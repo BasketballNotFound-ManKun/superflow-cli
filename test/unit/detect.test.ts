@@ -62,6 +62,16 @@ describe('core/detect', () => {
     expect(p.settingsFile).toMatch(/\.codex\/hooks\.json$/);
   });
 
+  it('getPlatformPaths(opencode) 返回 OpenCode 项目路径', () => {
+    const p = getPlatformPaths('opencode', 'project', '/tmp/demo');
+    expect(p.id).toBe('opencode');
+    expect(p.skillsDir).toBe('/tmp/demo/.opencode/skills');
+    expect(p.rulesDir).toBe('/tmp/demo/.opencode/rules');
+    expect(p.scriptsDir).toBe('/tmp/demo/.opencode/scripts');
+    expect(p.promptsDir).toBe('/tmp/demo/.opencode/commands');
+    expect(p.settingsFile).toBe('/tmp/demo/opencode.json');
+  });
+
   it('getPlatformPaths 拒绝未知 agent', () => {
     expect(() => getPlatformPaths('unknown' as any)).toThrow();
   });
@@ -72,7 +82,10 @@ describe('core/detect', () => {
   });
 
   it('parseAgentSelection 拒绝未知 agent 选择', () => {
-    expect(() => parseAgentSelection('cursor')).toThrow(/claude, codex, both/);
+    expect(parseAgentSelection('opencode')).toBe('opencode');
+    expect(parseAgentSelection('codex,opencode')).toEqual(['codex', 'opencode']);
+    expect(parseAgentSelection('all')).toBe('all');
+    expect(() => parseAgentSelection('cursor')).toThrow(/claude, codex, opencode, both, all/);
   });
 
   it('parseInstallScope 默认 global 且只接受 global/project', () => {
@@ -84,5 +97,7 @@ describe('core/detect', () => {
   it('resolveAgents 展开 both 为 claude + codex', () => {
     expect(resolveAgents('both')).toEqual(['claude', 'codex']);
     expect(resolveAgents('codex')).toEqual(['codex']);
+    expect(resolveAgents('all')).toEqual(['claude', 'codex', 'opencode']);
+    expect(resolveAgents(['codex', 'opencode'])).toEqual(['codex', 'opencode']);
   });
 });

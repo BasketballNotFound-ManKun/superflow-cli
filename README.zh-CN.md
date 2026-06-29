@@ -27,16 +27,19 @@
 
 # SuperBridge Flow
 
-通用 SDD 开发工作流 CLI，支持 Claude Code 和 Codex。
+通用 SDD 开发工作流 CLI，支持 Claude Code、Codex 和 OpenCode。
 
 SuperBridge Flow 不是简单“装两个工具”，而是把 OpenSpec/SDD 和
 Superpowers 编排成一个有状态的研发流程：前者负责需求、合同和验收口径，
 后者负责源码级设计、TDD 顺序、实现分工、review 和真实验证。
 
-CLI 会把 SuperBridge Flow 技能和配套 hook 脚本整合为单一 npm 包，自动部署到：
+CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 npm 包，
+自动部署到：
 
 - Claude Code：`~/.claude/skills/`、`~/.claude/scripts/`，并注册 `~/.claude/settings.json` hook
 - Codex：`~/.codex/skills/`、`~/.codex/hooks/`
+- OpenCode：`.opencode/skills/`、`.opencode/commands/`、`.opencode/scripts/`
+  或全局 `~/.config/opencode/`
 
 ## 工作流
 
@@ -63,11 +66,17 @@ npm install -g @chenmk/superflow
 ## 快速开始
 
 ```bash
-# 交互式选择 Claude Code / Codex（可多选）
+# 交互式选择 Claude Code / Codex / OpenCode（可多选）
 superflow init
 
 # 非交互模式，默认同时安装 Claude Code + Codex
 superflow init --yes
+
+# 显式安装 OpenCode
+superflow init --agent opencode
+
+# 同时安装 Claude Code + Codex + OpenCode
+superflow init --agent all
 
 # 跳过 hook 注册（手工管理）
 superflow init --no-hooks
@@ -105,8 +114,10 @@ superflow init
 
 | 命令 | 说明 |
 |------|------|
-| `superflow init` | 一站式安装；交互终端中可多选 Claude Code / Codex |
+| `superflow init` | 一站式安装；交互终端中可多选 Claude Code / Codex / OpenCode |
 | `superflow init --yes` | 非交互安装，默认 `--agent both` |
+| `superflow init --agent opencode` | 安装 OpenCode skills、commands、scripts 和 rules |
+| `superflow init --agent all` | 同时安装 Claude Code + Codex + OpenCode |
 | `superflow init --dry-run` | 只打印计划不执行 |
 | `superflow init --resume` | 从失败步骤继续 |
 | `superflow init --no-hooks` | 只装技能 + 脚本，跳过 Codex/Claude hook 注册 |
@@ -130,10 +141,10 @@ superflow init
 ## 依赖
 
 - Node.js 20+
-- Claude Code 或 Codex（按 `--agent` 选择）
+- Claude Code、Codex 或 OpenCode（按 `--agent` 选择）
 - 第三方（`superflow init` 自动装）：
   - openspec CLI（硬依赖，npm 全局）并在当前项目执行 `openspec init --tools ...`
-  - superpowers（硬依赖，Claude Code / Codex 对应插件）
+  - superpowers（Claude Code / Codex 为硬依赖；OpenCode 侧通过已部署 skills/commands 使用流程）
   - understand-anything（尽力安装，失败只警告）
   - api-doc-changelog（辅助 skill，复制到目标 agent skills 目录）
 
@@ -143,7 +154,7 @@ superflow init
 
 - `@chenmk/superflow`
 - `@fission-ai/openspec`
-- Claude Code / Codex 的 Superpowers 插件
+- Claude Code / Codex 的 Superpowers 插件；OpenCode 侧的 SuperBridge Flow assets
 
 推荐策略是“自动检查，手动更新”：默认只提示，不自动安装；执行
 `superflow update --with-package` 才会统一更新。

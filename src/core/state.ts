@@ -2,6 +2,8 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import type { SddState, Agent, PlatformState, Language } from '../types.js';
 
+const SUPPORTED_AGENTS: Agent[] = ['claude', 'codex', 'opencode'];
+
 export function loadState(file: string): SddState | null {
   if (!existsSync(file)) return null;
   try {
@@ -11,10 +13,20 @@ export function loadState(file: string): SddState | null {
     if (!parsed.version || !parsed.platforms || !parsed.completedSteps) {
       throw new Error('state file missing required top-level fields');
     }
-    return parsed as SddState;
+    return ensureStatePlatforms(parsed as SddState);
   } catch (err) {
     throw new Error(`Failed to parse state file ${file}: ${(err as Error).message}`);
   }
+}
+
+function ensureStatePlatforms(state: SddState): SddState {
+  const emptyPlatform = (): PlatformState => ({ skills: [], scripts: [], hooks: [] });
+  for (const agent of SUPPORTED_AGENTS) {
+    if (!state.platforms[agent]) {
+      state.platforms[agent] = emptyPlatform();
+    }
+  }
+  return state;
 }
 
 export function saveState(file: string, state: SddState): void {
@@ -33,6 +45,7 @@ export function initState(version: string, _agent: Agent, language: Language = '
     platforms: {
       claude: { ...emptyPlatform },
       codex: { ...emptyPlatform },
+      opencode: { ...emptyPlatform },
     },
     backups: {
       settingsFiles: [],

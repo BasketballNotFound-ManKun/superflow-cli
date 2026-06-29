@@ -4,6 +4,7 @@ export type TranslationKey =
   | 'agentPrompt'
   | 'agentClaude'
   | 'agentCodex'
+  | 'agentOpenCode'
   | 'agentBoth'
   | 'agentAnswer'
   | 'agentInvalid'
@@ -48,9 +49,10 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     agentPrompt: 'Select agent tools to initialize (multi-select):',
     agentClaude: 'Claude Code',
     agentCodex: 'Codex',
-    agentBoth: 'Install both (default)',
-    agentAnswer: 'Enter 1,2 / 2 / a:',
-    agentInvalid: 'Invalid input. Enter 1, 2, 1,2, claude, codex, or a.',
+    agentOpenCode: 'OpenCode',
+    agentBoth: 'Install Claude Code and Codex (default); use all for OpenCode too',
+    agentAnswer: 'Enter 1,2 / 2,3 / all / a:',
+    agentInvalid: 'Invalid input. Enter 1, 2, 3, 1,2, 2,3, claude, codex, opencode, all, or a.',
     languagePrompt: 'Select SuperBridge Flow language:',
     languageEnglish: 'English',
     languageChinese: 'Chinese',
@@ -59,7 +61,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     stepDeps: 'Install dependencies and initialize OpenSpec',
     stepSkills: 'Deploy SuperBridge Flow/OpenSpec skills',
     stepScriptsHooks: 'Deploy scripts and register hooks',
-    stepPrompts: 'Deploy Codex prompt aliases',
+    stepPrompts: 'Deploy prompt and command aliases',
     stepRules: 'Deploy SuperBridge Flow anti-drift rules',
     stepScan: 'Scaffold docs/sdd-context and check understand-anything',
     summaryTitle: 'superflow init summary',
@@ -91,9 +93,10 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     agentPrompt: '请选择要初始化的 agent 工具（可多选）：',
     agentClaude: 'Claude Code',
     agentCodex: 'Codex',
-    agentBoth: '两者都安装（默认）',
-    agentAnswer: '输入序号，例如 1,2 / 2 / a：',
-    agentInvalid: '输入无效，请输入 1、2、1,2、claude、codex 或 a。',
+    agentOpenCode: 'OpenCode',
+    agentBoth: '安装 Claude Code + Codex（默认）；输入 all 会包含 OpenCode',
+    agentAnswer: '输入序号，例如 1,2 / 2,3 / all / a：',
+    agentInvalid: '输入无效，请输入 1、2、3、1,2、2,3、claude、codex、opencode、all 或 a。',
     languagePrompt: '请选择 SuperBridge Flow 语言：',
     languageEnglish: '英文',
     languageChinese: '中文',
@@ -102,7 +105,7 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     stepDeps: '安装第三方依赖并初始化 OpenSpec',
     stepSkills: '部署 SuperBridge Flow/OpenSpec 技能',
     stepScriptsHooks: '部署脚本 + 注册 hook',
-    stepPrompts: '部署 Codex prompt alias',
+    stepPrompts: '部署 prompt/command alias',
     stepRules: '部署 SuperBridge Flow 防漂移规则',
     stepScan: '脚手架 docs/sdd-context/ + understand-anything 扫描 + 软提示',
     summaryTitle: 'superflow init summary',

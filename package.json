@@ -1,7 +1,7 @@
 {
   "name": "@chenmk/superflow",
   "version": "0.1.2",
-  "description": "SuperBridge Flow workflow CLI for Claude Code and Codex",
+  "description": "SuperBridge Flow workflow CLI for Claude Code, Codex, and OpenCode",
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -12,7 +12,8 @@
     "sdd",
     "tdd",
     "codex",
-    "claude-code"
+    "claude-code",
+    "opencode"
   ],
   "publishConfig": {
     "access": "public",

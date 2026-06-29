@@ -43,8 +43,8 @@ real verified delivery. SuperBridge Flow makes that gap explicit:
 - Handoff files, phase state, hooks, and guards reduce context drift when long
   conversations get compacted or split across agent sessions.
 
-The CLI installs skills, hooks, rules, scripts, handoff state, and dependency
-guards for Claude Code and Codex.
+The CLI installs skills, hooks or command aliases, rules, scripts, handoff
+state, and dependency guards for Claude Code, Codex, and OpenCode.
 
 ## Workflow
 
@@ -76,7 +76,7 @@ superflow init
 
 Interactive init lets you select:
 
-- target agent tools: Claude Code, Codex, or both
+- target agent tools: Claude Code, Codex, OpenCode, or selected combinations
 - language: English or Chinese
 - install scope: global or project
 
@@ -115,6 +115,8 @@ best-effort and does not block initialization.
 | Command | Purpose |
 | --- | --- |
 | `superflow init` | Install and configure SuperBridge Flow interactively |
+| `superflow init --agent opencode` | Install OpenCode skills and command aliases |
+| `superflow init --agent all` | Install Claude Code, Codex, and OpenCode |
 | `superflow update` | Refresh installed skills, hooks, scripts, and rules |
 | `superflow update --with-package` | Also update `@chenmk/superflow`, OpenSpec, and Superpowers |
 | `superflow doctor` | Diagnose installed assets and project state |
@@ -141,6 +143,16 @@ In Claude Code:
 ```text
 /superflow-pipeline
 ```
+
+In OpenCode:
+
+```text
+/superflow-pipeline
+```
+
+OpenCode receives `.opencode/skills` and `.opencode/commands` assets. Native
+hook registration is not enabled for OpenCode yet; use `/superflow-*` commands
+to run workflow gates explicitly.
 
 For large requirements, ask the agent to read one section or one feature at a
 time. SuperBridge Flow will route through clarification, OpenSpec docs,
@@ -190,7 +202,7 @@ keeps the same workflow contracts.
 ## Requirements
 
 - Node.js 20+
-- Claude Code or Codex
+- Claude Code, Codex, or OpenCode
 - npm access to install OpenSpec and Superpowers
 - Git Bash or a compatible shell on Windows for hook scripts
 

@@ -37,6 +37,20 @@ describe('commands/uninstall', () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
+  it('detects OpenCode command aliases during uninstall auto mode', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-uninstall-opencode-'));
+    const command = path.join(root, '.opencode', 'commands', 'superflow-pipeline.md');
+    fs.mkdirSync(path.dirname(command), { recursive: true });
+    fs.writeFileSync(command, 'ok');
+
+    const targets = detectInstalledUninstallTargets(root, ['opencode']);
+
+    expect(targets).toContainEqual(
+      { agent: 'opencode', scope: 'project', projectPath: root },
+    );
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
   it('detects legacy sdd skills so uninstall can clean old slash commands', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-uninstall-legacy-'));
     const skill = path.join(root, '.codex', 'skills', 'sdd-spec-pipeline', 'SKILL.md');
@@ -117,6 +131,26 @@ describe('commands/uninstall', () => {
 
     expect(result.ok).toBe(true);
     expect(fs.existsSync(prompt)).toBe(false);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('removes OpenCode command aliases during uninstall', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-uninstall-opencode-commands-'));
+    const command = path.join(root, '.opencode', 'commands', 'superflow-pipeline.md');
+    fs.mkdirSync(path.dirname(command), { recursive: true });
+    fs.writeFileSync(command, 'ok');
+
+    const result = await runUninstall({
+      agents: ['opencode'],
+      scope: 'project',
+      projectPath: root,
+      dryRun: false,
+      withDeps: false,
+      quiet: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(fs.existsSync(command)).toBe(false);
     fs.rmSync(root, { recursive: true, force: true });
   });
 });

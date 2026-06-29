@@ -28,6 +28,13 @@ describe('commands/update', () => {
     expect(plan.hooks.names).toContain('codex-auto-backup-hook.sh');
   });
 
+  it('creates an OpenCode update plan without native hooks', () => {
+    const plan = createUpdatePlan(['opencode']);
+    expect(plan.agents).toEqual(['opencode']);
+    expect(plan.scripts.names).toContain('superflow-hook-guard.sh');
+    expect(plan.hooks.names).toEqual([]);
+  });
+
   it('includes npm package update command when requested', () => {
     const plan = createUpdatePlan(['codex'], 'global', process.cwd(), true);
     expect(plan.packageUpdate).toEqual({

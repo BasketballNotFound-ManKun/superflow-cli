@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getManifestHooks,
   getManifest,
   getManifestRules,
   getManifestScripts,
@@ -24,10 +25,17 @@ describe('core/manifest', () => {
     expect(codexScripts).toContain('superflow-dependency-update-hook.sh');
     expect(codexScripts).toContain('codex-auto-backup-hook.sh');
     expect(claudeScripts).toContain('claude-auto-backup-hook.sh');
+    expect(getManifestScripts('opencode')).toContain('superflow-hook-guard.sh');
+    expect(getManifestScripts('opencode')).not.toContain('codex-auto-backup-hook.sh');
+    expect(getManifestScripts('opencode')).not.toContain('claude-auto-backup-hook.sh');
   });
 
-  it('manifest declares only Codex and Claude agents', () => {
-    expect(getManifest().agents).toEqual(['claude', 'codex']);
+  it('manifest declares Codex, Claude, and OpenCode agents', () => {
+    expect(getManifest().agents).toEqual(['claude', 'codex', 'opencode']);
+  });
+
+  it('OpenCode does not inherit Codex or Claude hook registration', () => {
+    expect(getManifestHooks('opencode')).toEqual([]);
   });
 
   it('manifest exposes SDD anti-drift rules', () => {

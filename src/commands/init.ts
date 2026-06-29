@@ -157,9 +157,10 @@ async function resolveInitAgentSelection(cmdOptions: {
 
 export function parseInitAgentInput(value: string): AgentSelection | null {
   const normalized = value.trim().toLowerCase();
-  if (!normalized || normalized === 'a' || normalized === 'all' || normalized === 'both') {
+  if (!normalized || normalized === 'a' || normalized === 'both') {
     return 'both';
   }
+  if (normalized === 'all') return 'all';
   const parts = normalized
     .split(/[,\s]+/)
     .map((part) => part.trim())
@@ -170,13 +171,18 @@ export function parseInitAgentInput(value: string): AgentSelection | null {
       selected.add('claude');
     } else if (part === '2' || part === 'codex' || part === 'x') {
       selected.add('codex');
+    } else if (part === '3' || part === 'opencode' || part === 'o') {
+      selected.add('opencode');
     } else {
       return null;
     }
   }
-  if (selected.size === 2) return 'both';
+  if (selected.size === 3) return 'all';
+  if (selected.size === 2 && selected.has('claude') && selected.has('codex')) return 'both';
+  if (selected.size > 1) return [...selected];
   if (selected.has('claude')) return 'claude';
   if (selected.has('codex')) return 'codex';
+  if (selected.has('opencode')) return 'opencode';
   return null;
 }
 
@@ -222,6 +228,7 @@ async function promptAgentSelection(language: Language): Promise<AgentSelection>
       console.log(`\n${t(language, 'agentPrompt')}`);
       console.log(`  1) ${t(language, 'agentClaude')}`);
       console.log(`  2) ${t(language, 'agentCodex')}`);
+      console.log(`  3) ${t(language, 'agentOpenCode')}`);
       console.log(`  a) ${t(language, 'agentBoth')}`);
       const answer = await rl.question(t(language, 'agentAnswer'));
       const selection = parseInitAgentInput(answer);
@@ -322,6 +329,9 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
         if (agents.includes('codex')) {
           log('[dry-run] Codex plugins/skills: superpowers / understand-anything / api-doc');
         }
+        if (agents.includes('opencode')) {
+          log('[dry-run] OpenCode: deploy skills/commands/scripts/rules; native hooks are not registered');
+        }
         return;
       }
       const openspec = await installOpenspec();
@@ -393,7 +403,9 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
           const scripts = scriptsForAgent(agent);
           const hookScripts = hookScriptsForAgent(agent);
           log(`[dry-run] cp ${scripts.length} scripts → ${platform.scriptsDir}`);
-          if (!options.noHooks) {
+          if (hookScripts.length === 0) {
+            log(`[dry-run] ${platform.name}: native hook registration is not supported`);
+          } else if (!options.noHooks) {
             log(`[dry-run] register ${hookScripts.length} hooks → ${platform.settingsFile}`);
           } else {
             log(`[dry-run] --no-hooks set, skipping hook registration`);
@@ -417,11 +429,19 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
             : `  ⚠ --no-hooks: skipped ${platform.name} hook registration (scripts deployed)`
           );
         } else {
+          const hookScripts = hookScriptsForAgent(agent);
+          if (hookScripts.length === 0) {
+            log(zh
+              ? `  ⚠ ${platform.name}: 当前未注册自动 hook；可通过 /superflow-* command 显式运行门禁`
+              : `  ⚠ ${platform.name}: automatic hooks are not registered; run /superflow-* commands to execute gates`
+            );
+            state.platforms[agent].hooks = [];
+            continue;
+          }
           const cleared = clearSddHooks(platform.settingsFile);
           if (cleared > 0) {
             log(`  ✓ cleared ${cleared} old superflow/legacy sdd hooks (avoid duplicate registration)`);
           }
-          const hookScripts = hookScriptsForAgent(agent);
           for (const script of hookScripts) {
             const command = path.join(platform.scriptsDir, script);
             try {
@@ -440,25 +460,32 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
       }
     }},
     { id: 5, name: t(options.language, 'stepPrompts'), run: async () => {
-      if (!agents.includes('codex')) {
+      const promptAgents = agents.filter((agent) => agent === 'codex' || agent === 'opencode');
+      if (promptAgents.length === 0) {
         log(zh
-          ? '  - 未选择 Codex，跳过 prompt alias'
-          : '  - Codex was not selected; skipping prompt aliases'
+          ? '  - 未选择 Codex/OpenCode，跳过 prompt/command alias'
+          : '  - Codex/OpenCode was not selected; skipping prompt/command aliases'
         );
         return;
       }
-      const platform = getPlatformPaths('codex', options.scope, projectPath);
       if (options.dryRun) {
-        log(`[dry-run] cp ${CODEX_PROMPTS.join(', ')} → ${platform.promptsDir}`);
+        for (const agent of promptAgents) {
+          const platform = getPlatformPaths(agent, options.scope, projectPath);
+          log(`[dry-run] cp ${CODEX_PROMPTS.join(', ')} → ${platform.promptsDir}`);
+        }
         return;
       }
-      await deployPrompts(
-        CODEX_PROMPTS,
-        path.join(ASSETS_DIR, 'prompts'),
-        platform.promptsDir,
-        { skipExisting: options.skipExisting }
-      );
-      log(`  ✓ Codex: ${CODEX_PROMPTS.length} prompt alias deployed`);
+      for (const agent of promptAgents) {
+        const platform = getPlatformPaths(agent, options.scope, projectPath);
+        await deployPrompts(
+          CODEX_PROMPTS,
+          path.join(ASSETS_DIR, 'prompts'),
+          platform.promptsDir,
+          { skipExisting: options.skipExisting }
+        );
+        const label = agent === 'opencode' ? 'command alias' : 'prompt alias';
+        log(`  ✓ ${platform.name}: ${CODEX_PROMPTS.length} ${label} deployed`);
+      }
     }},
     { id: 6, name: `${t(options.language, 'stepRules')} (${ALL_RULES.length})`, run: async () => {
       if (options.dryRun) {

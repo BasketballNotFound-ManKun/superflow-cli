@@ -1,6 +1,6 @@
 export type OS = 'darwin' | 'linux' | 'windows' | 'mingw' | 'msys' | 'cygwin' | 'unknown';
-export type Agent = 'claude' | 'codex';
-export type AgentSelection = Agent | 'both';
+export type Agent = 'claude' | 'codex' | 'opencode';
+export type AgentSelection = Agent | 'both' | 'all' | Agent[];
 export type InstallScope = 'global' | 'project';
 export type Language = 'en' | 'zh';
 

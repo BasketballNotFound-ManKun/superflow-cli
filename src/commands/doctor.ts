@@ -8,7 +8,13 @@ import {
   parseInstallScope,
   resolveAgents,
 } from '../core/detect.js';
-import { ALL_RULES, ALL_SKILLS, CODEX_PROMPTS, scriptsForAgent } from '../core/assets.js';
+import {
+  ALL_RULES,
+  ALL_SKILLS,
+  CODEX_PROMPTS,
+  hookScriptsForAgent,
+  scriptsForAgent,
+} from '../core/assets.js';
 import type { Agent, InstallScope } from '../types.js';
 
 type DoctorStatus = 'pass' | 'warn' | 'fail';
@@ -137,7 +143,11 @@ export async function doctorCommand(options: {
           failed = true;
         }
       }
-      failed = checkHookRegistration(platform.settingsFile, agent, failed);
+      if (hookScriptsForAgent(agent).length === 0) {
+        console.log(`  ⚠ ${platform.name} 未注册自动 hook；使用 /superflow-* command 显式运行门禁（WARN）`);
+      } else {
+        failed = checkHookRegistration(platform.settingsFile, agent, failed);
+      }
     } else {
       console.log(`  ✗ ${platform.scriptsDir} 缺失（FAIL）`);
       failed = true;
@@ -153,8 +163,8 @@ export async function doctorCommand(options: {
       }
     }
 
-    if (agent === 'codex') {
-      console.log(`\n[Prompt Alias: ${platform.name}]`);
+    if (agent === 'codex' || agent === 'opencode') {
+      console.log(`\n[${agent === 'opencode' ? 'Command Alias' : 'Prompt Alias'}: ${platform.name}]`);
       for (const prompt of CODEX_PROMPTS) {
         if (existsSync(path.join(platform.promptsDir, prompt))) {
           console.log(`  ✓ /${prompt.replace(/\.md$/, '')}`);
@@ -265,12 +275,21 @@ export async function collectDoctor(options: {
       });
     }
 
-    const hookCount = countSddHookCommands(platform.settingsFile, agent);
-    checks.push({
-      check: `hooks:${agent}:${currentScope}`,
-      status: hookCount >= 7 ? 'pass' : 'fail',
-      message: `${hookCount} command(s) registered`,
-    });
+    const hookScripts = hookScriptsForAgent(agent);
+    if (hookScripts.length === 0) {
+      checks.push({
+        check: `hooks:${agent}:${currentScope}`,
+        status: 'warn',
+        message: 'native hook registration is not supported; use command aliases',
+      });
+    } else {
+      const hookCount = countSddHookCommands(platform.settingsFile, agent);
+      checks.push({
+        check: `hooks:${agent}:${currentScope}`,
+        status: hookCount >= 7 ? 'pass' : 'fail',
+        message: `${hookCount} command(s) registered`,
+      });
+    }
 
     for (const skill of ALL_SKILLS) {
       const skillPath = path.join(platform.skillsDir, skill, 'SKILL.md');
@@ -281,7 +300,7 @@ export async function collectDoctor(options: {
       });
     }
 
-    if (agent === 'codex') {
+    if (agent === 'codex' || agent === 'opencode') {
       for (const prompt of CODEX_PROMPTS) {
         const promptPath = path.join(platform.promptsDir, prompt);
         checks.push({
@@ -413,7 +432,11 @@ function checkAgentDependencies(
   projectPath: string
 ): boolean {
   const platform = getPlatformPaths(agent, scope, projectPath);
-  const label = agent === 'claude' ? 'Claude' : 'Codex';
+  const label = agent === 'claude'
+    ? 'Claude'
+    : agent === 'codex'
+      ? 'Codex'
+      : 'OpenCode';
 
   if (hasSuperpowers(agent)) {
     console.log(`  ✓ superpowers (${label})`);

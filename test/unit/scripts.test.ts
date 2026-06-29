@@ -40,4 +40,11 @@ describe('core/scripts', () => {
     expect(content).toContain('$HOME/.claude/scripts/claude-auto-backup-hook.sh');
     expect(content).not.toContain('$HOME/.codex/hooks');
   });
+
+  it('deployScripts 部署到 OpenCode 时改写 Codex hook 路径', async () => {
+    await deployScripts(['test.sh'], TMP_ASSETS, TMP_SCRIPTS, { agent: 'opencode' });
+    const content = fs.readFileSync(path.join(TMP_SCRIPTS, 'test.sh'), 'utf-8');
+    expect(content).toContain('$HOME/.opencode/scripts/opencode-auto-backup-hook.sh');
+    expect(content).not.toContain('$HOME/.codex/hooks');
+  });
 });

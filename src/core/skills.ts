@@ -69,6 +69,12 @@ function shouldRewriteSkillFile(file: string): boolean {
 
 function rewriteSkillContent(content: string, agent: Agent): string {
   if (agent === 'codex') return content;
+  if (agent === 'opencode') {
+    return content
+      .replaceAll('~/.codex/hooks', '~/.opencode/scripts')
+      .replaceAll('~/.codex/skills', '~/.opencode/skills')
+      .replaceAll('Codex Hooks', 'OpenCode Commands');
+  }
   return content
     .replaceAll('~/.codex/hooks', '~/.claude/scripts')
     .replaceAll('~/.codex/skills', '~/.claude/skills')

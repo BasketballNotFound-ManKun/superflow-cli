@@ -2,8 +2,9 @@
 
 [中文教程](./INSTALL.md)
 
-SuperBridge Flow installs OpenSpec, Superpowers, skills, hooks, scripts, rules,
-and handoff state for Claude Code and Codex.
+SuperBridge Flow installs OpenSpec, Superpowers, skills, hooks or command
+aliases, scripts, rules, and handoff state for Claude Code, Codex, and
+OpenCode.
 
 ## 1. Install
 
@@ -35,14 +36,16 @@ SUPERFLOW_LANG=en superflow init
 
 1. Detect platform paths.
 2. Install OpenSpec CLI.
-3. Run native `openspec init <project> --tools claude,codex --profile custom`.
-4. Install Superpowers for selected agents.
+3. Run native `openspec init <project> --tools ... --profile custom`.
+4. Install Superpowers for selected Claude Code/Codex agents.
 5. Try understand-anything and api-doc-changelog.
 6. Deploy SuperBridge Flow/OpenSpec skills.
 7. Register hooks and rules.
 8. Scaffold `docs/sdd-context/`.
 
-OpenSpec and Superpowers are required. understand-anything is best-effort.
+OpenSpec and Superpowers are required for the full workflow. OpenCode receives
+skills and command aliases; native hook registration is not enabled for
+OpenCode yet. understand-anything is best-effort.
 
 ## 3. Daily Workflow
 
@@ -53,6 +56,12 @@ Use $superflow-pipeline to analyze this requirement and drive the full workflow.
 ```
 
 In Claude Code:
+
+```text
+/superflow-pipeline
+```
+
+In OpenCode:
 
 ```text
 /superflow-pipeline
@@ -117,6 +126,7 @@ Team environments should keep `check`. Personal machines may choose `apply`.
 ```bash
 superflow uninstall --agent codex --force
 superflow uninstall --agent claude --force
+superflow uninstall --agent opencode --force
 ```
 
 This removes SuperBridge Flow managed assets only. It does not remove unrelated

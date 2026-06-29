@@ -1,7 +1,13 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, readFileSync } from 'fs';
-import { ALL_RULES, ALL_SKILLS, hookScriptsForAgent, scriptsForAgent } from '../core/assets.js';
+import {
+  ALL_RULES,
+  ALL_SKILLS,
+  CODEX_PROMPTS,
+  hookScriptsForAgent,
+  scriptsForAgent,
+} from '../core/assets.js';
 import {
   getPlatformPaths,
   parseAgentSelection,
@@ -11,6 +17,7 @@ import {
 import { deployRules } from '../core/rules.js';
 import { deployScripts } from '../core/scripts.js';
 import { deploySkill } from '../core/skills.js';
+import { deployPrompts } from '../core/prompts.js';
 import { clearSddHooks, registerHook } from '../core/registry.js';
 import type { Agent, InstallScope } from '../types.js';
 import { runCommand } from '../utils/shell.js';
@@ -87,9 +94,13 @@ export async function updateCommand(options: {
     await deployRules(ALL_RULES, path.join(ASSETS_DIR, 'rules'), platform.rulesDir);
     const scripts = scriptsForAgent(agent);
     await deployScripts(scripts, path.join(ASSETS_DIR, 'scripts'), platform.scriptsDir, { agent });
-    if (!options.noHooks) {
+    if (agent === 'codex' || agent === 'opencode') {
+      await deployPrompts(CODEX_PROMPTS, path.join(ASSETS_DIR, 'prompts'), platform.promptsDir);
+    }
+    const hooks = hookScriptsForAgent(agent);
+    if (!options.noHooks && hooks.length > 0) {
       clearSddHooks(platform.settingsFile);
-      for (const hook of hookScriptsForAgent(agent)) {
+      for (const hook of hooks) {
         const command = path.join(platform.scriptsDir, hook);
         const timeout = hook === 'superflow-dependency-update-hook.sh' ? 300 : undefined;
         registerHook(platform.settingsFile, hook, command, { timeout });

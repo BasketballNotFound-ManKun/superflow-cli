@@ -42,6 +42,14 @@ function shouldRewriteScript(file: string): boolean {
 
 function rewriteScriptContent(content: string, agent: Agent): string {
   if (agent === 'codex') return content;
+  if (agent === 'opencode') {
+    return content
+      .replaceAll('$HOME/.codex/hooks', '$HOME/.opencode/scripts')
+      .replaceAll('~/.codex/hooks', '~/.opencode/scripts')
+      .replaceAll('~/.codex/skills', '~/.opencode/skills')
+      .replaceAll('$HOME/.codex/skills', '$HOME/.opencode/skills')
+      .replaceAll('codex-auto-backup-hook.sh', 'opencode-auto-backup-hook.sh');
+  }
   return content
     .replaceAll('$HOME/.codex/hooks', '$HOME/.claude/scripts')
     .replaceAll('~/.codex/hooks', '~/.claude/scripts')

@@ -24,6 +24,24 @@ describe('core/state', () => {
     expect(loaded?.platforms.claude.skills).toContain('superflow-clarify');
   });
 
+  it('loadState 兼容没有 OpenCode 平台字段的旧状态', () => {
+    fs.writeFileSync(TEST_STATE, JSON.stringify({
+      version: '0.1.0',
+      lastInit: new Date().toISOString(),
+      completedSteps: [],
+      platforms: {
+        claude: { skills: [], scripts: [], hooks: [] },
+        codex: { skills: [], scripts: [], hooks: [] },
+      },
+      backups: { settingsFiles: [], skills: [] },
+      previousVersion: null,
+    }));
+
+    const loaded = loadState(TEST_STATE);
+
+    expect(loaded?.platforms.opencode).toEqual({ skills: [], scripts: [], hooks: [] });
+  });
+
   it('initState 创建默认结构', () => {
     const state = initState('1.0.0', 'claude');
     expect(state.version).toBe('1.0.0');

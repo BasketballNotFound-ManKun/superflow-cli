@@ -29,6 +29,42 @@ describe('commands/doctor', () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
+  it('checks OpenCode commands without requiring hook registration', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-doctor-opencode-'));
+    fs.mkdirSync(path.join(root, 'openspec', 'changes'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'openspec', 'specs'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.opencode', 'skills', 'superflow-pipeline'), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(root, '.opencode', 'skills', 'superflow-pipeline', 'SKILL.md'),
+      'ok'
+    );
+    fs.mkdirSync(path.join(root, '.opencode', 'commands'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.opencode', 'commands', 'superflow-pipeline.md'),
+      'ok'
+    );
+
+    const result = await collectDoctor({
+      agent: 'opencode',
+      scope: 'project',
+      projectPath: root,
+    });
+
+    expect(result.checks).toContainEqual({
+      check: 'hooks:opencode:project',
+      status: 'warn',
+      message: 'native hook registration is not supported; use command aliases',
+    });
+    expect(result.checks).toContainEqual({
+      check: 'prompt:opencode:project:superflow-pipeline.md',
+      status: 'pass',
+      message: path.join(root, '.opencode', 'commands', 'superflow-pipeline.md'),
+    });
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
   it('fails on unknown top-level fields in .sdd state files', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-doctor-state-'));
     const stateDir = path.join(root, 'openspec', 'changes', 'demo', '.sdd');

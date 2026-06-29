@@ -1,6 +1,6 @@
 {
   "version": "0.1.2",
-  "agents": ["claude", "codex"],
+  "agents": ["claude", "codex", "opencode"],
   "skills": [
     "openspec-apply-change",
     "openspec-archive-change",
@@ -35,7 +35,8 @@
   ],
   "agentScripts": {
     "claude": ["claude-auto-backup-hook.sh"],
-    "codex": ["codex-auto-backup-hook.sh"]
+    "codex": ["codex-auto-backup-hook.sh"],
+    "opencode": []
   },
   "hooks": [
     "superflow-enforce-hook.sh",
@@ -48,6 +49,7 @@
   ],
   "agentHooks": {
     "claude": ["claude-auto-backup-hook.sh"],
-    "codex": ["codex-auto-backup-hook.sh"]
+    "codex": ["codex-auto-backup-hook.sh"],
+    "opencode": []
   }
 }

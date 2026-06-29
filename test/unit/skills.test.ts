@@ -54,4 +54,15 @@ describe('core/skills', () => {
     expect(content).toContain('Claude Code Hooks');
     expect(content).not.toContain('~/.codex/hooks');
   });
+
+  it('deploySkill 部署到 OpenCode 时改写 Codex 文档路径', async () => {
+    await deploySkill('sdd-test-skill', TMP_ASSETS, TMP_SKILLS, { agent: 'opencode' });
+    const content = fs.readFileSync(
+      path.join(TMP_SKILLS, 'sdd-test-skill', 'SKILL.md'),
+      'utf-8'
+    );
+    expect(content).toContain('~/.opencode/scripts');
+    expect(content).toContain('OpenCode Commands');
+    expect(content).not.toContain('~/.codex/hooks');
+  });
 });
