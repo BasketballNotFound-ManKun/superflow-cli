@@ -1,0 +1,60 @@
+{
+  "name": "@chenmk/superflow",
+  "version": "0.1.2",
+  "description": "SuperBridge Flow workflow CLI for Claude Code and Codex",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "superflow",
+    "superbridge-flow",
+    "openspec",
+    "superpowers",
+    "sdd",
+    "tdd",
+    "codex",
+    "claude-code"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "superflow": "dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "assets",
+    "README.md",
+    "README.zh-CN.md",
+    "INSTALL.en.md",
+    "INSTALL.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/cli/index.ts",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm test && npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/ test/",
+    "format": "prettier --write src/ test/"
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "cross-spawn": "^7.0.3"
+  },
+  "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
+  }
+}

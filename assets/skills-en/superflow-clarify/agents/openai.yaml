@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Clarify"
+  short_description: "Clarify requirements, confirm features one by one, and freeze API drafts"
+  default_prompt: "Use $superflow-clarify to process this requirement one confirmed feature at a time before SDD docs."

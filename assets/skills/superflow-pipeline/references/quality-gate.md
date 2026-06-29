@@ -1,0 +1,299 @@
+# 质量门检查清单
+
+**执行以下 checklist**，分为文档交付阶段（Stage 7）和实现交付阶段（分批验收）。
+
+---
+
+## 第一阶段：文档交付质量门（Stage 7）
+
+### 基础检查项（全部项目必做）
+
+| # | 检查项 | 标准 |
+|---|---|---|
+| 1 | 源码分析（1→1.1）/ 架构设计（0→1） | 引用具体类名、方法名、行号 / architecture.md 含技术选型、模块划分、数据模型 |
+| 2 | 变更矩阵（1→1.1） | design.md 每个 Requirement 映射到文件+方法 |
+| 3 | 可追溯性 | tasks.md 每个任务关联到 spec Requirement ID |
+| 4 | Scenario 覆盖 | spec 每个 Scenario 有 tests 对应测试用例 |
+| 5 | 任务原子性 | 每个任务只改一个文件或一个方法 |
+| 6 | 依赖声明 | 任务间依赖用 `blocked by` 标注 |
+| 7 | 事务边界 | DB 变更任务明确说明事务边界 |
+| 8 | 测试自动化 | 每个测试标注 [自动化] 或 [需手工] |
+| 9 | 应用配置 | tests.md 已确认端口、上下文路径、配置文件 |
+| 10 | 接口 URL | 每个接口测试构造完整 URL |
+| 11 | 修复指南 | tests.md 包含测试失败修复指南和质量红线 |
+| 12 | **Prompt 拆分合理性** | **如触发拆分条件，已按功能闭环拆分，每份 prompt 边界清晰** |
+| 13 | **需求/原型字段对账** | 涉及页面、截图、原型或前端联调时，已建立"页面字段 -> API 字段 -> DTO/VO -> DB -> 测试"映射 |
+| 14 | **功能点串行门禁** | 复杂 PRD、飞书文档、原型图或口头大需求必须具备 `source-ingestion.md`、`feature-gates.md`、`feature-inventory.md`、`ui-contract.md`、`gap-analysis.md`、`spec-freeze-review.md`，且当前功能点状态为 `已冻结` |
+
+### 按需检查项（涉及则必须检查）
+
+| # | 检查项 | 触发条件 | 标准 |
+|---|---|---|---|
+| 15 | API 先行冻结 | **涉及接口新增或出入参变更时强制** | api.md 在 design/tasks/tests/prompt 前生成并确认，含完整契约（Path/Query/Body/Response/错误码/示例 curl/枚举/条件必填）；不得实现后补档，不得只写"核心字段"或"同 POST" |
+| 16 | 前端契约兼容 | 前端字段与后端字段命名不同、字段合并或哨兵值表达 | api.md 必须写清兼容策略、字段映射和过渡方案；tests.md 必须覆盖前端真实 payload |
+| 17 | 下拉/枚举接口 | 页面存在下拉框、选择器或枚举展示 | api.md 必须说明数据来源接口、请求参数、响应字段和过滤规则；列表字段必须说明枚举取值 |
+| 18 | 反过度设计 | 涉及页面、原型、截图、前端联调 | 页面和产品文档没有、编程人员未确认的字段不得作为 API 必填；后端需要的字段必须标记为后端默认或后端推导 |
+| 19 | Mock 策略 | 涉及外部依赖/设备/第三方 | mock.md 声明 Mock 方式、假设条件、替代验证 |
+| 20 | 测试执行记录 | 执行了测试 | test-report.md 含环境、命令、结果汇总 |
+| 21 | 真实测试证据 | 声称接口、联调或真实测试完成 | 每个关键接口有 curl/请求体/响应/断言/真实参数来源；tests skipped、未启动应用、未连测试库、缺真实参数、mock-only、外部泛化失败时不得标记通过 |
+| 21.1 | 测试报告证据一致性 | 出现 test-report.md、Maven/Gradle 测试、跨仓测试或源码锚点 | `~/.codex/hooks/superflow-test-report-lint.py --tests <tests.md> <test-report.md>` 通过；同一命令的 `Tests run` 和 `N/N` 不矛盾；`Tests are skipped` 不得写成通过；tests.md 声明 L3/L4/真实入口/第三方/dev 工具时，报告必须有真实命令、环境、响应断言、DB、日志和外部回调/终态证据；源码锚点仍存在或明确标记为旧实现已删除 |
+| 22 | 提示词记录 | 使用 AI 辅助开发 | prompt/ 目录含完整 prompt、采纳情况、修改点 |
+| 23 | **可追溯性矩阵** | **拆分为多批时强制** | traceability-matrix.md 含需求/设计/任务/测试/prompt 映射，无设计漂移、无实现遗漏 |
+| 24 | **Reviewer 清单** | **拆分为多批时强制** | reviewer-checklist.md 含 19 项检查，用于分批评审 |
+| 25 | Red-Green 证据 | Bug 修复或 CR/Px 联调补项 | test-report.md 先记录修复前同一路径失败证据，再记录修复后通过证据；不能只写最终通过 |
+| 26 | **文件接口契约** | **涉及导出/下载/上传时强制** | api.md 含文件接口契约表（Content-Type、Content-Disposition、文件名规则、前端判断方式）；Controller 方法直接操作 HttpServletResponse；tests.md 验证响应头和文件体 |
+| 27 | **Excel 导入契约** | **涉及 Excel 导入时强制** | api.md 含模板列头表、failureCount 与 code 映射规则、日期格式兼容说明；模板 DTO 与导入 DTO 列头一致；tests.md 覆盖部分失败和短日期格式 |
+| 28 | **路由一致性** | **涉及新增 Controller mapping 时强制** | api.md 路径与 Controller mapping 双向一致；固定路径与 `{id}` 无冲突或已提示风险；tests.md 含路由映射用例 |
+| 29 | **数据权限决策** | **涉及访问业务数据的接口时强制** | api.md 每个访问业务数据的接口有明确数据权限决策（需要/不需要/不确定）；"不确定"项已向用户确认；复用当前仓库已有权限模式；tests.md 覆盖至少两个角色 |
+| 30 | **外部依赖契约** | **涉及 SDK/第三方/RPC/MQ 时强制** | api.md 含外部依赖契约（参数来源、SDK 版本、响应样例）；tests.md 含真实请求/响应或阻塞证据 |
+| 31 | **跨仓数据合同** | **多仓共享表、复制 PO/Mapper、MyBatis-Plus BaseMapper、字段删除/迁移时强制** | 已列出表结构真源和全部消费仓；每个消费仓完成实体/Mapper/SQL 与实际库字段对账；不存在列已删除或标注 `@TableField(exist = false)`；查询条件已按最终合同迁移 |
+| 32 | **真实入口验收** | **第三方、外部集成、支付、设备、回调、客户端或跨系统链路时强制** | test-report 区分 Mock/测试端点/真实入口；真实入口包含 payload、响应、trace 日志、DB 证据；mock-only 不得写 Passed |
+| 33 | **三层验收门禁** | **涉及接口、CRUD、Mapper/XML、数据库字段或配置驱动行为时强制** | prompt 明确完成定义；hook 标记 `.sdd-enforced`/`.db-verified` 已启用；交付前执行 `~/.codex/hooks/superflow-verify-integration.sh <test-report.md>` 且通过 |
+| 34 | **测试合同冻结** | **所有实现任务强制** | tests.md 每个用例包含用例ID、层级、前置数据、自动化命令、响应/DB/日志断言、RED预期失败、GREEN预期通过、test-report证据位置；没有可执行命令不得进入实现 |
+| 35 | **接口自动化前置** | **涉及接口、CRUD、Mapper/XML、配置驱动、MQ/任务或跨系统链路时强制** | 每个 L3/L4 用例有完整 Base URL、token/cookie 获取、curl/Postman/Newman/pytest/RestAssured 命令、请求体、响应断言、DB SELECT、日志关键词 |
+| 36 | **字段语义合同** | **涉及 ID/状态/类型/金额/设备/站点/订单/订阅/外部流水/枚举/跨表关联字段时强制** | design.md 包含 `字段 | 来源表/DTO/事件 | 真实语义 | 目标字段 | 目标语义 | 是否可等价 | 证据锚点 | 禁止用法 | 不确定项/owner`；字段语义不确定时阻塞 |
+| 37 | **写入闭环** | **涉及回填/落库/绑定/持久化/快照/同步/状态推进时强制** | design.md 或 traceability-matrix.md 包含 `业务动作 | Java setter/赋值点 | Converter/DTO 映射 | Mapper insert/update | DB column | 后续读取方 | 消费入口 | 验证 SQL | 测试用例`；只证明 setter 不通过 |
+| 38 | **真实入口调用链** | **所有接口/MQ/定时/设备/小程序/第三方/后台操作链路强制** | design.md 包含 `用户/外部动作 | 上游服务/接口 | 本仓入口 | MQ/异步回调 | 关键字段变化 | DB 状态 | 结算/通知/展示消费点 | 真实验证方式`；测试端点不能替代真实入口 |
+| 39 | **禁止 fallback 与猜测实现** | **所有实现任务强制** | sdd-quality-gate.md 或 design.md 明确禁止默认值、兜底反查、替代字段、保留旧值、空值转可用、静默跳过、下游补偿；批准兼容必须有 owner 确认和暴露/移除规则 |
+| 40 | **Agent 执行前自检占位** | **所有实现 prompt 强制** | test-report.md 或 prompt 中预置 `真实入口已定位 | 字段语义合同已核对 | 写入闭环已核对 | 禁止兜底边界已确认 | RED 测试已执行 | 允许修改文件 | 禁止修改文件 | 阻塞项` |
+| 41 | **Superpowers 技术详设（HOW）** | **完整 SDD 实现任务强制** | `docs/superpowers/specs/YYYY-MM-DD-*-technical-design.md` 存在并记录当前 handoff_hash；Superpowers 接管源码级 HOW、TDD/RED 切入点、团队/Reviewer/Tester 分工、worktree/端口计划和执行风险；不得覆盖 OpenSpec/SDD 的需求、API、DB、SQL、字段语义、tests 或验收门禁 |
+| 42 | **字段/状态反向影响面** | **涉及字段值、状态/枚举、在线离线、删除恢复、同步标记、支付退款状态、第三方状态时强制** | Superpowers 技术详设包含 `Field And Status Reverse Impact`，列出 `字段/状态 | 写入点 | 读取/过滤点 | 派生/同步点 | 跨模块消费方 | 消费方测试 | 缺口/阻塞`；必须执行 `rg`/Mapper XML/实体/DTO/SQL/定时/MQ/回调/第三方/兄弟仓反查；只改直接 setter/writer 阻塞 |
+| 43 | **架构师视角的模块职责与调用方向** | **涉及跨仓、跨服务、SDK、MQ、定时、设备、回调、第三方、小程序、网关或适配层时强制** | Superpowers 技术详设包含 `Architecture Boundary And Call Direction`，列出 `链路步骤 | 调用方向 | owner模块 | 既有入口/出口 | 拟新增入口/出口 | 是否允许 | 证据锚点 | 禁止绕路`；必须证明业务入口、出口适配、协议转换、设备网关、MQ 消费者的职责边界没有反转；不能仅以“技术上能调用”为设计依据 |
+| 44 | **上下文防漂移 handoff** | **所有进入实现的任务强制** | `.sdd/handoff/sdd-context.md`、`.json`、`.sha256` 和 `.sdd/state.yaml` 已生成；design.md、sdd-quality-gate.md、prompt、test-report 记录同一 handoff_hash；`superflow-guard.sh <change-dir> docs` 通过 |
+| 45 | **SDD 状态机字段** | **所有进入实现的任务强制** | `.sdd/state.yaml` 包含 workflow、phase、handoff_hash、build_mode、isolation、tdd_mode、review_mode、verify_mode、implementation_prompt、verification_report、archived；`superflow-state.sh status/next/recover` 输出一致 |
+
+### 文档完整性强制检查（新增，全部项目必做）
+
+| # | 检查项 | 标准 |
+|---|---|---|
+| 26 | **嵌入式变更文档完整性** | 每个 embedded change 目录包含 `.openspec.yaml`、`api.md`、`spec.md`、`design.md`、`tasks.md`、`tests.md`、`review-checklist.md`、`sdd-quality-gate.md`，缺一不可 |
+| 27 | **顶层文档同步更新** | 新增/修改 embedded change 后，`tasks.md`、`traceability-matrix.md`、`sdd-quality-gate.md`、`tests.md`、`test-report.md` 已同步更新 |
+| 28 | **implementation prompt 文档引用** | prompt 中"必读文档"列表必须包含 `design.md`、`tests.md`、`review-checklist.md`、`sdd-quality-gate.md`，不能只引用 `api.md` 和 `spec.md` |
+| 29 | **无"待后续生成"占位符** | 文档中不存在"待后续生成"、"待补充"、"TODO"等未完成的占位标记 |
+| 30 | **需求级汇总 SQL 文件** | 如涉及数据库变更，已创建需求级汇总 SQL 文件（如 `sql/{version}.sql`），且 tasks.md / tests.md / prompt 中已明确引用该文件路径 |
+| 31 | **tasks.md 标注 SQL 依赖** | 每个涉及数据库的任务已标注依赖的汇总 SQL 文件路径，不需要 SQL 的任务已写明"本任务不新增 SQL，但开始前仍需核查依赖表结构" |
+| 32 | **tests.md 包含数据库结构核查用例** | 测试用例中包含 SHOW CREATE TABLE / SHOW COLUMNS 等数据库结构核查用例 |
+| 33 | **汇总 SQL 格式规范** | SQL 脚本采用简单直接格式（ALTER TABLE / INSERT），不使用 INFORMATION_SCHEMA 判断、PREPARE/EXECUTE 等过度兼容脚本，按任务编号或功能块追加注释 |
+| 34 | **数据库迁移类任务 prompt 强制顺序（阻塞级）** | 涉及表结构重构、旧数据迁移、状态字段变更、分页筛选依赖新表/新状态时：① prompt/pXX-xxx.md 中必须包含"强制执行顺序"章节；② 章节必须覆盖：核对数据库结构 → 执行表结构改造 → 执行旧数据迁移 → 回填 test-report 证据 → 才允许 Java 编码；③ 任一缺失视为文档交付不完整，阻塞进入开发阶段 |
+| 35 | **版本总 SQL 收口对账（阻塞级）** | 每个涉及数据库的 P/CR 任务必须提供 `P编号 | 表 | 字段/索引/数据 | 源码引用 | 总SQL位置 | 开发库状态 | 测试库状态 | 处理结论` 对账表；开发库已有但源码依赖且总 SQL 缺失时必须补总 SQL；测试库已有字段不得重复 ADD，类型/注释不一致时生成 MODIFY；无对账表不得标记完成 |
+| 41 | **跨仓实体字段对账（阻塞级）** | 多仓共享表、复制实体、MyBatis-Plus `@TableName`/`BaseMapper` 时：① 必须提供 `表 | 真源结构 | 消费仓 | 实体/Mapper/SQL 字段 | 实际库字段 | 处理结论 | 验证证据`；② 任一消费仓映射不存在列或查询旧字段时阻塞；③ 不得通过给测试库补废弃字段绕过 |
+| 42 | **真实入口与测试端点分级（阻塞级）** | 涉及外部系统链路时：① test-report 必须分开记录 `Mock 验证`、`测试端点验证`、`真实入口验证`；② 测试 Controller/绕过鉴权端点只能标记局部通过；③ 无真实入口 payload/响应/trace/DB 时，不得写真实链路通过 |
+| 44 | **Red-Green 证据占位（阻塞级）** | test-report.md 必须预置 `RED 失败证据`、`GREEN 通过证据`、`接口自动化证据`、`DB 核查证据`、`日志核查证据`、`未自动化/阻塞用例`；每项绑定 tests.md 用例 ID |
+| 45 | **Superpowers 技术详设继承（阻塞级）** | implementation prompt 必须包含 `Superpower 技术详设继承`，链接 state 中的 `technical_design`，继承源码级 HOW、TDD/RED 顺序、团队分工和执行边界；prompt 不得让 agent 覆盖 OpenSpec/SDD 的 API、DB、字段语义、tests 或验收门禁 |
+| 46 | **handoff hash 继承（阻塞级）** | implementation prompt 必须包含 `上下文防漂移与状态继承`，链接 `.sdd/handoff/sdd-context.md`，记录 handoff_hash，并要求修改 SDD 文档后重跑 `superflow-handoff.sh --refresh` 和 `superflow-guard.sh <change-dir> implement` |
+| 47 | **状态机执行决策（阻塞级）** | implementation prompt 必须包含 `状态机执行决策`，记录 build_mode、isolation、tdd_mode、review_mode、implementation_prompt、worktree_ports，并要求进入 verify 前执行 `superflow-state.sh scale` 和 `superflow-guard.sh implement --apply` |
+
+**结果处理**
+
+- **全部通过** → 告知用户文档交付完成，可进入实现阶段
+- **任一未通过** → 停止，列出未通过项，询问用户如何处理
+
+---
+
+## 第二阶段：实现交付质量门（每批验收）
+
+每批实现完成后，必须执行以下门禁，**全部通过才能开始下一批**。
+
+### 批次通用门禁
+
+| # | 门禁 | 执行方式 | 通过标准 | 验证人 |
+|---|------|---------|---------|--------|
+| 1 | 编译 | `mvn/gradle clean compile` | BUILD SUCCESS | Worker |
+| 2 | 启动 | 正确命令启动 + 进程验证 | 新进程、健康检查 UP | Worker |
+| 3 | 范围合规 | `git diff --name-only` | 只修改了 prompt 允许范围内的文件 | Worker + Reviewer |
+| 4 | 代码评审 | `code-review-java` / reviewer-checklist | 无 HIGH+ 问题，评审清单全部通过 | Reviewer |
+| 5 | 接口测试 | curl 调接口 | 本批用例全部断言通过 | Tester |
+| 6 | 数据库 | mysql 查询 | 数据状态符合预期 | Tester |
+| 7 | 日志 | grep ERROR | 无 ERROR，关键日志出现 | Tester |
+| 8 | **SDD 集成验收脚本** | `~/.codex/hooks/superflow-verify-integration.sh <test-report.md>` | 启动、curl、DB、日志、证据等级检查全部通过 | Leader |
+| 9 | **批次报告** | 检查报告格式 | 包含全部必填项（完成范围、文件清单、测试执行、不一致项） | Leader |
+| 9 | **数据库前置门禁** | 报告中数据库核查章节 | 包含：检查的表/字段/索引、汇总 SQL 文件路径、执行的脚本、执行结果、复查确认 | Worker + Leader |
+| 10 | **SQL 文件管理** | 检查 SQL 文件数量 | 本需求下只维护一个汇总 SQL 文件，无独立 SQL 文件 | Leader |
+| 11 | **无代码绕过** | 检查业务代码 | 未因字段/默认值/初始化数据缺失而在业务代码中写绕过逻辑 | Reviewer + Leader |
+| 12 | **总 SQL 收口** | 检查源码/Mapper、开发库、测试库现状+总 SQL | 源码读写字段均可在最终数据库结构中找到；总 SQL 覆盖本批新增/变更；无测试库重复 ADD | Reviewer + Leader |
+| 13 | **跨仓数据合同收口** | 检查全部消费仓实体/Mapper/SQL 与真实库结构 | 无实体映射不存在列；无 Mapper 查询旧字段；字段迁移后的查询条件已同步；无法验证的消费仓明确阻塞 | Reviewer + Leader |
+| 14 | **真实入口验收收口** | 检查 test-report 证据等级 | Mock、测试端点、真实入口分级清楚；关键链路至少一条真实入口证据闭环，或明确标记外部阻塞 | Tester + Leader |
+| 15 | **RED-GREEN 收口** | 检查 test-report 同一用例的前后证据 | 编码前 RED 失败输出存在且失败原因正确；编码后同一命令 GREEN 通过；测试后补或未观察 RED 一律阻塞 | Worker + Tester + Leader |
+| 16 | **接口自动化收口** | 检查每个 L3/L4 用例证据 | 包含真实命令、请求体来源、响应断言、DB SELECT、日志关键词和环境信息；HTTP 200 或 DB-only 不能单独通过 | Tester + Leader |
+| 17 | **五项硬门禁收口** | 检查 prompt/test-report/design/tests | 字段语义合同、写入闭环、真实入口调用链、禁止 fallback 与猜测实现、Agent 执行前自检均有证据；任一缺失阻塞 | Reviewer + Leader |
+| 18 | **上下文防漂移收口** | 检查 `.sdd/handoff/*`、`.sdd/state.yaml`、prompt、test-report | handoff_hash 一致；`superflow-guard.sh <change-dir> implement` 或 `verify` 通过；换会话/并行窗口后的执行报告证明已重读 handoff 和原始文档 | Leader |
+| 19 | **状态机收口** | 检查 `.sdd/state.yaml` 和 `superflow-state.sh recover/next` | verify 前 phase 已由 implement guard 推进；verify 后 verification_report、verify_result、verified_at 正确；archive 前必须等待用户确认 | Leader |
+
+### 数据库迁移类任务特有加禁（触发条件：涉及表结构重构、旧数据迁移、状态字段变更、分页筛选依赖新表/新状态）
+
+| # | 门禁 | 执行方式 | 通过标准 | 验证人 |
+|---|------|---------|---------|--------|
+| D1 | **数据库前置核查** | `SHOW CREATE TABLE` / `DESC` / `SELECT COUNT` | 已核对当前开发环境数据库结构，新表/新字段/旧字段状态与设计一致 | Worker |
+| D2 | **表结构改造 SQL** | 执行基线 SQL + 迁移 SQL | 新库基线 SQL 按最终结构整理；开发库/测试库使用单独迁移 SQL 并已执行成功；`SHOW CREATE TABLE` 复查确认 | Worker + Leader |
+| D3 | **旧数据迁移 SQL** | 执行迁移脚本 + 数量核对 | 迁移前 COUNT、迁移后 COUNT 一致；迁移失败已停止并报告，未绕过 | Worker + Leader |
+| D4 | **迁移证据已回填 test-report** | 检查 test-report.md | 包含：SQL 文件路径、数据库连接来源、执行时间、执行结果、`SHOW CREATE TABLE` 摘要、迁移前后数量对比、关键联查结果 | Leader |
+| D5 | **Java 编码是否允许开始** | 综合判定 D1~D4 | D1~D4 全部通过，标记为"允许开始"；任一未通过，标记为"禁止开始"，必须阻塞 | Leader |
+| D6 | **版本总 SQL 收口** | 对比源码/Mapper、开发库、测试库现状+总 SQL | 每个独立任务 SQL 已合并到版本总 SQL；临时/独立 SQL 不作为交付依据；测试库已有字段不重复 ADD；字段类型/注释差异已有 MODIFY 或明确不采纳说明 | Leader |
+
+**数据库迁移类任务阻塞规则：**
+- 如果 D1（数据库前置核查）未执行或发现结构不一致 → **阻塞**，必须先完成核查
+- 如果 D2（表结构改造 SQL）执行失败 → **阻塞**，修复 SQL 后重新执行，禁止先写 Java 代码
+- 如果 D3（旧数据迁移 SQL）执行失败或数量核对不一致 → **阻塞**，必须解决迁移问题，禁止用业务代码绕过
+- 如果 D4（迁移证据）缺失 → **阻塞**，明确"不允许进入编码阶段"，必须补齐 test-report 证据
+- 如果 D6（版本总 SQL 收口）缺失 → **阻塞**，必须补齐汇总 SQL 和对账表，不能只说开发库已存在
+- D5 只有通过后才能开始 Phase 1（读取文档）之后的编码工作
+
+### P0 基线特有加禁
+
+| # | 门禁 | 执行方式 | 通过标准 |
+|---|------|---------|---------|
+| 9 | 工作树干净 | `git status` | 无未提交改动，无脏文件 |
+| 10 | 字段一致性 | 对比 SQL/实体/Mapper/DTO | 全部一致，或已修复/上报 |
+
+### 结果处理
+
+- **全部通过** → 标记本批完成，可开始下一批
+- **任一未通过** → 停止，修复后重新执行全部门禁，不得进入下一批
+- **连续 2 次未通过** → Leader 亲自介入，或拆解为更小的子批次
+
+---
+
+## 设计一致性检查（新增质量门）
+
+在生成所有 implementation prompt 后、进入开发前，执行一致性检查：
+
+### 检查 0：功能点冻结
+
+- 复杂需求必须逐功能点检查 `feature-gates.md`。
+- 当前功能点状态不是 `已冻结` 时，不得生成当前功能点 prompt。
+- 任一前置功能点为 `阻塞`、`理解待确认`、`接口草案待确认` 或 `SDD生成中` 时，不得进入后续功能点。
+- 后续联调追加问题必须新增 CR/Px prompt，不得污染已执行 prompt。
+
+### 检查 1：Prompt → Design 映射
+
+- implementation prompt 中每个任务必须能映射到 design.md / api.md / database-contract.md / tests.md 的具体章节
+- 映射方式：在 prompt 的"精确实现步骤"中标注 `(参考 design.md #{章节})`
+- prompt 必须继承 `docs/superpowers/specs/*-technical-design.md`，并只把它作为
+  源码级 HOW 和执行策略：团队、拆分、TDD、独立测试、Review、验证闭环。
+  不得把 Superpowers 技术详设扩写成新的需求/API/DB/测试事实源。
+
+### 检查 2：设计漂移标记
+
+- 如果 prompt 中出现设计文档没有定义的新方案，标记为 **"设计漂移"**
+- 处理方式：上报 Leader 确认，不允许实现 agent 自行改设计
+
+### 检查 3：实现遗漏标记
+
+- 如果设计文档有章节但没有对应 prompt 覆盖，标记为 **"实现遗漏风险"**
+- 处理方式：补充 prompt 或确认该章节由后续批次覆盖
+
+### 检查 4：前端契约闭环
+
+- 对每个页面字段、列表列、弹窗字段、下拉框、枚举和按钮动作，必须能追踪到 `api.md` 的接口契约、DTO/VO/数据库字段和 `tests.md` 用例。
+- 如果字段名不一致、多个前端字段合并为一个后端字段、使用 `-1` 等哨兵值表达特殊含义，必须在 `api.md` 写明，并在测试中覆盖。
+- 如果某个页面控件需要后端下拉接口，但只在 design/spec 中出现、没有 api.md 或代码落点，标记为 **"联调阻塞"**。
+
+### 检查 4.1：文件接口契约闭环（新增）
+
+- api.md 中每个导出/下载/模板下载接口是否填写了"文件接口契约"章节？
+- 文件流接口的 Controller 方法是否直接操作 HttpServletResponse（而非返回 Response<T>）？
+- 是否设置了 Content-Type 和 Content-Disposition？
+- tests.md 是否包含验证响应头（Content-Type、Content-Disposition）和文件体的用例？
+- 导出接口是否复用了列表筛选条件？是否受分页参数影响？
+
+### 检查 4.2：Excel 导入契约闭环（新增）
+
+- api.md 中每个导入接口是否填写了"Excel 导入/导出契约"章节？
+- failureCount > 0 时业务 code 是否明确为非 0？
+- 模板下载 DTO 和导入解析 DTO 的 @ExcelProperty 列头是否一致？
+- 日期字段是否兼容 yyyy-MM-dd 和 yyyy-MM-dd HH:mm:ss？
+- tests.md 是否包含部分失败、短日期格式的测试用例？
+
+### 检查 4.3：路由一致性闭环（新增）
+
+- api.md 中新增路径是否能在 Controller mapping 找到？
+- Controller 新增 mapping 是否能在 api.md 找到？
+- 同一 Controller 下是否存在固定路径被 `{id}` 抢占的风险？
+- tests.md 是否包含固定路径和路径变量的测试用例？
+
+### 检查 4.4：数据权限决策闭环（新增）
+
+- api.md 中每个访问业务数据的接口是否有数据权限判断（需要/不需要/不确定）？
+- 判断为"需要"的接口，是否已调查当前仓库已有权限模型并写明复用方案？
+- 判断为"不需要"的接口，是否写明了原因？
+- 判断为"不确定"的接口，是否已列入待确认问题并已向用户确认？
+- 未确认的数据权限问题是否阻塞了实现 prompt 生成？
+- 列表和导出是否使用同一数据权限口径？
+- 详情/编辑/删除接口是否做了越权保护？
+- tests.md 是否覆盖至少两个角色的数据范围？
+
+### 检查 4.5：外部依赖契约闭环（新增）
+
+- api.md 中涉及 SDK/第三方/RPC/MQ 的接口是否填写了"外部依赖契约"？
+- SDK 参数是否有来源说明（不是凭字段名猜测）？
+- tests.md 是否记录了真实请求/响应或明确标记外部阻塞？
+- SDK 版本变更是否记录了原因？
+
+### 检查 4.6：跨仓数据合同闭环（新增）
+
+- 涉及的共享表是否有唯一真源：版本总 SQL、database-contract、真实库 `SHOW CREATE TABLE` 三者是否一致？
+- 是否列出全部消费仓，包括 sibling service、外部集成、回调、定时任务、测试端点和导入导出？
+- 每个消费仓的 `@TableName` 实体字段是否都能在真实库字段中找到？
+- MyBatis-Plus `BaseMapper` 默认 SELECT 是否会包含不存在列？
+- Mapper XML/resultMap/手写 SQL 是否仍引用已删除或迁移字段？
+- 旧字段删除、状态字段派生、多站点 JSON 字段等迁移是否同步到查询条件？
+- 发现测试库缺字段时，是否先判断字段是否属于最终合同，避免补废弃字段迁就旧代码？
+
+### 检查 4.7：真实入口验收闭环（新增）
+
+- 第三方/外部集成/支付/设备/客户端链路是否记录真实入口 payload、响应、traceId、关键日志和 DB 证据？
+- test-report 是否把 `Mock 验证`、`测试端点验证`、`真实入口验证` 分开？
+- 测试 Controller、mock endpoint、绕过鉴权端点是否只标记为局部代码路径验证？
+- 如果外部平台只返回泛化失败，是否继续用本服务日志和 DB 旁证判断是外部失败、合同漂移还是代码异常？
+- 真实入口未闭环时，结论是否写 `Blocked`、`Partial` 或 `Mock only`，而不是 `Passed`？
+
+### 检查 5：真实测试证据
+
+- `test-report.md` 中每个通过项必须有可复核证据：命令、URL、请求体或关键参数、响应摘要、断言结果。
+- `BUILD SUCCESS` 只能证明构建通过，不能证明接口测试通过。
+- 出现 `Tests are skipped.`、未启动服务、未获取 token、未调用真实/Mock 外部服务时，对应用例必须标记为"未执行"或"阻塞"。
+- 涉及前端 payload、下拉/枚举、外部 SDK、设备、支付、退款、导入导出或跨系统链路时，必须记录真实测试参数来源；缺少真实参数时不能用占位值替代通过。
+- Bug 修复和 CR/Px 补项必须记录 Red-Green：同一 curl/test/workflow 在修复前失败、修复后通过。
+- 新功能也必须记录 Red-Green：新增自动化用例在生产代码前失败，生产代码后同一命令通过。
+- 如果 RED 没有执行、RED 因环境错误失败、或测试是在代码完成后才新增，对应用例必须标记为"阻塞"，不得写 Passed。
+- 接口自动化必须逐用例绑定：用例 ID、命令、请求数据来源、响应断言、DB SELECT、日志关键词。缺任一证据时不得写真实接口通过。
+- 外部服务不可用或只返回泛化错误时，只能标记为"外部阻塞"、"Mock 验证"或"部分验证"，不能宣称真实链路通过。
+- 测试 Controller、mock endpoint 或绕过鉴权端点不能替代真实外部入口；真实入口缺 payload/响应/trace/DB 任一关键证据时，不得宣称真实链路通过。
+
+### 检查 6：数据库前置门禁证据
+
+- 批次报告中必须包含"数据库前置门禁"章节，写明检查了哪些表/字段/索引/初始化数据。
+- 报告中必须包含汇总 SQL 文件路径、执行的具体脚本、执行结果、复查确认结果。
+- 如果业务代码绕过字段缺失、空 SET、默认值缺失、初始化数据缺失等问题，应优先判断是否是 SQL 未执行导致。
+- 如果根因是 SQL 未执行，修复方向应是执行/补齐汇总 SQL，而不是继续加业务兼容代码。
+- 没有真实数据库结构核查和 SQL 执行证据时，结论必须写"未通过，缺少数据库前置门禁证据"。
+- 检查本需求下是否只维护了一个汇总 SQL 文件，是否存在各任务各自新建的独立 SQL 文件。
+- SQL 脚本是否采用简单直接格式，不存在过度兼容脚本（INFORMATION_SCHEMA 判断、PREPARE/EXECUTE 等）。
+- 检查每个 P/CR 的 SQL 是否已合并进版本总 SQL，而不是只存在于开发库、临时 SQL、agent 输出或局部说明里。
+- 对最终发布脚本必须做三方对账：`源码/Mapper 读写字段`、`开发库结构`、`测试库现状 + 总 SQL 执行后结构`。
+
+### 检查记录格式
+
+```
+一致性检查报告：
+- 检查时间：{timestamp}
+- 检查范围：prompt/*.md vs design.md / api.md / tests.md
+- 设计漂移：X 项
+  - {prompt} 步骤 {n}：{描述} → 处理方式：{fix}
+- 实现遗漏：X 项
+  - design.md #{章节}：{描述} → 处理方式：{fix}
+- 前端契约阻塞：X 项
+  - {页面/字段/接口}：{描述} → 处理方式：{fix}
+- 真实测试证据缺口：X 项
+  - {用例/接口}：{缺失证据} → 处理方式：{fix}
+- 数据库前置门禁证据缺口：X 项
+  - {批次/任务}：{缺失的数据库核查/SQL 执行证据} → 处理方式：{fix}
+  - {批次/任务}：{发现代码绕过数据库缺失} → 根因判断：{SQL 未执行/设计变更} → 修复方向：{执行 SQL / 改设计}
+- 版本总 SQL 收口缺口：X 项
+  - {批次/任务}：{源码引用/开发库字段/测试库状态/总 SQL 缺口} → 处理方式：{补总 SQL / MODIFY / 不采纳并说明}
+- 跨仓数据合同缺口：X 项
+  - {表/消费仓}：{实体/Mapper/SQL 引用字段} → 实际库：{缺失/类型不一致/查询条件旧口径} → 处理方式：{修代码 / @TableField(exist=false) / 补最终合同 SQL / 阻塞}
+- 真实入口验收缺口：X 项
+  - {链路/入口}：{缺失 payload/响应/trace/DB/外部响应} → 当前证据等级：{Mock only / 测试端点 / Partial} → 处理方式：{补真实入口 / 标记外部阻塞}
+- 结论：通过 / 不通过（需修复后重新检查）
+```

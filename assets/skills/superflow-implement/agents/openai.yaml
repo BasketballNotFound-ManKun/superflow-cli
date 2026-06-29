@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Implement"
+  short_description: "生成分批实现 prompt、CR 追加任务与真实验收计划"
+  default_prompt: "Use $superflow-implement to create bounded implementation prompts and validation plans from existing SDD docs."

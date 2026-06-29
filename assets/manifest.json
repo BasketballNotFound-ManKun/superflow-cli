@@ -1,0 +1,53 @@
+{
+  "version": "0.1.2",
+  "agents": ["claude", "codex"],
+  "skills": [
+    "openspec-apply-change",
+    "openspec-archive-change",
+    "openspec-explore",
+    "openspec-propose",
+    "superflow-archive",
+    "superflow-clarify",
+    "superflow-design",
+    "superflow-docs",
+    "superflow-hotfix",
+    "superflow-implement",
+    "superflow-pipeline",
+    "superflow-table-impact-analysis",
+    "superflow-tweak",
+    "superflow-verify"
+  ],
+  "rules": [
+    "superflow-phase-guard.md"
+  ],
+  "scripts": [
+    "superflow-verify-integration.sh",
+    "superflow-delivery-check.sh",
+    "superflow-sql-sync-hook.py",
+    "superflow-contract-hooks.sh",
+    "superflow-enforce-hook.sh",
+    "superflow-hook-guard.sh",
+    "superflow-dependency-update-hook.sh",
+    "superflow-integration-evidence-hook.sh",
+    "superflow-test-report-lint.py",
+    "install-sql-pre-commit.sh",
+    "sync-settings-json.py"
+  ],
+  "agentScripts": {
+    "claude": ["claude-auto-backup-hook.sh"],
+    "codex": ["codex-auto-backup-hook.sh"]
+  },
+  "hooks": [
+    "superflow-enforce-hook.sh",
+    "superflow-hook-guard.sh",
+    "superflow-contract-hooks.sh",
+    "superflow-dependency-update-hook.sh",
+    "superflow-sql-sync-hook.py",
+    "superflow-delivery-check.sh",
+    "superflow-integration-evidence-hook.sh"
+  ],
+  "agentHooks": {
+    "claude": ["claude-auto-backup-hook.sh"],
+    "codex": ["codex-auto-backup-hook.sh"]
+  }
+}

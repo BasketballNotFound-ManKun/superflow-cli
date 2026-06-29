@@ -1,0 +1,9 @@
+{
+  "enabledPlugins": {
+    "test@test": true
+  },
+  "env": {
+    "FOO": "bar"
+  },
+  "hooks": {}
+}

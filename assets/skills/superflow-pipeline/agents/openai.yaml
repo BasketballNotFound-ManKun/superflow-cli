@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Router"
+  short_description: "优先路由到 OpenSpec 技能，并补充 SDD 质量门"
+  default_prompt: "Use $superflow-pipeline to choose the right OpenSpec or SDD phase skill for this request."

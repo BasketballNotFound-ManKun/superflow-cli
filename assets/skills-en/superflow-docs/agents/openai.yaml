@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Docs"
+  short_description: "Generate API-first SDD document sets from frozen feature scope"
+  default_prompt: "Use $superflow-docs to generate API-first OpenSpec SDD documents from the confirmed feature."

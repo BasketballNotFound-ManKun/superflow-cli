@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Docs"
+  short_description: "基于冻结功能点生成 API 先行的完整 SDD 文档集"
+  default_prompt: "Use $superflow-docs to generate API-first OpenSpec SDD documents from the confirmed feature."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Router"
+  short_description: "Route to OpenSpec skills first and add Superflow quality gates"
+  default_prompt: "Use $superflow-pipeline to choose the right OpenSpec or SDD phase skill for this request."

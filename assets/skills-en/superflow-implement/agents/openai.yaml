@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDD Implement"
+  short_description: "Generate batched implementation prompts, follow-up tasks, and real acceptance plans"
+  default_prompt: "Use $superflow-implement to create bounded implementation prompts and validation plans from existing SDD docs."
