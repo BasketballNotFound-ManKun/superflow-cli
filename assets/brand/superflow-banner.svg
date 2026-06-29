@@ -1,0 +1,80 @@
+<svg width="1600" height="420" viewBox="0 0 1600 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">SuperBridge Flow banner</title>
+  <desc id="desc">A dark technical banner for SuperBridge Flow, connecting OpenSpec and Superpowers through a bridge-shaped workflow.</desc>
+  <defs>
+    <radialGradient id="blueGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(328 205) rotate(18) scale(502 230)">
+      <stop stop-color="#67e8f9"/>
+      <stop offset="0.34" stop-color="#2563eb" stop-opacity="0.86"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="greenGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1110 218) rotate(160) scale(430 210)">
+      <stop stop-color="#22c55e" stop-opacity="0.9"/>
+      <stop offset="0.42" stop-color="#0891b2" stop-opacity="0.64"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="flow" x1="174" y1="256" x2="1360" y2="126" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60a5fa"/>
+      <stop offset="0.46" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.28 0 0 0 0 0.65 0 0 0 0 1 0 0 0 0.9 0"/>
+      <feBlend in="SourceGraphic" mode="screen"/>
+    </filter>
+    <pattern id="dotGrid" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#38bdf8" opacity="0.28"/>
+    </pattern>
+  </defs>
+
+  <rect width="1600" height="420" rx="18" fill="#020617"/>
+  <rect width="1600" height="420" rx="18" fill="url(#blueGlow)"/>
+  <rect width="1600" height="420" rx="18" fill="url(#greenGlow)"/>
+  <rect x="0" y="0" width="1600" height="420" fill="url(#dotGrid)" opacity="0.72"/>
+
+  <path d="M94 310C250 136 405 106 568 214C734 324 884 319 1039 181C1159 74 1298 56 1488 112" stroke="url(#flow)" stroke-width="8" stroke-linecap="round" filter="url(#softGlow)"/>
+  <path d="M122 338C298 210 438 205 584 282C743 365 936 308 1054 214C1184 111 1318 103 1476 154" stroke="#e0f2fe" stroke-width="2" stroke-linecap="round" opacity="0.78"/>
+  <path d="M126 282C298 68 513 80 664 196C808 307 966 273 1092 146C1214 23 1374 32 1502 72" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" opacity="0.42"/>
+
+  <g opacity="0.86">
+    <path d="M280 304H1320" stroke="#64748b" stroke-width="2"/>
+    <path d="M360 304C430 218 500 178 570 178C650 178 710 304 790 304C875 304 935 178 1025 178C1100 178 1168 222 1240 304" stroke="#cbd5e1" stroke-width="5" stroke-linecap="round"/>
+    <path d="M422 304V252M528 304V207M635 304V207M742 304V252M858 304V252M965 304V207M1072 304V207M1178 304V252" stroke="#cbd5e1" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <rect x="94" y="84" width="230" height="52" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-opacity="0.45"/>
+    <text x="118" y="118" fill="#bae6fd" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="24" letter-spacing="2">OpenSpec / SDD</text>
+    <rect x="94" y="148" width="230" height="40" rx="8" fill="#020617" stroke="#334155"/>
+    <text x="118" y="174" fill="#94a3b8" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="18">WHAT + contracts</text>
+  </g>
+
+  <g>
+    <rect x="1276" y="238" width="230" height="52" rx="8" fill="#052e2b" stroke="#34d399" stroke-opacity="0.52"/>
+    <text x="1300" y="272" fill="#bbf7d0" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="24" letter-spacing="2">Superpowers</text>
+    <rect x="1276" y="302" width="230" height="40" rx="8" fill="#020617" stroke="#334155"/>
+    <text x="1300" y="328" fill="#94a3b8" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="18">HOW + verification</text>
+  </g>
+
+  <g>
+    <text x="522" y="132" fill="#f8fafc" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="72" font-weight="800" letter-spacing="6">SUPERFLOW</text>
+    <text x="528" y="179" fill="#cbd5e1" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="28" letter-spacing="5">SUPERBRIDGE FLOW</text>
+    <text x="531" y="224" fill="#60a5fa" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="24" letter-spacing="3">FROM REQUIREMENT TO VERIFIED DELIVERY</text>
+  </g>
+
+  <g fill="#e2e8f0" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="17" opacity="0.9">
+    <text x="506" y="355">docs</text>
+    <text x="638" y="355">design</text>
+    <text x="800" y="355">implement</text>
+    <text x="990" y="355">verify</text>
+    <text x="1136" y="355">archive</text>
+  </g>
+
+  <g fill="#38bdf8" filter="url(#softGlow)">
+    <circle cx="486" cy="304" r="7"/>
+    <circle cx="624" cy="304" r="7"/>
+    <circle cx="782" cy="304" r="7"/>
+    <circle cx="960" cy="304" r="7"/>
+    <circle cx="1118" cy="304" r="7"/>
+  </g>
+</svg>

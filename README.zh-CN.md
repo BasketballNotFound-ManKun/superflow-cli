@@ -1,13 +1,56 @@
-# SuperBridge Flow
+<p align="center">
+  <img src="./assets/brand/superflow-banner.svg" alt="SuperBridge Flow banner">
+</p>
 
-[English](./README.md)
+<p align="center">
+  <a href="https://www.npmjs.com/package/@chenmk/superflow"><img alt="npm version" src="https://img.shields.io/npm/v/@chenmk/superflow?style=flat-square"></a>
+  <a href="https://www.npmjs.com/package/@chenmk/superflow"><img alt="monthly downloads" src="https://img.shields.io/npm/dm/@chenmk/superflow?style=flat-square&label=Downloads/mo"></a>
+  <a href="https://www.npmjs.com/package/@chenmk/superflow"><img alt="weekly downloads" src="https://img.shields.io/npm/dw/@chenmk/superflow?style=flat-square&label=Downloads/wk"></a>
+  <a href="https://github.com/BasketballNotFound-ManKun/superflow-cli/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/BasketballNotFound-ManKun/superflow-cli?style=flat-square"></a>
+  <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square"></a>
+  <img alt="Node.js 20+" src="https://img.shields.io/badge/Node.js-20%2B-339933?style=flat-square">
+</p>
+
+<p align="center">
+  <strong>把 OpenSpec/SDD 的合同约束和 Superpowers 的工程纪律，收束成一个可执行的交付工作流。</strong>
+</p>
+
+<p align="center">
+  <a href="./README.md">English</a>
+  ·
+  <a href="#安装">安装</a>
+  ·
+  <a href="#工作流">工作流</a>
+  ·
+  <a href="#star-history">Star History</a>
+</p>
+
+# SuperBridge Flow
 
 通用 SDD 开发工作流 CLI，支持 Claude Code 和 Codex。
 
-把 SuperBridge Flow 技能和配套 hook 脚本整合为单一 npm 包，通过 CLI 自动部署到：
+SuperBridge Flow 不是简单“装两个工具”，而是把 OpenSpec/SDD 和
+Superpowers 编排成一个有状态的研发流程：前者负责需求、合同和验收口径，
+后者负责源码级设计、TDD 顺序、实现分工、review 和真实验证。
+
+CLI 会把 SuperBridge Flow 技能和配套 hook 脚本整合为单一 npm 包，自动部署到：
 
 - Claude Code：`~/.claude/skills/`、`~/.claude/scripts/`，并注册 `~/.claude/settings.json` hook
 - Codex：`~/.codex/skills/`、`~/.codex/hooks/`
+
+## 工作流
+
+```text
+docs -> design -> implement -> verify -> archive
+```
+
+| 阶段 | 主责 | 产物 |
+|------|------|------|
+| `docs` | OpenSpec/SDD | 需求、接口、数据库、测试和验收合同 |
+| `design` | Superpowers | 源码级技术详设、影响面分析和 TDD 计划 |
+| `implement` | Superpowers + SuperBridge Flow | 分批任务 prompt、review 门禁和执行状态 |
+| `verify` | SuperBridge Flow hooks | 有证据的测试报告、真实入口和联调校验 |
+| `archive` | OpenSpec/SDD | 归档后的 spec 状态和生命周期闭环 |
 
 ## 安装
 
@@ -119,6 +162,13 @@ export SUPERFLOW_AUTO_UPDATE=apply
 # 调整最小检查间隔，默认 21600 秒（6 小时）
 export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 ```
+
+## Star History
+
+下图由 Star History 根据 GitHub 公开 star 数据动态生成。仓库保持 private
+时，第三方服务通常读不到完整数据；切换为 public 后会正常展示趋势。
+
+[![Star History Chart](https://api.star-history.com/svg?repos=BasketballNotFound-ManKun/superflow-cli&type=Date)](https://star-history.com/#BasketballNotFound-ManKun/superflow-cli&Date)
 
 ## 许可证
 
