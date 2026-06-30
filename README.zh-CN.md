@@ -179,7 +179,9 @@ export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 下图由 Star History 根据 GitHub 公开 star 数据动态生成。仓库保持 private
 时，第三方服务通常读不到完整数据；切换为 public 后会正常展示趋势。
 
-[![Star History Chart](https://api.star-history.com/svg?repos=BasketballNotFound-ManKun/superflow-cli&type=Date)](https://star-history.com/#BasketballNotFound-ManKun/superflow-cli&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=basketballnotfound-mankun/superflow-cli&type=Date)](https://star-history.com/#basketballnotfound-mankun/superflow-cli&Date)
+
+[打开 Star History 趋势图](https://star-history.com/#basketballnotfound-mankun/superflow-cli&Date)
 
 ## 许可证
 
