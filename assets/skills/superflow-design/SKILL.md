@@ -55,14 +55,21 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    orchestrator, stop and return to `$superflow-docs` unless the OpenSpec/SDD
    contract explicitly grants that ownership with approval evidence.
 6. For field/status/enum/sync changes, include `Field And Status Reverse
-   Impact` and prove writers, readers, filters, derived sync paths, consumers,
+Impact` and prove writers, readers, filters, derived sync paths, consumers,
    and tests. Direct setter-only design is blocked.
-7. Record state:
+7. For third-party, SDK, BEM/parking, payment/refund, financial display,
+   source/origin, status sync, or external dictionary fields, include
+   `External Enum Binding`. Prove local source fields/enums, external fields,
+   external enum values, display/business/financial meaning, source evidence,
+   owner confirmation, unresolved handling, and test evidence. A request
+   succeeding or a field being non-null is not enough; unconfirmed values are
+   blockers and must be returned to `$superflow-docs` or the user.
+8. Record state:
    ```bash
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> technical_design docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> design_doc design.md
    ```
-8. Update `design.md` with `Superpowers Technical Design Handoff`, update
+9. Update `design.md` with `Superpowers Technical Design Handoff`, update
    `sdd-quality-gate.md` with the technical design path and hash, then run
    `../superflow-pipeline/scripts/superflow-handoff.sh <change-dir> --refresh`.
    If the guard reports a stale or missing hash, record the printed hash in
@@ -70,11 +77,12 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    `--refresh` again. Do not set `design_doc` to the Superpowers document;
    `design_doc` is the OpenSpec/SDD contract design, while `technical_design`
    is the Superpowers HOW document.
-9. Run:
-   ```bash
-   ../superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>
-   ../superflow-pipeline/scripts/superflow-guard.sh <change-dir> design --apply
-   ```
+10. Run:
+
+```bash
+../superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>
+../superflow-pipeline/scripts/superflow-guard.sh <change-dir> design --apply
+```
 
 ## Completion
 

@@ -8,7 +8,7 @@
 
 ## 标准模板
 
-```
+````
 使用superpower技能，开启合适的团队，最少包含一名开发和一名测试交叉验证进行需求开发，测试验证闭环交付，更新测试文档和api.md：
 
 # P{batch-id} Prompt：{batch-name}
@@ -154,19 +154,32 @@
 ```bash
 rg -n "<field>|<enum>|<status>|<column>" .
 rg -n "<setter>|<getter>|<mapper column>|<dto field>" src test
-```
+````
 
 同时检查 Mapper XML、实体注解、DTO/VO、SQL 脚本、定时任务、MQ/事件消费、
 回调、第三方适配器、共享表/SDK 和兄弟仓消费方。
 
 完成报告必须包含：
 
-| 字段/状态 | 写入点 | 读取/过滤点 | 派生/同步点 | 跨模块消费方 | 已同步调整 | 不调整理由 | 覆盖测试 |
-|---|---|---|---|---|---|---|---|
-| ____ | ____ | ____ | ____ | ____ | ____ | ____ | ____ |
+| 字段/状态 | 写入点   | 读取/过滤点 | 派生/同步点 | 跨模块消费方 | 已同步调整 | 不调整理由 | 覆盖测试 |
+| --------- | -------- | ----------- | ----------- | ------------ | ---------- | ---------- | -------- |
+| \_\_\_\_  | \_\_\_\_ | \_\_\_\_    | \_\_\_\_    | \_\_\_\_     | \_\_\_\_   | \_\_\_\_   | \_\_\_\_ |
 
 只证明直接 setter/writer 已修改，不证明读取方、过滤方、派生同步方和消费方，
 视为未完成。
+
+## 外部枚举绑定确认（强制）
+
+如果本批涉及第三方、SDK、BEM/停车、支付退款、财务展示、来源字段、状态同步、
+外部字典或外部枚举，必须从 api.md / sdd-quality-gate.md /
+Superpowers 技术详设复制 `外部枚举绑定确认` / `External Enum Binding`，并在编码前复核。
+
+| 业务字段 | 本系统真源字段/枚举 | 外部系统字段 | 外部枚举/字典值 | 展示文案/业务语义/财务语义 | 取值来源                    | owner/确认时间 | 不确定项/阻塞处理      | 覆盖测试 |
+| -------- | ------------------- | ------------ | --------------- | -------------------------- | --------------------------- | -------------- | ---------------------- | -------- |
+| \_\_\_\_ | \_\_\_\_            | \_\_\_\_     | \_\_\_\_        | \_\_\_\_                   | 文档/日志/接口样例/用户确认 | \_\_\_\_       | 无 / Blocked: \_\_\_\_ | \_\_\_\_ |
+
+禁止用请求成功、值非空或字段存在替代外部枚举业务语义确认。未确认的外部枚举、
+支付来源、财务展示含义或兜底映射，必须停止并报告 `Blocked`。
 
 ## SDD 门禁激活（第一步，在所有编码工作之前执行）
 
@@ -195,9 +208,11 @@ cd {project-path} && rm -f .sdd-enforced
 **跳过以上步骤直接编辑代码会被 Hook 拦截。**
 
 ## 本批目标
+
 {一句话描述本批要完成的业务闭环}
 
 示例：
+
 - 完成主数据的 CRUD 接口，包括数据库表、实体、Mapper、Service、Controller，支持后台列表查询和批量导入模板下载。
 - 完成外部事件接入，包括消息解析、准入校验、事件格式化、向 MQ 发布 BusinessEvent。
 
@@ -229,6 +244,7 @@ pwd
 git branch --show-current
 git status --short
 ```
+
 - 确认当前目录包含本批次 worktree 名称
 - 确认当前分支是本批次分支
 - 如有异常，停止工作，不得开始任何代码编辑
@@ -238,16 +254,19 @@ git status --short
 本任务预设端口 = {base-port} + {batch-id} = {port}（如 9250 + 15 = 9265）。
 
 启动应用前检查端口占用：
+
 ```bash
 PORT={port}
 lsof -i :$PORT 2>/dev/null || netstat -tlnp 2>/dev/null | grep ":$PORT "
 ```
+
 - 若预设端口被其他 agent 占用 → 向后递增查找可用端口（到 9350），禁止关闭其他进程
 - 若更换端口，所有接口测试 URL 同步更新
 
 ### 编译依赖问题处理（强制）
 
 编译失败时禁止直接终止：
+
 - 分析错误类型 → 对照 design.md 检查 → 尝试修复 → 重新 clean compile
 - 其他 agent 能正常编译说明环境是对的，问题出在自己的代码
 - 15 分钟无法解决才上报 Leader
@@ -255,6 +274,7 @@ lsof -i :$PORT 2>/dev/null || netstat -tlnp 2>/dev/null | grep ":$PORT "
 ### Token 获取（强制）
 
 接口测试必须先获取真实 token：
+
 ```bash
 # 1. 获取验证码（带 Cookie）
 curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt \
@@ -268,6 +288,7 @@ curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt \
 
 # 3. 从响应 data.token 提取，后续请求 Header 带 token: $TOKEN
 ```
+
 - 禁止 mock-only、禁止假设固定 token
 - 登录失败时必须输出完整响应分析原因
 
@@ -290,23 +311,28 @@ curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt \
 或把任务标记为 `Blocked` / `Partially verified` 并说明阻塞原因。
 
 ## 允许修改的仓库
+
 {repository-name}
 
 ## 允许修改的目录/文件范围
+
 {具体列出允许修改的文件路径，精确到类名}
 
 示例：
+
 - src/main/java/com/example/domain/entity/BusinessRecord.java
 - src/main/java/com/example/domain/mapper/BusinessRecordMapper.java
 - src/main/resources/mapper/BusinessRecordMapper.xml
 - src/main/java/com/example/domain/service/BusinessRecordService.java
 - src/main/java/com/example/domain/controller/BusinessRecordController.java
-- src/main/resources/db/migration/V{version}__add_business_record.sql
+- src/main/resources/db/migration/V{version}\_\_add_business_record.sql
 
 ## 禁止修改的范围
+
 {明确列出禁止触碰的边界}
 
 示例：
+
 - 禁止修改 OtherDomainService.java 及其相关接口（由其他批次负责）
 - 禁止修改 PublicApiController.java（对外接口由其他批次负责）
 - 禁止修改消息协议相关配置和类（由其他批次负责）
@@ -314,17 +340,21 @@ curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt \
 - 禁止修改既有枚举值（如需新增枚举值，在报告中声明）
 
 ## 依赖的前置批次
+
 {列出本批依赖哪些批次已完成}
 
 示例：
+
 - P0 基线：已完成，数据库表结构和实体已对齐
 - P1 核心主数据：已完成，基础 CRUD 可用
 
 ## 业务背景
+
 {简述本批在整体业务中的位置和上下游关系}
 
 示例：
 本批是某业务流程的 P2 核心链路。用户或外部系统提交业务请求后，系统需要：
+
 1. 校验主数据有效性（依赖 P1 的主数据能力）
 2. 创建业务记录并初始化状态机
 3. 根据用户、租户或配置计算业务规则命中
@@ -332,6 +362,7 @@ curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt \
 5. 调用下游依赖完成资源锁定、通知或后续处理
 
 ## 精确实现步骤
+
 {按顺序列出具体要做什么，引用 design.md 章节}
 
 步骤 1：{具体动作}（参考 design.md #{章节}）
@@ -339,15 +370,18 @@ curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt \
 ...
 
 ## 数据库字段要求
+
 {明确字段名、类型、约束，引用 database-contract.md 或 design.md}
 
 **汇总 SQL 文件**：`openspec/changes/{change-id}/sql/{汇总SQL文件名}`
+
 - 本批次所有数据库变更脚本必须从该文件获取
 - 如果需要新增数据库变更，必须追加到该汇总 SQL 文件（按任务编号注释，如 `-- P16 业务字段补齐`）
 - SQL 脚本采用简单直接格式（ALTER TABLE / INSERT），不使用 INFORMATION_SCHEMA 判断、PREPARE/EXECUTE 等过度兼容脚本
 - 如果本批次不需要新增 SQL，写明"本批次不新增 SQL，但开始前仍需核查依赖表结构是否已满足设计"
 
 示例：
+
 - business_record 表：
   - id: BIGINT PK AUTO_INCREMENT
   - name: VARCHAR(64) NOT NULL
@@ -358,15 +392,18 @@ curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt \
   - created_at / updated_at: datetime
 
 ## API/消息契约要求
+
 {明确接口路径、方法、请求/响应字段，或 MQ topic、消息格式}
 
 示例：
 HTTP 接口：
+
 - POST /api/business-records
   - Request: BusinessRecordCreateDTO
   - Response: Result<Long>（返回创建后的 id）
 
 MQ 消息：
+
 - Topic: domain.business.event
 - Body: BusinessEvent
   - recordId: String
@@ -375,9 +412,11 @@ MQ 消息：
   - timestamp: Long
 
 ## 幂等、事务、失败处理要求
+
 {明确每个关键操作的幂等策略、事务边界、失败处理}
 
 示例：
+
 - 创建业务记录：
   - 幂等：基于 userId + businessId + 日期做幂等，重复请求返回已有记录号
   - 事务：@Transactional(rollbackFor = Exception.class)
@@ -389,6 +428,7 @@ MQ 消息：
   - 失败：业务异常时抛异常让 MQ 重试，达到最大重试次数后进死信队列
 
 ## 测试要求
+
 {明确本批需要验证的用例，引用 tests.md}
 
 - 用例 1：{描述}（tests.md #{章节}）
@@ -397,6 +437,7 @@ MQ 消息：
 每个用例必须执行：接口调用 → 数据库验证 → 日志检查
 
 ## 验收命令
+
 {列出本批验收时需要执行的命令}
 
 ```bash
@@ -471,6 +512,7 @@ grep ERROR {log-path} || echo "无 ERROR"
 - 如果发现需要修改"禁止修改的范围"内的文件才能完成本批目标，**停止**，上报 Leader，不允许越界修改
 - 如果发现 tests.md 中的断言在实际环境中不成立，**停止**，列出差异，上报 Leader
 - 如果编译或启动失败且 15 分钟内无法解决，**停止**，上报 Leader
+
 ```
 
 ---
@@ -480,25 +522,31 @@ grep ERROR {log-path} || echo "无 ERROR"
 当 prompt 涉及跨仓库交互时，必须在"业务背景"或"API/消息契约要求"中增加：
 
 ```
+
 ## 跨仓库交互契约
 
 ### 本仓库角色
+
 {生产者/消费者/契约层/业务归口}
 
 ### 上游依赖（本仓库消费）
-| 来源仓库 | 接口/消息 | 契约详情 | 状态 |
-|----------|-----------|----------|------|
-| {repo} | {path/topic} | {字段定义} | 已由 P{n} 提供 |
+
+| 来源仓库 | 接口/消息    | 契约详情   | 状态           |
+| -------- | ------------ | ---------- | -------------- |
+| {repo}   | {path/topic} | {字段定义} | 已由 P{n} 提供 |
 
 ### 下游契约（本仓库提供）
-| 目标仓库 | 接口/消息 | 契约详情 | 状态 |
-|----------|-----------|----------|------|
-| {repo} | {path/topic} | {字段定义} | 本批交付 |
+
+| 目标仓库 | 接口/消息    | 契约详情   | 状态     |
+| -------- | ------------ | ---------- | -------- |
+| {repo}   | {path/topic} | {字段定义} | 本批交付 |
 
 ### 禁止越界
+
 - 本仓库不处理 {其他仓库的职责}
 - 本仓库不直接操作 {其他仓库的数据库}
-```
+
+````
 
 ---
 
@@ -533,4 +581,4 @@ grep ERROR {log-path} || echo "无 ERROR"
 
 ## 评审清单
 - [reviewer-checklist.md](reviewer-checklist.md)
-```
+````

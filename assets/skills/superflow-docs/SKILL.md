@@ -76,6 +76,15 @@ For complex requirements, verify these before writing docs:
   If the docs only prove that a value exists, is non-null, or lets the request
   succeed, stop and return to `$superflow-clarify`. If fallback/default/keep-old-value
   behavior is proposed without explicit requirement or owner approval, stop.
+- For third-party, SDK, BEM/parking, payment/refund, financial display,
+  source/origin, status sync, or external dictionary/enum fields, `api.md` and
+  `sdd-quality-gate.md` must include `外部枚举绑定确认` / `External Enum
+Binding` with:
+  `业务字段 | 本系统真源字段/枚举 | 外部系统字段 | 外部枚举/字典值 |
+展示文案/业务语义/财务语义 | 取值来源 | owner/确认时间 |
+不确定项/阻塞处理 | 测试证据`. Unconfirmed values are blockers; do not
+  invent numeric values, origin/source values, display meanings, or fallback
+  mappings.
 - For low-freedom implementation handoff, docs include the five hard gates:
   field semantic contract, write-through persistence closure, real-entry call
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
@@ -202,7 +211,7 @@ Use references only as needed:
 - Do not freeze cross-module design from "this module can technically call it"
   evidence. `design.md` or `traceability-matrix.md` must include:
   `链路步骤 | 调用方向 | 业务入口 owner | 出口/适配 owner | 既有入口/出口 |
-  拟新增入口/出口 | 是否符合职责 | 证据锚点 | 禁止绕路`.
+拟新增入口/出口 | 是否符合职责 | 证据锚点 | 禁止绕路`.
   Outbound adapters, protocol translators, MQ notification consumers, and
   device gateways must not be promoted into business-entry orchestrators unless
   the contract says they own that entry and records approval.
@@ -231,14 +240,14 @@ Use references only as needed:
 - `design.md` must reference the frozen `api.md` fields and errors.
 - `design.md` must include a "字段语义合同" table for every risky field:
   `字段 | 来源表/DTO/事件 | 真实语义 | 目标字段 | 目标语义 | 是否可等价 |
-  证据锚点 | 禁止用法 | 不确定项/owner`.
+证据锚点 | 禁止用法 | 不确定项/owner`.
 - `design.md` or `traceability-matrix.md` must include a "写入闭环" table for
   every persisted or synchronized value:
   `业务动作 | Java setter/赋值点 | Converter/DTO 映射 | Mapper insert/update |
-  DB column | 后续读取方 | 消费入口 | 验证 SQL | 测试用例`.
+DB column | 后续读取方 | 消费入口 | 验证 SQL | 测试用例`.
 - `design.md` must include a "真实入口调用链" table:
   `用户/外部动作 | 上游服务/接口 | 本仓入口 | MQ/异步回调 | 关键字段变化 |
-  DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
+DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
 - `design.md` or `sdd-quality-gate.md` must include a "禁止 fallback 与猜测实现"
   section. It must explicitly list forbidden defaults, fallback queries,
   substitute fields, keep-old-value behavior, null conversion, and downstream
@@ -252,14 +261,14 @@ Use references only as needed:
   The final technical design is created by `$superflow-design`, not `$superflow-docs`.
 - `test-report.md` skeleton must include an "Agent 执行前自检" section with:
   `真实入口已定位 | 字段语义合同已核对 | 写入闭环已核对 |
-  禁止兜底边界已确认 | RED 测试已执行 | 允许修改文件 | 禁止修改文件 |
-  阻塞项`.
+禁止兜底边界已确认 | RED 测试已执行 | 允许修改文件 | 禁止修改文件 |
+阻塞项`.
 - `tasks.md`, `tests.md`, and later prompts must use the same field names as `api.md`.
 - `tests.md` is a pre-implementation contract. It must not be a vague checklist.
   Every case must include:
   `用例ID | 需求/Scenario | 层级L1/L2/L3/L4 | 前置数据 | 操作步骤 |
-  自动化命令 | 响应断言 | DB断言 | 日志断言 | RED预期失败 | GREEN预期通过 |
-  test-report证据位置`.
+自动化命令 | 响应断言 | DB断言 | 日志断言 | RED预期失败 | GREEN预期通过 |
+test-report证据位置`.
 - Each visible UI field, button action, list column, dropdown, and enum must map to API/DTO/DB/tests or be explicitly out of scope.
 - Every spec scenario must have at least one test case.
 - Every implementation batch must have at least one test that can fail before

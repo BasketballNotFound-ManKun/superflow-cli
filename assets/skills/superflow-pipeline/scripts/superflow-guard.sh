@@ -248,6 +248,17 @@ change_has_field_status_risk() {
     "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null
 }
 
+change_has_external_enum_risk() {
+  grep -RIEiq \
+    'BEM|payOrigin|payMode|支付来源|支付方式|财务口径|第三方枚举|第三方字段|third[- ]party enum|source system|SDK.*枚举|枚举.*SDK' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_has_architecture_boundary_risk() {
   grep -RIEiq \
     '跨仓|跨服务|sibling|SDK|MQ|topic|consumer|scheduler|定时|device|设备|callback|回调|third[- ]party|第三方|mini[- ]program|小程序|gateway|网关|adapter|适配|protocol|协议|interconnect|互联互通|调用链|入口|出口' \
@@ -281,6 +292,17 @@ require_prompt_set() {
   fi
 }
 
+require_external_enum_contract() {
+  local path="$1"
+  local label="$2"
+  require_grep 'External Enum Binding|外部枚举绑定|第三方字段语义绑定|外部字段.*外部枚举|外部枚举.*展示文案|owner.*确认' "$path" "$label"
+  require_grep '外部字段|外部系统字段|External field|target field' "$path" "$label external field column"
+  require_grep '外部枚举|外部字典|External enum|target enum' "$path" "$label external enum column"
+  require_grep '展示文案|业务语义|财务语义|display|business meaning' "$path" "$label display/business meaning column"
+  require_grep 'owner|确认|confirmed|approval' "$path" "$label owner confirmation column"
+  require_grep '不确定|阻塞|blocker|unknown|待确认' "$path" "$label unresolved/blocker column"
+}
+
 transition_event=""
 
 if [[ -x "$VALIDATE" && -f "$CHANGE_DIR/.sdd/state.yaml" ]]; then
@@ -310,6 +332,10 @@ case "$PHASE" in
     require_grep 'RED|红绿|GREEN' tests.md "RED/GREEN test contract"
     require_grep 'curl|Postman|Newman|pytest|RestAssured|自动化命令' tests.md "interface automation command"
     require_grep 'handoff_hash|sdd-context|上下文包|防漂移' sdd-quality-gate.md "handoff/context-drift gate"
+    if change_has_external_enum_risk; then
+      require_external_enum_contract api.md "external enum binding contract"
+      require_external_enum_contract sdd-quality-gate.md "external enum binding quality gate"
+    fi
     require_markdown_links_valid
     transition_event="docs-complete"
     ;;
@@ -342,6 +368,9 @@ case "$PHASE" in
         if change_has_field_status_risk; then
           require_grep 'Field And Status Reverse Impact|字段/状态反向影响面|写入点.*读取|读取/过滤点|派生/同步点' "$technical_design_rel" "field/status reverse impact matrix"
         fi
+        if change_has_external_enum_risk; then
+          require_external_enum_contract "$technical_design_rel" "external enum binding matrix"
+        fi
       fi
     fi
     require_grep 'Superpowers Technical Design Handoff|Superpower 技术详设|technical_design|源码级 HOW' design.md "Superpowers technical design handoff"
@@ -366,6 +395,9 @@ case "$PHASE" in
         require_grep 'Superpower 技术详设继承|technical_design|源码级 HOW|Technical Design' "$prompt_rel" "prompt Superpowers technical design inheritance"
         if change_has_field_status_risk; then
           require_grep '字段/状态反向影响面|Field And Status Reverse Impact|读取/过滤点|派生/同步点' "$prompt_rel" "prompt field/status reverse impact inheritance"
+        fi
+        if change_has_external_enum_risk; then
+          require_external_enum_contract "$prompt_rel" "prompt external enum binding inheritance"
         fi
       fi
       require_grep '上下文防漂移|handoff_hash|sdd-context' "$prompt_rel" "prompt context drift inheritance"
@@ -392,6 +424,9 @@ case "$PHASE" in
     require_grep '接口自动化|curl|Postman|Newman|pytest|RestAssured' test-report.md "interface automation evidence"
     require_grep 'DB|数据库|SELECT|SHOW CREATE' test-report.md "DB evidence"
     require_grep 'superflow-verify-integration|superflow-delivery-check|superflow-test-report-lint' test-report.md "SuperBridge Flow hook/script evidence"
+    if change_has_external_enum_risk; then
+      require_grep 'External Enum Binding|外部枚举绑定|第三方字段语义绑定|外部展示|展示文案|业务语义|财务语义|BEM|真实入口' test-report.md "external enum binding runtime evidence"
+    fi
     require_test_report_lint
     require_markdown_links_valid
     if [[ "$(state_get verification_report)" == "" || "$(state_get verification_report)" == "null" ]]; then
