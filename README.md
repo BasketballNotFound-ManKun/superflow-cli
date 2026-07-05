@@ -46,6 +46,42 @@ real verified delivery. SuperBridge Flow makes that gap explicit:
 The CLI installs skills, hooks or command aliases, rules, scripts, handoff
 state, and dependency guards for Claude Code, Codex, and OpenCode.
 
+## Highlights
+
+- **9 catalogued failure modes, blocked at the gate.** Nine real ways AI breaks
+  in production — swallowing the whole PRD then forgetting details, editing
+  only the setter while missing consumers, SQL drift across dev/test/DB
+  layers, mock-only "已验证" reports, and more — each baked into a hard check
+  the agent cannot skip.
+- **Architecture 6-questions before cross-service code.** Any change crossing
+  service / SDK / MQ / device / callback / gateway boundaries must answer six
+  questions in the technical design: who owns the module, what is the call
+  direction, where are existing entry/exit points, are new ones allowed, which
+  paths are forbidden, what is the evidence anchor.
+- **Field And Status Reverse Impact matrix.** Every schema / status / enum
+  change must enumerate its write sites, read sites, filter conditions,
+  derived / sync sites, cross-module consumers, and test coverage — including
+  reverse-recovery scenarios (down then up again, deleted then re-created, old
+  value unavailable while upstream didn't send the field).
+- **6 productized lessons as gates, not reminders.** Full-impact discovery,
+  business semantics over HTTP 200, no default fallbacks, DB reconciliation,
+  real-entry evidence, code-data verification — each baked into a specific
+  phase and a specific hook. Missing evidence blocks the next phase.
+- **5 phases × 5+ guard scripts as hard gates.** `superflow-guard.sh` +
+  `superflow-hook-guard.sh` + `superflow-contract-hooks.sh` +
+  `superflow-sql-sync-hook.py` + `superflow-test-report-lint.py` +
+  `superflow-verify-integration.sh`. No handoff hash → no implementation. No
+  real-entry evidence → no "verified" report.
+- **Context-drift proof via handoff + state + sha256.** When long sessions
+  compress, when agents switch, when multiple workers parallelize —
+  `.sdd/handoff/sdd-context.{md,json}` + sha256 + `.sdd/state.yaml` keep
+  Worker / Tester / Reviewer on the same source of truth. Stale prompts
+  blocked by hash mismatch.
+- **User says one sentence, pipeline runs 9 steps.** No prompt engineering
+  required: `> use SuperFlow to handle this requirement` triggers clarify →
+  docs → design → implement → verify → archive. Phase progression, guards,
+  hashes, and hooks are flow-enforced, not user-discipline.
+
 ## Workflow
 
 ```text
