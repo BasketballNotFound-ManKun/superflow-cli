@@ -6,7 +6,7 @@ import {
   createUninstallPlan,
   detectInstalledUninstallTargets,
   runUninstall,
-} from '../../src/commands/uninstall.js';
+} from '../../src/app/commands/uninstall.js';
 
 describe('commands/uninstall', () => {
   it('plans uninstall targets under the provided project path', () => {

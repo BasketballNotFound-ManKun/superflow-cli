@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cliText, resolveCliLanguage } from '../../src/core/cli-help.js';
+import { cliText, resolveCliLanguage } from '../../src/domains/config/cli-help.js';
 
 describe('core/cli-help', () => {
   it('uses SUPERFLOW_LANG as the default help language', () => {

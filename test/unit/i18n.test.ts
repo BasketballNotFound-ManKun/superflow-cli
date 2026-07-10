@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeLanguage, t } from '../../src/core/i18n.js';
+import { normalizeLanguage, t } from '../../src/domains/config/i18n.js';
 
 describe('core/i18n', () => {
   it('normalizes language aliases', () => {

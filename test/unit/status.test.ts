@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { collectStatus } from '../../src/commands/status.js';
+import { collectStatus } from '../../src/app/commands/status.js';
 
 describe('commands/status', () => {
   it('collects active SDD changes with phase, tasks, and next skill', async () => {

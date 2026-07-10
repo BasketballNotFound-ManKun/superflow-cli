@@ -7,21 +7,21 @@ import {
   CODEX_PROMPTS,
   hookScriptsForAgent,
   scriptsForAgent,
-} from '../core/assets.js';
+} from '../../domains/skill/assets.js';
+import { getPlatformPaths } from '../../platform/paths.js';
 import {
-  getPlatformPaths,
   parseAgentSelection,
   parseInstallScope,
   resolveAgents,
-} from '../core/detect.js';
-import { deployRules } from '../core/rules.js';
-import { deployScripts } from '../core/scripts.js';
-import { deploySkill } from '../core/skills.js';
-import { deployPrompts } from '../core/prompts.js';
-import { clearSddHooks, registerHook } from '../core/registry.js';
-import type { Agent, InstallScope } from '../types.js';
-import { runCommand } from '../utils/shell.js';
-import { installCodexSuperpowers, installSuperpowers } from '../core/dependencies.js';
+} from '../../domains/agent.js';
+import { deployRules } from '../../domains/skill/rules.js';
+import { deployScripts } from '../../domains/skill/scripts.js';
+import { deploySkill } from '../../domains/skill/deploy.js';
+import { deployPrompts } from '../../domains/skill/prompts.js';
+import { clearSddHooks, registerHook } from '../../domains/hook.js';
+import type { Agent, InstallScope } from '../../types.js';
+import { runCommand } from '../../platform/process.js';
+import { installCodexSuperpowers, installSuperpowers } from '../../domains/deps.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

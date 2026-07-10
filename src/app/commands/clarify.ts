@@ -1,4 +1,4 @@
-import { checkSkillDeployment, type SkillCheckOptions } from '../core/skill-check.js';
+import { checkSkillDeployment, type SkillCheckOptions } from '../../domains/skill/check.js';
 
 const SKILL_NAME = 'superflow-clarify';
 

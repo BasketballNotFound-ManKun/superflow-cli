@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { registerHook, clearSddHooks, HOOK_MAP } from '../../src/core/registry.js';
-import { hookScriptsForAgent } from '../../src/core/assets.js';
+import { registerHook, clearSddHooks, HOOK_MAP } from '../../src/domains/hook.js';
+import { hookScriptsForAgent } from '../../src/domains/skill/assets.js';
 
 const TMP = path.join(os.tmpdir(), 'sdd-test-registry-' + Date.now());
 const SETTINGS = path.join(TMP, 'settings.json');

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { collectDoctor, countSddHookCommands } from '../../src/commands/doctor.js';
+import { collectDoctor, countSddHookCommands } from '../../src/app/commands/doctor.js';
 
 describe('commands/doctor', () => {
   it('auto scope checks both project and global scopes', async () => {

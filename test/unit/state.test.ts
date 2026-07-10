@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { loadState, saveState, initState } from '../../src/core/state.js';
+import { loadState, saveState, initState } from '../../src/domains/state.js';
 
 const TEST_STATE = path.join(os.tmpdir(), 'sdd-test-state-' + Date.now() + '.json');
 

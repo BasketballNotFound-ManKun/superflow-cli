@@ -5,7 +5,7 @@ import {
   getManifestRules,
   getManifestScripts,
   getManifestSkillNames,
-} from '../../src/core/manifest.js';
+} from '../../src/domains/config/manifest.js';
 
 describe('core/manifest', () => {
   it('manifest exposes SDD, OpenSpec, and verify skill assets', () => {

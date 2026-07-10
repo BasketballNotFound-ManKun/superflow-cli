@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { Agent } from '../types.js';
+import type { Agent } from '../../types.js';
 
 export interface DeployScriptsOptions {
   agent?: Agent;

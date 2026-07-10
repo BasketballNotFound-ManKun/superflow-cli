@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import path from 'path';
-import { normalizeLanguage, t } from '../core/i18n.js';
-import type { Language } from '../types.js';
+import { normalizeLanguage, t } from '../../domains/config/i18n.js';
+import { collectCheck } from './check.js';
+import type { Language } from '../../types.js';
 
 export interface ChangeStatus {
   name: string;
@@ -10,6 +11,7 @@ export interface ChangeStatus {
   phase: string;
   buildMode: string;
   reviewMode: string;
+  autoTransition: string;
   verifyMode: string;
   verifyResult: string;
   tasksCompleted: number;
@@ -17,6 +19,7 @@ export interface ChangeStatus {
   nextCommand: string | null;
   nextReason: string;
   risks: Array<{ level: 'info' | 'warning' | 'error'; code: string; message: string }>;
+  docGaps: number;
 }
 
 export interface StatusResult {
@@ -53,6 +56,8 @@ export async function collectStatus(targetPath = '.'): Promise<StatusResult> {
     if (state.archived === 'true' || state.phase === 'done') continue;
     const tasks = countTasks(path.join(changeDir, 'tasks.md'));
 
+    const docCheck = collectCheck(changeDir, entry);
+
     changes.push({
       name: entry,
       path: path.relative(projectPath, changeDir),
@@ -60,6 +65,7 @@ export async function collectStatus(targetPath = '.'): Promise<StatusResult> {
       phase: state.phase ?? 'unknown',
       buildMode: state.build_mode ?? 'null',
       reviewMode: state.review_mode ?? 'null',
+      autoTransition: state.auto_transition ?? 'true',
       verifyMode: state.verify_mode ?? 'null',
       verifyResult: state.verify_result ?? 'pending',
       tasksCompleted: tasks.done,
@@ -67,6 +73,7 @@ export async function collectStatus(targetPath = '.'): Promise<StatusResult> {
       nextCommand: nextCommand(entry, state.phase),
       nextReason: nextReason(state.phase, tasks, state.verify_result, resolveLanguage()),
       risks: buildRisks(changeDir, state, tasks, resolveLanguage()),
+      docGaps: docCheck.failed,
     });
   }
 
@@ -169,6 +176,20 @@ function buildRisks(
   if ((state.workflow ?? 'full') === 'full' && (state.review_mode ?? 'null') === 'null') {
     risks.push({ level: 'warning', code: 'REVIEW_MODE_MISSING', message: t(language, 'riskReviewMissing') });
   }
+  if ((state.auto_transition ?? 'true') === 'false') {
+    risks.push({ level: 'info', code: 'AUTO_TRANSITION_OFF', message: language === 'en' ? 'auto_transition is off; manual trigger required.' : 'auto_transition 已关闭，需手动推进阶段。' });
+  }
+  // 文档缺口检测（复用已导入的 collectCheck）
+  const docCheck = collectCheck(changeDir, '');
+  if (docCheck.failed > 0) {
+    risks.push({
+      level: 'error',
+      code: 'DOCS_INCOMPLETE',
+      message: language === 'en'
+        ? `Missing ${docCheck.failed} required SDD document(s). Run: superflow check <change>`
+        : `缺失 ${docCheck.failed} 个必备 SDD 文档。执行: superflow check <change>`,
+    });
+  }
   if (state.verify_result === 'fail') {
     risks.push({ level: 'error', code: 'VERIFY_FAILED', message: t(language, 'riskVerifyFailed') });
   } else if (phase === 'verify' && !fileExists(changeDir, 'test-report.md')) {
@@ -197,8 +218,9 @@ function printStatus(result: StatusResult, language: Language): void {
     const tasks = change.tasksTotal > 0
       ? ` | tasks ${change.tasksCompleted}/${change.tasksTotal}`
       : '';
+    const docGap = change.docGaps > 0 ? ` 📋缺${change.docGaps}文档` : '';
     console.log(
-      `- ${change.name}: phase=${change.phase}, workflow=${change.workflow}, review_mode=${change.reviewMode}${tasks}`
+      `- ${change.name}: phase=${change.phase}, workflow=${change.workflow}, review=${change.reviewMode}, auto=${change.autoTransition}${tasks}${docGap}`
     );
     console.log(`  path: ${change.path}`);
     if (change.nextCommand) console.log(`  next: ${change.nextCommand}`);

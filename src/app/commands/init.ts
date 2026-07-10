@@ -3,14 +3,13 @@ import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import { createInterface } from 'readline/promises';
 import { stdin as input, stdout as output } from 'process';
+import { detectOS } from '../../platform/os.js';
+import { getPlatformPaths, stateFile } from '../../platform/paths.js';
 import {
-  detectOS,
-  getPlatformPaths,
   parseAgentSelection,
   parseInstallScope,
   resolveAgents,
-} from '../core/detect.js';
-import { stateFile } from '../utils/path.js';
+} from '../../domains/agent.js';
 import {
   installOpenspec,
   initializeOpenspec,
@@ -20,23 +19,23 @@ import {
   installUnderstand,
   installCodexUnderstand,
   installApiDocChangelog,
-} from '../core/dependencies.js';
-import { deploySkill } from '../core/skills.js';
-import { deployScripts } from '../core/scripts.js';
-import { deployPrompts } from '../core/prompts.js';
-import { deployRules } from '../core/rules.js';
-import { registerHook, clearSddHooks } from '../core/registry.js';
-import { loadState, saveState, initState } from '../core/state.js';
-import { scaffoldBusinessContext, checkUnderstandScan, printSoftPrompt } from '../core/context.js';
+} from '../../domains/deps.js';
+import { deploySkill } from '../../domains/skill/deploy.js';
+import { deployScripts } from '../../domains/skill/scripts.js';
+import { deployPrompts } from '../../domains/skill/prompts.js';
+import { deployRules } from '../../domains/skill/rules.js';
+import { registerHook, clearSddHooks } from '../../domains/hook.js';
+import { loadState, saveState, initState } from '../../domains/state.js';
+import { scaffoldBusinessContext, checkUnderstandScan, printSoftPrompt } from '../../domains/config/context.js';
 import {
   ALL_RULES,
   ALL_SKILLS,
   CODEX_PROMPTS,
   scriptsForAgent,
   hookScriptsForAgent,
-} from '../core/assets.js';
-import { normalizeLanguage, t } from '../core/i18n.js';
-import type { Agent, AgentSelection, InstallScope, Language } from '../types.js';
+} from '../../domains/skill/assets.js';
+import { normalizeLanguage, t } from '../../domains/config/i18n.js';
+import type { Agent, AgentSelection, InstallScope, Language } from '../../types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -532,8 +531,8 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
         log('  ✓ understand-anything graph detected: ' + understandResult.graphPath);
       } else {
         log(zh
-          ? '  ⚠ understand-anything 还没扫（用户在 Claude 会话中跑 /understand）'
-          : '  ⚠ understand-anything has not scanned this project yet (run /understand in an agent session)'
+          ? '  ⚠ understand-anything 还没扫 — SDD 影响面发现前置条件，不跑会导致 docs/design 门禁阻塞'
+          : '  ⚠ understand-anything not scanned — required for SDD impact discovery; will block docs/design gate'
         );
       }
       // 3. 软提示

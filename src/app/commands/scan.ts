@@ -1,8 +1,8 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { scaffoldBusinessContext, checkUnderstandScan, printSoftPrompt } from '../core/context.js';
-import { normalizeLanguage } from '../core/i18n.js';
-import type { Language } from '../types.js';
+import { scaffoldBusinessContext, checkUnderstandScan, printSoftPrompt } from '../../domains/config/context.js';
+import { normalizeLanguage } from '../../domains/config/i18n.js';
+import type { Language } from '../../types.js';
 
 export interface ScanOptions {
   dryRun: boolean;

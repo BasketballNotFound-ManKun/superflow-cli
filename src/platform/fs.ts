@@ -5,7 +5,6 @@ import path from 'path';
 /**
  * 计算目录的 SHA-256 哈希。
  * 算法：递归读取所有文件，path + sha256(file) 拼接后整体 hash。
- * 顺序敏感于文件名（sort 排序），但忽略目录的 mtime。
  */
 export function computeDirHash(dir: string): string {
   const files = collectFiles(dir);

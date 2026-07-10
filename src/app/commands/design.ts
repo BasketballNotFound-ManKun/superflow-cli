@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   checkSkillDeployment,
   type SkillCheckOptions,
-} from "../core/skill-check.js";
+} from "../../domains/skill/check.js";
 
 const SKILL_NAME = "superflow-design";
 const __filename = fileURLToPath(import.meta.url);

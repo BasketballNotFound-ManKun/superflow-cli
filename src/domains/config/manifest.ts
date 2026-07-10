@@ -1,5 +1,5 @@
-import manifestJson from '../../assets/manifest.json' with { type: 'json' };
-import type { Agent } from '../types.js';
+import manifestJson from '../../../assets/manifest.json' with { type: 'json' };
+import type { Agent } from '../../types.js';
 
 export interface SddManifest {
   version: string;

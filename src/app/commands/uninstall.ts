@@ -7,17 +7,17 @@ import {
   CODEX_PROMPTS,
   LEGACY_CODEX_PROMPTS,
   scriptsForAgent,
-} from '../core/assets.js';
+} from '../../domains/skill/assets.js';
+import { getPlatformPaths } from '../../platform/paths.js';
 import {
-  getPlatformPaths,
   parseAgentSelection,
   parseInstallScope,
   resolveAgents,
-} from '../core/detect.js';
-import { rulePath } from '../core/rules.js';
-import { clearSddHooks } from '../core/registry.js';
-import { runCommand } from '../utils/shell.js';
-import type { Agent, InstallScope } from '../types.js';
+} from '../../domains/agent.js';
+import { rulePath } from '../../domains/skill/rules.js';
+import { clearSddHooks } from '../../domains/hook.js';
+import { runCommand } from '../../platform/process.js';
+import type { Agent, InstallScope } from '../../types.js';
 
 type UninstallScope = InstallScope | 'auto';
 

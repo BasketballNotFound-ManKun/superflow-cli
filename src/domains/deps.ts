@@ -2,13 +2,13 @@ import { promises as fs } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { runCommand } from '../utils/shell.js';
+import { runCommand } from '../platform/process.js';
 import type { Agent, InstallScope } from '../types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// dist/core/dependencies.js → ../../assets
-const ASSETS_DIR = path.resolve(__dirname, '..', '..', 'assets');
+// dist/domains/deps.js → ../../../assets
+const ASSETS_DIR = path.resolve(__dirname, '..', '..', '..', 'assets');
 
 export interface InstallResult {
   ok: boolean;

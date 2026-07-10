@@ -1,4 +1,4 @@
-import type { Language } from '../types.js';
+import type { Language } from '../../types.js';
 import { normalizeLanguage } from './i18n.js';
 
 export interface CliHelpText {

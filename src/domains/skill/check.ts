@@ -1,7 +1,8 @@
 import { existsSync } from 'fs';
 import path from 'path';
-import { computeDirHash } from './integrity.js';
-import { getPlatformPaths, parseAgentSelection, resolveAgents } from './detect.js';
+import { computeDirHash } from '../../platform/fs.js';
+import { getPlatformPaths } from '../../platform/paths.js';
+import { parseAgentSelection, resolveAgents } from '../agent.js';
 
 export interface SkillCheckOptions {
   agent?: string;

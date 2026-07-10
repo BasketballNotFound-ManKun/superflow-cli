@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { detectOS } from '../../src/platform/os.js';
+import { getPlatformPaths } from '../../src/platform/paths.js';
 import {
-  detectOS,
-  getPlatformPaths,
   parseAgentSelection,
   parseInstallScope,
   resolveAgents,
-} from '../../src/core/detect.js';
+} from '../../src/domains/agent.js';
 
 describe('core/detect', () => {
   afterEach(() => {

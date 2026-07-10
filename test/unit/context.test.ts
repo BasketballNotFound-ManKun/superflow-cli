@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { scaffoldBusinessContext, printSoftPrompt, checkUnderstandScan } from '../../src/core/context.js';
+import { scaffoldBusinessContext, printSoftPrompt, checkUnderstandScan } from '../../src/domains/config/context.js';
 
 // 重新导出一个测试可访问的文件名列表（因为原文件未 export）
 const CONTEXT_FILES = ['business-rules.md', 'incidents.md', 'decisions.md', 'external-systems.md'] as const;

@@ -1,12 +1,12 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import type { Language } from '../types.js';
+import type { Language } from '../../types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// dist/core/context.js -> ../../assets/context-templates*
-const ASSETS_DIR = path.resolve(__dirname, '..', '..', 'assets');
+// dist/domains/config/context.js -> ../../../assets/context-templates*
+const ASSETS_DIR = path.resolve(__dirname, '..', '..', '..', 'assets');
 
 const CONTEXT_FILES = [
   'business-rules.md',
@@ -142,12 +142,16 @@ export function printSoftPrompt(
   } else {
     console.log('');
     console.log(zh
-      ? '⚠️  understand-anything 还没扫（可选）：'
-      : '⚠️  understand-anything has not scanned this project yet (optional):'
+      ? '⚠️  understand-anything 还没扫 — 这是 SDD 平台级影响面发现的前置条件'
+      : '⚠️  understand-anything has not scanned this project yet — required for SDD impact discovery'
     );
     console.log(zh
       ? '   在 Claude 会话中跑 /understand（输出 .understand-anything/knowledge-graph.json）'
       : '   Run /understand in an agent session to produce .understand-anything/knowledge-graph.json'
+    );
+    console.log(zh
+      ? '   ⛔ 不跑的话，SDD docs/design 阶段的平台级影响面门禁会阻塞，届时仍需补跑或降级手动分析'
+      : '   ⛔ Without it, the SDD platform impact gate will block during docs/design phase'
     );
   }
   console.log('━'.repeat(70));

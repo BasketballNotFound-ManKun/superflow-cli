@@ -1,10 +1,10 @@
-import type { Agent } from '../types.js';
+import type { Agent } from '../../types.js';
 import {
   getManifestHooks,
   getManifestRules,
   getManifestScripts,
   getManifestSkillNames,
-} from './manifest.js';
+} from '../config/manifest.js';
 
 export const ALL_SKILLS = getManifestSkillNames();
 export const ALL_RULES = getManifestRules();

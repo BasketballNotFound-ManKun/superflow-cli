@@ -3,12 +3,16 @@ import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { cliText, resolveCliLanguage } from '../core/cli-help.js';
+import { cliText, resolveCliLanguage } from '../domains/config/cli-help.js';
+import { checkForUpdates } from '../platform/version-check.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const pkgPath = join(__dirname, '..', '..', 'package.json');
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+
+// 启动时后台检查新版本（非阻塞，不 await）
+checkForUpdates(pkg.version);
 
 const program = new Command();
 const helpText = cliText(resolveCliLanguage());
@@ -72,7 +76,7 @@ program
   .option('--no-openspec-init', helpText.noOpenspecInitOption)
   .option('--no-scan', helpText.noScanOption)
   .action(async (targetPath, options) => {
-    const { initCommand } = await import('../commands/init.js');
+    const { initCommand } = await import('./commands/init.js');
     await initCommand({
       ...commandOptions(options),
       targetPath: resolveTargetPathArg(targetPath, options, 'init'),
@@ -86,7 +90,7 @@ program
   .option('--force', helpText.forceOption)
   .option('--language <language>', helpText.languageOption)
   .action(async (options) => {
-    const { scanCommand } = await import('../commands/scan.js');
+    const { scanCommand } = await import('./commands/scan.js');
     await scanCommand(commandOptions(options));
   });
 
@@ -95,7 +99,7 @@ program
   .description(helpText.clarifyDescription)
   .option('--agent <agent>', helpText.agentOption, 'both')
   .action(async (feature, options) => {
-    const { clarifyCommand } = await import('../commands/clarify.js');
+    const { clarifyCommand } = await import('./commands/clarify.js');
     await clarifyCommand(feature, options);
   });
 
@@ -104,7 +108,7 @@ program
   .description(helpText.docsDescription)
   .option('--agent <agent>', helpText.agentOption, 'both')
   .action(async (change, options) => {
-    const { docsCommand } = await import('../commands/docs.js');
+    const { docsCommand } = await import('./commands/docs.js');
     await docsCommand(change, options);
   });
 
@@ -113,7 +117,7 @@ program
   .description(helpText.designDescription)
   .option('--agent <agent>', helpText.agentOption, 'both')
   .action(async (change, options) => {
-    const { designCommand } = await import('../commands/design.js');
+    const { designCommand } = await import('./commands/design.js');
     await designCommand(change, options);
   });
 
@@ -122,7 +126,7 @@ program
   .description(helpText.implementDescription)
   .option('--agent <agent>', helpText.agentOption, 'both')
   .action(async (task, options) => {
-    const { implementCommand } = await import('../commands/implement.js');
+    const { implementCommand } = await import('./commands/implement.js');
     await implementCommand(task, options);
   });
 
@@ -131,7 +135,7 @@ program
   .description(helpText.pipelineDescription)
   .option('--agent <agent>', helpText.agentOption, 'both')
   .action(async (options) => {
-    const { pipelineCommand } = await import('../commands/pipeline.js');
+    const { pipelineCommand } = await import('./commands/pipeline.js');
     await pipelineCommand(options);
   });
 
@@ -140,7 +144,7 @@ program
   .description(helpText.verifyDescription)
   .option('--agent <agent>', helpText.agentOption, 'both')
   .action(async (change, options) => {
-    const { verifyCommand } = await import('../commands/verify.js');
+    const { verifyCommand } = await import('./commands/verify.js');
     await verifyCommand(change, options);
   });
 
@@ -149,7 +153,7 @@ program
   .description(helpText.archiveDescription)
   .option('--agent <agent>', helpText.agentOption, 'both')
   .action(async (change, options) => {
-    const { archiveCommand } = await import('../commands/archive.js');
+    const { archiveCommand } = await import('./commands/archive.js');
     await archiveCommand(change, options);
   });
 
@@ -158,7 +162,7 @@ program
   .description(helpText.statusDescription)
   .option('--json', helpText.jsonOption)
   .action(async (targetPath = '.', options) => {
-    const { statusCommand } = await import('../commands/status.js');
+    const { statusCommand } = await import('./commands/status.js');
     await statusCommand(targetPath, options);
   });
 
@@ -172,7 +176,7 @@ program
   .option('--no-hooks', helpText.noHooksUpdateOption)
   .option('--with-package', helpText.withPackageOption)
   .action(async (targetPath, options) => {
-    const { updateCommand } = await import('../commands/update.js');
+    const { updateCommand } = await import('./commands/update.js');
     await updateCommand({
       ...commandOptions(options),
       targetPath: resolveTargetPathArg(targetPath, options, 'update'),
@@ -186,7 +190,7 @@ program
   .option('--scope <scope>', helpText.commandScopeOption, 'global')
   .option('--json', helpText.jsonOption)
   .action(async (targetPath, options) => {
-    const { doctorCommand } = await import('../commands/doctor.js');
+    const { doctorCommand } = await import('./commands/doctor.js');
     await doctorCommand({
       ...commandOptions(options),
       targetPath: resolveTargetPathArg(targetPath, options, 'doctor'),
@@ -203,10 +207,34 @@ program
   .option('--force', helpText.uninstallForceOption)
   .option('--with-deps', helpText.withDepsOption)
   .action(async (targetPath, options) => {
-    const { uninstallCommand } = await import('../commands/uninstall.js');
+    const { uninstallCommand } = await import('./commands/uninstall.js');
     await uninstallCommand({
       ...commandOptions(options),
       targetPath: resolveTargetPathArg(targetPath, options, 'uninstall'),
+    });
+  });
+
+program
+  .command('check <change>')
+  .description('检查 SDD change 的文档完整性')
+  .option('--json', '输出 JSON')
+  .action(async (change, options) => {
+    const { checkCommand } = await import('./commands/check.js');
+    await checkCommand(change, { json: options.json });
+  });
+
+program
+  .command('config <change>')
+  .description('Set workflow config for a change (review_mode, auto_transition)')
+  .option('--review-mode <mode>', 'Review mode: off | standard | thorough')
+  .option('--auto-transition <bool>', 'Auto-advance phases: true | false')
+  .option('--json', 'Output JSON')
+  .action(async (change, options) => {
+    const { configCommand } = await import('./commands/config.js');
+    await configCommand(change, {
+      reviewMode: options.reviewMode,
+      autoTransition: options.autoTransition,
+      json: options.json,
     });
   });
 

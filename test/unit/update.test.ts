@@ -10,7 +10,7 @@ import {
   detectInstalledTargets,
   formatDependencyUpdateCommands,
   formatPackageUpdateCommand,
-} from '../../src/commands/update.js';
+} from '../../src/app/commands/update.js';
 
 describe('commands/update', () => {
   it('creates a JSON-safe update plan for selected agents', () => {

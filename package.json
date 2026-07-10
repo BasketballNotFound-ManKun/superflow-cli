@@ -1,6 +1,6 @@
 {
   "name": "@chenmk/superflow",
-  "version": "0.1.3",
+  "version": "0.2.2",
   "description": "SuperBridge Flow workflow CLI for Claude Code, Codex, and OpenCode",
   "license": "MIT",
   "type": "module",
@@ -23,7 +23,7 @@
     "node": ">=20"
   },
   "bin": {
-    "superflow": "dist/cli/index.js"
+    "superflow": "dist/app/cli.js"
   },
   "files": [
     "dist",

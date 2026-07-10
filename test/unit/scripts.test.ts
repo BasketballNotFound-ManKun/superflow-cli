@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { deployScripts } from '../../src/core/scripts.js';
+import { deployScripts } from '../../src/domains/skill/scripts.js';
 
 const TMP = path.join(os.tmpdir(), 'sdd-test-scripts-' + Date.now());
 const TMP_SCRIPTS = path.join(TMP, '.claude', 'scripts');

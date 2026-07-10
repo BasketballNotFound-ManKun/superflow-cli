@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import os from 'os';
 import path from 'path';
-import { home, claudeSkills, claudeScripts, claudeSettings, stateFile } from '../../src/utils/path.js';
+import { home, claudeSkills, claudeScripts, claudeSettings, stateFile } from '../../src/platform/paths.js';
 
 describe('utils/path', () => {
   it('home 应该是 os.homedir() 的值', () => {

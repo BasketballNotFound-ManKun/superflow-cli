@@ -1,21 +1,21 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
-import { runCommand } from '../utils/shell.js';
+import { runCommand } from '../../platform/process.js';
+import { getPlatformPaths } from '../../platform/paths.js';
 import {
-  getPlatformPaths,
   parseAgentSelection,
   parseInstallScope,
   resolveAgents,
-} from '../core/detect.js';
+} from '../../domains/agent.js';
 import {
   ALL_RULES,
   ALL_SKILLS,
   CODEX_PROMPTS,
   hookScriptsForAgent,
   scriptsForAgent,
-} from '../core/assets.js';
-import type { Agent, InstallScope } from '../types.js';
+} from '../../domains/skill/assets.js';
+import type { Agent, InstallScope } from '../../types.js';
 
 type DoctorStatus = 'pass' | 'warn' | 'fail';
 type DoctorScope = InstallScope | 'auto';

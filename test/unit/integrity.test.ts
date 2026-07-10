@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
 import { writeFileSync } from 'fs';
-import { computeDirHash } from '../../src/core/integrity.js';
+import { computeDirHash } from '../../src/platform/fs.js';
 
 const FIXTURE = path.join(process.cwd(), 'test', 'fixture', 'integrity-skill');
 

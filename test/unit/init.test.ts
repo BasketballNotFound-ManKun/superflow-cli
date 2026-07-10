@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseInitAgentInput } from '../../src/commands/init.js';
+import { parseInitAgentInput } from '../../src/app/commands/init.js';
 
 describe('commands/init', () => {
   it('parseInitAgentInput 支持默认和 both/all', () => {

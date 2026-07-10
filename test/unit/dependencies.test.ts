@@ -7,11 +7,11 @@ import {
   installCodexSuperpowers,
   installUnderstand,
   installApiDocChangelog,
-} from '../../src/core/dependencies.js';
-import { runCommand } from '../../src/utils/shell.js';
+} from '../../src/domains/deps.js';
+import { runCommand } from '../../src/platform/process.js';
 import { promises as fs } from 'fs';
 
-vi.mock('../../src/utils/shell.js', () => ({
+vi.mock('../../src/platform/process.js', () => ({
   runCommand: vi.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
 }));
 
