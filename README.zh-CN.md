@@ -50,6 +50,9 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 - **5 个阶段 × 5+ 门禁脚本硬阻断。** `superflow-guard.sh` + `superflow-hook-guard.sh` + `superflow-contract-hooks.sh` + `superflow-sql-sync-hook.py` + `superflow-test-report-lint.py` + `superflow-verify-integration.sh`。没有 handoff hash 不进实现，没有真实入口证据不写"通过"。
 - **用 handoff + state + sha256 治上下文漂移。** 长会话压缩、切 agent、并行 worktree——`.sdd/handoff/sdd-context.{md,json}` + sha256 + `.sdd/state.yaml` 让 Worker / Tester / Reviewer 始终基于同一份上下文，hash 对不上的旧 prompt 自动被 guard 拒绝。
 - **用户只说一句话，流水线跑 9 步。** 不用写复杂 prompt：`> 用 SuperFlow 处理这个需求` 触发 clarify → docs → design → implement → verify → archive。阶段推进、guard、hash、hook 全是流程强制，不靠用户自觉。
+- **`superflow check` 一键诊断文档缺口。** 对照 13 项必备 SDD 文件逐项核验，缺失即 exit 1。再也不会进了 implement 才发现 proposal 没写——check 在 docs 阶段就拦住你。
+- **`superflow config` 按需调整审查强度。** `--review-mode off|standard|thorough` 控制代码审查深度；`--auto-transition` 控制阶段自动流转。不同改动匹配不同强度，省 token 不省质量。
+- **启动自动检查新版本。** 每次执行 superflow 命令，后台静默对比 npm registry。发现新版本时 stderr 输出升级提示，不阻塞、不拖慢。
 
 ## 工作流
 
@@ -141,6 +144,11 @@ superflow init
 | `superflow design [change]` | 校验 SuperBridge Flow design 阶段技能部署 |
 | `superflow implement [task]` | 校验 SuperBridge Flow implement 阶段技能部署 |
 | `superflow pipeline` | 校验 SuperBridge Flow pipeline 阶段技能部署 |
+| `superflow check <change>` | 对照 13 项必备文件清单检查文档完整性 |
+| `superflow config <change> --review-mode <mode>` | 设置代码审查强度（off/standard/thorough） |
+| `superflow config <change> --auto-transition <bool>` | 控制阶段自动流转（true/false） |
+| `superflow status` | 展示所有 active change 的阶段、任务、文档缺口 |
+| `superflow update --with-package` | 更新 superflow 自身和 openspec/superpowers 依赖 |
 
 ## 系统支持
 

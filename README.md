@@ -81,6 +81,16 @@ state, and dependency guards for Claude Code, Codex, and OpenCode.
   required: `> use SuperFlow to handle this requirement` triggers clarify →
   docs → design → implement → verify → archive. Phase progression, guards,
   hashes, and hooks are flow-enforced, not user-discipline.
+- **`superflow check` audits document completeness.** Runs against a 13-item
+  required-file checklist per change. Missing a required doc? Exit 1. No more
+  surprises at the implement phase — the gate catches gaps while you're still
+  in docs.
+- **`superflow config` tunes review depth per change.** `--review-mode
+  off|standard|thorough` controls code-review intensity; `--auto-transition`
+  controls automatic phase progression. Match the rigor to the risk.
+- **Startup version check.** Every superflow command silently compares your
+  installed version against the npm registry. A new version triggers a
+  non-blocking upgrade hint on stderr.
 
 ## Workflow
 
@@ -165,6 +175,11 @@ best-effort and does not block initialization.
 | `superflow implement` | Check implement-phase skill deployment |
 | `superflow verify` | Check verify-phase skill deployment |
 | `superflow archive` | Check archive-phase skill deployment |
+| `superflow check <change>` | Audit 13-file SDD document completeness |
+| `superflow config <change> --review-mode <mode>` | Set review depth (off/standard/thorough) |
+| `superflow config <change> --auto-transition <bool>` | Toggle automatic phase progression |
+| `superflow status` | List active changes with phase, tasks, and doc gaps |
+| `superflow update --with-package` | Update superflow, OpenSpec, and Superpowers |
 
 ## Agent Usage
 
