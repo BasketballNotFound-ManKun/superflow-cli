@@ -131,7 +131,7 @@ esac
 find "$CHANGE_DIR" -type f \
   \( -name '*.md' -o -name '.openspec.yaml' -o -name '*.yml' -o -name '*.yaml' \) \
   ! -path "$CHANGE_DIR/.sdd/*" \
-  ! -path "$CHANGE_DIR/.comet/*" \
+  ! -path "$CHANGE_DIR/.sdd/*" \
   ! -path "$CHANGE_DIR/.git/*" \
   | sort > "$TMP_LIST"
 
