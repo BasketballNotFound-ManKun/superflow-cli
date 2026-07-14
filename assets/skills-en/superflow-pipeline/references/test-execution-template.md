@@ -26,10 +26,12 @@
 Required when monetary calculation, settlement, proration, allocation,
 reconciliation, or financial display changes:
 
-| Case | Amount field | Original input/precision | Rounding boundary and mode | Half-cent/residual/multi-detail case | Original | Discount | Actual | Allocated total | Reconciliation |
-|---|---|---|---|---|---|---|---|---|---|
-| TC-M01 | | | | | | | | | pass/blocked |
+| Case | Amount identity | Authoritative total | Independent components | Complement derivation | Original input/precision | Rounding boundary and mode | Half-cent/residual/multi-detail case | Reconciliation |
+|---|---|---|---|---|---|---|---|---|
+| TC-M01 | `original = discount + actual` | `original` | `discount` | `actual = original - discount` | | | | pass/blocked |
 
 Prove that calculation-state values were not rounded before the confirmed final
 boundary and that original, discount, actual, refund, and allocated totals obey
-the design contract. A two-decimal display assertion alone is insufficient.
+the design contract. When an authoritative total exists, prove the final
+component was derived by subtraction instead of independently calculated and
+rounded. A two-decimal display assertion alone is insufficient.

@@ -118,6 +118,10 @@ Before implementation phase can exit:
   `Money Precision Boundary`, keep calculation-state precision until the
   confirmed settlement/display boundary, forbid early `setScale(2)` before
   later slicing or aggregation, and require deterministic residual allocation.
+  For additive identities with an authoritative total, the prompt must compute
+  only N-1 components independently and derive the final complement as
+  `authoritative total - sum(other components)`; calculating and rounding all
+  components independently is blocked.
   RED/GREEN coverage must include half-cent, residual, or multi-detail cases
   and prove reconciliation identities in `test-report.md`.
 - Every implementation prompt must include a "上下文防漂移与状态继承" section.

@@ -89,9 +89,9 @@ Use this whenever the change involves amount, fee, discount, deduction, refund,
 sharing, payment, invoice, balance, electricity fee, service fee, package
 settlement, proration, allocation, reconciliation, or financial display.
 
-| Amount field | Calculation-state source | Intermediate precision | Rounding boundary | Scale/mode | Allocation/reconciliation rule | Forbidden early rounding | Test evidence |
-|---|---|---|---|---|---|---|---|
-| `amount` | `<rate * quantity>` | `<BigDecimal scale>` | `<DB/API/display>` | `<2/HALF_UP>` | `<sum first, allocate delta>` | `<setScale before slice>` | `<case IDs>` |
+| Amount identity | Authoritative total | Independently calculated components | Complement amount and derivation | Calculation-state source | Intermediate precision | Rounding boundary | Scale/mode | Allocation/reconciliation rule | Forbidden early rounding | Test evidence |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `original = discount + actual` | `original` | `discount` | `actual = original - discount` | `<rate * quantity>` | `<BigDecimal scale>` | `<DB/API/display>` | `<2/HALF_UP>` | `<sum first, allocate delta>` | `<setScale before slice>` | `<case IDs>` |
 
 Required precision checks:
 
@@ -107,8 +107,14 @@ boundaries such as settlement posting, persistence fields that require cents,
 payment/fiscal interfaces, invoices, exports, or display. For multi-detail
 allocation, compute the high-precision target first, then distribute the final
 rounded amount deterministically so totals match and identities such as
-`original = discount + actual` hold. Do not calculate later slices, discounts,
-ratios, or unit prices from already-rounded money.
+`original = discount + actual` hold. When an additive identity exists and its
+total is the authoritative source, calculate only the required N-1 components
+independently and derive the final complement as `authoritative total - sum(other
+components)`. Do not independently calculate and round every component and then
+rebuild the authoritative total. If complement derivation is not applicable,
+record why, identify the actual source of truth, and provide owner evidence.
+Do not calculate later slices, discounts, ratios, or unit prices from
+already-rounded money.
 
 ## Execution Architecture
 

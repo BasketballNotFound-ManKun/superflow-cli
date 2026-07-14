@@ -322,6 +322,9 @@ require_money_precision_contract() {
   require_grep '结算态|展示态|settlement|display.state|rounding boundary' "$path" "$label settlement/display boundary"
   require_grep 'scale|rounding mode|RoundingMode|舍入模式' "$path" "$label scale and rounding mode"
   require_grep '分配|对账|allocation|reconciliation|residual|尾差' "$path" "$label allocation/reconciliation rule"
+  require_grep '权威总额|真源总额|authoritative total|source.of.truth total' "$path" "$label authoritative total"
+  require_grep '差额反推|总额.*减|authoritative total.*minus|derive.*complement|complement amount' "$path" "$label complement derivation"
+  require_grep '禁止.*分别计算|不得.*分别计算|禁止.*独立.*舍入|do not.*independently|must not.*calculate.*separately' "$path" "$label independent calculation prohibition"
   require_grep '禁止提前舍入|不得提前.*舍入|forbidden early rounding|do not.*round' "$path" "$label forbidden early rounding"
   require_grep '半分|尾差|多明细|half.cent|residual|multi.detail' "$path" "$label boundary test evidence"
 }
@@ -332,6 +335,8 @@ require_money_precision_evidence() {
   require_grep 'Money Precision Boundary|金额精度边界' "$path" "$label"
   require_grep '半分|尾差|多明细|half.cent|residual|multi.detail' "$path" "$label boundary cases"
   require_grep '原始金额|优惠金额|实付金额|分配合计|对账|original.*discount.*actual|allocated total|reconciliation' "$path" "$label reconciliation evidence"
+  require_grep '权威总额|真源总额|authoritative total' "$path" "$label authoritative total evidence"
+  require_grep '差额反推|总额.*减|authoritative total.*minus|derive.*complement|complement amount' "$path" "$label complement derivation evidence"
 }
 
 transition_event=""

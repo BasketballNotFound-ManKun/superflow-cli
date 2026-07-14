@@ -63,7 +63,8 @@ Every implementation prompt must include these sections:
 - Money precision boundary when monetary behavior changes: calculation-state
   source and intermediate precision, settlement/display boundary, scale and
   rounding mode, forbidden early rounding, deterministic residual allocation,
-  and half-cent or multi-detail reconciliation evidence.
+  authoritative total, complement derivation as `authoritative total -
+  sum(other components)`, and half-cent or multi-detail reconciliation evidence.
 - Write-loop verification: business action, setter/assignment, converter, mapper
   insert/update, DB column, downstream reader, consumer entry, SQL check, test
   case.

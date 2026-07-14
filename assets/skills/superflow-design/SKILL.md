@@ -72,7 +72,12 @@ Impact` and prove writers, readers, filters, derived sync paths, consumers,
    allocation/reconciliation rule, and tests covering half-cent or residual
    cases. If the design rounds money before later slicing, proration,
    aggregation, discounting, or allocation, stop and redesign the calculation
-   boundary.
+   boundary. When an additive identity has an authoritative total, the design
+   must calculate only N-1 components independently and derive the final
+   complement as `authoritative total - sum(other components)`. Independently
+   calculating and rounding all components before rebuilding the total is
+   blocked. A claimed exception must name the actual source of truth and owner
+   evidence.
 9. Record state:
    ```bash
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> technical_design docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md

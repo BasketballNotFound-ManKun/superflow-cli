@@ -26,7 +26,10 @@ Superpowers technical design is canonical for source-level HOW and execution.
 - Money Precision Boundary copied from the technical design when monetary
   behavior changes. Keep calculation-state precision until the confirmed
   settlement/display boundary, record scale and rounding mode, forbid early
-  rounding, and define deterministic residual allocation.
+  rounding, and define deterministic residual allocation. For additive
+  identities, name the authoritative total, calculate only N-1 components
+  independently, and derive the complement as `authoritative total - sum(other
+  components)`. Do not calculate and round every component independently.
 - RED test executed.
 - Allowed and forbidden files confirmed.
 - Blockers listed.

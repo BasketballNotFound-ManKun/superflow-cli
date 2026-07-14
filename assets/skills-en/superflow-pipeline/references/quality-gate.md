@@ -21,7 +21,10 @@
   package settlement, proration, allocation, reconciliation, or financial
   display changes. It must separate calculation state from settlement/display
   state, forbid early rounding, and include half-cent, residual, or
-  multi-detail allocation evidence.
+  multi-detail allocation evidence. For additive identities, it must name the
+  authoritative total and derive the final complement as `authoritative total -
+  sum(other components)` instead of calculating and rounding every component
+  independently.
 - SQL risk review exists for DB changes.
 - No fallback or guesswork is allowed without explicit owner approval.
 

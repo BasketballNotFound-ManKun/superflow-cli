@@ -83,7 +83,10 @@ For complex requirements, verify these before writing docs:
   `test-report.md` skeleton must reserve half-cent, residual, or multi-detail
   cases and reconciliation evidence. Do not freeze docs that allow intermediate
   money to be rounded before later slicing, aggregation, discounting, or
-  allocation.
+  allocation. For additive identities, docs must name the authoritative total,
+  independently calculated N-1 components, and the final complement formula:
+  `authoritative total - sum(other components)`. Do not allow every component
+  to be calculated and rounded independently before rebuilding the total.
 - For low-freedom implementation handoff, docs include the five hard gates:
   field semantic contract, write-through persistence closure, real-entry call
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
@@ -304,7 +307,8 @@ Use references only as needed:
 - For money-related changes, `test-report.md` must also include `Money Precision
   Boundary` evidence: original calculation inputs and precision, actual rounding
   boundary and mode, half-cent/residual/multi-detail cases, and reconciliation
-  of original, discount, actual/refund, and allocated totals.
+  of original, discount, actual/refund, and allocated totals. Evidence must show
+  which total was authoritative and which complement was derived by subtraction.
 - `sdd-quality-gate.md` must include blocking checks for:
   executable tests frozen, RED/GREEN expectations present, interface automation
   commands present, DB/log assertions present, and mock/skipped cases excluded

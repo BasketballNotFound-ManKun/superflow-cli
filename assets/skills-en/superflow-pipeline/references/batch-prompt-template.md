@@ -27,7 +27,10 @@ review-checklist.md, sdd-quality-gate.md, test-report.md, and technical design.
 - For monetary changes, inherit `Money Precision Boundary`, retain
   calculation-state precision until the confirmed settlement/display boundary,
   record scale and rounding mode, forbid early rounding before slicing or
-  allocation, and define deterministic residual handling.
+  allocation, and define deterministic residual handling. For additive
+  identities, calculate only N-1 components independently and derive the final
+  complement as `authoritative total - sum(other components)`; do not calculate
+  and round every component independently.
 
 ## Implementation Steps
 

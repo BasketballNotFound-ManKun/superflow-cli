@@ -300,6 +300,9 @@ require_money_precision_contract() {
   require_grep 'settlement|display.state|rounding boundary' "$path" "$label settlement/display boundary"
   require_grep 'scale|rounding mode|RoundingMode' "$path" "$label scale and rounding mode"
   require_grep 'allocation|reconciliation|residual' "$path" "$label allocation/reconciliation rule"
+  require_grep 'authoritative total|source.of.truth total' "$path" "$label authoritative total"
+  require_grep 'authoritative total.*minus|derive.*complement|complement amount' "$path" "$label complement derivation"
+  require_grep 'do not.*independently|must not.*calculate.*separately' "$path" "$label independent calculation prohibition"
   require_grep 'forbidden early rounding|do not.*round' "$path" "$label forbidden early rounding"
   require_grep 'half.cent|residual|multi.detail' "$path" "$label boundary test evidence"
 }
@@ -310,6 +313,8 @@ require_money_precision_evidence() {
   require_grep 'Money Precision Boundary' "$path" "$label"
   require_grep 'half.cent|residual|multi.detail' "$path" "$label boundary cases"
   require_grep 'original.*discount.*actual|allocated total|reconciliation' "$path" "$label reconciliation evidence"
+  require_grep 'authoritative total' "$path" "$label authoritative total evidence"
+  require_grep 'authoritative total.*minus|derive.*complement|complement amount' "$path" "$label complement derivation evidence"
 }
 
 transition_event=""

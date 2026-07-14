@@ -125,7 +125,10 @@ The workflow must preserve these gates:
   until the confirmed final boundary, forbid early rounding, define scale and
   rounding mode plus deterministic residual handling, and require half-cent or
   multi-detail reconciliation evidence across design, prompts, review, tests,
-  and verify.
+  and verify. When an additive identity has an authoritative total, calculate
+  only N-1 components independently and derive the final complement as
+  `authoritative total - sum(other components)`; never round every component
+  independently and rebuild the authoritative total.
 - Architecture boundary and call-direction analysis for multi-repo, service,
   SDK, MQ, scheduler, callback, gateway, adapter, device, or third-party flows.
 - SQL risk review before implementation for DB changes.

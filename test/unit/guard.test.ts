@@ -208,11 +208,12 @@ async function makeExternalEnumChange() {
 
 type MoneyPrecisionOptions = {
   designContract?: boolean;
+  legacyDesignContract?: boolean;
   promptContract?: boolean;
   reportEvidence?: boolean;
 };
 
-const MONEY_PRECISION_CONTRACT = [
+const LEGACY_MONEY_PRECISION_CONTRACT = [
   "## Money Precision Boundary",
   "",
   "Calculation-state source and intermediate precision are preserved.",
@@ -220,6 +221,14 @@ const MONEY_PRECISION_CONTRACT = [
   "Allocation and reconciliation use deterministic residual handling.",
   "Forbidden early rounding: do not round before later slicing or aggregation.",
   "Test evidence covers half-cent, residual, and multi-detail allocation cases.",
+  "",
+].join("\n");
+
+const MONEY_PRECISION_CONTRACT = [
+  LEGACY_MONEY_PRECISION_CONTRACT,
+  "The authoritative total is original amount for original = discount + actual.",
+  "Derive the complement amount: actual = authoritative total minus discount.",
+  "Do not calculate and round every component independently; must not calculate components separately.",
   "",
 ].join("\n");
 
@@ -266,7 +275,11 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "",
     "OpenSpec/SDD remains canonical and must not be overwritten.",
     "",
-    options.designContract ? MONEY_PRECISION_CONTRACT : "",
+    options.legacyDesignContract
+      ? LEGACY_MONEY_PRECISION_CONTRACT
+      : options.designContract
+        ? MONEY_PRECISION_CONTRACT
+        : "",
   ].join("\n");
   await write(
     path.join(
@@ -296,7 +309,7 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "DB 数据库 SELECT completed.",
     "superflow-verify-integration / superflow-delivery-check / superflow-test-report-lint passed.",
     options.reportEvidence
-      ? "Money Precision Boundary: half-cent, residual, and multi-detail cases passed; original = discount + actual, allocated total reconciliation passed."
+      ? "Money Precision Boundary: half-cent, residual, and multi-detail cases passed; original = discount + actual, allocated total reconciliation passed. The authoritative total was original amount; the complement amount actual was derived as authoritative total minus discount."
       : "",
     "handoff_hash: pending",
     "",
@@ -420,6 +433,18 @@ describe("superflow-guard.sh", () => {
       execFileAsync("bash", [EN_GUARD, change, "design"]),
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("money precision boundary"),
+    });
+  });
+
+  it("rejects a precision design without authoritative-total complement derivation", async () => {
+    const change = await prepareMoneyPrecisionChange({
+      legacyDesignContract: true,
+    });
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "design"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("authoritative total"),
     });
   });
 

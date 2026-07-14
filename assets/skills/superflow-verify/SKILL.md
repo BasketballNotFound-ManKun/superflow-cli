@@ -48,6 +48,10 @@ Money-related changes always require full verification of
 rounding boundary and mode, half-cent/residual/multi-detail cases, deterministic
 allocation, and reconciliation identities. A final two-decimal display value
 or unit-test-only evidence is not sufficient.
+For additive identities, verification must prove which total was authoritative,
+which N-1 components were calculated independently, and which final complement
+was derived as `authoritative total - sum(other components)`. Evidence that all
+components were independently calculated and rounded is a failure.
 
 ## Required Superpowers
 
@@ -102,7 +106,9 @@ Before pass:
    risk.
 6. For money-related changes, `test-report.md` records the `Money Precision
    Boundary` cases and proves original, discount, actual/refund, and allocated
-   totals reconcile without early rounding.
+   totals reconcile without early rounding. For additive identities it also
+   records the authoritative total and the subtraction used to derive the final
+   complement.
 7. Branch/worktree status is handled and `.sdd/state.yaml` has:
    `branch_status: handled`.
 
