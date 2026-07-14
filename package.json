@@ -1,6 +1,6 @@
 {
   "name": "@chenmk/superflow",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "SuperBridge Flow workflow CLI for Claude Code, Codex, and OpenCode",
   "license": "MIT",
   "type": "module",
@@ -27,6 +27,7 @@
   },
   "files": [
     "dist",
+    "scripts",
     "assets",
     "README.md",
     "README.zh-CN.md",
@@ -36,6 +37,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/cli/index.ts",
+    "postinstall": "node scripts/postinstall.js",
     "prepack": "npm run build",
     "prepublishOnly": "npm test && npm run build",
     "test": "vitest run",
