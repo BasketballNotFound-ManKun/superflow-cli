@@ -30,6 +30,11 @@ Superpowers technical design is canonical for source-level HOW and execution.
   identities, name the authoritative total, calculate only N-1 components
   independently, and derive the complement as `authoritative total - sum(other
   components)`. Do not calculate and round every component independently.
+- Read `money-precision-algorithms.md`; inherit exact decimal construction,
+  currency and provider minor units, rounding level/mode/policy source,
+  residual strategy and stable tie-breaker, pre/post-round audit, and
+  positive/zero/negative tests. FX changes also inherit base/quote metadata,
+  rate source/time, canonical path, and target settlement rounding.
 - RED test executed.
 - Allowed and forbidden files confirmed.
 - Blockers listed.

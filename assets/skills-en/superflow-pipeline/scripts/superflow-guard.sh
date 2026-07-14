@@ -259,6 +259,17 @@ change_has_money_precision_risk() {
     "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
 }
 
+change_has_fx_precision_risk() {
+  grep -RIEiq \
+    '(^|[^[:alnum:]_])(exchange rate|fx rate|currency conversion|cross.currency|base currency|quote currency)([^[:alnum:]_]|$)' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_has_architecture_boundary_risk() {
   grep -RIEiq \
     'cross-repo|cross-service|sibling|SDK|MQ|topic|consumer|scheduler|scheduled|device|callback|third[- ]party|mini[- ]program|gateway|adapter|protocol|interconnect|call chain|entry|exit' \
@@ -305,6 +316,23 @@ require_money_precision_contract() {
   require_grep 'do not.*independently|must not.*calculate.*separately' "$path" "$label independent calculation prohibition"
   require_grep 'forbidden early rounding|do not.*round' "$path" "$label forbidden early rounding"
   require_grep 'half.cent|residual|multi.detail' "$path" "$label boundary test evidence"
+  require_grep 'BigDecimal|MonetaryAmount|integer minor unit|exact decimal' "$path" "$label exact representation"
+  require_grep 'never.*(float|double)|do not.*(float|double)' "$path" "$label binary floating-point prohibition"
+  require_grep 'currency' "$path" "$label currency contract"
+  require_grep 'minor unit|provider unit' "$path" "$label minor-unit boundary"
+  require_grep 'rounding level|rounding point|line.level.*aggregate' "$path" "$label rounding level"
+  require_grep 'policy source|contract source' "$path" "$label rounding policy source"
+  require_grep 'largest remainder|stable tie.break|business key' "$path" "$label deterministic residual tie-breaker"
+  require_grep 'positive.*zero.*negative|positive.*refund' "$path" "$label signed-value evidence"
+  require_grep 'pre.round.*post.round' "$path" "$label rounding audit evidence"
+  require_grep 'DECIMAL|NUMERIC|persistence.*not applicable' "$path" "$label persistence precision contract"
+  if change_has_fx_precision_risk; then
+    require_grep 'base/quote|base currency.*quote currency' "$path" "$label FX direction"
+    require_grep 'rate source' "$path" "$label FX source"
+    require_grep 'rate.*timestamp|rate.*effective' "$path" "$label FX timestamp"
+    require_grep 'canonical conversion path|canonical path' "$path" "$label FX canonical path"
+    require_grep 'target.*settlement.*round' "$path" "$label FX target rounding"
+  fi
 }
 
 require_money_precision_evidence() {
@@ -315,6 +343,18 @@ require_money_precision_evidence() {
   require_grep 'original.*discount.*actual|allocated total|reconciliation' "$path" "$label reconciliation evidence"
   require_grep 'authoritative total' "$path" "$label authoritative total evidence"
   require_grep 'authoritative total.*minus|derive.*complement|complement amount' "$path" "$label complement derivation evidence"
+  require_grep 'currency' "$path" "$label currency evidence"
+  require_grep 'minor unit|provider unit' "$path" "$label minor-unit reconciliation"
+  require_grep 'positive.*zero.*negative|positive.*refund' "$path" "$label signed-value cases"
+  require_grep 'pre.round.*post.round' "$path" "$label rounding audit evidence"
+  require_grep 'residual recipient' "$path" "$label residual audit evidence"
+  require_grep 'tied remainder' "$path" "$label tied-residual cases"
+  require_grep 'idempoten' "$path" "$label allocation idempotence"
+  if change_has_fx_precision_risk; then
+    require_grep 'base/quote|base currency.*quote currency' "$path" "$label FX direction evidence"
+    require_grep 'rate source' "$path" "$label FX source evidence"
+    require_grep 'target.*settlement.*round' "$path" "$label FX target rounding evidence"
+  fi
 }
 
 transition_event=""

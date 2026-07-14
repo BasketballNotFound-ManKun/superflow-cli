@@ -65,6 +65,9 @@ Every implementation prompt must include these sections:
   rounding mode, forbidden early rounding, deterministic residual allocation,
   authoritative total, complement derivation as `authoritative total -
   sum(other components)`, and half-cent or multi-detail reconciliation evidence.
+  It also inherits `money-precision-algorithms.md`: exact representation,
+  currency/provider minor units, rounding policy source, stable residual
+  tie-breaker, signed-value evidence, and conditional FX metadata.
 - Write-loop verification: business action, setter/assignment, converter, mapper
   insert/update, DB column, downstream reader, consumer entry, SQL check, test
   case.

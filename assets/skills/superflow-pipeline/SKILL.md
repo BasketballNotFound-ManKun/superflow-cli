@@ -845,6 +845,7 @@ Load only the reference needed for the current phase:
 - OpenSpec format: `references/openspec-format.md`
 - Document quality: `references/quality-standards.md`
 - Quality gate: `references/quality-gate.md`
+- 金额精度算法基线：`references/money-precision-algorithms.md`
 - Batch prompt split: `references/batch-split-guide.md`
 - Batch prompt template: `references/batch-prompt-template.md`
 - Implementation orchestration: `references/orchestration.md`

@@ -26,12 +26,15 @@
 Required when monetary calculation, settlement, proration, allocation,
 reconciliation, or financial display changes:
 
-| Case | Amount identity | Authoritative total | Independent components | Complement derivation | Original input/precision | Rounding boundary and mode | Half-cent/residual/multi-detail case | Reconciliation |
-|---|---|---|---|---|---|---|---|---|
-| TC-M01 | `original = discount + actual` | `original` | `discount` | `actual = original - discount` | | | | pass/blocked |
+| Case | Identity/authoritative total | Currency/minor unit | Complement | Pre/post round | Strategy/residual recipient | Positive/zero/refund/tied residual | Reconciliation |
+|---|---|---|---|---|---|---|---|
+| TC-M01 | `original = discount + actual` / `original` | CNY/minor unit | `actual = original - discount` | | largest remainder / | | pass/blocked |
 
 Prove that calculation-state values were not rounded before the confirmed final
 boundary and that original, discount, actual, refund, and allocated totals obey
 the design contract. When an authoritative total exists, prove the final
 component was derived by subtraction instead of independently calculated and
-rounded. A two-decimal display assertion alone is insufficient.
+rounded. Record currency, provider minor unit, pre/post-round values, residual
+recipient, and positive/zero/negative or refund, tied remainder, and idempotent
+recalculation evidence. FX cases also record base/quote, rate source, and target
+settlement rounding. A two-decimal display assertion alone is insufficient.

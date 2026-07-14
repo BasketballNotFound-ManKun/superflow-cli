@@ -113,9 +113,22 @@ Use this whenever the change involves amount, fee, discount, deduction, refund,
 sharing, payment, invoice, balance, electricity fee, service fee, package
 settlement, proration, allocation, reconciliation, or financial display.
 
-| Amount identity | Authoritative total | Independently calculated components | Complement amount and derivation | Calculation-state source | Intermediate precision | Rounding boundary | Scale/mode | Allocation/reconciliation rule | Forbidden early rounding | Test evidence |
-| --------------- | ------------------- | ----------------------------------- | -------------------------------- | ------------------------ | ---------------------- | ----------------- | ---------- | ------------------------------ | ------------------------ | ------------- |
-| `original = discount + actual` | `original` | `discount` | `actual = original - discount` | `<rate * quantity>` | `<BigDecimal scale>` | `<DB/API/display>` | `<2/HALF_UP>` | `<sum first, allocate delta>` | `<setScale before slice>` | `<case IDs>` |
+| Amount identity | Authoritative total | Exact type/construction | Currency and unit | Calculation-state source | Rounding level/boundary | Scale/mode/source | Allocation strategy/tie-breaker | Complement derivation | Audit evidence | Test evidence |
+| --------------- | ------------------- | ----------------------- | ----------------- | ------------------------ | ----------------------- | ----------------- | ------------------------------- | --------------------- | -------------- | ------------- |
+| `original = discount + actual` | `original` | `<BigDecimal from string>` | `<CNY; internal scale; provider minor unit>` | `<rate * quantity>` | `<order/payment adapter>` | `<2/HALF_UP/contract>` | `<largest remainder/business key>` | `actual = original - discount` | `<pre/post round; residual recipient>` | `<positive/zero/refund/half-unit/tied residual IDs>` |
+
+Use `money-precision-algorithms.md` to complete the contract. State the exact
+decimal representation and construction source; currency and ISO/provider
+minor-unit boundary; rounding level, mode, and policy source; deterministic
+residual strategy and stable tie-breaker; negative/refund symmetry; persistence
+precision/scale and overflow checks. Never assume every currency has two
+decimal places or use database implicit conversion as the rounding policy.
+
+For FX changes, additionally record:
+
+| Base/quote | Rate source/time | Rate precision | Canonical path | Target unit/rounding | Round-trip tolerance | Evidence |
+| ---------- | ---------------- | -------------- | -------------- | -------------------- | -------------------- | -------- |
+| `<base/quote>` | `<source/timestamp>` | `<scale>` | `<direct/triangulated order>` | `<currency/provider rule>` | `<contract tolerance>` | `<case IDs>` |
 
 Required precision checks:
 

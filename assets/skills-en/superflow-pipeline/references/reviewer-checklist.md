@@ -14,6 +14,12 @@
   `authoritative total - sum(other components)`?
 - Reject designs that calculate and round every component independently before
   rebuilding an authoritative total.
+- Are exact decimal construction, currency and provider minor units, rounding
+  level/policy source, and persistence precision explicit?
+- Does allocation use a declared residual strategy and stable tie-breaker, with
+  positive, zero, negative/refund, tied-remainder, and idempotence evidence?
+- For FX, are base/quote, source/time, canonical path, and target settlement
+  rounding explicit, without early rate rounding or synthesized inverses?
 - Are SQL changes reviewed and tied to total version SQL when needed?
 - Are RED/GREEN evidence and real-entry evidence present?
 - Are mock-only results clearly labeled?

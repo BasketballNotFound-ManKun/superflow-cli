@@ -178,3 +178,4 @@ Use the reference files in this skill directory as templates:
 - references/dirty-worktree.md
 - references/subagent-progress.md
 - references/superpower-technical-design-template.md
+- references/money-precision-algorithms.md

@@ -209,8 +209,11 @@ async function makeExternalEnumChange() {
 type MoneyPrecisionOptions = {
   designContract?: boolean;
   legacyDesignContract?: boolean;
+  preIndustryDesignContract?: boolean;
   promptContract?: boolean;
   reportEvidence?: boolean;
+  fxChange?: boolean;
+  fxContract?: boolean;
 };
 
 const LEGACY_MONEY_PRECISION_CONTRACT = [
@@ -226,9 +229,31 @@ const LEGACY_MONEY_PRECISION_CONTRACT = [
 
 const MONEY_PRECISION_CONTRACT = [
   LEGACY_MONEY_PRECISION_CONTRACT,
+  "Exact decimal representation uses BigDecimal constructed from string, never double.",
+  "Currency contract is CNY; the provider minor unit boundary is declared separately from internal scale.",
+  "The rounding level is order settlement; policy source is the business contract.",
+  "Allocation uses largest remainder with a stable tie-break by business key.",
+  "Test evidence covers positive, zero, and negative values.",
+  "Audit evidence records pre-round and post-round values and the residual recipient.",
+  "Persistence uses DECIMAL with precision and scale aligned to the API contract.",
   "The authoritative total is original amount for original = discount + actual.",
   "Derive the complement amount: actual = authoritative total minus discount.",
   "Do not calculate and round every component independently; must not calculate components separately.",
+  "",
+].join("\n");
+
+const PRE_INDUSTRY_MONEY_PRECISION_CONTRACT = [
+  LEGACY_MONEY_PRECISION_CONTRACT,
+  "The authoritative total is original amount for original = discount + actual.",
+  "Derive the complement amount: actual = authoritative total minus discount.",
+  "Do not calculate and round every component independently; must not calculate components separately.",
+  "",
+].join("\n");
+
+const FX_PRECISION_CONTRACT = [
+  "FX base/quote is CNY/USD; rate source and rate timestamp are recorded.",
+  "The canonical conversion path uses the contracted direct rate.",
+  "Target settlement rounding uses the USD provider minor unit.",
   "",
 ].join("\n");
 
@@ -236,7 +261,9 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
   const change = await makeCrossServiceChange();
   await write(
     path.join(change, "proposal.md"),
-    "# Proposal\n\nCalculate package settlement amount and allocation.\n",
+    options.fxChange
+      ? "# Proposal\n\nCalculate package settlement amount, allocation, and FX rate currency conversion.\n"
+      : "# Proposal\n\nCalculate package settlement amount and allocation.\n",
   );
   await write(
     path.join(change, "api.md"),
@@ -277,9 +304,14 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "",
     options.legacyDesignContract
       ? LEGACY_MONEY_PRECISION_CONTRACT
-      : options.designContract
-        ? MONEY_PRECISION_CONTRACT
-        : "",
+      : options.preIndustryDesignContract
+        ? PRE_INDUSTRY_MONEY_PRECISION_CONTRACT
+        : options.designContract
+          ? [
+              MONEY_PRECISION_CONTRACT,
+              options.fxContract ? FX_PRECISION_CONTRACT : "",
+            ].join("\n")
+          : "",
   ].join("\n");
   await write(
     path.join(
@@ -296,7 +328,12 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "",
     "Superpower 技术详设继承: technical_design is the source-level HOW.",
     "上下文防漂移: sdd-context and handoff_hash pending.",
-    options.promptContract ? MONEY_PRECISION_CONTRACT : "",
+    options.promptContract
+      ? [
+          MONEY_PRECISION_CONTRACT,
+          options.fxContract ? FX_PRECISION_CONTRACT : "",
+        ].join("\n")
+      : "",
   ].join("\n");
   await write(path.join(change, "prompt", "implementation.md"), prompt);
   await write(path.join(change, "prompt", "p01.md"), prompt);
@@ -309,7 +346,16 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "DB 数据库 SELECT completed.",
     "superflow-verify-integration / superflow-delivery-check / superflow-test-report-lint passed.",
     options.reportEvidence
-      ? "Money Precision Boundary: half-cent, residual, and multi-detail cases passed; original = discount + actual, allocated total reconciliation passed. The authoritative total was original amount; the complement amount actual was derived as authoritative total minus discount."
+      ? [
+          "Money Precision Boundary: half-cent, residual, and multi-detail cases passed; original = discount + actual, allocated total reconciliation passed.",
+          "The authoritative total was original amount; the complement amount actual was derived as authoritative total minus discount.",
+          "Currency CNY reconciled in provider minor units. Positive, zero, and negative cases passed.",
+          "Audit captured pre-round and post-round values plus the residual recipient.",
+          "Tied remainder allocation and idempotent repeated execution passed.",
+          options.fxContract
+            ? "FX base/quote CNY/USD used the recorded rate source; target settlement rounding used the USD provider minor unit."
+            : "",
+        ].join(" ")
       : "",
     "handoff_hash: pending",
     "",
@@ -445,6 +491,45 @@ describe("superflow-guard.sh", () => {
       execFileAsync("bash", [GUARD, change, "design"]),
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("authoritative total"),
+    });
+  });
+
+  it("requires a directional FX contract for currency conversion", async () => {
+    const change = await prepareMoneyPrecisionChange({
+      designContract: true,
+      fxChange: true,
+    });
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "design"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("FX direction"),
+    });
+  });
+
+  it("rejects a pre-industry contract without exact units and rounding policy", async () => {
+    const change = await prepareMoneyPrecisionChange({
+      preIndustryDesignContract: true,
+    });
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "design"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("exact representation"),
+    });
+  });
+
+  it("accepts a complete directional FX precision contract", async () => {
+    const change = await prepareMoneyPrecisionChange({
+      designContract: true,
+      fxChange: true,
+      fxContract: true,
+    });
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "design"]),
+    ).resolves.toMatchObject({
+      stdout: expect.stringContaining("guard passed for phase design"),
     });
   });
 

@@ -31,6 +31,9 @@ review-checklist.md, sdd-quality-gate.md, test-report.md, and technical design.
   identities, calculate only N-1 components independently and derive the final
   complement as `authoritative total - sum(other components)`; do not calculate
   and round every component independently.
+- Inherit `money-precision-algorithms.md`: exact decimal construction, currency
+  and provider minor units, rounding policy source, deterministic residual
+  tie-breaker, signed-value tests, and conditional FX conversion metadata.
 
 ## Implementation Steps
 

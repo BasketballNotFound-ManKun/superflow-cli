@@ -270,6 +270,17 @@ change_has_money_precision_risk() {
     "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
 }
 
+change_has_fx_precision_risk() {
+  grep -RIEiq \
+    '汇率|换汇|外汇|币种转换|跨币种|兑换率|(^|[^[:alnum:]_])(exchange rate|fx rate|currency conversion|cross.currency|base currency|quote currency)([^[:alnum:]_]|$)' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_has_architecture_boundary_risk() {
   grep -RIEiq \
     '跨仓|跨服务|sibling|SDK|MQ|topic|consumer|scheduler|定时|device|设备|callback|回调|third[- ]party|第三方|mini[- ]program|小程序|gateway|网关|adapter|适配|protocol|协议|interconnect|互联互通|调用链|入口|出口' \
@@ -327,6 +338,23 @@ require_money_precision_contract() {
   require_grep '禁止.*分别计算|不得.*分别计算|禁止.*独立.*舍入|do not.*independently|must not.*calculate.*separately' "$path" "$label independent calculation prohibition"
   require_grep '禁止提前舍入|不得提前.*舍入|forbidden early rounding|do not.*round' "$path" "$label forbidden early rounding"
   require_grep '半分|尾差|多明细|half.cent|residual|multi.detail' "$path" "$label boundary test evidence"
+  require_grep 'BigDecimal|MonetaryAmount|整数最小单位|integer minor unit|exact decimal' "$path" "$label exact representation"
+  require_grep '禁止.*(float|double)|不得.*(float|double)|never.*(float|double)|do not.*(float|double)' "$path" "$label binary floating-point prohibition"
+  require_grep '币种|currency' "$path" "$label currency contract"
+  require_grep '最小单位|minor unit|provider unit|渠道单位' "$path" "$label minor-unit boundary"
+  require_grep '舍入层级|舍入点|rounding level|rounding point|明细.*整单|line.level.*aggregate' "$path" "$label rounding level"
+  require_grep '规则来源|合同依据|policy source|contract source' "$path" "$label rounding policy source"
+  require_grep '最大余数|largest remainder|稳定.*排序|stable tie.break|业务主键' "$path" "$label deterministic residual tie-breaker"
+  require_grep '正数.*零.*负数|正数.*退款|positive.*zero.*negative|positive.*refund' "$path" "$label signed-value evidence"
+  require_grep '舍入前.*舍入后|pre.round.*post.round' "$path" "$label rounding audit evidence"
+  require_grep 'DECIMAL|NUMERIC|数据库.*不适用|持久化.*不适用|persistence.*not applicable' "$path" "$label persistence precision contract"
+  if change_has_fx_precision_risk; then
+    require_grep 'base/quote|基础币种.*目标币种|基准币种.*报价币种' "$path" "$label FX direction"
+    require_grep '汇率来源|rate source' "$path" "$label FX source"
+    require_grep '汇率.*时间|rate.*timestamp|rate.*effective' "$path" "$label FX timestamp"
+    require_grep '唯一换算路径|权威换算路径|canonical conversion path|canonical path' "$path" "$label FX canonical path"
+    require_grep '目标.*结算.*舍入|target.*settlement.*round' "$path" "$label FX target rounding"
+  fi
 }
 
 require_money_precision_evidence() {
@@ -337,6 +365,18 @@ require_money_precision_evidence() {
   require_grep '原始金额|优惠金额|实付金额|分配合计|对账|original.*discount.*actual|allocated total|reconciliation' "$path" "$label reconciliation evidence"
   require_grep '权威总额|真源总额|authoritative total' "$path" "$label authoritative total evidence"
   require_grep '差额反推|总额.*减|authoritative total.*minus|derive.*complement|complement amount' "$path" "$label complement derivation evidence"
+  require_grep '币种|currency' "$path" "$label currency evidence"
+  require_grep '最小单位|minor unit|provider unit|渠道单位' "$path" "$label minor-unit reconciliation"
+  require_grep '正数.*零.*负数|正数.*退款|positive.*zero.*negative|positive.*refund' "$path" "$label signed-value cases"
+  require_grep '舍入前.*舍入后|pre.round.*post.round' "$path" "$label rounding audit evidence"
+  require_grep '尾差接收方|residual recipient' "$path" "$label residual audit evidence"
+  require_grep '并列余数|tied remainder' "$path" "$label tied-residual cases"
+  require_grep '幂等|idempoten' "$path" "$label allocation idempotence"
+  if change_has_fx_precision_risk; then
+    require_grep 'base/quote|基础币种.*目标币种|基准币种.*报价币种' "$path" "$label FX direction evidence"
+    require_grep '汇率来源|rate source' "$path" "$label FX source evidence"
+    require_grep '目标.*结算.*舍入|target.*settlement.*round' "$path" "$label FX target rounding evidence"
+  fi
 }
 
 transition_event=""

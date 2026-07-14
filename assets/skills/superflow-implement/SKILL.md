@@ -122,6 +122,10 @@ Before implementation phase can exit:
   only N-1 components independently and derive the final complement as
   `authoritative total - sum(other components)`; calculating and rounding all
   components independently is blocked.
+  It must inherit `money-precision-algorithms.md`: exact decimal construction,
+  currency/provider minor units, rounding level and policy source,
+  deterministic residual tie-breaker, pre/post-round audit, signed-value tests,
+  and conditional FX metadata.
   RED/GREEN coverage must include half-cent, residual, or multi-detail cases
   and prove reconciliation identities in `test-report.md`.
 - Every implementation prompt must include a "上下文防漂移与状态继承" section.

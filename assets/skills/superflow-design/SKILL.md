@@ -77,7 +77,12 @@ Impact` and prove writers, readers, filters, derived sync paths, consumers,
    complement as `authoritative total - sum(other components)`. Independently
    calculating and rounding all components before rebuilding the total is
    blocked. A claimed exception must name the actual source of truth and owner
-   evidence.
+   evidence. Read
+   `../superflow-pipeline/references/money-precision-algorithms.md` and also
+   freeze the exact representation, currency/minor-unit boundary, rounding
+   level and policy source, deterministic residual strategy with stable
+   tie-breaker, and positive/zero/negative evidence. For FX changes, freeze the
+   directional rate metadata and one canonical conversion path.
 9. Record state:
    ```bash
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> technical_design docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md
