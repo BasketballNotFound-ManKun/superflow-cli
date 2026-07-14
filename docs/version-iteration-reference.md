@@ -122,6 +122,52 @@ Superflow 的目标是把 OpenSpec、understand-anything、真实源码与 Super
 
 ---
 
+## 版本发布门禁
+
+版本发布必须使用同一条顺序，防止 npm 已发布但 GitHub 没有版本说明：
+
+1. 同步更新 `package.json` 与 `package-lock.json` 的版本号并提交。
+2. 使用 `--cleanup=verbatim` 创建 annotated tag，避免 Git 把 Markdown 标题当作
+   注释删除。标签标题包含当前版本，正文必须写明“从上一版本升级内容”，并
+   包含“升级摘要、主要更新、验证结果、升级方式”四个章节。主要更新必须使用条目，
+   让第一次看到项目的网友也能直接理解版本价值，不能只粘贴 commit 列表。
+3. 执行 `npm publish`。`prepublishOnly` 会先运行 `npm run release:check`，标签或
+   升级说明不合格时阻断发布。
+4. 推送 `main` 和版本标签。`.github/workflows/publish-release-notes.yml` 会读取标签
+   正文并自动创建 GitHub Release。
+5. 分别用 `npm view @chenmk/superflow version` 和 `gh release view <tag>` 回查。
+
+若标签已经推送但 Release 创建失败，可在 GitHub Actions 手动执行“发布 GitHub
+Release”，输入原标签补建；工作流幂等，Release 已存在时不会重复创建。
+
+示例：
+
+```bash
+git tag --cleanup=verbatim -a v0.2.6 \
+  -m "发布 Superflow 0.2.6" \
+  -m "## 升级摘要
+
+从 0.2.5 升级内容：<一句话说明版本价值>
+
+## 主要更新
+
+- <用户能感知的更新一>
+- <用户能感知的更新二>
+
+## 验证结果
+
+- <测试、构建和兼容性结果>
+
+## 升级方式
+
+- npm install -g @chenmk/superflow@0.2.6"
+npm publish --access public --registry https://registry.npmjs.org
+git push origin main
+git push origin v0.2.6
+```
+
+---
+
 ## 历史吸收 ✅
 
 | # | 能力 | 值得？ | 理由 |
