@@ -85,6 +85,14 @@ Binding` with:
 不确定项/阻塞处理 | 测试证据`. Unconfirmed values are blockers; do not
   invent numeric values, origin/source values, display meanings, or fallback
   mappings.
+- For amount, fee, discount, deduction, refund, sharing, payment, invoice,
+  balance, electricity/service fee, package settlement, proration, allocation,
+  reconciliation, or financial display changes, `sdd-quality-gate.md` must
+  declare `Money Precision Boundary` as blocking. `tests.md` and the
+  `test-report.md` skeleton must reserve half-cent, residual, or multi-detail
+  cases and reconciliation evidence. Do not freeze docs that allow intermediate
+  money to be rounded before later slicing, aggregation, discounting, or
+  allocation.
 - For low-freedom implementation handoff, docs include the five hard gates:
   field semantic contract, write-through persistence closure, real-entry call
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
@@ -302,6 +310,10 @@ test-report证据位置`.
   `RED 失败证据`, `GREEN 通过证据`, `接口自动化证据`, `DB 核查证据`,
   `日志核查证据`, `未自动化/阻塞用例`, and `Partially verified 边界`.
   Each section must reference concrete `tests.md` case IDs.
+- For money-related changes, `test-report.md` must also include `Money Precision
+  Boundary` evidence: original calculation inputs and precision, actual rounding
+  boundary and mode, half-cent/residual/multi-detail cases, and reconciliation
+  of original, discount, actual/refund, and allocated totals.
 - `sdd-quality-gate.md` must include blocking checks for:
   executable tests frozen, RED/GREEN expectations present, interface automation
   commands present, DB/log assertions present, and mock/skipped cases excluded

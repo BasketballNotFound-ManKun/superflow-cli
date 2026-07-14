@@ -120,6 +120,12 @@ The workflow must preserve these gates:
   removal rules.
 - Field/status reverse impact analysis for IDs, statuses, enums, payment,
   online/offline, sync markers, external state, or persisted behavior.
+- Money Precision Boundary for monetary calculation, settlement, allocation,
+  reconciliation, or financial display. Preserve calculation-state precision
+  until the confirmed final boundary, forbid early rounding, define scale and
+  rounding mode plus deterministic residual handling, and require half-cent or
+  multi-detail reconciliation evidence across design, prompts, review, tests,
+  and verify.
 - Architecture boundary and call-direction analysis for multi-repo, service,
   SDK, MQ, scheduler, callback, gateway, adapter, device, or third-party flows.
 - SQL risk review before implementation for DB changes.

@@ -23,6 +23,10 @@ Superpowers technical design is canonical for source-level HOW and execution.
 - Field semantic contract checked.
 - Write-loop checked.
 - No-fallback boundary confirmed.
+- Money Precision Boundary copied from the technical design when monetary
+  behavior changes. Keep calculation-state precision until the confirmed
+  settlement/display boundary, record scale and rounding mode, forbid early
+  rounding, and define deterministic residual allocation.
 - RED test executed.
 - Allowed and forbidden files confirmed.
 - Blockers listed.
@@ -32,3 +36,7 @@ Superpowers technical design is canonical for source-level HOW and execution.
 Do not claim completion until build/test, real-entry execution, DB/log evidence,
 test-report update, and SuperBridge Flow hook scripts pass or are marked blocked
 with concrete reasons.
+
+For monetary changes, completion also requires half-cent, residual, or
+multi-detail allocation tests and reconciliation evidence proving that original,
+discount, actual, and allocated totals satisfy the contract identities.

@@ -16,6 +16,12 @@
 - Field/status reverse impact matrix exists when risky fields or states change.
 - Architecture boundary and call-direction matrix exists for cross-service or
   external flows.
+- Money precision boundary exists when amount, fee, discount, deduction,
+  refund, sharing, payment, invoice, balance, electricity fee, service fee,
+  package settlement, proration, allocation, reconciliation, or financial
+  display changes. It must separate calculation state from settlement/display
+  state, forbid early rounding, and include half-cent, residual, or
+  multi-detail allocation evidence.
 - SQL risk review exists for DB changes.
 - No fallback or guesswork is allowed without explicit owner approval.
 

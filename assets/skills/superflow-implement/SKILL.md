@@ -111,6 +111,15 @@ Before implementation phase can exit:
   source, Mapper XML, entities, DTO/VO, SQL, scheduled jobs, MQ/event consumers,
   callbacks, third-party adapters, shared SDK/tables, and sibling repos when
   applicable. A prompt that only changes the direct setter/writer is blocked.
+- When a task changes money, fees, discounts, deductions, refunds, sharing,
+  payments, invoices, balances, electricity/service fees, package settlement,
+  proration, allocation, reconciliation, or financial display, every prompt
+  must include "金额精度边界继承". It must copy the technical design
+  `Money Precision Boundary`, keep calculation-state precision until the
+  confirmed settlement/display boundary, forbid early `setScale(2)` before
+  later slicing or aggregation, and require deterministic residual allocation.
+  RED/GREEN coverage must include half-cent, residual, or multi-detail cases
+  and prove reconciliation identities in `test-report.md`.
 - Every implementation prompt must include a "上下文防漂移与状态继承" section.
   It must link `.sdd/handoff/sdd-context.md` as a clickable Markdown link,
   record the exact `handoff_hash`, and require Worker/Tester/Reviewer to read

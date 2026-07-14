@@ -248,6 +248,17 @@ change_has_field_status_risk() {
     "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null
 }
 
+change_has_money_precision_risk() {
+  grep -RIEiq \
+    '(^|[^[:alnum:]_])(amount|fee|fees|price|discount|deduction|refund|payment|invoice|balance|proration|allocation|reconciliation|residual|precision|rounding)([^[:alnum:]_]|$)|revenue sharing|profit sharing|split payment|electricity fee|service fee|package settlement|serviceFee|chargeFee|totalAmount|actualAmount|payAmount|refundAmount|discountAmount|invoiceAmount|balanceAmount' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_has_architecture_boundary_risk() {
   grep -RIEiq \
     'cross-repo|cross-service|sibling|SDK|MQ|topic|consumer|scheduler|scheduled|device|callback|third[- ]party|mini[- ]program|gateway|adapter|protocol|interconnect|call chain|entry|exit' \
@@ -281,6 +292,26 @@ require_prompt_set() {
   fi
 }
 
+require_money_precision_contract() {
+  local path="$1"
+  local label="$2"
+  require_grep 'Money Precision Boundary' "$path" "$label"
+  require_grep 'calculation.state|calculation source|intermediate precision' "$path" "$label calculation state"
+  require_grep 'settlement|display.state|rounding boundary' "$path" "$label settlement/display boundary"
+  require_grep 'scale|rounding mode|RoundingMode' "$path" "$label scale and rounding mode"
+  require_grep 'allocation|reconciliation|residual' "$path" "$label allocation/reconciliation rule"
+  require_grep 'forbidden early rounding|do not.*round' "$path" "$label forbidden early rounding"
+  require_grep 'half.cent|residual|multi.detail' "$path" "$label boundary test evidence"
+}
+
+require_money_precision_evidence() {
+  local path="$1"
+  local label="$2"
+  require_grep 'Money Precision Boundary' "$path" "$label"
+  require_grep 'half.cent|residual|multi.detail' "$path" "$label boundary cases"
+  require_grep 'original.*discount.*actual|allocated total|reconciliation' "$path" "$label reconciliation evidence"
+}
+
 transition_event=""
 
 if [[ -x "$VALIDATE" && -f "$CHANGE_DIR/.sdd/state.yaml" ]]; then
@@ -310,6 +341,9 @@ case "$PHASE" in
     require_grep 'RED|red-green|GREEN' tests.md "RED/GREEN test contract"
     require_grep 'curl|Postman|Newman|pytest|RestAssured|automation command' tests.md "interface automation command"
     require_grep 'handoff_hash|sdd-context|context package|anti-drift' sdd-quality-gate.md "handoff/context-drift gate"
+    if change_has_money_precision_risk; then
+      require_grep 'Money Precision Boundary' sdd-quality-gate.md "money precision quality gate"
+    fi
     require_markdown_links_valid
     transition_event="docs-complete"
     ;;
@@ -342,6 +376,9 @@ case "$PHASE" in
         if change_has_field_status_risk; then
           require_grep 'Field And Status Reverse Impact|Field And Status Reverse Impact|write point.*read|read/filter points|derived/sync points' "$technical_design_rel" "field/status reverse impact matrix"
         fi
+        if change_has_money_precision_risk; then
+          require_money_precision_contract "$technical_design_rel" "money precision boundary"
+        fi
       fi
     fi
     require_grep 'Superpowers Technical Design Handoff|Superpowers Technical Design|technical_design|source-level HOW' design.md "Superpowers technical design handoff"
@@ -366,6 +403,9 @@ case "$PHASE" in
         require_grep 'Superpowers Technical Design inheritance|technical_design|source-level HOW|Technical Design' "$prompt_rel" "prompt Superpowers technical design inheritance"
         if change_has_field_status_risk; then
           require_grep 'Field And Status Reverse Impact|Field And Status Reverse Impact|read/filter points|derived/sync points' "$prompt_rel" "prompt field/status reverse impact inheritance"
+        fi
+        if change_has_money_precision_risk; then
+          require_money_precision_contract "$prompt_rel" "prompt money precision inheritance"
         fi
       fi
       require_grep 'context anti-drift|handoff_hash|sdd-context' "$prompt_rel" "prompt context drift inheritance"
@@ -392,6 +432,9 @@ case "$PHASE" in
     require_grep 'interface automation|curl|Postman|Newman|pytest|RestAssured' test-report.md "interface automation evidence"
     require_grep 'DB|database|SELECT|SHOW CREATE' test-report.md "DB evidence"
     require_grep 'superflow-verify-integration|superflow-delivery-check|superflow-test-report-lint' test-report.md "SuperBridge Flow hook/script evidence"
+    if change_has_money_precision_risk; then
+      require_money_precision_evidence test-report.md "money precision runtime evidence"
+    fi
     require_test_report_lint
     require_markdown_links_valid
     if [[ "$(state_get verification_report)" == "" || "$(state_get verification_report)" == "null" ]]; then

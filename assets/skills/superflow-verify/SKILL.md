@@ -43,6 +43,12 @@ Use `.sdd/state.yaml` `verify_mode` after `scale`.
 prove the complete evidence chain: source/Mapper/XML, DB when needed, real
 entry point, interface automation, logs, SQL sync, and consumer behavior.
 
+Money-related changes always require full verification of
+`Money Precision Boundary`: original calculation inputs and intermediate precision, the actual
+rounding boundary and mode, half-cent/residual/multi-detail cases, deterministic
+allocation, and reconciliation identities. A final two-decimal display value
+or unit-test-only evidence is not sufficient.
+
 ## Required Superpowers
 
 Immediately load and apply these Superpowers when available:
@@ -94,7 +100,10 @@ Before pass:
    delivery or branch closeout.
 5. Code review findings are either fixed or explicitly recorded with accepted
    risk.
-6. Branch/worktree status is handled and `.sdd/state.yaml` has:
+6. For money-related changes, `test-report.md` records the `Money Precision
+   Boundary` cases and proves original, discount, actual/refund, and allocated
+   totals reconcile without early rounding.
+7. Branch/worktree status is handled and `.sdd/state.yaml` has:
    `branch_status: handled`.
 
 Only then run:

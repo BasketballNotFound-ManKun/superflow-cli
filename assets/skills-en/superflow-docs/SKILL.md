@@ -76,6 +76,14 @@ For complex requirements, verify these before writing docs:
   If the docs only prove that a value exists, is non-null, or lets the request
   succeed, stop and return to `$superflow-clarify`. If fallback/default/keep-old-value
   behavior is proposed without explicit requirement or owner approval, stop.
+- For amount, fee, discount, deduction, refund, sharing, payment, invoice,
+  balance, electricity/service fee, package settlement, proration, allocation,
+  reconciliation, or financial display changes, `sdd-quality-gate.md` must
+  declare `Money Precision Boundary` as blocking. `tests.md` and the
+  `test-report.md` skeleton must reserve half-cent, residual, or multi-detail
+  cases and reconciliation evidence. Do not freeze docs that allow intermediate
+  money to be rounded before later slicing, aggregation, discounting, or
+  allocation.
 - For low-freedom implementation handoff, docs include the five hard gates:
   field semantic contract, write-through persistence closure, real-entry call
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
@@ -293,6 +301,10 @@ Use references only as needed:
   `RED failure evidence`, `GREEN pass evidence`, `interface automation evidence`, `DB evidence`,
   `log evidence`, `manual/blocking cases`, and `Partially verified boundary`.
   Each section must reference concrete `tests.md` case IDs.
+- For money-related changes, `test-report.md` must also include `Money Precision
+  Boundary` evidence: original calculation inputs and precision, actual rounding
+  boundary and mode, half-cent/residual/multi-detail cases, and reconciliation
+  of original, discount, actual/refund, and allocated totals.
 - `sdd-quality-gate.md` must include blocking checks for:
   executable tests frozen, RED/GREEN expectations present, interface automation
   commands present, DB/log assertions present, and mock/skipped cases excluded

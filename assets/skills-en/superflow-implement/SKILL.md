@@ -60,6 +60,10 @@ Every implementation prompt must include these sections:
   DTO, converter, SQL, scheduled job, MQ, callback, and sibling repo references.
 - Field semantic contract: source field, source meaning, target field, target
   meaning, equivalence, evidence anchor, forbidden usage, and owner for unknowns.
+- Money precision boundary when monetary behavior changes: calculation-state
+  source and intermediate precision, settlement/display boundary, scale and
+  rounding mode, forbidden early rounding, deterministic residual allocation,
+  and half-cent or multi-detail reconciliation evidence.
 - Write-loop verification: business action, setter/assignment, converter, mapper
   insert/update, DB column, downstream reader, consumer entry, SQL check, test
   case.
@@ -99,6 +103,8 @@ Block prompt generation or execution when any of these are missing:
 - handoff files and matching hash;
 - technical_design for full workflow;
 - field/status reverse impact matrix when risky fields or states are touched;
+- money precision boundary when monetary calculation, settlement, allocation,
+  reconciliation, or financial display is touched;
 - architecture boundary and call-direction matrix for cross-service or external
   flows;
 - executable tests.md commands for L3/L4 or real-entry requirements;

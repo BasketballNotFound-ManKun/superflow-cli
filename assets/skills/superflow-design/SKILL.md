@@ -64,12 +64,21 @@ Impact` and prove writers, readers, filters, derived sync paths, consumers,
    owner confirmation, unresolved handling, and test evidence. A request
    succeeding or a field being non-null is not enough; unconfirmed values are
    blockers and must be returned to `$superflow-docs` or the user.
-8. Record state:
+8. For amount, fee, discount, deduction, refund, sharing, payment, invoice,
+   balance, electricity fee, service fee, package settlement, proration,
+   allocation, reconciliation, or financial display changes,
+   include `Money Precision Boundary`. Prove calculation-state fields,
+   settlement/display-state fields, rounding boundary, scale, rounding mode,
+   allocation/reconciliation rule, and tests covering half-cent or residual
+   cases. If the design rounds money before later slicing, proration,
+   aggregation, discounting, or allocation, stop and redesign the calculation
+   boundary.
+9. Record state:
    ```bash
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> technical_design docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> design_doc design.md
    ```
-9. Update `design.md` with `Superpowers Technical Design Handoff`, update
+10. Update `design.md` with `Superpowers Technical Design Handoff`, update
    `sdd-quality-gate.md` with the technical design path and hash, then run
    `../superflow-pipeline/scripts/superflow-handoff.sh <change-dir> --refresh`.
    If the guard reports a stale or missing hash, record the printed hash in
@@ -77,7 +86,7 @@ Impact` and prove writers, readers, filters, derived sync paths, consumers,
    `--refresh` again. Do not set `design_doc` to the Superpowers document;
    `design_doc` is the OpenSpec/SDD contract design, while `technical_design`
    is the Superpowers HOW document.
-10. Run:
+11. Run:
 
 ```bash
 ../superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>

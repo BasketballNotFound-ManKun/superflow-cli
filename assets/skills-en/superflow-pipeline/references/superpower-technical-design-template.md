@@ -83,6 +83,33 @@ third-party adapters, and sibling repos when the table or DTO is shared.
 The technical design must say which references are intentionally unchanged and
 why. A change is not ready when only the direct setter/writer is designed.
 
+## Money Precision Boundary
+
+Use this whenever the change involves amount, fee, discount, deduction, refund,
+sharing, payment, invoice, balance, electricity fee, service fee, package
+settlement, proration, allocation, reconciliation, or financial display.
+
+| Amount field | Calculation-state source | Intermediate precision | Rounding boundary | Scale/mode | Allocation/reconciliation rule | Forbidden early rounding | Test evidence |
+|---|---|---|---|---|---|---|---|
+| `amount` | `<rate * quantity>` | `<BigDecimal scale>` | `<DB/API/display>` | `<2/HALF_UP>` | `<sum first, allocate delta>` | `<setScale before slice>` | `<case IDs>` |
+
+Required precision checks:
+
+```bash
+rg -ni "setScale|round|RoundingMode|BigDecimal|double|float|money\\(" <source-and-test-paths>
+rg -ni "amount|fee|price|discount|deduction|refund|pay|invoice|balance|serviceFee|chargeFee" <source-and-test-paths>
+```
+
+The design must separate calculation-state money from settlement/display-state
+money. Intermediate calculations must keep original rate, product, proportion,
+process evidence, and allocation precision. Round only at explicit outbound
+boundaries such as settlement posting, persistence fields that require cents,
+payment/fiscal interfaces, invoices, exports, or display. For multi-detail
+allocation, compute the high-precision target first, then distribute the final
+rounded amount deterministically so totals match and identities such as
+`original = discount + actual` hold. Do not calculate later slices, discounts,
+ratios, or unit prices from already-rounded money.
+
 ## Execution Architecture
 
 - Worker boundaries:
@@ -119,6 +146,9 @@ why. A change is not ready when only the direct setter/writer is designed.
   that only shows "can call through this module" is not ready.
 - For field/status changes, prove reverse impact before coding: writers,
   readers, filters, derived sync paths, external consumers, and tests.
+- For money changes, prove the precision boundary before coding: calculation
+  state, settlement/display state, final rounding point, allocation rule, and
+  half-cent/residual tests.
 - Do not invent API fields, DB columns, status semantics, fallback behavior, or
   acceptance criteria.
 - Keep unresolved source facts as blockers. Do not convert them to guesses.

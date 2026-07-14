@@ -259,6 +259,17 @@ change_has_external_enum_risk() {
     "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
 }
 
+change_has_money_precision_risk() {
+  grep -RIEiq \
+    '金额|费用|价格|优惠|折扣|抵扣|退款|分账|支付|发票|余额|电费|服务费|套餐结算|比例分摊|明细分配|尾差|精度|舍入|(^|[^[:alnum:]_])(amount|fee|fees|price|discount|deduction|refund|payment|invoice|balance|proration|allocation|reconciliation|rounding)([^[:alnum:]_]|$)|revenue sharing|profit sharing|split payment|serviceFee|chargeFee|totalAmount|actualAmount|payAmount|refundAmount|discountAmount|invoiceAmount|balanceAmount' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_has_architecture_boundary_risk() {
   grep -RIEiq \
     '跨仓|跨服务|sibling|SDK|MQ|topic|consumer|scheduler|定时|device|设备|callback|回调|third[- ]party|第三方|mini[- ]program|小程序|gateway|网关|adapter|适配|protocol|协议|interconnect|互联互通|调用链|入口|出口' \
@@ -303,6 +314,26 @@ require_external_enum_contract() {
   require_grep '不确定|阻塞|blocker|unknown|待确认' "$path" "$label unresolved/blocker column"
 }
 
+require_money_precision_contract() {
+  local path="$1"
+  local label="$2"
+  require_grep 'Money Precision Boundary|金额精度边界' "$path" "$label"
+  require_grep '计算态|calculation.state|calculation source|intermediate precision' "$path" "$label calculation state"
+  require_grep '结算态|展示态|settlement|display.state|rounding boundary' "$path" "$label settlement/display boundary"
+  require_grep 'scale|rounding mode|RoundingMode|舍入模式' "$path" "$label scale and rounding mode"
+  require_grep '分配|对账|allocation|reconciliation|residual|尾差' "$path" "$label allocation/reconciliation rule"
+  require_grep '禁止提前舍入|不得提前.*舍入|forbidden early rounding|do not.*round' "$path" "$label forbidden early rounding"
+  require_grep '半分|尾差|多明细|half.cent|residual|multi.detail' "$path" "$label boundary test evidence"
+}
+
+require_money_precision_evidence() {
+  local path="$1"
+  local label="$2"
+  require_grep 'Money Precision Boundary|金额精度边界' "$path" "$label"
+  require_grep '半分|尾差|多明细|half.cent|residual|multi.detail' "$path" "$label boundary cases"
+  require_grep '原始金额|优惠金额|实付金额|分配合计|对账|original.*discount.*actual|allocated total|reconciliation' "$path" "$label reconciliation evidence"
+}
+
 transition_event=""
 
 if [[ -x "$VALIDATE" && -f "$CHANGE_DIR/.sdd/state.yaml" ]]; then
@@ -335,6 +366,9 @@ case "$PHASE" in
     if change_has_external_enum_risk; then
       require_external_enum_contract api.md "external enum binding contract"
       require_external_enum_contract sdd-quality-gate.md "external enum binding quality gate"
+    fi
+    if change_has_money_precision_risk; then
+      require_grep 'Money Precision Boundary|金额精度边界' sdd-quality-gate.md "money precision quality gate"
     fi
     require_markdown_links_valid
     transition_event="docs-complete"
@@ -371,6 +405,9 @@ case "$PHASE" in
         if change_has_external_enum_risk; then
           require_external_enum_contract "$technical_design_rel" "external enum binding matrix"
         fi
+        if change_has_money_precision_risk; then
+          require_money_precision_contract "$technical_design_rel" "money precision boundary"
+        fi
       fi
     fi
     require_grep 'Superpowers Technical Design Handoff|Superpower 技术详设|technical_design|源码级 HOW' design.md "Superpowers technical design handoff"
@@ -399,6 +436,9 @@ case "$PHASE" in
         if change_has_external_enum_risk; then
           require_external_enum_contract "$prompt_rel" "prompt external enum binding inheritance"
         fi
+        if change_has_money_precision_risk; then
+          require_money_precision_contract "$prompt_rel" "prompt money precision inheritance"
+        fi
       fi
       require_grep '上下文防漂移|handoff_hash|sdd-context' "$prompt_rel" "prompt context drift inheritance"
     fi
@@ -426,6 +466,9 @@ case "$PHASE" in
     require_grep 'superflow-verify-integration|superflow-delivery-check|superflow-test-report-lint' test-report.md "SuperBridge Flow hook/script evidence"
     if change_has_external_enum_risk; then
       require_grep 'External Enum Binding|外部枚举绑定|第三方字段语义绑定|外部展示|展示文案|业务语义|财务语义|BEM|真实入口' test-report.md "external enum binding runtime evidence"
+    fi
+    if change_has_money_precision_risk; then
+      require_money_precision_evidence test-report.md "money precision runtime evidence"
     fi
     require_test_report_lint
     require_markdown_links_valid

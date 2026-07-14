@@ -24,6 +24,10 @@ review-checklist.md, sdd-quality-gate.md, test-report.md, and technical design.
 - Do not change forbidden files or root aggregate docs from a worker batch.
 - Use TDD: record RED failure before GREEN success.
 - Do not mark mock-only or unit-only evidence as real integration.
+- For monetary changes, inherit `Money Precision Boundary`, retain
+  calculation-state precision until the confirmed settlement/display boundary,
+  record scale and rounding mode, forbid early rounding before slicing or
+  allocation, and define deterministic residual handling.
 
 ## Implementation Steps
 
@@ -44,5 +48,7 @@ log check, and hook commands.
 - Real-entry evidence
 - DB/log evidence
 - Hook evidence
+- Money precision evidence: half-cent/residual/multi-detail cases and
+  reconciliation of original, discount, actual, and allocated totals
 - Deviations
 - Blockers
