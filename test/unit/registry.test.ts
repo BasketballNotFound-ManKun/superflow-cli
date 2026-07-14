@@ -21,11 +21,12 @@ describe('core/registry', () => {
     fs.rmSync(TMP, { recursive: true, force: true });
   });
 
-  it('HOOK_MAP 含 9 个 hook 脚本', () => {
-    expect(Object.keys(HOOK_MAP).length).toBe(9);
+  it('HOOK_MAP 含 10 个 hook 脚本', () => {
+    expect(Object.keys(HOOK_MAP).length).toBe(10);
     expect(HOOK_MAP['superflow-enforce-hook.sh']).toBeDefined();
     expect(HOOK_MAP['superflow-hook-guard.sh']).toBeDefined();
     expect(HOOK_MAP['superflow-dependency-update-hook.sh'].event).toBe('UserPromptSubmit');
+    expect(HOOK_MAP['superflow-archive-command-hook.sh'].matcher).toBe('Bash');
     expect(HOOK_MAP['codex-auto-backup-hook.sh']).toBeDefined();
     // sql-sync-hook.py 的 Bash 注册通过 registerHook 第二次调用（matcherOverride）实现
     // 不在 HOOK_MAP 默认 matcher 里
@@ -165,10 +166,10 @@ describe('core/registry', () => {
 
     // 第一次 init
     runInitLike();
-    expect(countSuperflowCommands(SETTINGS)).toBe(9);  // 8 hook 脚本 + sql-sync 双注册
+    expect(countSuperflowCommands(SETTINGS)).toBe(10);  // 9 hook 脚本 + sql-sync 双注册
 
     // 第二次 init（幂等性：数量应不变）
     runInitLike();
-    expect(countSuperflowCommands(SETTINGS)).toBe(9);
+    expect(countSuperflowCommands(SETTINGS)).toBe(10);
   });
 });

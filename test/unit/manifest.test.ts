@@ -22,12 +22,18 @@ describe('core/manifest', () => {
     const codexScripts = getManifestScripts('codex');
     const claudeScripts = getManifestScripts('claude');
     expect(codexScripts).toContain('superflow-hook-guard.sh');
+    expect(codexScripts).toContain('superflow-archive-command-hook.sh');
     expect(codexScripts).toContain('superflow-dependency-update-hook.sh');
     expect(codexScripts).toContain('codex-auto-backup-hook.sh');
     expect(claudeScripts).toContain('claude-auto-backup-hook.sh');
     expect(getManifestScripts('opencode')).toContain('superflow-hook-guard.sh');
     expect(getManifestScripts('opencode')).not.toContain('codex-auto-backup-hook.sh');
     expect(getManifestScripts('opencode')).not.toContain('claude-auto-backup-hook.sh');
+  });
+
+  it('registers the direct archive command gate for native-hook agents', () => {
+    expect(getManifestHooks('codex')).toContain('superflow-archive-command-hook.sh');
+    expect(getManifestHooks('claude')).toContain('superflow-archive-command-hook.sh');
   });
 
   it('manifest declares Codex, Claude, and OpenCode agents', () => {

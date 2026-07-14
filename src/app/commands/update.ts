@@ -1,5 +1,4 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { existsSync, readFileSync } from 'fs';
 import {
   ALL_RULES,
@@ -22,10 +21,8 @@ import { clearSddHooks, registerHook } from '../../domains/hook.js';
 import type { Agent, InstallScope } from '../../types.js';
 import { runCommand } from '../../platform/process.js';
 import { installCodexSuperpowers, installSuperpowers } from '../../domains/deps.js';
+import { ASSETS_DIR, PACKAGE_ROOT } from '../../platform/assets.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ASSETS_DIR = path.resolve(__dirname, '..', '..', 'assets');
 const PACKAGE_NAME = '@chenmk/superflow';
 const OPENSPEC_PACKAGE_NAME = '@fission-ai/openspec';
 const OFFICIAL_REGISTRY = 'https://registry.npmjs.org';
@@ -209,7 +206,7 @@ export function formatDependencyUpdateCommands(agents: Agent[], packageScope: In
 
 export function detectPackageScope(
   projectPath: string,
-  packageRoot = path.resolve(__dirname, '..', '..')
+  packageRoot = PACKAGE_ROOT
 ): InstallScope {
   const localPackageRoot = path.join(projectPath, 'node_modules', '@chenmk', 'superflow');
   if (isSameOrInside(packageRoot, localPackageRoot)) return 'project';

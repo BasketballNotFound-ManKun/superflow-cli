@@ -29,6 +29,7 @@
     "superflow-hook-guard.sh",
     "superflow-dependency-update-hook.sh",
     "superflow-integration-evidence-hook.sh",
+    "superflow-archive-command-hook.sh",
     "superflow-test-report-lint.py",
     "install-sql-pre-commit.sh",
     "sync-settings-json.py"
@@ -45,7 +46,8 @@
     "superflow-dependency-update-hook.sh",
     "superflow-sql-sync-hook.py",
     "superflow-delivery-check.sh",
-    "superflow-integration-evidence-hook.sh"
+    "superflow-integration-evidence-hook.sh",
+    "superflow-archive-command-hook.sh"
   ],
   "agentHooks": {
     "claude": ["claude-auto-backup-hook.sh"],

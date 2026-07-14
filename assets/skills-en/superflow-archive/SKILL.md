@@ -14,6 +14,10 @@ do not mark archived until the user confirms final closeout.
 - `phase: archive`.
 - `verify_result: pass`.
 - `verification_report` points to an existing report.
+- Every checkbox in `tasks.md` is checked.
+- The verification report contains `Verification Result: PASS` and
+  `Archive Readiness: PASS`.
+- `branch_status: handled` and `verified_at` are recorded.
 - `superflow-state.sh recover <change-dir>` gives a coherent archive recovery action.
 
 ## Procedure
@@ -42,6 +46,8 @@ do not mark archived until the user confirms final closeout.
   the user explicitly accepts the boundary.
 - Do not use archive to hide missing API, DB, hook, SQL, test-report, or real
   integration evidence.
+- Never call `openspec archive` directly to bypass the lifecycle gate. The
+  installed archive-command hook blocks that path when native hooks are active.
 - In a standard `openspec/changes/<name>` layout, archive must use OpenSpec
   archive semantics so delta specs are merged and the change is moved to
   `openspec/changes/archive/`. State-only archive is only a fallback for

@@ -591,4 +591,111 @@ describe("superflow-guard.sh", () => {
     const { stdout } = await execFileAsync("bash", [STATE, "phase", change]);
     expect(stdout.trim()).toBe("verify");
   });
+
+  it("blocks verify when tasks are not fully checked off", async () => {
+    const change = await makeCrossServiceChange();
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [STATE, "set", change, "verify_mode", "light"]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "branch_status",
+      "handled",
+    ]);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "verify"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("unchecked task(s) remain"),
+    });
+  });
+
+  it("blocks archive without an explicit PASS closeout marker", async () => {
+    const change = await makeCrossServiceChange();
+    await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [STATE, "set", change, "verify_mode", "light"]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "verify_result",
+      "pass",
+    ]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "verification_report",
+      "test-report.md",
+    ]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "branch_status",
+      "handled",
+    ]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "verified_at",
+      "2026-07-14T00:00:00Z",
+    ]);
+    await execFileAsync("bash", [STATE, "set", change, "phase", "archive"], {
+      env: { ...process.env, SUPERFLOW_FORCE_PHASE: "1" },
+    });
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "archive"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("archive readiness PASS marker"),
+    });
+
+    await fs.promises.appendFile(
+      path.join(change, "test-report.md"),
+      "\nVerification Result: PASS\nArchive Readiness: PASS\n",
+    );
+    await expect(
+      execFileAsync("bash", [GUARD, change, "archive"]),
+    ).resolves.toMatchObject({
+      stdout: expect.stringContaining("guard passed for phase archive"),
+    });
+  });
+
+  it("requires test-environment fingerprint for full verification", async () => {
+    const change = await makeCrossServiceChange();
+    await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");
+    await write(
+      path.join(change, "test-report.md"),
+      [
+        "# Test Report",
+        "",
+        "RED failure evidence and GREEN pass evidence.",
+        "Interface automation: curl http://localhost:8080/api.",
+        "DB SELECT and log ERROR checks passed.",
+        "superflow-verify-integration / superflow-delivery-check / superflow-test-report-lint passed.",
+        "Verification Result: PASS",
+        "Archive Readiness: PASS",
+        "",
+      ].join("\n"),
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [STATE, "set", change, "verify_mode", "full"]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "branch_status",
+      "handled",
+    ]);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "verify"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("full verification test environment"),
+    });
+  });
 });

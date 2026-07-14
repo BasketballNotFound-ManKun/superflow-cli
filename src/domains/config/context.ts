@@ -1,12 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import type { Language } from '../../types.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// dist/domains/config/context.js -> ../../../assets/context-templates*
-const ASSETS_DIR = path.resolve(__dirname, '..', '..', '..', 'assets');
+import { ASSETS_DIR } from '../../platform/assets.js';
 
 const CONTEXT_FILES = [
   'business-rules.md',

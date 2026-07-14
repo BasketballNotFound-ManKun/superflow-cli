@@ -38,3 +38,15 @@ rounded. Record currency, provider minor unit, pre/post-round values, residual
 recipient, and positive/zero/negative or refund, tied remainder, and idempotent
 recalculation evidence. FX cases also record base/quote, rate source, and target
 settlement rounding. A two-decimal display assertion alone is insufficient.
+
+## Closeout
+
+Verification Result: PASS / FAIL / BLOCKED / PARTIALLY_VERIFIED
+Archive Readiness: PASS / BLOCKED
+
+Required for `verify_mode: full`:
+
+- Test environment:
+- Branch/commit/build number or image:
+- Base URL:
+- Verification timestamp:

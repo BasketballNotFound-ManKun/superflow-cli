@@ -111,6 +111,13 @@ Before pass:
    complement.
 7. Branch/worktree status is handled and `.sdd/state.yaml` has:
    `branch_status: handled`.
+8. Every checkbox in `tasks.md` is checked. A completed implementation with
+   stale task documentation is a verification failure, not an archive-time
+   cleanup item.
+9. `test-report.md` ends with the machine-checkable closeout markers
+   `验证结果: PASS` and `归档就绪: PASS`. For `verify_mode: full`, it also
+   records the test environment, branch/commit/build or image fingerprint,
+   Base URL, and verification timestamp.
 
 Only then run:
 

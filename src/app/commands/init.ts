@@ -1,5 +1,4 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import { createInterface } from 'readline/promises';
 import { stdin as input, stdout as output } from 'process';
@@ -36,11 +35,7 @@ import {
 } from '../../domains/skill/assets.js';
 import { normalizeLanguage, t } from '../../domains/config/i18n.js';
 import type { Agent, AgentSelection, InstallScope, Language } from '../../types.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// dist/commands/init.js → ../../assets
-const ASSETS_DIR = path.resolve(__dirname, '..', '..', 'assets');
+import { ASSETS_DIR } from '../../platform/assets.js';
 
 export interface InitOptions {
   dryRun: boolean;

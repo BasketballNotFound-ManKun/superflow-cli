@@ -166,6 +166,16 @@ HTTP 200、字段非空、mock-only、DB-only、`BUILD SUCCESS`、`Tests are ski
 ## 9. 结论
 
 [是否达到交付标准，是否可以进入下一阶段]
+
+验证结果: PASS / FAIL / BLOCKED / PARTIALLY_VERIFIED
+归档就绪: PASS / BLOCKED
+
+`verify_mode: full` 时必须填写：
+
+- 测试环境：
+- 分支/commit/构建号或镜像：
+- Base URL：
+- 验证时间：
 ```
 
 ## 任务完成 Checklist（全部满足才能标记完成）

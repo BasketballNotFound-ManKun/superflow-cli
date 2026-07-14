@@ -52,9 +52,28 @@ if [ -z "$CHANGED" ]; then
   exit 0
 fi
 
+ACTIVE_SDD_CHANGED=$(printf '%s\n' "$CHANGED" | grep -Ev \
+  '(^|/)(doc/)?openspec/changes/archive/' || true)
+
 SDD_ACTIVE=0
 if [ -f "$REPO_ROOT/.sdd-enforced" ]; then
   SDD_ACTIVE=1
+fi
+
+if [ "$SDD_ACTIVE" -eq 0 ]; then
+  ACTIVE_STATE=$(find "$REPO_ROOT/openspec/changes" \
+    -path '*/archive/*' -prune -o \
+    -path '*/.sdd/state.yaml' -type f -print 2>/dev/null \
+    | while IFS= read -r state; do
+        phase=$(awk -F':' '$1=="phase"{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}' "$state")
+        archived=$(awk -F':' '$1=="archived"{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}' "$state")
+        if [ "$archived" != "true" ] && { [ "$phase" = "implement" ] || [ "$phase" = "verify" ]; }; then
+          printf '%s\n' "$state"
+        fi
+      done | head -n 1)
+  if [ -n "$ACTIVE_STATE" ]; then
+    SDD_ACTIVE=1
+  fi
 fi
 
 RUNTIME_CHANGED=$(printf '%s\n' "$CHANGED" | grep -E \
@@ -63,16 +82,16 @@ RUNTIME_CHANGED=$(printf '%s\n' "$CHANGED" | grep -E \
 CODE_RUNTIME_CHANGED=$(printf '%s\n' "$CHANGED" | grep -E \
   '(^|/)src/main/.*\.(java|xml|yml|yaml|properties)$|(^|/)mapper/.*\.xml$' || true)
 
-P_DIRS=$(printf '%s\n' "$CHANGED" | sed -nE \
+P_DIRS=$(printf '%s\n' "$ACTIVE_SDD_CHANGED" | sed -nE \
   's#^(.*embedded-changes/(p[0-9]+[^/]*))/.*$#\1#p' | sort -u)
 
-REPORTS=$(printf '%s\n' "$CHANGED" | grep -E \
+REPORTS=$(printf '%s\n' "$ACTIVE_SDD_CHANGED" | grep -E \
   '(^|/)embedded-changes/p[0-9][^/]*/test-report\.md$|(^|/)test-report\.md$' || true)
 
-AGGREGATE_DOCS=$(printf '%s\n' "$CHANGED" | grep -E \
+AGGREGATE_DOCS=$(printf '%s\n' "$ACTIVE_SDD_CHANGED" | grep -E \
   '(^|/)openspec/changes/[^/]+/(tasks|test-report|traceability-matrix|sdd-quality-gate|tests)\.md$|(^|/)doc/openspec/changes/[^/]+/(tasks|test-report|traceability-matrix|sdd-quality-gate|tests)\.md$' || true)
 
-SDD_DOCS_CHANGED=$(printf '%s\n' "$CHANGED" | grep -E \
+SDD_DOCS_CHANGED=$(printf '%s\n' "$ACTIVE_SDD_CHANGED" | grep -E \
   '(^|/)(doc/)?openspec/changes/|(^|/)embedded-changes/p[0-9]' || true)
 
 AGGREGATE_ALLOWED=0

@@ -178,6 +178,60 @@ require_state_file() {
   require_file .sdd/state.yaml
 }
 
+require_tasks_complete() {
+  local task_count unchecked_count
+  require_file tasks.md
+  [[ -f "$CHANGE_DIR/tasks.md" ]] || return 0
+  task_count="$(grep -Ec '^[[:space:]]*-[[:space:]]+\[[ xX]\]' "$CHANGE_DIR/tasks.md" || true)"
+  unchecked_count="$(grep -Ec '^[[:space:]]*-[[:space:]]+\[[[:space:]]\]' "$CHANGE_DIR/tasks.md" || true)"
+  [[ "$task_count" -gt 0 ]] || issues+=("tasks.md has no checkbox tasks")
+  [[ "$unchecked_count" -eq 0 ]] || issues+=("$unchecked_count unchecked task(s) remain in tasks.md")
+}
+
+verification_report_path() {
+  local value
+  value="$(state_get verification_report)"
+  [[ -n "$value" && "$value" != "null" ]] || return 1
+  if [[ -f "$CHANGE_DIR/$value" ]]; then
+    printf '%s\n' "$CHANGE_DIR/$value"
+    return 0
+  fi
+  if [[ -f "$value" ]]; then
+    printf '%s\n' "$value"
+    return 0
+  fi
+  return 1
+}
+
+require_closeout_markers() {
+  local report="${1:-$CHANGE_DIR/test-report.md}"
+  if [[ ! -f "$report" ]]; then
+    issues+=("verification report path does not exist: $report")
+    return 0
+  fi
+  if ! grep -Eiq '(Verification Result)[[:space:]:|*-]*(PASS)' "$report"; then
+    issues+=("verification result PASS marker not found in verification report")
+  fi
+  if ! grep -Eiq '(Archive Readiness)[[:space:]:|*-]*(PASS|READY)' "$report"; then
+    issues+=("archive readiness PASS marker not found in verification report")
+  fi
+}
+
+require_branch_handled() {
+  local branch_status
+  branch_status="$(state_get branch_status)"
+  [[ "$branch_status" == "handled" ]] || issues+=("branch_status must be handled before verification closeout")
+}
+
+require_full_verification_fingerprint() {
+  local report="$CHANGE_DIR/test-report.md"
+  [[ "$(state_get verify_mode)" == "full" ]] || return 0
+  require_grep 'test environment|staging|sandbox' "$report" "full verification test environment"
+  require_grep 'branch|commit|tag|build|image' "$report" "full verification deployment fingerprint"
+  require_grep 'https?://|Base URL' "$report" "full verification base URL"
+  require_grep 'timestamp|verified[_ -]?at|20[0-9]{2}-[0-9]{2}-[0-9]{2}' "$report" "full verification timestamp"
+}
+
 require_spec_doc() {
   if [[ -f "$CHANGE_DIR/spec.md" ]]; then
     return
@@ -471,6 +525,7 @@ case "$PHASE" in
     ;;
   verify)
     require_state_file
+    require_tasks_complete
     require_file test-report.md
     require_grep 'RED|failure evidence' test-report.md "RED evidence"
     require_grep 'GREEN|pass evidence' test-report.md "GREEN evidence"
@@ -481,6 +536,9 @@ case "$PHASE" in
       require_money_precision_evidence test-report.md "money precision runtime evidence"
     fi
     require_test_report_lint
+    require_closeout_markers "$CHANGE_DIR/test-report.md"
+    require_branch_handled
+    require_full_verification_fingerprint
     require_markdown_links_valid
     if [[ "$(state_get verification_report)" == "" || "$(state_get verification_report)" == "null" ]]; then
       "$STATE" set "$CHANGE_DIR" verification_report test-report.md
@@ -489,11 +547,20 @@ case "$PHASE" in
     ;;
   archive)
     require_state_file
+    require_tasks_complete
     verify_result="$(state_get verify_result)"
     [[ "$verify_result" == "pass" ]] || issues+=("verify_result must be pass before archive")
     archived="$(state_get archived)"
     [[ "$archived" != "true" ]] || issues+=("archived is already true")
     require_state_value verification_report "verification_report"
+    report_path="$(verification_report_path || true)"
+    if [[ -z "$report_path" ]]; then
+      issues+=("verification_report path does not exist")
+    else
+      require_closeout_markers "$report_path"
+    fi
+    require_branch_handled
+    require_state_value verified_at "verified_at"
     transition_event="archived"
     ;;
   *)

@@ -5,7 +5,6 @@ export interface HookMapEntry {
   event: string;
   matcher?: string;
 }
-
 export const HOOK_MAP: Record<string, HookMapEntry> = {
   'claude-auto-backup-hook.sh': { event: 'PostToolUse', matcher: 'Edit|Write|Bash' },
   'codex-auto-backup-hook.sh': { event: 'PostToolUse', matcher: 'Edit|Write|Bash' },
@@ -16,6 +15,7 @@ export const HOOK_MAP: Record<string, HookMapEntry> = {
   'superflow-sql-sync-hook.py': { event: 'PreToolUse', matcher: 'Edit|Write|NotebookEdit' },
   'superflow-delivery-check.sh': { event: 'PreToolUse', matcher: 'Bash' },
   'superflow-integration-evidence-hook.sh': { event: 'PreToolUse', matcher: 'Bash' },
+  'superflow-archive-command-hook.sh': { event: 'PreToolUse', matcher: 'Bash' },
 };
 
 export type HookPlatform = 'claude' | 'codex';
