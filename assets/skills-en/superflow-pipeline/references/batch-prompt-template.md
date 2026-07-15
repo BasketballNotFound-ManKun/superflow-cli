@@ -24,6 +24,13 @@ review-checklist.md, sdd-quality-gate.md, test-report.md, and technical design.
 - Do not change forbidden files or root aggregate docs from a worker batch.
 - Use TDD: record RED failure before GREEN success.
 - Do not mark mock-only or unit-only evidence as real integration.
+- For third-party platforms/tools, SDKs, MQ/Kafka, callbacks, payment
+  providers, cloud services, or other external integrations, inherit
+  `External Integration Configuration And Deployment Contract`. Cover
+  local/test/production sources and provisioning, injection/creation,
+  runtime/provisioning owners and timing, readiness evidence, rollback, secret
+  handling, and blockers. Do not hard-code environment-dependent values or
+  infer production readiness from test auto-creation.
 - For monetary changes, inherit `Money Precision Boundary`, retain
   calculation-state precision until the confirmed settlement/display boundary,
   record scale and rounding mode, forbid early rounding before slicing or

@@ -313,6 +313,17 @@ change_has_external_enum_risk() {
     "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
 }
 
+change_has_external_config_risk() {
+  grep -RIEiq \
+    '第三方|外部平台|外部工具|外部集成|third[- ]party|external (platform|tool|integration|system)|SDK|MQ|Kafka|RocketMQ|TDMQ|callback|回调|webhook|支付渠道|payment gateway|cloud service|云服务' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_has_money_precision_risk() {
   grep -RIEiq \
     '金额|费用|价格|优惠|折扣|抵扣|退款|分账|支付|发票|余额|电费|服务费|套餐结算|比例分摊|明细分配|尾差|精度|舍入|(^|[^[:alnum:]_])(amount|fee|fees|price|discount|deduction|refund|payment|invoice|balance|proration|allocation|reconciliation|rounding)([^[:alnum:]_]|$)|revenue sharing|profit sharing|split payment|serviceFee|chargeFee|totalAmount|actualAmount|payAmount|refundAmount|discountAmount|invoiceAmount|balanceAmount' \
@@ -377,6 +388,20 @@ require_external_enum_contract() {
   require_grep '展示文案|业务语义|财务语义|display|business meaning' "$path" "$label display/business meaning column"
   require_grep 'owner|确认|confirmed|approval' "$path" "$label owner confirmation column"
   require_grep '不确定|阻塞|blocker|unknown|待确认' "$path" "$label unresolved/blocker column"
+}
+
+require_external_config_contract() {
+  local path="$1"
+  local label="$2"
+  require_grep 'External Integration Configuration And Deployment Contract|外部集成配置与部署合同|外部配置.*部署合同' "$path" "$label"
+  require_grep '本地.*测试.*生产|local.*test.*production|local.*staging.*production' "$path" "$label environment matrix"
+  require_grep '注入|创建方式|provision|injection|IaC|Secret|控制台|console' "$path" "$label injection/provisioning"
+  require_grep '运行 owner|创建 owner|provisioning owner|runtime owner|owner.*时点|owner.*time' "$path" "$label owner and timing"
+  require_grep '就绪|readiness|消息轨迹|trace|health' "$path" "$label readiness evidence"
+  require_grep '回滚|rollback|禁用|disable' "$path" "$label rollback"
+  require_grep '密钥|凭据|secret|credential' "$path" "$label secret handling"
+  require_grep '不得.*硬编码|禁止.*硬编码|not.*hard.?cod|must not.*hard.?cod|do not hard.?code' "$path" "$label no hard-coded external config"
+  require_grep '测试.*生产|test.*production|staging.*production' "$path" "$label test-production distinction"
 }
 
 require_money_precision_contract() {
@@ -466,6 +491,10 @@ case "$PHASE" in
       require_external_enum_contract api.md "external enum binding contract"
       require_external_enum_contract sdd-quality-gate.md "external enum binding quality gate"
     fi
+    if change_has_external_config_risk; then
+      require_external_config_contract api.md "external integration configuration contract"
+      require_external_config_contract sdd-quality-gate.md "external integration deployment gate"
+    fi
     if change_has_money_precision_risk; then
       require_grep 'Money Precision Boundary|金额精度边界' sdd-quality-gate.md "money precision quality gate"
     fi
@@ -504,6 +533,9 @@ case "$PHASE" in
         if change_has_external_enum_risk; then
           require_external_enum_contract "$technical_design_rel" "external enum binding matrix"
         fi
+        if change_has_external_config_risk; then
+          require_external_config_contract "$technical_design_rel" "external integration configuration and deployment contract"
+        fi
         if change_has_money_precision_risk; then
           require_money_precision_contract "$technical_design_rel" "money precision boundary"
         fi
@@ -534,6 +566,9 @@ case "$PHASE" in
         fi
         if change_has_external_enum_risk; then
           require_external_enum_contract "$prompt_rel" "prompt external enum binding inheritance"
+        fi
+        if change_has_external_config_risk; then
+          require_external_config_contract "$prompt_rel" "prompt external integration configuration inheritance"
         fi
         if change_has_money_precision_risk; then
           require_money_precision_contract "$prompt_rel" "prompt money precision inheritance"
@@ -566,6 +601,10 @@ case "$PHASE" in
     require_grep 'superflow-verify-integration|superflow-delivery-check|superflow-test-report-lint' test-report.md "SuperBridge Flow hook/script evidence"
     if change_has_external_enum_risk; then
       require_grep 'External Enum Binding|外部枚举绑定|第三方字段语义绑定|外部展示|展示文案|业务语义|财务语义|BEM|真实入口' test-report.md "external enum binding runtime evidence"
+    fi
+    if change_has_external_config_risk; then
+      require_grep 'External Integration Configuration And Deployment Contract|外部集成配置与部署合同' test-report.md "external integration configuration runtime evidence"
+      require_grep '生产.*就绪|production.*ready|provision.*verified|资源.*存在|resource.*exists' test-report.md "external production readiness evidence"
     fi
     if change_has_money_precision_risk; then
       require_money_precision_evidence test-report.md "money precision runtime evidence"

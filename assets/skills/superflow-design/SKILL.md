@@ -54,17 +54,29 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    adapter/protocol translator/device gateway into a business-entry
    orchestrator, stop and return to `$superflow-docs` unless the OpenSpec/SDD
    contract explicitly grants that ownership with approval evidence.
-6. For field/status/enum/sync changes, include `Field And Status Reverse
+6. For third-party platforms/tools, SDKs, MQ/Kafka, callbacks, payment
+   gateways, cloud services, or other external integrations, include
+   `External Integration Configuration And Deployment Contract`. Inventory
+   every endpoint, app/tenant/project ID, Topic, Tag, Consumer Group,
+   namespace, webhook, ACL/role, feature switch, timeout, and credential
+   reference. Prove the source and injection/provisioning method for local,
+   test, and production environments, plus owner, creation timing, readiness
+   check, rollback, and unresolved blockers. Runtime values and server-side
+   resources must not exist only as hard-coded annotations/constants. Test
+   auto-creation or pre-existing resources must not be treated as proof that
+   production will provision them. Missing production provisioning evidence
+   blocks design completion.
+7. For field/status/enum/sync changes, include `Field And Status Reverse
 Impact` and prove writers, readers, filters, derived sync paths, consumers,
    and tests. Direct setter-only design is blocked.
-7. For third-party, SDK, BEM/parking, payment/refund, financial display,
+8. For third-party, SDK, BEM/parking, payment/refund, financial display,
    source/origin, status sync, or external dictionary fields, include
    `External Enum Binding`. Prove local source fields/enums, external fields,
    external enum values, display/business/financial meaning, source evidence,
    owner confirmation, unresolved handling, and test evidence. A request
    succeeding or a field being non-null is not enough; unconfirmed values are
    blockers and must be returned to `$superflow-docs` or the user.
-8. For amount, fee, discount, deduction, refund, sharing, payment, invoice,
+9. For amount, fee, discount, deduction, refund, sharing, payment, invoice,
    balance, electricity fee, service fee, package settlement, proration,
    allocation, reconciliation, or financial display changes,
    include `Money Precision Boundary`. Prove calculation-state fields,
@@ -83,12 +95,12 @@ Impact` and prove writers, readers, filters, derived sync paths, consumers,
    level and policy source, deterministic residual strategy with stable
    tie-breaker, and positive/zero/negative evidence. For FX changes, freeze the
    directional rate metadata and one canonical conversion path.
-9. Record state:
+10. Record state:
    ```bash
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> technical_design docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> design_doc design.md
    ```
-10. Update `design.md` with `Superpowers Technical Design Handoff`, update
+11. Update `design.md` with `Superpowers Technical Design Handoff`, update
    `sdd-quality-gate.md` with the technical design path and hash, then run
    `../superflow-pipeline/scripts/superflow-handoff.sh <change-dir> --refresh`.
    If the guard reports a stale or missing hash, record the printed hash in
@@ -96,7 +108,7 @@ Impact` and prove writers, readers, filters, derived sync paths, consumers,
    `--refresh` again. Do not set `design_doc` to the Superpowers document;
    `design_doc` is the OpenSpec/SDD contract design, while `technical_design`
    is the Superpowers HOW document.
-11. Run:
+12. Run:
 
 ```bash
 ../superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>

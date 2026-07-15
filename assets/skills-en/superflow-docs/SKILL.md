@@ -76,6 +76,17 @@ For complex requirements, verify these before writing docs:
   If the docs only prove that a value exists, is non-null, or lets the request
   succeed, stop and return to `$superflow-clarify`. If fallback/default/keep-old-value
   behavior is proposed without explicit requirement or owner approval, stop.
+- For third-party platforms/tools, SDKs, MQ/Kafka, callbacks, payment gateways,
+  cloud services, or other external integrations, `api.md` and
+  `sdd-quality-gate.md` must include `External Integration Configuration And
+  Deployment Contract`. Inventory endpoints, app/tenant/project IDs,
+  Topic/Tag/Consumer Group, namespace, webhook, ACL/role, feature switches,
+  timeout, and credential references across local, test, and production
+  environments. Record injection/provisioning method, runtime owner,
+  provisioning owner/time, readiness evidence, rollback, secret handling, and
+  blockers. Environment-dependent values must not be hard-coded; test
+  auto-creation or existing test resources do not prove production readiness.
+  Missing production provisioning evidence blocks document freeze.
 - For amount, fee, discount, deduction, refund, sharing, payment, invoice,
   balance, electricity/service fee, package settlement, proration, allocation,
   reconciliation, or financial display changes, `sdd-quality-gate.md` must

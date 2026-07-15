@@ -23,6 +23,14 @@ Superpowers technical design is canonical for source-level HOW and execution.
 - Field semantic contract checked.
 - Write-loop checked.
 - No-fallback boundary confirmed.
+- External Integration Configuration And Deployment Contract copied from the
+  API, quality gate, and technical design for third-party platforms/tools,
+  SDKs, MQ/Kafka, callbacks, payment providers, cloud services, or other
+  external integrations. Cover local/test/production sources and provisioning,
+  injection/creation, runtime/provisioning owners and timing, readiness
+  evidence, rollback, secret handling, and blockers. Do not hard-code
+  environment-dependent external values or treat test auto-creation as
+  production readiness evidence.
 - Money Precision Boundary copied from the technical design when monetary
   behavior changes. Keep calculation-state precision until the confirmed
   settlement/display boundary, record scale and rounding mode, forbid early

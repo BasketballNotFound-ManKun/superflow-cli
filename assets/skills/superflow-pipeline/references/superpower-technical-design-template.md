@@ -60,6 +60,32 @@ orchestrator unless the OpenSpec/SDD contract explicitly says that module owns
 the new entry point and records the owner approval. If the correct owner is
 unclear, mark the design blocked.
 
+## External Integration Configuration And Deployment Contract
+
+Use this whenever the change integrates with a third-party platform/tool, SDK,
+MQ/Kafka, callback, payment gateway, cloud service, or other external system.
+
+| External dependency/resource | Config/resource item | Local source/provisioning | Test source/provisioning | Production source/provisioning | Injection/creation method | Runtime owner | Provisioning owner/time | Readiness evidence | Rollback | Secret handling | Blocker |
+| ---------------------------- | -------------------- | ------------------------- | ------------------------ | ------------------------------ | ------------------------- | ------------- | ----------------------- | ------------------ | -------- | --------------- | ------- |
+| `<TDMQ>` | `<Consumer Group>` | `<auto/manual/IaC>` | `<existing resource>` | `<pre-created by ops>` | `<config/secret/IaC/console>` | `<service>` | `<owner + before deploy>` | `<console/API/trace>` | `<disable/rollback>` | `<secret reference only>` | `<none/blocker>` |
+
+Required checks:
+
+```bash
+rg -ni "https?://|endpoint|base.?url|app.?id|tenant|project.?id|topic|tag|consumer.?group|namespace|webhook|acl|role|secret|token|password|timeout" <source-and-config-paths>
+rg -ni "@.*Listener|new.*Client|builder\(|System\.getenv|ConfigurationProperties|Value\(" <source-and-config-paths>
+```
+
+Do not hard-code environment-dependent endpoints, resource names, identifiers,
+credentials, ACLs, or operational switches in annotations, constants, or
+business code. Stable protocol constants may remain code constants only when
+the design proves they are not environment-specific and no server-side
+resource must be provisioned. Test auto-creation, a successful local startup,
+or an already-existing test resource is not evidence that production is
+ready. Every server-side resource must have an explicit production owner,
+creation timing, readiness check, and rollback path. Missing production
+provisioning evidence is a blocker.
+
 ## Field And Status Reverse Impact
 
 Use this whenever changing field values, enum/status values, derived fields,

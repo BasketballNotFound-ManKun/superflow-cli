@@ -302,6 +302,17 @@ change_has_field_status_risk() {
     "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null
 }
 
+change_has_external_config_risk() {
+  grep -RIEiq \
+    'third[- ]party|external (platform|tool|integration|system)|SDK|MQ|Kafka|RocketMQ|TDMQ|callback|webhook|payment gateway|cloud service' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_has_money_precision_risk() {
   grep -RIEiq \
     '(^|[^[:alnum:]_])(amount|fee|fees|price|discount|deduction|refund|payment|invoice|balance|proration|allocation|reconciliation|residual|precision|rounding)([^[:alnum:]_]|$)|revenue sharing|profit sharing|split payment|electricity fee|service fee|package settlement|serviceFee|chargeFee|totalAmount|actualAmount|payAmount|refundAmount|discountAmount|invoiceAmount|balanceAmount' \
@@ -389,6 +400,20 @@ require_money_precision_contract() {
   fi
 }
 
+require_external_config_contract() {
+  local path="$1"
+  local label="$2"
+  require_grep 'External Integration Configuration And Deployment Contract' "$path" "$label"
+  require_grep 'local.*test.*production|local.*staging.*production' "$path" "$label environment matrix"
+  require_grep 'provision|injection|IaC|Secret|console' "$path" "$label injection/provisioning"
+  require_grep 'provisioning owner|runtime owner|owner.*time' "$path" "$label owner and timing"
+  require_grep 'readiness|trace|health' "$path" "$label readiness evidence"
+  require_grep 'rollback|disable' "$path" "$label rollback"
+  require_grep 'secret|credential' "$path" "$label secret handling"
+  require_grep 'not.*hard.?cod|must not.*hard.?cod|do not hard.?code' "$path" "$label no hard-coded external config"
+  require_grep 'test.*production|staging.*production' "$path" "$label test-production distinction"
+}
+
 require_money_precision_evidence() {
   local path="$1"
   local label="$2"
@@ -443,6 +468,10 @@ case "$PHASE" in
     if change_has_money_precision_risk; then
       require_grep 'Money Precision Boundary' sdd-quality-gate.md "money precision quality gate"
     fi
+    if change_has_external_config_risk; then
+      require_external_config_contract api.md "external integration configuration contract"
+      require_external_config_contract sdd-quality-gate.md "external integration deployment gate"
+    fi
     require_markdown_links_valid
     transition_event="docs-complete"
     ;;
@@ -475,6 +504,9 @@ case "$PHASE" in
         if change_has_field_status_risk; then
           require_grep 'Field And Status Reverse Impact|Field And Status Reverse Impact|write point.*read|read/filter points|derived/sync points' "$technical_design_rel" "field/status reverse impact matrix"
         fi
+        if change_has_external_config_risk; then
+          require_external_config_contract "$technical_design_rel" "external integration configuration and deployment contract"
+        fi
         if change_has_money_precision_risk; then
           require_money_precision_contract "$technical_design_rel" "money precision boundary"
         fi
@@ -502,6 +534,9 @@ case "$PHASE" in
         require_grep 'Superpowers Technical Design inheritance|technical_design|source-level HOW|Technical Design' "$prompt_rel" "prompt Superpowers technical design inheritance"
         if change_has_field_status_risk; then
           require_grep 'Field And Status Reverse Impact|Field And Status Reverse Impact|read/filter points|derived/sync points' "$prompt_rel" "prompt field/status reverse impact inheritance"
+        fi
+        if change_has_external_config_risk; then
+          require_external_config_contract "$prompt_rel" "prompt external integration configuration inheritance"
         fi
         if change_has_money_precision_risk; then
           require_money_precision_contract "$prompt_rel" "prompt money precision inheritance"
@@ -534,6 +569,10 @@ case "$PHASE" in
     require_grep 'superflow-verify-integration|superflow-delivery-check|superflow-test-report-lint' test-report.md "SuperBridge Flow hook/script evidence"
     if change_has_money_precision_risk; then
       require_money_precision_evidence test-report.md "money precision runtime evidence"
+    fi
+    if change_has_external_config_risk; then
+      require_grep 'External Integration Configuration And Deployment Contract' test-report.md "external integration configuration runtime evidence"
+      require_grep 'production.*ready|provision.*verified|resource.*exists' test-report.md "external production readiness evidence"
     fi
     require_test_report_lint
     require_closeout_markers "$CHANGE_DIR/test-report.md"

@@ -28,6 +28,18 @@ const STATE = path.join(SCRIPT_DIR, "superflow-state.sh");
 
 let tmp: string;
 
+const EXTERNAL_CONFIG_CONTRACT = [
+  "## External Integration Configuration And Deployment Contract",
+  "",
+  "| External dependency/resource | Config/resource item | Local source/provisioning | Test source/provisioning | Production source/provisioning | Injection/creation method | Runtime owner | Provisioning owner/time | Readiness evidence | Rollback | Secret handling | Blocker |",
+  "|---|---|---|---|---|---|---|---|---|---|---|---|",
+  "| TDMQ | Consumer Group | local config | test existing resource | production pre-created resource | IaC or console provisioning | energy service | operations before deployment | console and message trace readiness | disable consumption and rollback | Secret reference, no credential value | none |",
+  "",
+  "Do not hard-code environment-dependent external configuration or server-side resources.",
+  "Test auto-creation or test readiness does not prove production readiness.",
+  "",
+].join("\n");
+
 async function write(file: string, content: string) {
   await fs.promises.mkdir(path.dirname(file), { recursive: true });
   await fs.promises.writeFile(file, content);
@@ -51,7 +63,7 @@ async function makeCrossServiceChange() {
       "## Superpowers Technical Design Handoff",
       "",
       "OpenSpec/SDD remains canonical for WHAT and contracts.",
-      "This change crosses services, MQ, gateway, adapter, and third-party protocol boundaries.",
+      "This change crosses services, gateway, and adapter boundaries.",
       "handoff_hash: pending",
       "",
     ].join("\n"),
@@ -195,6 +207,7 @@ async function makeExternalEnumChange() {
       "",
       "OpenSpec/SDD remains canonical and must not be overwritten.",
       "",
+      EXTERNAL_CONFIG_CONTRACT,
       "## Field And Status Reverse Impact",
       "",
       "| Field/status | Write/update points | Read/filter points | Derived/sync points | Cross-module consumers | Tests covering consumers | Missing coverage/blocker |",
@@ -459,6 +472,58 @@ describe("superflow-guard.sh", () => {
       execFileAsync("bash", [GUARD, change, "design"]),
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("external enum binding matrix"),
+    });
+  });
+
+  it("requires external configuration and deployment contract", async () => {
+    const change = await makeCrossServiceChange();
+    await write(
+      path.join(change, "proposal.md"),
+      "# Proposal\n\nIntegrate TDMQ RocketMQ Consumer Group for a third-party platform.\n",
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "technical_design",
+      "docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md",
+    ]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "design"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining(
+        "external integration configuration and deployment contract",
+      ),
+    });
+  });
+
+  it("requires external configuration contract in the English guard", async () => {
+    const change = await makeCrossServiceChange();
+    await write(
+      path.join(change, "proposal.md"),
+      "# Proposal\n\nIntegrate TDMQ RocketMQ Consumer Group for a third-party platform.\n",
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "technical_design",
+      "docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md",
+    ]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [EN_GUARD, change, "design"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining(
+        "external integration configuration and deployment contract",
+      ),
     });
   });
 

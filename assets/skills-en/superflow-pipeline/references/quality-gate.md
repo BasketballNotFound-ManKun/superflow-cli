@@ -16,6 +16,15 @@
 - Field/status reverse impact matrix exists when risky fields or states change.
 - Architecture boundary and call-direction matrix exists for cross-service or
   external flows.
+- External Integration Configuration And Deployment Contract exists for
+  third-party platforms/tools, SDKs, MQ/Kafka, callbacks, payment providers,
+  cloud services, or other external integrations. It inventories environment
+  sources and provisioning for endpoints, app/tenant/project IDs,
+  Topic/Tag/Consumer Group, namespace, webhook, ACL/role, switches, timeouts,
+  and credential references; names runtime/provisioning owners, timing,
+  readiness evidence, rollback, secret handling, and blockers; and forbids
+  environment-dependent hard-coded values. Test auto-creation, existing test
+  resources, or local startup do not prove production readiness.
 - Money precision boundary exists when amount, fee, discount, deduction,
   refund, sharing, payment, invoice, balance, electricity fee, service fee,
   package settlement, proration, allocation, reconciliation, or financial
