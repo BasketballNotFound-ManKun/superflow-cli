@@ -25,6 +25,14 @@
   readiness evidence, rollback, secret handling, and blockers; and forbids
   environment-dependent hard-coded values. Test auto-creation, existing test
   resources, or local startup do not prove production readiness.
+- Concurrency And Idempotency Ownership exists for concurrent requests, batch
+  issue/activation/renewal, duplicate callbacks/consumption, or repeated
+  external delivery. It defines the business idempotency key,
+  application-layer atomic claim owner, short transaction boundary,
+  PENDING/SUCCESS/FAILED state machine, retry code reuse, external-call
+  boundary, and uncertain-result reconciliation. A unique index is not the
+  default; it is only an optional fallback with explicit natural uniqueness,
+  historical cleanup, NULL/soft-delete behavior, and conflict handling.
 - Money precision boundary exists when amount, fee, discount, deduction,
   refund, sharing, payment, invoice, balance, electricity fee, service fee,
   package settlement, proration, allocation, reconciliation, or financial

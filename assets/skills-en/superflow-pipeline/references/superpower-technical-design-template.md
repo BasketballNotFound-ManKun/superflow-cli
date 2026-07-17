@@ -85,6 +85,26 @@ ready. Every server-side resource must have an explicit production owner,
 creation timing, readiness check, and rollback path. Missing production
 provisioning evidence is a blocker.
 
+## Concurrency And Idempotency Ownership
+
+Complete this section for concurrent requests, batch issue/activation/renewal,
+duplicate callbacks, duplicate consumption, or repeated external delivery.
+
+| Scenario | Business idempotency key | Claim owner/resource | Application-layer atomic claim | Short transaction boundary | State machine | Retry code reuse | External-call boundary | Uncertain-result handling | Unique-index role | Test evidence |
+| -------- | ------------------------ | -------------------- | ------------------------------ | -------------------------- | ------------- | ---------------- | ---------------------- | ------------------------- | ----------------- | ------------- |
+| `<batch issue>` | `<package+vehicle+period>` | `<period row>` | `<lock owner then persist PENDING>` | `<commit claim independently>` | `PENDING/SUCCESS/FAILED` | `<reuse original business code>` | `<call after commit>` | `<block duplicates and reconcile>` | `<not default; optional fallback>` | `<concurrent/duplicate/retry cases>` |
+
+Application-layer atomic claim is the default: use a stable business
+idempotency key, lock an explicit owner resource in a short transaction,
+persist `PENDING`, commit, and release the database lock before the external
+call. Update the state after the call; every retry reuses the original business
+code. An uncertain result blocks duplicate delivery and remains reconcilable.
+Do not use check-then-insert, process-local locks, or random IDs as cross-instance
+idempotency, and do not hold a database lock across an external call. A unique
+index is not the default; it is only an optional database fallback when natural
+uniqueness, historical cleanup, NULL/soft-delete behavior, and conflict handling
+are explicitly contracted.
+
 ## Field And Status Reverse Impact
 
 Use this whenever changing field values, enum/status values, derived fields,

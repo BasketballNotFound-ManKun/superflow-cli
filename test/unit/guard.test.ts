@@ -527,6 +527,58 @@ describe("superflow-guard.sh", () => {
     });
   });
 
+  it("requires concurrency and idempotency ownership contract", async () => {
+    const change = await makeCrossServiceChange();
+    await write(
+      path.join(change, "proposal.md"),
+      "# Proposal\n\n批量下发月票需要处理并发、重复提交和幂等。\n",
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "technical_design",
+      "docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md",
+    ]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "design"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining(
+        "concurrency and idempotency ownership contract",
+      ),
+    });
+  });
+
+  it("requires concurrency ownership contract in the English guard", async () => {
+    const change = await makeCrossServiceChange();
+    await write(
+      path.join(change, "proposal.md"),
+      "# Proposal\n\nBatch issue monthly tickets with concurrent retries.\n",
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "technical_design",
+      "docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md",
+    ]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [EN_GUARD, change, "design"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining(
+        "concurrency and idempotency ownership contract",
+      ),
+    });
+  });
+
   it("requires money precision boundary in settlement design", async () => {
     const change = await prepareMoneyPrecisionChange();
 

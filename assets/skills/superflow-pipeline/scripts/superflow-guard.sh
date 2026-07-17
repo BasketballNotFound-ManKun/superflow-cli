@@ -324,6 +324,17 @@ change_has_external_config_risk() {
     "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
 }
 
+change_has_concurrency_idempotency_risk() {
+  grep -RIEiq \
+    '并发|批量下发|批量开通|批量续费|重复提交|重复回调|重复消费|重复下发|幂等|竞态|原子占用|concurren|idempoten|race condition|duplicate (request|callback|consumption|delivery)|atomic claim' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_has_money_precision_risk() {
   grep -RIEiq \
     '金额|费用|价格|优惠|折扣|抵扣|退款|分账|支付|发票|余额|电费|服务费|套餐结算|比例分摊|明细分配|尾差|精度|舍入|(^|[^[:alnum:]_])(amount|fee|fees|price|discount|deduction|refund|payment|invoice|balance|proration|allocation|reconciliation|rounding)([^[:alnum:]_]|$)|revenue sharing|profit sharing|split payment|serviceFee|chargeFee|totalAmount|actualAmount|payAmount|refundAmount|discountAmount|invoiceAmount|balanceAmount' \
@@ -402,6 +413,19 @@ require_external_config_contract() {
   require_grep '密钥|凭据|secret|credential' "$path" "$label secret handling"
   require_grep '不得.*硬编码|禁止.*硬编码|not.*hard.?cod|must not.*hard.?cod|do not hard.?code' "$path" "$label no hard-coded external config"
   require_grep '测试.*生产|test.*production|staging.*production' "$path" "$label test-production distinction"
+}
+
+require_concurrency_idempotency_contract() {
+  local path="$1"
+  local label="$2"
+  require_grep 'Concurrency And Idempotency Ownership|并发与幂等归属|应用层原子占用' "$path" "$label"
+  require_grep '业务幂等键|business idempotency key|business key' "$path" "$label business idempotency key"
+  require_grep '应用层原子占用|application.layer atomic claim|atomic claim' "$path" "$label application-layer atomic claim"
+  require_grep '短事务|short transaction|事务边界|transaction boundary' "$path" "$label short transaction boundary"
+  require_grep '待处理|pending|成功|success|失败|failed|状态流转|state machine' "$path" "$label state machine"
+  require_grep '重试|retry' "$path" "$label retry contract"
+  require_grep '外部调用|external call|third.party call' "$path" "$label external-call boundary"
+  require_grep '唯一索引.*(不是|不得|不作为).*默认|unique index.*not.*default|do not.*default.*unique index' "$path" "$label unique index is not the default"
 }
 
 require_money_precision_contract() {
@@ -495,6 +519,9 @@ case "$PHASE" in
       require_external_config_contract api.md "external integration configuration contract"
       require_external_config_contract sdd-quality-gate.md "external integration deployment gate"
     fi
+    if change_has_concurrency_idempotency_risk; then
+      require_concurrency_idempotency_contract sdd-quality-gate.md "concurrency and idempotency ownership quality gate"
+    fi
     if change_has_money_precision_risk; then
       require_grep 'Money Precision Boundary|金额精度边界' sdd-quality-gate.md "money precision quality gate"
     fi
@@ -536,6 +563,9 @@ case "$PHASE" in
         if change_has_external_config_risk; then
           require_external_config_contract "$technical_design_rel" "external integration configuration and deployment contract"
         fi
+        if change_has_concurrency_idempotency_risk; then
+          require_concurrency_idempotency_contract "$technical_design_rel" "concurrency and idempotency ownership contract"
+        fi
         if change_has_money_precision_risk; then
           require_money_precision_contract "$technical_design_rel" "money precision boundary"
         fi
@@ -569,6 +599,9 @@ case "$PHASE" in
         fi
         if change_has_external_config_risk; then
           require_external_config_contract "$prompt_rel" "prompt external integration configuration inheritance"
+        fi
+        if change_has_concurrency_idempotency_risk; then
+          require_concurrency_idempotency_contract "$prompt_rel" "prompt concurrency and idempotency ownership inheritance"
         fi
         if change_has_money_precision_risk; then
           require_money_precision_contract "$prompt_rel" "prompt money precision inheritance"
@@ -605,6 +638,10 @@ case "$PHASE" in
     if change_has_external_config_risk; then
       require_grep 'External Integration Configuration And Deployment Contract|外部集成配置与部署合同' test-report.md "external integration configuration runtime evidence"
       require_grep '生产.*就绪|production.*ready|provision.*verified|资源.*存在|resource.*exists' test-report.md "external production readiness evidence"
+    fi
+    if change_has_concurrency_idempotency_risk; then
+      require_grep 'Concurrency And Idempotency Ownership|并发与幂等归属|应用层原子占用' test-report.md "concurrency and idempotency runtime evidence"
+      require_grep '并发|concurren|重复|duplicate|重试|retry' test-report.md "concurrency duplicate and retry cases"
     fi
     if change_has_money_precision_risk; then
       require_money_precision_evidence test-report.md "money precision runtime evidence"

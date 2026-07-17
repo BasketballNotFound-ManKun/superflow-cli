@@ -31,6 +31,15 @@ Superpowers technical design is canonical for source-level HOW and execution.
   evidence, rollback, secret handling, and blockers. Do not hard-code
   environment-dependent external values or treat test auto-creation as
   production readiness evidence.
+- Concurrency And Idempotency Ownership copied from the technical design for
+  concurrent requests, batch issue/activation/renewal, duplicate callbacks or
+  consumption, and repeated external delivery. Define a stable business
+  idempotency key, application-layer atomic claim owner, short transaction
+  boundary, PENDING/SUCCESS/FAILED state machine, retry reuse of the original
+  business code, external-call boundary, and uncertain-result reconciliation.
+  Release database locks before external calls. A unique index is not the
+  default; it is only an optional fallback with explicit natural uniqueness,
+  historical cleanup, NULL/soft-delete behavior, and conflict handling.
 - Money Precision Boundary copied from the technical design when monetary
   behavior changes. Keep calculation-state precision until the confirmed
   settlement/display boundary, record scale and rounding mode, forbid early

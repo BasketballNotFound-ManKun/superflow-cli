@@ -86,6 +86,21 @@ ready. Every server-side resource must have an explicit production owner,
 creation timing, readiness check, and rollback path. Missing production
 provisioning evidence is a blocker.
 
+## Concurrency And Idempotency Ownership
+
+批量开通、批量续费、并发请求、重复回调、重复消费或重复外部下发时必须填写。
+
+| 场景 | 业务幂等键 | 原子占用 owner/资源 | 应用层原子占用操作 | 短事务边界 | 状态流转 | 重试复用编码 | 外部调用边界 | 结果不确定处理 | 唯一索引角色 | 测试证据 |
+| ---- | ---------- | ------------------- | ------------------ | ---------- | -------- | ------------ | ------------ | -------------- | ------------ | -------- |
+| `<批量下发>` | `<套餐+车辆+周期>` | `<周期记录>` | `<锁定 owner 后写 PENDING>` | `<独立事务提交占用>` | `PENDING/SUCCESS/FAILED` | `<复用原业务单号>` | `<提交后调用>` | `<阻止重复并进入对账>` | `<非默认；必要时兜底>` | `<并发/重复/重试用例>` |
+
+应用层原子占用是默认方案：先用稳定业务幂等键在短事务内锁定明确的 owner 资源，
+写入 `PENDING` 并提交，再释放数据库锁后执行外部调用。外部调用成功或失败后更新
+状态；重试必须复用原业务单号。结果不确定时必须阻止重复下发并保留人工对账入口。
+禁止用“先查再插”、单进程锁或随机单号冒充跨实例幂等，也禁止在外部调用期间持有
+长事务或数据库锁。唯一索引不是默认方案；仅当自然唯一语义、历史数据清理、NULL/
+软删除行为和冲突处理合同都已明确时，才可作为数据库兜底。
+
 ## Field And Status Reverse Impact
 
 Use this whenever changing field values, enum/status values, derived fields,

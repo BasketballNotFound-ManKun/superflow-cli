@@ -31,6 +31,15 @@ review-checklist.md, sdd-quality-gate.md, test-report.md, and technical design.
   runtime/provisioning owners and timing, readiness evidence, rollback, secret
   handling, and blockers. Do not hard-code environment-dependent values or
   infer production readiness from test auto-creation.
+- For concurrent requests, batch issue/activation/renewal, duplicate callbacks
+  or consumption, and repeated external delivery, inherit `Concurrency And
+  Idempotency Ownership`. Define a stable business idempotency key,
+  application-layer atomic claim owner, short transaction boundary,
+  PENDING/SUCCESS/FAILED state machine, retry reuse of the original business
+  code, external-call boundary, and uncertain-result reconciliation. Release
+  database locks before external calls. A unique index is not the default and
+  may only be an optional fallback with explicit natural uniqueness,
+  historical cleanup, NULL/soft-delete behavior, and conflict handling.
 - For monetary changes, inherit `Money Precision Boundary`, retain
   calculation-state precision until the confirmed settlement/display boundary,
   record scale and rounding mode, forbid early rounding before slicing or

@@ -313,6 +313,17 @@ change_has_external_config_risk() {
     "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
 }
 
+change_has_concurrency_idempotency_risk() {
+  grep -RIEiq \
+    'concurren|idempoten|race condition|duplicate (request|callback|consumption|delivery)|atomic claim|batch (issue|activate|renew)' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_has_money_precision_risk() {
   grep -RIEiq \
     '(^|[^[:alnum:]_])(amount|fee|fees|price|discount|deduction|refund|payment|invoice|balance|proration|allocation|reconciliation|residual|precision|rounding)([^[:alnum:]_]|$)|revenue sharing|profit sharing|split payment|electricity fee|service fee|package settlement|serviceFee|chargeFee|totalAmount|actualAmount|payAmount|refundAmount|discountAmount|invoiceAmount|balanceAmount' \
@@ -414,6 +425,19 @@ require_external_config_contract() {
   require_grep 'test.*production|staging.*production' "$path" "$label test-production distinction"
 }
 
+require_concurrency_idempotency_contract() {
+  local path="$1"
+  local label="$2"
+  require_grep 'Concurrency And Idempotency Ownership|application.layer atomic claim|atomic claim' "$path" "$label"
+  require_grep 'business idempotency key|business key' "$path" "$label business idempotency key"
+  require_grep 'application.layer atomic claim|atomic claim' "$path" "$label application-layer atomic claim"
+  require_grep 'short transaction|transaction boundary' "$path" "$label short transaction boundary"
+  require_grep 'pending|success|failed|state machine' "$path" "$label state machine"
+  require_grep 'retry' "$path" "$label retry contract"
+  require_grep 'external call|third.party call' "$path" "$label external-call boundary"
+  require_grep 'unique index.*not.*default|do not.*default.*unique index' "$path" "$label unique index is not the default"
+}
+
 require_money_precision_evidence() {
   local path="$1"
   local label="$2"
@@ -472,6 +496,9 @@ case "$PHASE" in
       require_external_config_contract api.md "external integration configuration contract"
       require_external_config_contract sdd-quality-gate.md "external integration deployment gate"
     fi
+    if change_has_concurrency_idempotency_risk; then
+      require_concurrency_idempotency_contract sdd-quality-gate.md "concurrency and idempotency ownership quality gate"
+    fi
     require_markdown_links_valid
     transition_event="docs-complete"
     ;;
@@ -507,6 +534,9 @@ case "$PHASE" in
         if change_has_external_config_risk; then
           require_external_config_contract "$technical_design_rel" "external integration configuration and deployment contract"
         fi
+        if change_has_concurrency_idempotency_risk; then
+          require_concurrency_idempotency_contract "$technical_design_rel" "concurrency and idempotency ownership contract"
+        fi
         if change_has_money_precision_risk; then
           require_money_precision_contract "$technical_design_rel" "money precision boundary"
         fi
@@ -537,6 +567,9 @@ case "$PHASE" in
         fi
         if change_has_external_config_risk; then
           require_external_config_contract "$prompt_rel" "prompt external integration configuration inheritance"
+        fi
+        if change_has_concurrency_idempotency_risk; then
+          require_concurrency_idempotency_contract "$prompt_rel" "prompt concurrency and idempotency ownership inheritance"
         fi
         if change_has_money_precision_risk; then
           require_money_precision_contract "$prompt_rel" "prompt money precision inheritance"
@@ -573,6 +606,10 @@ case "$PHASE" in
     if change_has_external_config_risk; then
       require_grep 'External Integration Configuration And Deployment Contract' test-report.md "external integration configuration runtime evidence"
       require_grep 'production.*ready|provision.*verified|resource.*exists' test-report.md "external production readiness evidence"
+    fi
+    if change_has_concurrency_idempotency_risk; then
+      require_grep 'Concurrency And Idempotency Ownership|application.layer atomic claim|atomic claim' test-report.md "concurrency and idempotency runtime evidence"
+      require_grep 'concurren|duplicate|retry' test-report.md "concurrency duplicate and retry cases"
     fi
     require_test_report_lint
     require_closeout_markers "$CHANGE_DIR/test-report.md"
