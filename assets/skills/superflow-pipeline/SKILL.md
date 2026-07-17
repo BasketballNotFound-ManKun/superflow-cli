@@ -11,6 +11,12 @@ This is the lightweight SDD router. Do not load the whole SDD process when a sma
 
 - Use `$openspec-explore` when the user is still thinking through a requirement,
   wants to compare options, or needs codebase investigation before a change.
+- Route to `$superflow-clarify` in embedded deep-clarification mode when the
+  user explicitly asks for rigorous questioning, or when a bounded feature has
+  unresolved owner decisions, mutually exclusive approaches, unclear source of
+  truth, unclear acceptance behavior, or cross-system responsibility. This is
+  a mode inside the normal clarify phase, not a separate command the user must
+  remember.
 - Use `$superflow-clarify` only when product inputs are complex and must be frozen one
   feature at a time before creating OpenSpec artifacts.
 - Long PRDs, Lark/Feishu exports, screenshot-heavy requirements, and mixed
@@ -48,6 +54,29 @@ This is the lightweight SDD router. Do not load the whole SDD process when a sma
 - Use `$superflow-table-impact-analysis` whenever a requirement, bug fix, sync task,
   SQL change, status field, Mapper/XML query, or cross-repo shared table affects
   database-backed behavior.
+
+## Embedded Deep Clarification
+
+When the router selects embedded deep clarification, follow these rules inside
+`$superflow-clarify`:
+
+- Do not activate it for a clear, bounded hotfix or tweak whose intended behavior
+  and acceptance result are already evidenced. Do not turn routine work into an
+  interview.
+- Explore facts that can be established from the requirement, repository,
+  configuration, tests, logs, or available tools before asking the user. Ask only
+  for a decision the user or owner must make.
+- Ask exactly one decision question at a time. State the recommended option and
+  its important consequence, then wait for the answer before the next question.
+- After each answer, update `.sdd/handoff/brainstorm-summary.md` with
+  `confirmed`, `candidate`, `pending`, and `rejected` entries. Do not rely on
+  chat memory for a resolved decision.
+- Do not create or change proposal, spec, design, tasks, tests, or implementation
+  artifacts until all decisions that affect the current feature are confirmed or
+  explicitly marked blocked.
+- Exit deep clarification once only repository-verifiable facts remain and the
+  user confirms the current feature understanding. Continue through the existing
+  clarify workflow without invoking an external skill dependency.
 
 ## Non-Negotiable Rules
 

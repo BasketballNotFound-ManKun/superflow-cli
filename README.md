@@ -206,7 +206,10 @@ hook registration is not enabled for OpenCode yet; use `/superflow-*` commands
 to run workflow gates explicitly.
 
 For large requirements, ask the agent to read one section or one feature at a
-time. SuperBridge Flow will route through clarification, OpenSpec docs,
+time. The total router automatically uses embedded deep clarification when a
+feature needs an owner decision; it investigates available facts first and asks
+one decision at a time with a recommendation. Clear, bounded work continues
+without an interview. SuperBridge Flow then routes through OpenSpec docs,
 Superpowers technical design, implementation prompts, verification, and archive.
 
 ## Automatic Update Checks

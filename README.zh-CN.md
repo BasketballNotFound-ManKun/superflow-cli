@@ -121,6 +121,7 @@ superflow init
 - Superpowers 负责 HOW：源码级技术详设、TDD/RED 顺序、团队分工、worktree/端口并行、review/tester 编排和验证闭环。
 - 完整流程是 `docs -> design -> implement -> verify -> archive`。Superpowers 技术详设落到 `docs/superpowers/specs/*-technical-design.md`，并记录到 `.sdd/state.yaml` 的 `technical_design`，避免长会话压缩后漂移。
 - Codex 侧通常用自然语言或 `$superflow-pipeline` 触发；Claude Code 侧可以直接用 `/superflow-pipeline`、`/superflow-docs`、`/superflow-design` 等 slash command。
+- 只说一句话触发总路由时，遇到需要业务负责人选择的关键分歧，SuperFlow 会在 clarify 阶段自动进入深度澄清：先查代码和已有资料能确认的事实，再一次只问一个决策问题，并给出推荐方案与影响。明确、范围小的改动不会被强行拉进问答流程。
 - 飞书、语雀等在线文档读取工具不内置在 SuperBridge Flow CLI 中；可自行用 `lark-cli` 等外部工具读取，再通过 `/superflow-pipeline` 或 `$superflow-pipeline` 分段分析指定小节。
 
 ## 命令
