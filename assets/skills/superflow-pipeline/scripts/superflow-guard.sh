@@ -24,6 +24,7 @@ VALIDATE="$SCRIPT_DIR/superflow-yaml-validate.sh"
 CHANGE_DIR="${1:-}"
 PHASE="${2:-}"
 MODE="${3:-}"
+CHANGE_DIR_INPUT="${CHANGE_DIR%/}"
 
 [[ -n "$CHANGE_DIR" && -n "$PHASE" ]] || {
   usage
@@ -34,6 +35,25 @@ MODE="${3:-}"
 
 CHANGE_DIR="$(cd "$CHANGE_DIR" && pwd)"
 issues=()
+
+require_canonical_change_layout() {
+  local suffix
+
+  if [[ -L "$CHANGE_DIR_INPUT" ]]; then
+    issues+=("symlinked OpenSpec change directory is forbidden; keep one physical openspec/changes/<change-name> directory")
+  fi
+
+  [[ "$CHANGE_DIR" == */openspec/changes/* ]] || return 0
+  suffix="${CHANGE_DIR#*/openspec/changes/}"
+  case "$suffix" in
+    archive/*|*/embedded-changes/*) return 0 ;;
+  esac
+  if [[ "$suffix" == */* ]]; then
+    issues+=("non-canonical OpenSpec change directory: encode the version in <change-name> and use openspec/changes/<change-name>")
+  fi
+}
+
+require_canonical_change_layout
 
 require_file() {
   local path="$1"

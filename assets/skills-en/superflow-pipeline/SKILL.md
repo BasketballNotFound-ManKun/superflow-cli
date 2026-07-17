@@ -79,6 +79,22 @@ When the router selects embedded deep clarification, follow these rules inside
 
 ## Required Artifacts
 
+### Canonical OpenSpec Change Directory (Blocking)
+
+- Superflow must use the OpenSpec CLI single-level layout:
+  `openspec/changes/<change-name>/`.
+- The release version belongs in the change name, not an intermediate
+  directory. Encode `v1.1.1` as `v1-1-1-<feature-slug>` and never create
+  `changes/v1.1.1/<feature-slug>/`.
+- Keep exactly one physical directory for each change. Do not create a
+  compatibility symlink, copied directory, or second canonical document tree.
+- Run `openspec new change <change-name>` first, then reuse that same physical
+  directory for status, instructions, strict validation, state, handoff, and
+  every Superflow guard.
+- If a nested version directory or symlinked change is found, stop document
+  generation, migrate it to one flat physical directory, and rerun
+  `openspec validate <change-name> --strict`.
+
 For a full change, the docs phase must create or refresh:
 
 - proposal.md

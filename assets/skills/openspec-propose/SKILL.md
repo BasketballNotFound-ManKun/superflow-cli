@@ -22,6 +22,17 @@ When ready to implement, run /opsx:apply
 
 **Input**: The user's request should include a change name (kebab-case) OR a description of what they want to build.
 
+### OpenSpec canonical change 目录（阻塞级）
+
+- change 必须只有一个实体目录：`openspec/changes/<name>/`。
+- 版本归属必须编码进 `<name>`，例如版本 `v1.1.1` 的账号权限需求使用
+  `v1-1-1-account-permission-optimization`。
+- 禁止创建 `openspec/changes/v1.1.1/<feature>/` 这类嵌套版本目录。
+- 禁止为了兼容 OpenSpec CLI 再创建扁平软链接、目录副本或第二套 canonical 文档。
+- 创建、查询、校验和后续 apply 必须始终使用同一个 `<name>`：
+  `openspec new change`、`openspec status --change`、
+  `openspec validate <name> --strict` 的名称必须一致。
+
 **Steps**
 
 1. **If no clear input provided, ask what they want to build**

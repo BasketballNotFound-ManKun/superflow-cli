@@ -22,6 +22,20 @@ When ready to implement, run /opsx:apply
 
 **Input**: The user's request should include a change name (kebab-case) OR a description of what they want to build.
 
+### Canonical OpenSpec Change Directory (Blocking)
+
+- A change must have exactly one physical directory:
+  `openspec/changes/<name>/`.
+- Encode the release version in `<name>`. For example, an account-permission
+  change for `v1.1.1` must use `v1-1-1-account-permission-optimization`.
+- Do not create nested version directories such as
+  `openspec/changes/v1.1.1/<feature>/`.
+- Do not create a flat symlink, copied directory, or second canonical document
+  tree to work around OpenSpec CLI discovery.
+- Creation, status, validation, and apply must use the same `<name>` in
+  `openspec new change`, `openspec status --change`, and
+  `openspec validate <name> --strict`.
+
 **Steps**
 
 1. **If no clear input provided, ask what they want to build**

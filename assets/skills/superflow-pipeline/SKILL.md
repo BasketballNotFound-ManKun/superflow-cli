@@ -80,6 +80,19 @@ When the router selects embedded deep clarification, follow these rules inside
 
 ## Non-Negotiable Rules
 
+### OpenSpec change 目录唯一性（阻塞级）
+
+- Superflow 必须遵守 OpenSpec CLI 的单层目录规范：
+  `openspec/changes/<change-name>/`。
+- 版本号属于 change name，不属于中间目录。`v1.1.1` 必须编码为
+  `v1-1-1-<feature-slug>`，不得生成 `changes/v1.1.1/<feature-slug>/`。
+- 同一 change 只能保留一个实体目录；禁止生成兼容软链接、目录副本或第二套
+  canonical 文档。
+- 生成文档前必须先执行 `openspec new change <change-name>`，后续 status、
+  instructions、validate、Superflow state/handoff/guard 全部复用该实体目录。
+- 发现嵌套版本目录或软链接 change 时，停止文档生成并迁移为唯一的扁平实体目录，
+  再运行 `openspec validate <change-name> --strict`。
+
 ### 上下文防漂移与状态门禁（阻塞级）
 
 SDD 的核心价值是可追溯事实链、接口验证、hook 质量监控、任务 prompt

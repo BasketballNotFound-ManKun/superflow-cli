@@ -433,6 +433,42 @@ describe("superflow-guard.sh", () => {
     await fs.promises.rm(tmp, { recursive: true, force: true });
   });
 
+  it("rejects a release version used as a nested change directory", async () => {
+    const change = path.join(
+      tmp,
+      "openspec",
+      "changes",
+      "v1.1.1",
+      "account-permission-optimization",
+    );
+    await fs.promises.mkdir(change, { recursive: true });
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining(
+        "non-canonical OpenSpec change directory",
+      ),
+    });
+  });
+
+  it("rejects a symlink alias for an OpenSpec change", async () => {
+    if (process.platform === "win32") return;
+    const changes = path.join(tmp, "openspec", "changes");
+    const target = path.join(changes, "v1-1-1-account-permission-optimization");
+    const alias = path.join(changes, "account-permission-alias");
+    await fs.promises.mkdir(target, { recursive: true });
+    await fs.promises.symlink(target, alias, "dir");
+
+    await expect(
+      execFileAsync("bash", [GUARD, alias, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining(
+        "symlinked OpenSpec change directory is forbidden",
+      ),
+    });
+  });
+
   it("requires architecture boundary matrix for cross-service design", async () => {
     const change = await makeCrossServiceChange();
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
