@@ -50,6 +50,15 @@ any full SDD document or implementation prompt is generated.
   external input. If semantics are unclear, mark the feature blocked instead of
   inventing a fallback.
 - Process one feature at a time, in product-document order.
+- When the pipeline selected embedded deep-clarification mode, investigate facts
+  from the repository, source documents, configuration, tests, logs, and tools
+  before asking. Ask the user only about an unresolved decision that needs owner
+  intent; do not ask for facts that can be found locally.
+- In embedded deep-clarification mode, ask exactly one decision question at a
+  time. Include the recommended answer and its important consequence, wait for
+  the answer, then record the result before asking the next question. Do not
+  create SDD artifacts or implementation prompts while a current-feature
+  decision remains pending.
 - For long PRDs, Lark/Feishu exports, screenshots, or mixed product docs, do
   not read the whole document and generate all tasks in one pass. First create
   a source index, then process one bounded section or feature at a time. Each
@@ -85,6 +94,10 @@ Create or update these files in the active OpenSpec change directory:
 - Business semantic evidence when status/enum/sync/default behavior is involved:
   source-of-truth field, enum mapping, consumer interpretation, business basis,
   explicitly rejected fallback/default choices, and unresolved owner questions.
+- Deep-clarification decision evidence when this mode is active: each question,
+  recommendation, user decision, consequence, and the resulting
+  `confirmed`/`candidate`/`pending`/`rejected` entry in
+  `.sdd/handoff/brainstorm-summary.md`.
 
 Use the detailed workflow in:
 
@@ -127,14 +140,20 @@ Use the detailed workflow in:
     If a proposed default, fallback, old-value retention, or null conversion is
     not explicitly approved by the requirement or owner, mark it rejected and do
     not include it in the design.
-11. Ask only current-feature clarification questions.
-12. Wait for programmer confirmation.
-13. Draft a rough API contract: path, action, core request, core response. Field types can be approximate.
-14. Wait for programmer confirmation of the rough API.
-15. Produce a precise API section with field names, types, requiredness, defaults, enums, errors, examples, and curl.
-16. Mark the feature as `frozen` only when understanding, rough API, precise API,
+11. If embedded deep-clarification mode is active, resolve one decision at a
+    time. For each question, state the recommended answer and consequence, wait
+    for the programmer response, then update
+    `.sdd/handoff/brainstorm-summary.md` under `confirmed`, `candidate`,
+    `pending`, or `rejected`. Stop asking once only repository-verifiable facts
+    remain.
+12. Ask only any remaining current-feature clarification questions.
+13. Wait for programmer confirmation.
+14. Draft a rough API contract: path, action, core request, core response. Field types can be approximate.
+15. Wait for programmer confirmation of the rough API.
+16. Produce a precise API section with field names, types, requiredness, defaults, enums, errors, examples, and curl.
+17. Mark the feature as `frozen` only when understanding, rough API, precise API,
     and validation data needs are confirmed or explicitly blocked.
-17. Only after the current feature is frozen or blocked, move to the next
+18. Only after the current feature is frozen or blocked, move to the next
     indexed feature. Do not batch-confirm multiple features from memory or a
     compressed chat summary.
 

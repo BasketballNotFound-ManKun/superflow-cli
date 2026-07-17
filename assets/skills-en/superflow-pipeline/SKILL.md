@@ -37,6 +37,11 @@ hotfix:
 
 ## Routing
 
+- When the user explicitly asks for rigorous questioning, or a bounded feature
+  has unresolved owner decisions, mutually exclusive approaches, an unclear
+  source of truth, unclear acceptance behavior, or cross-system responsibility,
+  use `superflow-clarify` in embedded deep-clarification mode. This is a mode
+  inside the normal clarify phase, not a separate command the user must remember.
 - New or unclear requirement: use superflow-clarify.
 - Confirmed requirement needing full docs: use openspec-propose, then
   superflow-docs.
@@ -48,6 +53,29 @@ hotfix:
 - Small wording or non-runtime process change: use superflow-tweak.
 - Urgent small behavior repair: use superflow-hotfix, unless API, DB, cross-repo,
   status, SQL, SDK, or real-entry gates are involved.
+
+## Embedded Deep Clarification
+
+When the router selects embedded deep clarification, follow these rules inside
+`superflow-clarify`:
+
+- Do not activate it for a clear, bounded hotfix or tweak whose intended behavior
+  and acceptance result are already evidenced. Do not turn routine work into an
+  interview.
+- Establish facts from the requirement, repository, configuration, tests, logs,
+  or available tools before asking the user. Ask only for a decision the user or
+  owner must make.
+- Ask exactly one decision question at a time. State the recommended option and
+  its important consequence, then wait for the answer before the next question.
+- After each answer, update `.sdd/handoff/brainstorm-summary.md` with
+  `confirmed`, `candidate`, `pending`, and `rejected` entries. Do not rely on
+  chat memory for a resolved decision.
+- Do not create or change proposal, spec, design, tasks, tests, or implementation
+  artifacts until all decisions that affect the current feature are confirmed or
+  explicitly marked blocked.
+- Exit deep clarification once only repository-verifiable facts remain and the
+  user confirms the current feature understanding. Continue through the existing
+  clarify workflow without invoking an external skill dependency.
 
 ## Required Artifacts
 
