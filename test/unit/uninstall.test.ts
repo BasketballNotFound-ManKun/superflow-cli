@@ -20,6 +20,19 @@ describe('commands/uninstall', () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
+  it('plans Codex Superpowers removal with the official marketplace', () => {
+    const plan = createUninstallPlan(
+      ['codex'],
+      true,
+      'global',
+      process.cwd()
+    );
+
+    expect(plan.dependencyCommands).toContain(
+      'codex plugin remove superpowers@openai-api-curated'
+    );
+  });
+
   it('detects only actually installed uninstall targets in auto mode', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-uninstall-auto-'));
     const skill = path.join(root, '.codex', 'skills', 'superflow-pipeline', 'SKILL.md');

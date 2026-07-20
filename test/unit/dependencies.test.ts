@@ -10,6 +10,7 @@ import {
 } from '../../src/domains/deps.js';
 import { runCommand } from '../../src/platform/process.js';
 import { promises as fs } from 'fs';
+import path from 'path';
 
 vi.mock('../../src/platform/process.js', () => ({
   runCommand: vi.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
@@ -83,6 +84,25 @@ describe('core/dependencies', () => {
     });
     const result = await installCodexSuperpowers();
     expect(result.ok).toBe(true);
+  });
+
+  it('installCodexSuperpowers 使用 Codex 官方 marketplace', async () => {
+    await installCodexSuperpowers();
+    expect(runCommand).toHaveBeenCalledWith(
+      'codex',
+      ['plugin', 'add', 'superpowers@openai-api-curated']
+    );
+  });
+
+  it('依赖更新脚本使用 Codex 官方 marketplace', async () => {
+    const script = await fs.readFile(
+      path.resolve('assets/scripts/superflow-dependency-update-hook.sh'),
+      'utf-8'
+    );
+    expect(script).toContain(
+      'codex plugin add superpowers@openai-api-curated'
+    );
+    expect(script).not.toContain('superpowers@openai-curated');
   });
 
   it('installUnderstand 失败时返回 ok=false', async () => {

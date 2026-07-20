@@ -143,7 +143,7 @@ if [ "$MODE" = "apply" ]; then
   fi
 
   if command -v codex >/dev/null 2>&1; then
-    run_logged codex plugin add superpowers@openai-curated || true
+    run_logged codex plugin add superpowers@openai-api-curated || true
   fi
 else
   STATUS_FILE="$STATE_DIR/dependency-update-status.txt"

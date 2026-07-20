@@ -10,6 +10,9 @@ export interface InstallResult {
   error?: string;
 }
 
+export const CODEX_SUPERPOWERS_PLUGIN =
+  'superpowers@openai-api-curated';
+
 function alreadyInstalled(output: string): boolean {
   return /already\s+(installed|exists)|is\s+already\s+installed|already\s+added/i.test(output);
 }
@@ -91,7 +94,7 @@ export async function installCodexSuperpowers(): Promise<InstallResult> {
   const result = await runCommand('codex', [
     'plugin',
     'add',
-    'superpowers@openai-curated',
+    CODEX_SUPERPOWERS_PLUGIN,
   ]);
   if (result.code !== 0) {
     const output = `${result.stderr}\n${result.stdout}`;

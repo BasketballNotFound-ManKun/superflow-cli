@@ -42,7 +42,7 @@ describe('commands/update', () => {
       commands: [
         'npm install -g @chenmk/superflow@latest --registry https://registry.npmjs.org',
         'npm install -g @fission-ai/openspec@latest --registry https://registry.npmjs.org',
-        'codex plugin add superpowers@openai-curated',
+        'codex plugin add superpowers@openai-api-curated',
       ],
     });
   });
@@ -73,6 +73,9 @@ describe('commands/update', () => {
     ]);
     expect(formatDependencyUpdateCommands(['claude'], 'global')).toContain(
       'claude plugin install superpowers@superpowers-marketplace'
+    );
+    expect(formatDependencyUpdateCommands(['codex'], 'global')).toContain(
+      'codex plugin add superpowers@openai-api-curated'
     );
   });
 

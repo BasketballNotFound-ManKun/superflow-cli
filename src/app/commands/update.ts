@@ -20,7 +20,11 @@ import { deployPrompts } from '../../domains/skill/prompts.js';
 import { clearSddHooks, registerHook } from '../../domains/hook.js';
 import type { Agent, InstallScope } from '../../types.js';
 import { runCommand } from '../../platform/process.js';
-import { installCodexSuperpowers, installSuperpowers } from '../../domains/deps.js';
+import {
+  CODEX_SUPERPOWERS_PLUGIN,
+  installCodexSuperpowers,
+  installSuperpowers,
+} from '../../domains/deps.js';
 import { ASSETS_DIR, PACKAGE_ROOT } from '../../platform/assets.js';
 
 const PACKAGE_NAME = '@chenmk/superflow';
@@ -199,7 +203,7 @@ export function formatDependencyUpdateCommands(agents: Agent[], packageScope: In
     commands.push('claude plugin install superpowers@superpowers-marketplace');
   }
   if (agents.includes('codex')) {
-    commands.push('codex plugin add superpowers@openai-curated');
+    commands.push(`codex plugin add ${CODEX_SUPERPOWERS_PLUGIN}`);
   }
   return commands;
 }

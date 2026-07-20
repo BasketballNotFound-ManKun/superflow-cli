@@ -163,7 +163,9 @@ superflow init
 - Claude Code、Codex 或 OpenCode（按 `--agent` 选择）
 - 第三方（`superflow init` 自动装）：
   - openspec CLI（硬依赖，npm 全局）并在当前项目执行 `openspec init --tools ...`
-  - superpowers（Claude Code / Codex 为硬依赖；OpenCode 侧通过已部署 skills/commands 使用流程）
+  - superpowers（Claude Code / Codex 为硬依赖；Codex 自动安装官方
+    `superpowers@openai-api-curated`，确保包含验证、代码评审和分支收尾三个强制技能；
+    OpenCode 侧通过已部署 skills/commands 使用流程）
   - understand-anything（尽力安装，失败只警告）
   - api-doc-changelog（辅助 skill，复制到目标 agent skills 目录）
 

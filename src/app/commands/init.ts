@@ -10,6 +10,7 @@ import {
   resolveAgents,
 } from '../../domains/agent.js';
 import {
+  CODEX_SUPERPOWERS_PLUGIN,
   installOpenspec,
   initializeOpenspec,
   openspecInitArgs,
@@ -321,7 +322,8 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
           log('[dry-run] Claude plugins: superpowers / understand-anything / api-doc');
         }
         if (agents.includes('codex')) {
-          log('[dry-run] Codex plugins/skills: superpowers / understand-anything / api-doc');
+          log(`[dry-run] codex plugin add ${CODEX_SUPERPOWERS_PLUGIN}`);
+          log('[dry-run] Codex skills: understand-anything / api-doc');
         }
         if (agents.includes('opencode')) {
           log('[dry-run] OpenCode: deploy skills/commands/scripts/rules; native hooks are not registered');
@@ -355,6 +357,10 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
       if (agents.includes('codex')) {
         const sup = await installCodexSuperpowers();
         if (!sup.ok) throw new Error(`codex superpowers install failed: ${sup.error}`);
+        log(zh
+          ? '  ✓ Codex Superpowers 已安装，包含验证、代码评审和分支收尾技能'
+          : '  ✓ Codex Superpowers installed for verification, code review, and branch closeout'
+        );
         const und = await installCodexUnderstand();
         if (!und.ok) warn(`[WARN] codex understand-anything: ${und.error}`);
         const api = await installApiDocChangelog(

@@ -17,6 +17,7 @@ import {
 import { rulePath } from '../../domains/skill/rules.js';
 import { clearSddHooks } from '../../domains/hook.js';
 import { runCommand } from '../../platform/process.js';
+import { CODEX_SUPERPOWERS_PLUGIN } from '../../domains/deps.js';
 import type { Agent, InstallScope } from '../../types.js';
 
 type UninstallScope = InstallScope | 'auto';
@@ -287,7 +288,9 @@ function removeSkillWithBackups(
 function dependencyUninstallCommands(agents: string[], withDeps: boolean): string[] {
   return withDeps
     ? [
-        agents.includes('codex') ? 'codex plugin remove superpowers@openai-curated' : null,
+        agents.includes('codex')
+          ? `codex plugin remove ${CODEX_SUPERPOWERS_PLUGIN}`
+          : null,
         agents.includes('codex') ? 'bash ~/.understand-anything/repo/install.sh --uninstall codex' : null,
         agents.includes('claude') ? 'claude plugin remove superpowers@superpowers-marketplace' : null,
         agents.includes('claude') ? 'claude plugin remove understand-anything@understand-anything' : null,
@@ -301,7 +304,7 @@ async function uninstallDependencies(agents: string[], dryRun: boolean): Promise
     await maybeRun(
       'codex superpowers',
       'codex',
-      ['plugin', 'remove', 'superpowers@openai-curated'],
+      ['plugin', 'remove', CODEX_SUPERPOWERS_PLUGIN],
       dryRun
     );
     await maybeRun(

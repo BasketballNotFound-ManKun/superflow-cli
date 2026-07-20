@@ -146,7 +146,10 @@ SUPERFLOW_LANG=en superflow init
 `superflow init` installs and configures:
 
 - OpenSpec CLI, then runs `openspec init <project> --tools ...`
-- Superpowers for the selected agent tools
+- Superpowers for the selected agent tools. Codex uses the official
+  `superpowers@openai-api-curated` plugin, including
+  `verification-before-completion`, `requesting-code-review`, and
+  `finishing-a-development-branch`.
 - SuperBridge Flow/OpenSpec skills
 - hooks, scripts, and anti-drift rules
 - Codex prompt aliases
