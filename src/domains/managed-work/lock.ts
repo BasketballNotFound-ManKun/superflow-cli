@@ -9,6 +9,8 @@ import {
 } from "fs";
 import path from "path";
 import { isProcessAlive } from "../../platform/process-liveness.js";
+import type { Language } from "../../types.js";
+import { managedText } from "./i18n.js";
 
 interface LockOwner {
   pid: number;
@@ -22,12 +24,22 @@ export interface ManagedLock {
   release(): void;
 }
 
-export function acquireManagedLock(file: string, token: string): ManagedLock {
+export function acquireManagedLock(
+  file: string,
+  token: string,
+  language?: Language,
+): ManagedLock {
   mkdirSync(path.dirname(file), { recursive: true });
   if (existsSync(file)) {
     const owner = readOwner(file);
     if (owner && isProcessAlive(owner.pid)) {
-      throw new Error(`任务正在由进程 ${owner.pid} 执行`);
+      throw new Error(
+        managedText(
+          language,
+          `任务正在由进程 ${owner.pid} 执行`,
+          `Task is already being executed by process ${owner.pid}`,
+        ),
+      );
     }
     unlinkSync(file);
   }

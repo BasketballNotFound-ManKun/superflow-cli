@@ -18,7 +18,7 @@ import { deployScripts } from '../../domains/skill/scripts.js';
 import { deploySkill } from '../../domains/skill/deploy.js';
 import { deployPrompts } from '../../domains/skill/prompts.js';
 import { clearSddHooks, registerHook } from '../../domains/hook.js';
-import type { Agent, InstallScope } from '../../types.js';
+import type { Agent, InstallScope, Language } from '../../types.js';
 import { runCommand } from '../../platform/process.js';
 import {
   CODEX_SUPERPOWERS_PLUGIN,
@@ -26,6 +26,10 @@ import {
   installSuperpowers,
 } from '../../domains/deps.js';
 import { ASSETS_DIR, PACKAGE_ROOT } from '../../platform/assets.js';
+import { stateFile } from '../../platform/paths.js';
+import { initState, loadState, saveState } from '../../domains/state.js';
+import { resolveRuntimeLanguage } from '../../domains/config/cli-help.js';
+import { managedText } from '../../domains/managed-work/i18n.js';
 
 const PACKAGE_NAME = '@chenmk/superflow';
 const OPENSPEC_PACKAGE_NAME = '@fission-ai/openspec';
@@ -41,6 +45,7 @@ export interface UpdatePlan {
   rules: { total: number; names: string[] };
   scripts: { total: number; names: string[] };
   hooks: { total: number; names: string[] };
+  language: Language;
 }
 
 export interface UpdateTarget {
@@ -57,7 +62,9 @@ export async function updateCommand(options: {
   scope?: string;
   withPackage?: boolean;
   targetPath?: string;
+  language?: string;
 } = {}): Promise<void> {
+  const language = resolveUpdateLanguage(options.language);
   const agents = resolveAgents(parseAgentSelection(options.agent));
   const projectPath = path.resolve(options.targetPath ?? process.cwd());
   const targets = resolveUpdateTargets(projectPath, agents, options.scope);
@@ -72,7 +79,8 @@ export async function updateCommand(options: {
     projectPath,
     !!options.withPackage,
     targets,
-    packageScope
+    packageScope,
+    language,
   );
 
   if (options.dryRun) {
@@ -90,7 +98,8 @@ export async function updateCommand(options: {
     const { agent, scope } = target;
     const platform = getPlatformPaths(agent, scope, target.projectPath);
     for (const skill of ALL_SKILLS) {
-      await deploySkill(skill, path.join(ASSETS_DIR, 'skills'), platform.skillsDir, { agent });
+      const skillsRoot = skillsRootForLanguage(language);
+      await deploySkill(skill, skillsRoot, platform.skillsDir, { agent });
     }
     await deployRules(ALL_RULES, path.join(ASSETS_DIR, 'rules'), platform.rulesDir);
     const scripts = scriptsForAgent(agent);
@@ -111,6 +120,8 @@ export async function updateCommand(options: {
       }
     }
   }
+
+  persistUpdateLanguage(language, planAgents);
 
   printPlan(plan, !!options.json, 'updated');
 }
@@ -156,7 +167,8 @@ export function createUpdatePlan(
   projectPath = process.cwd(),
   withPackage = false,
   targets: UpdateTarget[] = agents.map((agent) => ({ agent, scope, projectPath })),
-  packageScope: InstallScope = scope
+  packageScope: InstallScope = scope,
+  language: Language = 'zh'
 ): UpdatePlan {
   const scriptNames = [...new Set(agents.flatMap((agent) => scriptsForAgent(agent)))];
   const hookNames = [...new Set(agents.flatMap((agent) => hookScriptsForAgent(agent)))];
@@ -173,7 +185,20 @@ export function createUpdatePlan(
     rules: { total: ALL_RULES.length, names: [...ALL_RULES] },
     scripts: { total: scriptNames.length, names: scriptNames },
     hooks: { total: hookNames.length, names: hookNames },
+    language,
   };
+}
+
+export function resolveUpdateLanguage(
+  value?: unknown,
+  env: NodeJS.ProcessEnv = process.env,
+  installedStateFile = stateFile,
+): Language {
+  return resolveRuntimeLanguage(value, env, installedStateFile);
+}
+
+export function skillsRootForLanguage(language: Language): string {
+  return path.join(ASSETS_DIR, language === 'en' ? 'skills-en' : 'skills');
 }
 
 export function buildPackageUpdateArgs(scope: InstallScope): string[] {
@@ -244,7 +269,14 @@ function printPlan(plan: UpdatePlan, json: boolean, status = 'planned'): void {
     console.log(JSON.stringify({ status, ...plan }, null, 2));
     return;
   }
-  console.log(`SuperBridge Flow update ${status}: ${plan.agents.join(', ')}`);
+  console.log(
+    managedText(
+      plan.language,
+      `SuperBridge Flow 更新 ${status}: ${plan.agents.join(', ')}`,
+      `SuperBridge Flow update ${status}: ${plan.agents.join(', ')}`,
+    ),
+  );
+  console.log(managedText(plan.language, `语言: ${plan.language}`, `language: ${plan.language}`));
   if (plan.packageUpdate.enabled) {
     console.log('packages:');
     for (const command of plan.packageUpdate.commands) {
@@ -255,6 +287,19 @@ function printPlan(plan: UpdatePlan, json: boolean, status = 'planned'): void {
   console.log(`rules: ${plan.rules.total}`);
   console.log(`scripts: ${plan.scripts.total}`);
   console.log(`hooks: ${plan.hooks.total}`);
+}
+
+function persistUpdateLanguage(language: Language, agents: Agent[]): void {
+  let state = loadState(stateFile);
+  if (!state) {
+    const packageJson = JSON.parse(
+      readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf-8')
+    ) as { version?: string };
+    state = initState(packageJson.version ?? 'unknown', agents[0] ?? 'claude', language);
+  }
+  state.language = language;
+  state.lastInit = new Date().toISOString();
+  saveState(stateFile, state);
 }
 
 async function updateNpmPackage(

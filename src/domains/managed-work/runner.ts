@@ -41,6 +41,7 @@ import {
   validateManagedTaskContract,
   validateManagedTaskPromptSnapshot,
 } from "./contract.js";
+import { managedList, managedText } from "./i18n.js";
 
 export async function runManagedTask(
   projectRoot: string,
@@ -52,7 +53,11 @@ export async function runManagedTask(
   let state = loadManagedRun(projectRoot, taskId, registryRunId(contract, env));
   const runDir = managedRunDir(projectRoot, taskId, state.runId);
   mkdirSync(runDir, { recursive: true });
-  const lock = acquireManagedLock(path.join(runDir, "run.lock"), randomUUID());
+  const lock = acquireManagedLock(
+    path.join(runDir, "run.lock"),
+    randomUUID(),
+    contract.language,
+  );
   let projectLocks: ReturnType<typeof acquireProjectLocks> = [];
 
   try {
@@ -60,17 +65,31 @@ export async function runManagedTask(
     validateManagedTaskContract(contract);
     validateManagedTaskPromptSnapshot(contract);
     if (state.contractHash !== contract.contractHash) {
-      return finishBlocked(contract, state, "运行状态与任务合同哈希不一致", env);
+      return finishBlocked(
+        contract,
+        state,
+        mt(contract, "运行状态与任务合同哈希不一致", "Run state and task contract hashes do not match"),
+        env,
+      );
     }
     if (!verifyManagedJournal(state)) {
-      return finishBlocked(contract, state, "事件账本校验失败，拒绝继续", env);
+      return finishBlocked(
+        contract,
+        state,
+        mt(contract, "事件账本校验失败，拒绝继续", "Event journal verification failed; refusing to continue"),
+        env,
+      );
     }
     state = transition(contract, state, "running", "preflight", env);
     appendManagedEvent(state, {
       eventType: "run.started",
       actor: "managed-runner",
       role: "runner",
-      summary: "后台开始或恢复托管任务",
+      summary: mt(
+        contract,
+        "后台开始或恢复托管任务",
+        "Background service started or resumed the managed task",
+      ),
     });
     const schemas = writeManagedSchemas(state);
     state = reconcileCompletedReview(contract, state, env);
@@ -128,7 +147,11 @@ export async function runManagedTask(
         eventType: "connectivity.lost",
         actor: "managed-runner",
         role: "system",
-        summary: `网络或模型服务暂时不可用：${message}`,
+        summary: mt(
+          contract,
+          `网络或模型服务暂时不可用：${message}`,
+          `Network or model service is temporarily unavailable: ${message}`,
+        ),
       });
       return state;
     }
@@ -151,7 +174,7 @@ function reconcileCompletedReview(
   const result = JSON.parse(
     readFileSync(state.lastReviewResult, "utf-8"),
   ) as ReviewResult;
-  validateReviewResult(result);
+  validateReviewResult(result, contract.language);
   const endedReviews = readManagedEvents(state).filter(
     (event) => event.eventType === "review.ended",
   ).length;
@@ -161,7 +184,11 @@ function reconcileCompletedReview(
       eventType: "review.ended",
       actor: contract.supervisorAgent,
       role: "supervisor",
-      summary: `恢复已落盘的检查结果：${result.summary}`,
+      summary: mt(
+        contract,
+        `恢复已落盘的检查结果：${result.summary}`,
+        `Recovered persisted review result: ${result.summary}`,
+      ),
       evidencePaths: [state.lastReviewResult],
     });
   }
@@ -182,7 +209,11 @@ function reconcileCompletedReview(
       eventType: "recovery.checkpoint_restored",
       actor: "managed-runner",
       role: "runner",
-      summary: "根据已落盘的整改结论恢复到执行者整改步骤",
+      summary: mt(
+        contract,
+        "根据已落盘的整改结论恢复到执行者整改步骤",
+        "Restored the executor repair step from persisted review findings",
+      ),
     });
   }
   return state;
@@ -197,7 +228,12 @@ async function executeWorker(
   env: NodeJS.ProcessEnv,
 ): Promise<ManagedRunState> {
   if (state.executorInvocations >= contract.budgets.maxExecutorInvocations) {
-    return finishBudgetExhausted(contract, state, "执行调用次数达到上限", env);
+    return finishBudgetExhausted(
+      contract,
+      state,
+      mt(contract, "执行调用次数达到上限", "Executor invocation limit reached"),
+      env,
+    );
   }
   if (
     state.totalAgentInvocations >= contract.budgets.maxTotalAgentInvocations
@@ -205,7 +241,7 @@ async function executeWorker(
     return finishBudgetExhausted(
       contract,
       state,
-      "总 Agent 调用次数达到上限",
+      mt(contract, "总 Agent 调用次数达到上限", "Total Agent invocation limit reached"),
       env,
     );
   }
@@ -220,7 +256,11 @@ async function executeWorker(
     eventType: "executor.started",
     actor: contract.executorAgent,
     role: "executor",
-    summary: `开始第 ${state.executorInvocations} 次执行调用`,
+    summary: mt(
+      contract,
+      `开始第 ${state.executorInvocations} 次执行调用`,
+      `Started executor invocation ${state.executorInvocations}`,
+    ),
   });
 
   const prompt = buildExecutorPrompt(contract, state, findings);
@@ -302,7 +342,7 @@ async function executeWorker(
   return finishBlocked(
     contract,
     state,
-    result.output.blockers.join("；") || result.output.summary,
+    managedList(contract.language, result.output.blockers, "", "") || result.output.summary,
     env,
   );
 }
@@ -323,7 +363,7 @@ async function executeReview(
     return finishBudgetExhausted(
       contract,
       state,
-      "总 Agent 调用次数达到上限",
+      mt(contract, "总 Agent 调用次数达到上限", "Total Agent invocation limit reached"),
       env,
     );
   }
@@ -342,7 +382,11 @@ async function executeReview(
     eventType: "review.started",
     actor: contract.supervisorAgent,
     role: "supervisor",
-    summary: `开始第 ${state.reviewRound} 轮正式检查`,
+    summary: mt(
+      contract,
+      `开始第 ${state.reviewRound} 轮正式检查`,
+      `Started formal review round ${state.reviewRound}`,
+    ),
   });
 
   const prompt = buildReviewPrompt(contract, state);
@@ -383,14 +427,19 @@ async function executeReview(
     status: "active",
     lastResumedRound: state.reviewRound,
   };
-  validateReviewResult(result.output);
+  validateReviewResult(result.output, contract.language);
   if (
     computeWorkspaceFingerprintForRoots([
       contract.projectRoot,
       ...contract.relatedProjectRoots,
     ]) !== fingerprint
   ) {
-    return finishBlocked(contract, state, "只读检查期间工作区发生变化", env);
+    return finishBlocked(
+      contract,
+      state,
+      mt(contract, "只读检查期间工作区发生变化", "Workspace changed during read-only review"),
+      env,
+    );
   }
   const resultFile = path.join(
     managedRunDir(state.projectRoot, state.taskId, state.runId),
@@ -449,6 +498,7 @@ function invocation(
     taskId: state.taskId,
     runId: state.runId,
     role,
+    language: contract.language,
     agent:
       role === "executor" ? contract.executorAgent : contract.supervisorAgent,
     projectRoot: state.projectRoot,
@@ -509,21 +559,36 @@ function finishAwaitingGitApproval(
   runManagedDeliveryCheck(state, true);
   appendTaskReport(
     state,
-    `\n## 最终结论\n\n${summary}\n\n状态：等待用户批准 Git 提交。\n`,
+    mt(
+      contract,
+      `\n## 最终结论\n\n${summary}\n\n状态：等待用户批准 Git 提交。\n`,
+      `\n## Final conclusion\n\n${summary}\n\nStatus: waiting for user approval to commit Git changes.\n`,
+    ),
   );
-  updateTaskReportStatus(state, "等待用户批准 Git 提交");
+  updateTaskReportStatus(
+    state,
+    mt(contract, "等待用户批准 Git 提交", "waiting for Git commit approval"),
+  );
   appendManagedEvent(state, {
     eventType: "run.delivery_ready",
     actor: "managed-runner",
     role: "runner",
-    summary: "任务已通过检查，等待用户批准 Git 提交",
+    summary: mt(
+      contract,
+      "任务已通过检查，等待用户批准 Git 提交",
+      "Task passed review and is waiting for user approval to commit Git changes",
+    ),
   });
   notifyManagedTask(
     {
       taskId: state.taskId,
       type: "delivery_ready",
-      title: "Superflow 任务已完成",
-      message: `${state.taskId} 已通过检查，等待 Git 提交批准`,
+      title: mt(contract, "Superflow 任务已完成", "Superflow task completed"),
+      message: mt(
+        contract,
+        `${state.taskId} 已通过检查，等待 Git 提交批准`,
+        `${state.taskId} passed review and is waiting for Git commit approval`,
+      ),
     },
     env,
   );
@@ -546,8 +611,18 @@ function finishBlocked(
   state.blocker = blocker;
   state.completedAt = null;
   saveManagedRun(state);
-  appendTaskReport(state, `\n## 当前阻塞\n\n${blocker}\n`);
-  updateTaskReportStatus(state, "等待人工处理");
+  appendTaskReport(
+    state,
+    mt(
+      contract,
+      `\n## 当前阻塞\n\n${blocker}\n`,
+      `\n## Current blocker\n\n${blocker}\n`,
+    ),
+  );
+  updateTaskReportStatus(
+    state,
+    mt(contract, "等待人工处理", "waiting for human action"),
+  );
   appendManagedEvent(state, {
     eventType: "human_input.required",
     actor: "managed-runner",
@@ -558,7 +633,7 @@ function finishBlocked(
     {
       taskId: state.taskId,
       type: "human_required",
-      title: "Superflow 任务需要处理",
+      title: mt(contract, "Superflow 任务需要处理", "Superflow task needs attention"),
       message: `${state.taskId}: ${blocker}`,
     },
     env,
@@ -578,9 +653,16 @@ function finishReviewExhausted(
     "review_exhausted",
     env,
   );
-  state.blocker = "正式检查达到五轮上限";
+  state.blocker = mt(
+    contract,
+    "正式检查达到五轮上限",
+    "Formal review reached the five-round limit",
+  );
   saveManagedRun(state);
-  updateTaskReportStatus(state, "检查轮次耗尽");
+  updateTaskReportStatus(
+    state,
+    mt(contract, "检查轮次耗尽", "review rounds exhausted"),
+  );
   appendManagedEvent(state, {
     eventType: "budget.exhausted",
     actor: "managed-runner",
@@ -591,7 +673,11 @@ function finishReviewExhausted(
     {
       taskId: state.taskId,
       type: "budget_exhausted",
-      title: "Superflow 检查轮次已耗尽",
+      title: mt(
+        contract,
+        "Superflow 检查轮次已耗尽",
+        "Superflow review rounds exhausted",
+      ),
       message: `${state.taskId}: ${state.blocker}`,
     },
     env,
@@ -614,7 +700,10 @@ function finishBudgetExhausted(
   );
   state.blocker = reason;
   saveManagedRun(state);
-  updateTaskReportStatus(state, "调用预算耗尽");
+  updateTaskReportStatus(
+    state,
+    mt(contract, "调用预算耗尽", "invocation budget exhausted"),
+  );
   appendManagedEvent(state, {
     eventType: "budget.exhausted",
     actor: "managed-runner",
@@ -625,7 +714,11 @@ function finishBudgetExhausted(
     {
       taskId: state.taskId,
       type: "budget_exhausted",
-      title: "Superflow 调用预算已耗尽",
+      title: mt(
+        contract,
+        "Superflow 调用预算已耗尽",
+        "Superflow invocation budget exhausted",
+      ),
       message: `${state.taskId}: ${reason}`,
     },
     env,
@@ -649,7 +742,11 @@ function enforceBudgets(
       eventType: "deadline.warning",
       actor: "managed-runner",
       role: "runner",
-      summary: `实际工作时间已达到 ${contract.budgets.activeRunWarningHours} 小时，任务继续运行但已接近兜底上限`,
+      summary: mt(
+        contract,
+        `实际工作时间已达到 ${contract.budgets.activeRunWarningHours} 小时，任务继续运行但已接近兜底上限`,
+        `Active work time reached ${contract.budgets.activeRunWarningHours} hours; the task continues but is approaching the safety limit`,
+      ),
     });
   }
   if (activeHours >= contract.budgets.maxActiveRunHours) {
@@ -660,7 +757,11 @@ function enforceBudgets(
       "deadline_exhausted",
       env,
     );
-    state.blocker = "实际工作时间达到防失控上限";
+    state.blocker = mt(
+      contract,
+      "实际工作时间达到防失控上限",
+      "Active work time reached the safety limit",
+    );
     saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "deadline.exhausted",
@@ -695,7 +796,7 @@ function validateExecutorResult(
   result: ExecutorResult,
 ): void {
   if (!["ready_for_review", "blocked", "failed"].includes(result.status)) {
-    throw new Error("执行 Agent 返回了非法状态");
+    throw new Error(mt(contract, "执行 Agent 返回了非法状态", "Executor Agent returned an invalid status"));
   }
   if (
     !Array.isArray(result.changedFiles) ||
@@ -703,28 +804,31 @@ function validateExecutorResult(
     !Array.isArray(result.evidence) ||
     !Array.isArray(result.blockers)
   ) {
-    throw new Error("执行 Agent 结果缺少文件、命令、证据或阻塞列表");
+    throw new Error(mt(contract, "执行 Agent 结果缺少文件、命令、证据或阻塞列表", "Executor Agent result is missing files, commands, evidence, or blockers"));
   }
-  if (!result.summary.trim()) throw new Error("执行 Agent 结果缺少摘要");
+  if (!result.summary.trim()) {
+    throw new Error(mt(contract, "执行 Agent 结果缺少摘要", "Executor Agent result is missing a summary"));
+  }
   if (result.status !== "ready_for_review") {
     if (result.blockers.length === 0) {
-      throw new Error("执行 Agent 声明阻塞或失败，但没有提供阻塞原因");
+      throw new Error(mt(contract, "执行 Agent 声明阻塞或失败，但没有提供阻塞原因", "Executor Agent reported blocked or failed without a blocker"));
     }
     return;
   }
   if (result.blockers.length > 0) {
-    throw new Error("执行 Agent 声明可检查，但仍存在阻塞项");
+    throw new Error(mt(contract, "执行 Agent 声明可检查，但仍存在阻塞项", "Executor Agent reported ready for review while blockers remain"));
   }
   if (result.commands.some((command) => command.exitCode !== 0)) {
-    throw new Error("执行 Agent 声明可检查，但命令证据中仍有失败项");
+    throw new Error(mt(contract, "执行 Agent 声明可检查，但命令证据中仍有失败项", "Executor Agent reported ready for review while command evidence still contains failures"));
   }
   if (contract.profile === "engineering" || contract.profile === "sdd") {
-    validateEngineeringEvidence(result.commands);
+    validateEngineeringEvidence(result.commands, contract);
   }
 }
 
 function validateEngineeringEvidence(
   commands: ExecutorResult["commands"],
+  contract: ManagedTaskContract,
 ): void {
   const successful = commands.filter((command) => command.exitCode === 0);
   const categories = new Set(
@@ -732,7 +836,11 @@ function validateEngineeringEvidence(
   );
   if (categories.size < 2) {
     throw new Error(
-      "工程任务至少需要两类成功验证证据（构建、测试、启动或真实调用），只编译或只跑单测不能交付",
+      mt(
+        contract,
+        "工程任务至少需要两类成功验证证据（构建、测试、启动或真实调用），只编译或只跑单测不能交付",
+        "Engineering tasks require at least two successful evidence categories (build, tests, startup, or real calls); compilation-only or unit-test-only evidence cannot be delivered",
+      ),
     );
   }
 }
@@ -771,23 +879,26 @@ function verificationCategories(command: string): string[] {
   return categories;
 }
 
-function validateReviewResult(result: ReviewResult): void {
+function validateReviewResult(
+  result: ReviewResult,
+  language: ManagedTaskContract["language"] = "zh",
+): void {
   if (!["pass", "needs_fix", "blocked"].includes(result.result)) {
-    throw new Error("监督 Agent 返回了非法状态");
+    throw new Error(managedText(language, "监督 Agent 返回了非法状态", "Supervisor Agent returned an invalid status"));
   }
   if (!Array.isArray(result.findings))
-    throw new Error("监督 Agent 结果缺少 findings");
+    throw new Error(managedText(language, "监督 Agent 结果缺少 findings", "Supervisor Agent result is missing findings"));
   if (
     result.result === "pass" &&
     result.findings.some((finding) => finding.blocking)
   ) {
-    throw new Error("监督结果声明通过，但仍存在阻断 finding");
+    throw new Error(managedText(language, "监督结果声明通过，但仍存在阻断 finding", "Supervisor result reported pass while blocking findings remain"));
   }
   if (
     result.result === "needs_fix" &&
     !result.findings.some((finding) => finding.blocking)
   ) {
-    throw new Error("监督结果要求整改，但没有提供阻断 finding");
+    throw new Error(managedText(language, "监督结果要求整改，但没有提供阻断 finding", "Supervisor result requested fixes without a blocking finding"));
   }
 }
 
@@ -795,6 +906,16 @@ function executorReportSection(
   state: ManagedRunState,
   result: ExecutorResult,
 ): string {
+  if (state.language === "en") {
+    return [
+      `## Executor invocation ${state.executorInvocations}`,
+      "",
+      `Status: ${result.status}`,
+      `Summary: ${result.summary}`,
+      `Changed files: ${result.changedFiles.join(", ") || "none"}`,
+      `Blockers: ${result.blockers.join("; ") || "none"}`,
+    ].join("\n");
+  }
   return [
     `## 执行调用 ${state.executorInvocations}`,
     "",
@@ -809,6 +930,15 @@ function reviewReportSection(
   state: ManagedRunState,
   result: ReviewResult,
 ): string {
+  if (state.language === "en") {
+    return [
+      `## Formal review R${state.reviewRound}`,
+      "",
+      `Result: ${result.result}`,
+      `Summary: ${result.summary}`,
+      `Blocking findings: ${result.findings.filter((finding) => finding.blocking).length}`,
+    ].join("\n");
+  }
   return [
     `## 正式检查 R${state.reviewRound}`,
     "",
@@ -829,6 +959,7 @@ function updateRegistry(
       projectRoot: contract.projectRoot,
       status: state.status,
       profile: state.profile,
+      language: contract.language,
       activeRunId: state.runId,
       createdAt: contract.createdAt,
       updatedAt: new Date().toISOString(),
@@ -844,7 +975,15 @@ function registryRunId(
 ): string {
   const registry = loadRegistry(env);
   const entry = registry.tasks.find((item) => item.taskId === contract.taskId);
-  if (!entry) throw new Error(`全局任务索引缺少 ${contract.taskId}`);
+  if (!entry) {
+    throw new Error(
+      mt(
+        contract,
+        `全局任务索引缺少 ${contract.taskId}`,
+        `Global task registry is missing ${contract.taskId}`,
+      ),
+    );
+  }
   return entry.activeRunId;
 }
 
@@ -865,6 +1004,7 @@ function acquireProjectLocks(contract: ManagedTaskContract) {
         acquireManagedLock(
           path.join(root, ".superflow", "managed-project.lock"),
           `${contract.taskId}:${randomUUID()}`,
+          contract.language,
         ),
       );
     }
@@ -922,4 +1062,12 @@ export function redactManagedLog(value: string): string {
       "$1<redacted>",
     )
     .replace(/(https?:\/\/[^:\s/@]+:)[^@\s/]+@/gi, "$1<redacted>@");
+}
+
+function mt(
+  contract: ManagedTaskContract,
+  zh: string,
+  en: string,
+): string {
+  return managedText(contract.language, zh, en);
 }

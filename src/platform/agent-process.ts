@@ -7,6 +7,8 @@ import type {
   AgentInvoker,
   ManagedAgent,
 } from "../domains/managed-work/types.js";
+import { managedText } from "../domains/managed-work/i18n.js";
+import type { Language } from "../types.js";
 
 export class LocalAgentInvoker implements AgentInvoker {
   async invoke<T>(
@@ -55,13 +57,25 @@ async function runAgentProcess<T>(
     let finished = false;
 
     const warningTimer = setTimeout(() => {
-      invocation.onProgress?.("连续一段时间没有新进展，后台仍在观察进程");
+      invocation.onProgress?.(
+        managedText(
+          invocation.language,
+          "连续一段时间没有新进展，后台仍在观察进程",
+          "No new progress for a while; the background service is still observing the process",
+        ),
+      );
     }, invocation.timeout.warningMs);
     let stalledTimer = setTimeout(onStalled, invocation.timeout.stalledMs);
     const hardTimer = setTimeout(() => {
       stopChild(child.pid);
       finishError(
-        new Error(`单次 Agent 调用超过 ${invocation.timeout.hardMs}ms`),
+        new Error(
+          managedText(
+            invocation.language,
+            `单次 Agent 调用超过 ${invocation.timeout.hardMs}ms`,
+            `Single Agent invocation exceeded ${invocation.timeout.hardMs}ms`,
+          ),
+        ),
       );
     }, invocation.timeout.hardMs);
     if (invocation.sessionId) invocation.onSession?.(invocation.sessionId);
@@ -96,7 +110,17 @@ async function runAgentProcess<T>(
       cleanupTimers();
       finished = true;
       if ((code ?? 1) !== 0) {
-        reject(new Error(formatAgentFailure(invocation.agent, code, stdout, stderr)));
+        reject(
+          new Error(
+            formatAgentFailure(
+              invocation.agent,
+              code,
+              stdout,
+              stderr,
+              invocation.language,
+            ),
+          ),
+        );
         return;
       }
       try {
@@ -104,13 +128,20 @@ async function runAgentProcess<T>(
           invocation.agent,
           stdout,
           command.outputFile,
+          invocation.language,
         );
         const resolvedSession =
           sessionId ??
           extractSessionFromLines(stdout) ??
           command.initialSessionId;
         if (!resolvedSession)
-          throw new Error("Agent 输出中缺少可恢复 session ID");
+          throw new Error(
+            managedText(
+              invocation.language,
+              "Agent 输出中缺少可恢复 session ID",
+              "Agent output is missing a resumable session ID",
+            ),
+          );
         resolve({
           sessionId: resolvedSession,
           output,
@@ -127,7 +158,15 @@ async function runAgentProcess<T>(
     function onStalled(): void {
       if (Date.now() - lastOutputAt < invocation.timeout.stalledMs) return;
       stopChild(child.pid);
-      finishError(new Error("Agent 长时间没有输出，已保存现场并中断"));
+      finishError(
+        new Error(
+          managedText(
+            invocation.language,
+            "Agent 长时间没有输出，已保存现场并中断",
+            "Agent produced no output for too long; state was preserved and the process was interrupted",
+          ),
+        ),
+      );
     }
 
     function finishError(error: Error): void {
@@ -150,12 +189,17 @@ export function formatAgentFailure(
   code: number | null,
   stdout: string,
   stderr: string,
+  language?: Language,
 ): string {
   const details = [stderr.trim(), extractFailureFromEvents(stdout)]
     .filter(Boolean)
     .join("\n")
     .slice(-2_000);
-  return `${agent} 调用失败，退出码 ${code ?? 1}: ${redactFailure(details) || "未返回错误详情"}`;
+  return managedText(
+    language,
+    `${agent} 调用失败，退出码 ${code ?? 1}: ${redactFailure(details) || "未返回错误详情"}`,
+    `${agent} invocation failed with exit code ${code ?? 1}: ${redactFailure(details) || "no error details returned"}`,
+  );
 }
 
 function extractFailureFromEvents(stdout: string): string {
@@ -255,9 +299,10 @@ function extractStructuredOutput<T>(
   agent: ManagedAgent,
   stdout: string,
   outputFile: string | null,
+  language?: Language,
 ): T {
   if (agent === "codex" && outputFile && existsSync(outputFile)) {
-    return parseStructuredValue<T>(readFileSync(outputFile, "utf-8"));
+    return parseStructuredValue<T>(readFileSync(outputFile, "utf-8"), language);
   }
   const events = stdout.split(/\r?\n/).map(safeJson).filter(Boolean) as Record<
     string,
@@ -266,21 +311,29 @@ function extractStructuredOutput<T>(
   for (let index = events.length - 1; index >= 0; index--) {
     const event = events[index];
     for (const key of ["structured_output", "structuredOutput", "result"]) {
-      if (event[key] !== undefined) return parseStructuredValue<T>(event[key]);
+      if (event[key] !== undefined) return parseStructuredValue<T>(event[key], language);
     }
   }
-  return parseStructuredValue<T>(stdout);
+  return parseStructuredValue<T>(stdout, language);
 }
 
-function parseStructuredValue<T>(value: unknown): T {
+function parseStructuredValue<T>(value: unknown, language?: Language): T {
   if (typeof value === "object" && value !== null) return value as T;
-  if (typeof value !== "string") throw new Error("Agent 未返回结构化结果");
+  if (typeof value !== "string") {
+    throw new Error(
+      managedText(language, "Agent 未返回结构化结果", "Agent did not return structured output"),
+    );
+  }
   const trimmed = value.trim();
   try {
     return JSON.parse(trimmed) as T;
   } catch {
     const match = trimmed.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("Agent 最终输出不是 JSON");
+    if (!match) {
+      throw new Error(
+        managedText(language, "Agent 最终输出不是 JSON", "Agent final output is not JSON"),
+      );
+    }
     return JSON.parse(match[0]) as T;
   }
 }

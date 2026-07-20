@@ -6,6 +6,7 @@ import { managedHome, managedServicePath } from "./paths.js";
 import { runManagedTask } from "./runner.js";
 import {
   loadRegistry,
+  loadManagedTask,
   readJson,
   upsertRegistryEntry,
   writeJsonAtomic,
@@ -14,6 +15,7 @@ import { notifyManagedTask } from "./notifications.js";
 import { acquireManagedLock } from "./lock.js";
 import { randomUUID } from "crypto";
 import { isProcessAlive } from "../../platform/process-liveness.js";
+import { managedText } from "./i18n.js";
 
 export interface ManagedServiceState {
   pid: number;
@@ -86,6 +88,16 @@ function recordServiceFailure(
   env: NodeJS.ProcessEnv,
 ): void {
   const message = error instanceof Error ? error.message : String(error);
+  const registry = loadRegistry(env);
+  const entry = registry.tasks.find((item) => item.taskId === taskId);
+  let language;
+  try {
+    language = entry
+      ? loadManagedTask(entry.projectRoot, taskId).language
+      : undefined;
+  } catch {
+    language = undefined;
+  }
   const file = path.join(managedHome(env), "managed", "service-errors.jsonl");
   mkdirSync(path.dirname(file), { recursive: true });
   appendFileSync(
@@ -97,7 +109,11 @@ function recordServiceFailure(
     {
       taskId,
       type: "service_failed",
-      title: "Superflow 后台任务异常",
+      title: managedText(
+        language,
+        "Superflow 后台任务异常",
+        "Superflow background task failure",
+      ),
       message: `${taskId}: ${message}`,
     },
     env,

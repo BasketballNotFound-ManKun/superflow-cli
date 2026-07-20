@@ -12,6 +12,7 @@ export function initManagedRunState(
     taskId: contract.taskId,
     projectRoot: contract.projectRoot,
     profile: contract.profile,
+    language: contract.language,
     status: "queued",
     currentStep: "queued",
     reviewRound: 0,

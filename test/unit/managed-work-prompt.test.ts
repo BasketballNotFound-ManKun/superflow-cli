@@ -8,6 +8,7 @@ import {
 } from "../../src/domains/managed-work/contract.js";
 import { initManagedRunState } from "../../src/domains/managed-work/state.js";
 import { createManagedTaskFiles } from "../../src/domains/managed-work/storage.js";
+import { buildExecutorPrompt, buildReviewPrompt } from "../../src/domains/managed-work/prompts.js";
 
 const roots: string[] = [];
 
@@ -47,5 +48,23 @@ describe("managed work prompt snapshot", () => {
     expect(() => validateManagedTaskPromptSnapshot(contract)).toThrow(
       "快照哈希校验失败",
     );
+  });
+
+  it("builds English executor and reviewer prompts without Chinese text", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-prompt-en-"));
+    roots.push(root);
+    const contract = createManagedTaskContract({
+      request: "Implement the task",
+      projectRoot: root,
+      language: "en",
+    });
+    const state = initManagedRunState(contract);
+
+    const executor = buildExecutorPrompt(contract, state);
+    const reviewer = buildReviewPrompt(contract, state);
+
+    expect(executor).toContain("only executor allowed to modify");
+    expect(reviewer).toContain("persistent read-only reviewer");
+    expect(`${executor}\n${reviewer}`).not.toMatch(/[\p{Script=Han}]/u);
   });
 });

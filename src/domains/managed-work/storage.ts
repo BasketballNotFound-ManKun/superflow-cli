@@ -15,6 +15,7 @@ import type {
   ManagedTaskContract,
 } from "./types.js";
 import { managedRegistryPath, managedRunDir, managedTaskDir } from "./paths.js";
+import { managedList, managedText } from "./i18n.js";
 
 export function writeJsonAtomic(file: string, value: unknown): void {
   mkdirSync(path.dirname(file), { recursive: true });
@@ -55,12 +56,20 @@ export function createManagedTaskFiles(
   writeFileSync(path.join(runDir, "progress.jsonl"), "", "utf-8");
   writeFileSync(
     path.join(runDir, "progress.md"),
-    "# 托管任务进度\n\n状态：已创建\n",
+    managedText(
+      contract.language,
+      "# 托管任务进度\n\n状态：已创建\n",
+      "# Managed Task Progress\n\nStatus: created\n",
+    ),
     "utf-8",
   );
   writeFileSync(
     path.join(runDir, "task-report.md"),
-    "# 托管任务报告\n\n状态：执行中\n",
+    managedText(
+      contract.language,
+      "# 托管任务报告\n\n状态：执行中\n",
+      "# Managed Task Report\n\nStatus: running\n",
+    ),
     "utf-8",
   );
   upsertRegistryEntry(
@@ -69,6 +78,7 @@ export function createManagedTaskFiles(
       projectRoot: contract.projectRoot,
       status: contract.status,
       profile: contract.profile,
+      language: contract.language,
       activeRunId: runState.runId,
       createdAt: contract.createdAt,
       updatedAt: contract.updatedAt,
@@ -165,12 +175,27 @@ export function updateTaskReportStatus(
   const content = readFileSync(file, "utf-8");
   writeFileSync(
     file,
-    content.replace(/^状态：.*$/m, `状态：${status}`),
+    content.replace(
+      /^(?:状态：|Status: ).*$/m,
+      managedText(state.language, `状态：${status}`, `Status: ${status}`),
+    ),
     "utf-8",
   );
 }
 
 function buildRequestMarkdown(contract: ManagedTaskContract): string {
+  if (contract.language === "en") {
+    return [
+      "# Original User Task",
+      "",
+      `Task ID: ${contract.taskId}`,
+      `Created at: ${contract.createdAt}`,
+      `Source: ${contract.source}`,
+      "",
+      contract.request,
+      "",
+    ].join("\n");
+  }
   return [
     "# 用户原始任务",
     "",
@@ -185,6 +210,40 @@ function buildRequestMarkdown(contract: ManagedTaskContract): string {
 
 function buildTaskBrief(contract: ManagedTaskContract): string {
   const criteria = contract.doneCriteria.map((item) => `- ${item}`).join("\n");
+  if (contract.language === "en") {
+    return [
+      "# Managed Task Contract",
+      "",
+      `Task ID: ${contract.taskId}`,
+      `Task profile: ${contract.profile}`,
+      `Related repositories: ${managedList(contract.language, contract.relatedProjectRoots)}`,
+      `Supervisor Agent: ${contract.supervisorAgent}`,
+      `Executor Agent: ${contract.executorAgent}`,
+      `Contract hash: ${contract.contractHash}`,
+      ...(contract.taskPrompt
+        ? [
+            `Original task prompt: ${contract.taskPrompt.originalPath}`,
+            `Frozen prompt snapshot: ${contract.taskPrompt.snapshotPath}`,
+            `Prompt SHA-256: ${contract.taskPrompt.sha256}`,
+          ]
+        : []),
+      "",
+      "## Goal",
+      "",
+      contract.objective,
+      "",
+      "## Completion criteria",
+      "",
+      criteria,
+      "",
+      "## Permission boundaries",
+      "",
+      "- Maximum autonomy within safety boundaries.",
+      "- Never commit or push Git, publish, or write to production automatically.",
+      "- Never bypass sandbox or permission checks.",
+      "",
+    ].join("\n");
+  }
   return [
     "# 托管任务合同",
     "",
@@ -224,7 +283,13 @@ function writeTaskPromptSnapshot(contract: ManagedTaskContract): void {
   const content = readFileSync(contract.taskPrompt.originalPath, "utf-8");
   const actual = createHash("sha256").update(content).digest("hex");
   if (actual !== contract.taskPrompt.sha256) {
-    throw new Error("任务 Prompt 在创建合同后发生变化，拒绝生成快照");
+    throw new Error(
+      managedText(
+        contract.language,
+        "任务 Prompt 在创建合同后发生变化，拒绝生成快照",
+        "Task prompt changed after contract creation; refusing to create snapshot",
+      ),
+    );
   }
   writeFileSync(contract.taskPrompt.snapshotPath, content, "utf-8");
 }

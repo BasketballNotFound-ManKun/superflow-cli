@@ -55,6 +55,13 @@ describe("agent process command", () => {
     expect(message).not.toContain("token=abc");
     expect(message).toContain("token=<redacted>");
   });
+
+  it("formats Agent failures in English when requested", () => {
+    const message = formatAgentFailure("claude", 1, "", "service busy", "en");
+
+    expect(message).toContain("invocation failed with exit code 1");
+    expect(message).not.toMatch(/[\p{Script=Han}]/u);
+  });
 });
 
 function fixture(

@@ -11,6 +11,9 @@ export function buildExecutorPrompt(
   state: ManagedRunState,
   repairFindings: ReviewFinding[] = [],
 ): string {
+  if (contract.language === "en") {
+    return buildExecutorPromptEnglish(contract, state, repairFindings);
+  }
   const taskDir = managedTaskDir(contract.projectRoot, contract.taskId);
   const runDir = managedRunDir(
     contract.projectRoot,
@@ -87,6 +90,9 @@ export function buildReviewPrompt(
   contract: ManagedTaskContract,
   state: ManagedRunState,
 ): string {
+  if (contract.language === "en") {
+    return buildReviewPromptEnglish(contract, state);
+  }
   const taskDir = managedTaskDir(contract.projectRoot, contract.taskId);
   const runDir = managedRunDir(
     contract.projectRoot,
@@ -127,5 +133,129 @@ export function buildReviewPrompt(
     "- 没有阻断问题时返回 pass；执行范围外且需要用户决定时返回 blocked。",
     "",
     "最终必须严格按照 JSON Schema 返回结构化结果。",
+  ].join("\n");
+}
+
+function buildExecutorPromptEnglish(
+  contract: ManagedTaskContract,
+  state: ManagedRunState,
+  repairFindings: ReviewFinding[],
+): string {
+  const taskDir = managedTaskDir(contract.projectRoot, contract.taskId);
+  const runDir = managedRunDir(
+    contract.projectRoot,
+    contract.taskId,
+    state.runId,
+  );
+  const originalPromptDir = contract.taskPrompt
+    ? path.dirname(contract.taskPrompt.originalPath)
+    : null;
+  const frozenPrompt = contract.taskPrompt
+    ? [
+        `Frozen task prompt: ${contract.taskPrompt.snapshotPath}`,
+        `Original prompt directory: ${originalPromptDir}`,
+        `Prompt SHA-256: ${contract.taskPrompt.sha256}`,
+      ]
+    : [];
+  const repair = repairFindings.length === 0
+    ? ""
+    : [
+        "",
+        "## Required fixes for this round",
+        "",
+        ...repairFindings.map((finding) => [
+          `- ${finding.id} [${finding.severity}] ${finding.target}`,
+          `  - Evidence: ${finding.evidence}`,
+          `  - Risk: ${finding.risk}`,
+          `  - Required fix: ${finding.requiredFix}`,
+          `  - Acceptance checks: ${finding.acceptanceChecks.join("; ")}`,
+        ].join("\n")),
+      ].join("\n");
+
+  return [
+    "You are the only executor allowed to modify target deliverables for this managed task.",
+    "Continue until the task is complete. Do not lower the bar because of configuration, dependencies, ports, development databases, or test failures.",
+    "",
+    `Task ID: ${contract.taskId}`,
+    `Run ID: ${state.runId}`,
+    `Task profile: ${contract.profile}`,
+    `Contract hash: ${contract.contractHash}`,
+    `Project root: ${contract.projectRoot}`,
+    `Additional writable repositories: ${contract.relatedProjectRoots.join(", ") || "none"}`,
+    `Task contract: ${path.join(taskDir, "task-brief.md")}`,
+    ...frozenPrompt,
+    `Run evidence directory (read-only; do not modify): ${runDir}`,
+    "",
+    "## User goal",
+    "",
+    contract.objective,
+    "",
+    "## Mandatory boundaries",
+    "",
+    "- Before coding, search existing modules, shared methods, components, tests, and dependencies; prefer reuse.",
+    ...(originalPromptDir
+      ? [
+          "- Read the complete frozen task prompt before starting; it is the execution entry point.",
+          `- Resolve relative paths in the prompt against ${originalPromptDir}.`,
+          "- tasks.md is only a checklist and must not replace the frozen task prompt.",
+        ]
+      : []),
+    "- You may trace the real owner across related repositories in the same platform, but record every repository involved.",
+    "- You may use an approved development database. Never drop databases or tables, truncate data, or run unbounded bulk updates/deletes.",
+    "- Never run Git commit/push, publish, deploy, or write to production.",
+    "- Never disable the sandbox, bypass permissions, alter tests to fit the implementation, or hide business gaps with defaults.",
+    "- Do not modify state, events, historical prompts, or reports under `.superflow/tasks`; the background service owns them.",
+    "- For code tasks, run build, tests, and runtime verification proportionate to risk. Compilation-only or unit-test-only evidence is not completion.",
+    "- Return blocked only when a user decision, credential, or high-risk permission is genuinely required, and list alternatives already attempted.",
+    repair,
+    "",
+    "Return the final result strictly according to the JSON Schema.",
+  ].join("\n");
+}
+
+function buildReviewPromptEnglish(
+  contract: ManagedTaskContract,
+  state: ManagedRunState,
+): string {
+  const taskDir = managedTaskDir(contract.projectRoot, contract.taskId);
+  const runDir = managedRunDir(
+    contract.projectRoot,
+    contract.taskId,
+    state.runId,
+  );
+  const frozenPrompt = contract.taskPrompt
+    ? [
+        `Frozen task prompt: ${contract.taskPrompt.snapshotPath}`,
+        `Original prompt directory: ${path.dirname(contract.taskPrompt.originalPath)}`,
+        `Prompt SHA-256: ${contract.taskPrompt.sha256}`,
+      ]
+    : [];
+  return [
+    "You are the persistent read-only reviewer for this task. Do not modify any target files in this round.",
+    "Do not trust completion claims from the executor. Independently inspect the workspace and original evidence.",
+    "",
+    `Task ID: ${contract.taskId}`,
+    `Run ID: ${state.runId}`,
+    `Review round: ${state.reviewRound}`,
+    `Contract hash: ${contract.contractHash}`,
+    `Task contract: ${path.join(taskDir, "task-brief.md")}`,
+    ...frozenPrompt,
+    `Executor result: ${state.lastExecutorResult}`,
+    `Task report: ${path.join(runDir, "task-report.md")}`,
+    "",
+    "## Review requirements",
+    "",
+    "- Independently inspect the user goal, change scope, code diff, and command evidence.",
+    ...(contract.taskPrompt
+      ? ["- Treat the frozen task prompt and its referenced SDD documents as the review contract."]
+      : []),
+    "- Check reuse of existing capabilities and reject parallel duplicate implementations.",
+    "- Check correctness, security, data, concurrency, transactions, configuration, and real runtime risks.",
+    "- If startup, API, database, or log evidence is required, block when any required category is missing.",
+    "- Do not block on formatting or personal preference; preserve review rounds for material risks.",
+    "- Every blocking finding must include factual evidence, risk, a precise required fix, and executable acceptance checks.",
+    "- Return pass when there are no blocking findings; return blocked only for decisions outside execution scope that require the user.",
+    "",
+    "Return the final result strictly according to the JSON Schema.",
   ].join("\n");
 }

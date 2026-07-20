@@ -9,7 +9,7 @@ Always dispatch through:
 
 ```bash
 superflow pipeline "<implementation-prompt|change-dir|task>" --managed --project "<root>" \
-  --supervisor <codex|claude> --executor <claude|codex>
+  --supervisor <codex|claude> --executor <claude|codex> --language <en|zh>
 ```
 
 The command always starts the independent background service and follows the
@@ -20,6 +20,7 @@ original conversation.
 Hard gates:
 
 - Claim the 5/7/12 budgets before an Agent call.
+- Freeze the selected language into the contract; prompts, journals, reports, notifications, errors, and resumed rounds must use that same language.
 - Revalidate the frozen contract hash, non-overridable permissions, and 5/7/12 hard limits on every start and resume. Fail closed if persisted contract data changed.
 - Resolve change directories through `.sdd/state.yaml` `implementation_prompt`; treat `tasks.md` as a checklist only. Copy the prompt into a managed snapshot and freeze its SHA-256 for both agents.
 - Persist and resume exact supervisor and executor session IDs.

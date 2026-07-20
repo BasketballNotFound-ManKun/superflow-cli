@@ -13,6 +13,10 @@ describe("managed work contract", () => {
     );
     expect(classifyManagedProfile("修改数据库字段并检查跨仓 API")).toBe("sdd");
     expect(classifyManagedProfile("持续观察构建状态")).toBe("monitor");
+    expect(classifyManagedProfile("Implement login validation and tests")).toBe(
+      "engineering",
+    );
+    expect(classifyManagedProfile("Change a database API across repos")).toBe("sdd");
   });
 
   it("creates a bounded two-agent contract", () => {
@@ -28,6 +32,20 @@ describe("managed work contract", () => {
     expect(contract.budgets.maxExecutorInvocations).toBe(7);
     expect(contract.budgets.maxTotalAgentInvocations).toBe(12);
     expect(contract.contractHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("freezes English into the contract and completion criteria", () => {
+    const contract = createManagedTaskContract({
+      request: "Implement login validation",
+      projectRoot: ".",
+      profile: "engineering",
+      language: "en",
+    });
+
+    expect(contract.language).toBe("en");
+    expect(contract.doneCriteria.join("\n")).toContain("verification evidence");
+    expect(contract.doneCriteria.join("\n")).not.toMatch(/[\p{Script=Han}]/u);
+    expect(() => validateManagedTaskContract(contract)).not.toThrow();
   });
 
   it("rejects attempts to raise hard limits", () => {

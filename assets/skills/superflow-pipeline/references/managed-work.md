@@ -20,7 +20,7 @@ implementation prompt、change 目录或简单任务，不需要知道内部 Ski
 
 ```bash
 superflow pipeline "<implementation-prompt|change-dir|task>" --managed --project "<root>" \
-  --supervisor <codex|claude> --executor <claude|codex>
+  --supervisor <codex|claude> --executor <claude|codex> --language <zh|en>
 ```
 
 查看：
@@ -35,6 +35,7 @@ superflow status <root>
 ## 硬门槛
 
 - 5/7/12 调用上限由状态机先占用后调用，Prompt 无权上调。
+- 语言写入冻结合同；执行 Prompt、账本、报告、通知、错误和恢复轮次始终使用同一语言。
 - 每次启动和恢复都重新校验冻结合同哈希、不可覆盖权限及 5/7/12 硬上限；磁盘文件被
   改写时按失败关闭，不能继续调用 Agent。
 - change 目录必须通过 `.sdd/state.yaml` 的 `implementation_prompt` 定位执行入口；

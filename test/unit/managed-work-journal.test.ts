@@ -57,4 +57,36 @@ describe("managed work journal", () => {
     fs.appendFileSync(journal, '{"sequence":99}\n');
     expect(verifyManagedJournal(state)).toBe(false);
   });
+
+  it("writes English progress and report artifacts for English contracts", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-journal-en-"));
+    roots.push(root);
+    const env = { ...process.env, SUPERFLOW_HOME: path.join(root, "home") };
+    const contract = createManagedTaskContract({
+      request: "Prepare a result",
+      projectRoot: root,
+      language: "en",
+    });
+    const state = initManagedRunState(contract);
+    createManagedTaskFiles(contract, state, env);
+    appendManagedEvent(state, {
+      eventType: "run.created",
+      actor: "test",
+      role: "runner",
+      summary: "Created",
+    });
+    const runDir = path.join(
+      root,
+      ".superflow",
+      "tasks",
+      contract.taskId,
+      "runs",
+      state.runId,
+    );
+
+    expect(fs.readFileSync(path.join(runDir, "progress.md"), "utf-8"))
+      .toContain("# Managed Task Progress");
+    expect(fs.readFileSync(path.join(runDir, "task-report.md"), "utf-8"))
+      .toContain("# Managed Task Report");
+  });
 });

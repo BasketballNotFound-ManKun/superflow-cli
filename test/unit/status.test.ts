@@ -82,6 +82,24 @@ describe("commands/status", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
+  it("returns English SDD status explanations when requested", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-status-en-"));
+    const changeDir = path.join(root, "openspec", "changes", "demo");
+    fs.mkdirSync(path.join(changeDir, ".sdd"), { recursive: true });
+    fs.writeFileSync(path.join(changeDir, "tasks.md"), "- [ ] pending\n");
+    fs.writeFileSync(
+      path.join(changeDir, ".sdd", "state.yaml"),
+      "workflow: full\nphase: implement\nreview_mode: standard\n",
+    );
+
+    const result = await collectStatus(root, "en");
+
+    expect(result.changes[0].nextReason).toContain("1 task(s) remain");
+    expect(result.changes[0].risks.map((risk) => risk.message).join("\n"))
+      .not.toMatch(/[\p{Script=Han}]/u);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
   it("collects managed tasks with budgets and session summaries", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-status-"));
     const home = path.join(root, "home");

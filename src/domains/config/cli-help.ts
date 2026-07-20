@@ -1,5 +1,7 @@
 import type { Language } from "../../types.js";
 import { normalizeLanguage } from "./i18n.js";
+import { loadState } from "../state.js";
+import { stateFile } from "../../platform/paths.js";
 
 export interface CliHelpText {
   programDescription: string;
@@ -35,6 +37,13 @@ export interface CliHelpText {
   withPackageOption: string;
   uninstallForceOption: string;
   withDepsOption: string;
+  managedOption: string;
+  managedProjectOption: string;
+  managedProfileOption: string;
+  managedSupervisorOption: string;
+  managedExecutorOption: string;
+  managedAddDirOption: string;
+  managedResumeOption: string;
 }
 
 const CLI_TEXT: Record<Language, CliHelpText> = {
@@ -80,6 +89,15 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     uninstallForceOption: "Skip confirmation prompt",
     withDepsOption:
       "Also uninstall OpenSpec, Superpowers, and Understand dependencies",
+    managedOption:
+      "Manage an implementation prompt, change directory, or direct task and wait for terminal delivery",
+    managedProjectOption: "Managed task project directory",
+    managedProfileOption:
+      "Task profile: auto | quick | engineering | sdd | monitor",
+    managedSupervisorOption: "Supervisor agent: codex | claude",
+    managedExecutorOption: "Executor agent: codex | claude",
+    managedAddDirOption: "Additional writable repositories in the same platform",
+    managedResumeOption: "Resume from recorded sessions and checkpoints",
   },
   zh: {
     programDescription: "SuperBridge Flow - SDD/TDD 与双 Agent 托管工作流 CLI",
@@ -118,6 +136,14 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     withPackageOption: "同时执行 npm update 更新 @chenmk/superflow 包",
     uninstallForceOption: "跳过确认提示",
     withDepsOption: "同时卸载 OpenSpec、Superpowers、Understand 依赖",
+    managedOption:
+      "托管 implementation prompt、change 目录或自然语言任务，并等待终态回传",
+    managedProjectOption: "托管任务项目目录",
+    managedProfileOption: "任务档位：auto | quick | engineering | sdd | monitor",
+    managedSupervisorOption: "监督 Agent：codex | claude",
+    managedExecutorOption: "执行 Agent：codex | claude",
+    managedAddDirOption: "同一业务平台需要联动修改的其他仓库",
+    managedResumeOption: "从已登记会话和检查点恢复托管任务",
   },
 };
 
@@ -131,7 +157,23 @@ export function resolveCliLanguage(
 ): Language {
   const fromArg = languageFromArgv(argv);
   if (fromArg) return fromArg;
-  return normalizeLanguage(env.SUPERFLOW_LANG) ?? "zh";
+  return resolveRuntimeLanguage(undefined, env);
+}
+
+export function resolveRuntimeLanguage(
+  value?: unknown,
+  env: NodeJS.ProcessEnv = process.env,
+  installedStateFile = stateFile,
+): Language {
+  const explicit = normalizeLanguage(value);
+  if (explicit) return explicit;
+  const fromEnvironment = normalizeLanguage(env.SUPERFLOW_LANG);
+  if (fromEnvironment) return fromEnvironment;
+  try {
+    return loadState(installedStateFile)?.language ?? "zh";
+  } catch {
+    return "zh";
+  }
 }
 
 function languageFromArgv(argv: string[]): Language | null {

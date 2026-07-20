@@ -137,22 +137,23 @@ program
   .option("--agent <agent>", helpText.agentOption, "both")
   .option(
     "--managed",
-    "托管 implementation prompt、change 目录或自然语言任务，并等待终态回传",
+    helpText.managedOption,
   )
-  .option("--project <path>", "托管任务项目目录")
+  .option("--project <path>", helpText.managedProjectOption)
   .option(
     "--profile <profile>",
-    "任务档位：auto | quick | engineering | sdd | monitor",
+    helpText.managedProfileOption,
     "auto",
   )
-  .option("--supervisor <agent>", "监督 Agent：codex | claude", "codex")
-  .option("--executor <agent>", "执行 Agent：codex | claude")
-  .option("--add-dir <paths...>", "同一业务平台需要联动修改的其他仓库")
-  .option("--resume-task <taskId>", "从已登记会话和检查点恢复托管任务")
+  .option("--supervisor <agent>", helpText.managedSupervisorOption, "codex")
+  .option("--executor <agent>", helpText.managedExecutorOption)
+  .option("--add-dir <paths...>", helpText.managedAddDirOption)
+  .option("--resume-task <taskId>", helpText.managedResumeOption)
+  .option("--language <language>", helpText.languageOption)
   .option("--dry-run", helpText.dryRun)
   .action(async (request, options) => {
     const { pipelineCommand } = await import("./commands/pipeline.js");
-    await pipelineCommand(request, options);
+    await pipelineCommand(request, commandOptions(options));
   });
 
 program
@@ -186,9 +187,10 @@ program
   .command("status [path]")
   .description(helpText.statusDescription)
   .option("--json", helpText.jsonOption)
+  .option("--language <language>", helpText.languageOption)
   .action(async (targetPath = ".", options) => {
     const { statusCommand } = await import("./commands/status.js");
-    await statusCommand(targetPath, options);
+    await statusCommand(targetPath, commandOptions(options));
   });
 
 program
@@ -200,6 +202,7 @@ program
   .option("--json", helpText.jsonOption)
   .option("--no-hooks", helpText.noHooksUpdateOption)
   .option("--with-package", helpText.withPackageOption)
+  .option("--language <language>", helpText.languageOption)
   .action(async (targetPath, options) => {
     const { updateCommand } = await import("./commands/update.js");
     await updateCommand({

@@ -82,6 +82,31 @@ function regenerateProgress(state: ManagedRunState, file: string): void {
     .filter(Boolean)
     .map((line) => JSON.parse(line) as ManagedEvent);
   const latest = events[events.length - 1];
+  if (state.language === "en") {
+    const markdown = [
+      "# Managed Task Progress",
+      "",
+      `Task: ${state.taskId}`,
+      `Run: ${state.runId}`,
+      `Status: ${state.status}`,
+      `Step: ${state.currentStep}`,
+      `Review round: ${state.reviewRound}`,
+      `Executor calls: ${state.executorInvocations}`,
+      `Total Agent calls: ${state.totalAgentInvocations}`,
+      `Supervisor session: ${shortId(state.supervisorSession.sessionId)}`,
+      `Executor session: ${shortId(state.executorSession.sessionId)}`,
+      `Latest event: ${latest?.summary ?? "none"}`,
+      "",
+      "## Timeline",
+      "",
+      ...events
+        .slice(-50)
+        .map((event) => `- ${event.timestamp} [${event.eventType}] ${event.summary}`),
+      "",
+    ].join("\n");
+    writeFileSync(path.join(path.dirname(file), "progress.md"), markdown, "utf-8");
+    return;
+  }
   const markdown = [
     "# 托管任务进度",
     "",

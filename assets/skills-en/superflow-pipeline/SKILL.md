@@ -27,7 +27,7 @@ mode. Do not require the user to name `superflow-pipeline`, roles, or CLI flags:
 
 ```bash
 superflow pipeline "<implementation prompt, change directory, or direct task>" --managed --project "<project root>" \
-  --supervisor codex --executor claude
+  --supervisor codex --executor claude --language en
 ```
 
 Swap the roles when Claude is the current entry agent. The command always uses
@@ -49,6 +49,7 @@ Hard gates:
 - `superflow-managed-work-check.mjs` must pass before delivery-ready status.
 - Record the single delivery-ready event only after the integrity script passes.
 - After the managed command returns a terminal state, read the task report and summarize it to the user instead of returning only a task ID.
+- Freeze the selected language into the task contract. Executor and reviewer prompts, resumed rounds, journals, reports, notifications, and errors must inherit that language without switching mid-run.
 
 ## Phase Order
 

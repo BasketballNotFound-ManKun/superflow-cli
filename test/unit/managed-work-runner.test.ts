@@ -68,6 +68,39 @@ describe("managed work runner", () => {
     expect(checkOutput).toContain("OK 托管任务状态完整");
   });
 
+  it("keeps English across Agent invocations, reports, and notifications", async () => {
+    const fixture = createFixture("quick", "en");
+    const invoker = new FakeInvoker([
+      executorReady("Task completed"),
+      reviewPass("Evidence complete"),
+    ]);
+
+    const state = await runManagedTask(
+      fixture.root,
+      fixture.contract.taskId,
+      invoker,
+      fixture.env,
+    );
+    const runDir = path.join(
+      fixture.root,
+      ".superflow",
+      "tasks",
+      fixture.contract.taskId,
+      "runs",
+      state.runId,
+    );
+    const report = fs.readFileSync(path.join(runDir, "task-report.md"), "utf-8");
+    const notifications = fs.readFileSync(
+      path.join(fixture.env.SUPERFLOW_HOME, "managed", "notifications.jsonl"),
+      "utf-8",
+    );
+
+    expect(invoker.invocations.every((item) => item.language === "en")).toBe(true);
+    expect(report).toContain("## Final conclusion");
+    expect(report).toContain("waiting for Git commit approval");
+    expect(notifications).toContain("Superflow task completed");
+  });
+
   it("resumes both original sessions during repair", async () => {
     const fixture = createFixture();
     const invoker = new FakeInvoker([
@@ -258,7 +291,10 @@ class FakeInvoker implements AgentInvoker {
   }
 }
 
-function createFixture(profile: "quick" | "engineering" = "quick") {
+function createFixture(
+  profile: "quick" | "engineering" = "quick",
+  language: "zh" | "en" = "zh",
+) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-runner-"));
   roots.push(root);
   const env = {
@@ -270,6 +306,7 @@ function createFixture(profile: "quick" | "engineering" = "quick") {
     request: "整理一份任务结果",
     projectRoot: root,
     profile,
+    language,
   });
   const state = initManagedRunState(contract);
   createManagedTaskFiles(contract, state, env);

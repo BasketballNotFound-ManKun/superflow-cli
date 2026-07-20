@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { cliText, resolveCliLanguage } from '../../src/domains/config/cli-help.js';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import {
+  cliText,
+  resolveCliLanguage,
+  resolveRuntimeLanguage,
+} from '../../src/domains/config/cli-help.js';
 
 describe('core/cli-help', () => {
   it('uses SUPERFLOW_LANG as the default help language', () => {
@@ -12,6 +19,23 @@ describe('core/cli-help', () => {
       ['node', 'superflow', '--language', 'zh', '--help'],
       { SUPERFLOW_LANG: 'en' }
     )).toBe('zh');
+  });
+
+  it('uses the installed language when no argument or environment override exists', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-language-'));
+    const state = path.join(root, 'state.json');
+    fs.writeFileSync(state, JSON.stringify({
+      version: '0.3.1',
+      lastInit: new Date().toISOString(),
+      language: 'en',
+      completedSteps: [],
+      platforms: {},
+      backups: { settingsFiles: [], skills: [] },
+      previousVersion: null,
+    }));
+
+    expect(resolveRuntimeLanguage(undefined, {}, state)).toBe('en');
+    fs.rmSync(root, { recursive: true, force: true });
   });
 
   it('returns English CLI help text', () => {

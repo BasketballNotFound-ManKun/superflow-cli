@@ -114,6 +114,7 @@ function verifyContract(contract) {
     projectRoot: path.resolve(contract.projectRoot),
     relatedProjectRoots: contract.relatedProjectRoots.map((root) => path.resolve(root)),
     profile: contract.profile,
+    ...(contract.language ? { language: contract.language } : {}),
     objective: contract.objective,
     doneCriteria: contract.doneCriteria,
     taskPrompt: contract.taskPrompt,

@@ -10,6 +10,8 @@ import {
   detectInstalledTargets,
   formatDependencyUpdateCommands,
   formatPackageUpdateCommand,
+  resolveUpdateLanguage,
+  skillsRootForLanguage,
 } from '../../src/app/commands/update.js';
 
 describe('commands/update', () => {
@@ -33,6 +35,32 @@ describe('commands/update', () => {
     expect(plan.agents).toEqual(['opencode']);
     expect(plan.scripts.names).toContain('superflow-hook-guard.sh');
     expect(plan.hooks.names).toEqual([]);
+  });
+
+  it('preserves the installed English language during update', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-update-language-'));
+    const state = path.join(root, 'state.json');
+    fs.writeFileSync(state, JSON.stringify({
+      version: '0.3.1',
+      lastInit: new Date().toISOString(),
+      language: 'en',
+      completedSteps: [],
+      platforms: {
+        claude: { skills: [], scripts: [], hooks: [] },
+        codex: { skills: [], scripts: [], hooks: [] },
+        opencode: { skills: [], scripts: [], hooks: [] },
+      },
+      backups: { settingsFiles: [], skills: [] },
+      previousVersion: null,
+    }));
+
+    expect(resolveUpdateLanguage(undefined, {}, state)).toBe('en');
+    expect(resolveUpdateLanguage('zh', { SUPERFLOW_LANG: 'en' }, state)).toBe('zh');
+    expect(createUpdatePlan(['codex'], 'global', process.cwd(), false, undefined, 'global', 'en').language)
+      .toBe('en');
+    expect(skillsRootForLanguage('en')).toMatch(/assets\/skills-en$/);
+    expect(skillsRootForLanguage('zh')).toMatch(/assets\/skills$/);
+    fs.rmSync(root, { recursive: true, force: true });
   });
 
   it('includes npm package update command when requested', () => {

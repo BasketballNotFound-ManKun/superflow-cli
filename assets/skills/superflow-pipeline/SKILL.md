@@ -15,7 +15,7 @@ CLI 命令：
 
 ```bash
 superflow pipeline "<implementation-prompt 路径、change 目录或简单任务>" --managed --project "<项目根目录>" \
-  --supervisor codex --executor claude
+  --supervisor codex --executor claude --language zh
 ```
 
 当前入口是 Claude 时交换两个角色。命令默认由独立后台服务执行，同时监听本地任务账本
@@ -37,6 +37,8 @@ superflow pipeline "<implementation-prompt 路径、change 目录或简单任务
 - 运行产物完整性必须通过 `superflow-managed-work-check.mjs`。
 - 只有完整性脚本先通过，状态机才能记录唯一的交付就绪事件。
 - 托管命令返回终态后，当前 Agent 必须读取任务报告并向用户汇总；不能只报告任务编号。
+- 语言必须冻结进任务合同；执行 Prompt、恢复轮次、进度账本、任务报告、通知和错误提示
+  必须继承合同语言，不能在中途切换。
 
 ## Choose The Right SDD Skill
 

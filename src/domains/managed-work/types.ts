@@ -1,3 +1,5 @@
+import type { Language } from "../../types.js";
+
 export type ManagedAgent = "codex" | "claude";
 export type ManagedProfile = "quick" | "engineering" | "sdd" | "monitor";
 
@@ -48,6 +50,7 @@ export interface ManagedTaskContract {
   projectRoot: string;
   relatedProjectRoots: string[];
   profile: ManagedProfile;
+  language?: Language;
   objective: string;
   doneCriteria: string[];
   taskPrompt: ManagedTaskPrompt | null;
@@ -75,6 +78,7 @@ export interface ManagedRunState {
   taskId: string;
   projectRoot: string;
   profile: ManagedProfile;
+  language?: Language;
   status: ManagedTaskStatus;
   currentStep: string;
   reviewRound: number;
@@ -150,6 +154,7 @@ export interface ManagedRegistryEntry {
   projectRoot: string;
   status: ManagedTaskStatus;
   profile: ManagedProfile;
+  language?: Language;
   activeRunId: string;
   createdAt: string;
   updatedAt: string;
@@ -165,6 +170,7 @@ export interface AgentInvocation {
   taskId: string;
   runId: string;
   role: "supervisor" | "executor";
+  language?: Language;
   agent: ManagedAgent;
   projectRoot: string;
   writableRoots: string[];

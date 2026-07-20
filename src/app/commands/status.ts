@@ -6,7 +6,9 @@ import {
   statSync,
 } from "fs";
 import path from "path";
-import { normalizeLanguage, t } from "../../domains/config/i18n.js";
+import { t } from "../../domains/config/i18n.js";
+import { resolveRuntimeLanguage } from "../../domains/config/cli-help.js";
+import { managedText } from "../../domains/managed-work/i18n.js";
 import { readServiceState } from "../../domains/managed-work/service.js";
 import { managedRunDir } from "../../domains/managed-work/paths.js";
 import {
@@ -68,21 +70,25 @@ export interface ManagedTaskStatus {
 
 export async function statusCommand(
   targetPath = ".",
-  options: { json?: boolean } = {},
+  options: { json?: boolean; language?: unknown } = {},
 ): Promise<void> {
-  const result = await collectStatus(targetPath);
+  const language = resolveRuntimeLanguage(options.language);
+  const result = await collectStatus(targetPath, language);
   if (options.json) {
     console.log(JSON.stringify(result, null, 2));
     return;
   }
-  printStatus(result, resolveLanguage());
+  printStatus(result, language);
 }
 
-export async function collectStatus(targetPath = "."): Promise<StatusResult> {
+export async function collectStatus(
+  targetPath = ".",
+  language: Language = "zh",
+): Promise<StatusResult> {
   const projectPath = path.resolve(targetPath);
   const changesRoot = path.join(projectPath, "openspec", "changes");
   const changes: ChangeStatus[] = [];
-  const managedTasks = collectManagedTasks(projectPath);
+  const managedTasks = collectManagedTasks(projectPath, language);
   const service = readServiceState();
   const managedService = service
     ? { pid: service.pid, running: isProcessAlive(service.pid) }
@@ -120,9 +126,9 @@ export async function collectStatus(targetPath = "."): Promise<StatusResult> {
         state.phase,
         tasks,
         state.verify_result,
-        resolveLanguage(),
+        language,
       ),
-      risks: buildRisks(changeDir, state, tasks, resolveLanguage()),
+      risks: buildRisks(changeDir, state, tasks, language),
       docGaps: docCheck.failed,
     });
   }
@@ -300,25 +306,41 @@ function printStatus(result: StatusResult, language: Language): void {
 
   if (result.managedTasks.length > 0) {
     const service = result.managedService
-      ? `${result.managedService.running ? "运行中" : "未运行"} (PID ${result.managedService.pid})`
-      : "未启动";
-    console.log(`托管任务 (${result.projectPath}) | 后台服务：${service}\n`);
+      ? `${managedText(language, result.managedService.running ? "运行中" : "未运行", result.managedService.running ? "running" : "stopped")} (PID ${result.managedService.pid})`
+      : managedText(language, "未启动", "not started");
+    console.log(
+      managedText(
+        language,
+        `托管任务 (${result.projectPath}) | 后台服务：${service}\n`,
+        `Managed tasks (${result.projectPath}) | background service: ${service}\n`,
+      ),
+    );
     for (const task of result.managedTasks) {
       console.log(
         `- ${task.taskId}: ${task.status} | ${task.profile} | ${task.currentStep}`,
       );
       console.log(
-        `  轮次 ${task.reviewRound}/${task.maxReviewRounds} | ` +
-          `执行 ${task.executorInvocations}/${task.maxExecutorInvocations} | ` +
-          `总调用 ${task.totalAgentInvocations}/${task.maxTotalAgentInvocations}`,
+        managedText(
+          language,
+          `  轮次 ${task.reviewRound}/${task.maxReviewRounds} | 执行 ${task.executorInvocations}/${task.maxExecutorInvocations} | 总调用 ${task.totalAgentInvocations}/${task.maxTotalAgentInvocations}`,
+          `  reviews ${task.reviewRound}/${task.maxReviewRounds} | executor ${task.executorInvocations}/${task.maxExecutorInvocations} | total calls ${task.totalAgentInvocations}/${task.maxTotalAgentInvocations}`,
+        ),
       );
       console.log(
-        `  会话：监督=${task.supervisorSession}，执行=${task.executorSession}`,
+        managedText(
+          language,
+          `  会话：监督=${task.supervisorSession}，执行=${task.executorSession}`,
+          `  sessions: supervisor=${task.supervisorSession}, executor=${task.executorSession}`,
+        ),
       );
-      if (task.blocker) console.log(`  阻塞：${task.blocker}`);
-      if (task.taskPrompt) console.log(`  任务 Prompt：${task.taskPrompt}`);
-      console.log(`  进度：${task.progressPath}`);
-      console.log(`  报告：${task.reportPath}`);
+      if (task.blocker) {
+        console.log(managedText(language, `  阻塞：${task.blocker}`, `  blocker: ${task.blocker}`));
+      }
+      if (task.taskPrompt) {
+        console.log(managedText(language, `  任务 Prompt：${task.taskPrompt}`, `  task prompt: ${task.taskPrompt}`));
+      }
+      console.log(managedText(language, `  进度：${task.progressPath}`, `  progress: ${task.progressPath}`));
+      console.log(managedText(language, `  报告：${task.reportPath}`, `  report: ${task.reportPath}`));
     }
     if (result.changes.length > 0) console.log("");
   }
@@ -331,7 +353,9 @@ function printStatus(result: StatusResult, language: Language): void {
       change.tasksTotal > 0
         ? ` | tasks ${change.tasksCompleted}/${change.tasksTotal}`
         : "";
-    const docGap = change.docGaps > 0 ? ` 📋缺${change.docGaps}文档` : "";
+    const docGap = change.docGaps > 0
+      ? managedText(language, ` 📋缺${change.docGaps}文档`, ` 📋${change.docGaps} docs missing`)
+      : "";
     console.log(
       `- ${change.name}: phase=${change.phase}, workflow=${change.workflow}, review=${change.reviewMode}, auto=${change.autoTransition}${tasks}${docGap}`,
     );
@@ -346,7 +370,10 @@ function printStatus(result: StatusResult, language: Language): void {
   }
 }
 
-function collectManagedTasks(projectPath: string): ManagedTaskStatus[] {
+function collectManagedTasks(
+  projectPath: string,
+  language: Language,
+): ManagedTaskStatus[] {
   const registry = loadRegistry();
   return registry.tasks
     .filter((entry) => canonicalPath(entry.projectRoot) === canonicalPath(projectPath))
@@ -414,7 +441,11 @@ function collectManagedTasks(projectPath: string): ManagedTaskStatus[] {
           maxTotalAgentInvocations: 0,
           supervisorSession: "--",
           executorSession: "--",
-          blocker: "本地任务状态缺失，需要恢复检查",
+          blocker: managedText(
+            language,
+            "本地任务状态缺失，需要恢复检查",
+            "Local task state is missing; recovery is required",
+          ),
           taskPrompt: null,
           progressPath: "",
           reportPath: "",
@@ -431,8 +462,4 @@ function shortSession(sessionId: string | null): string {
 function canonicalPath(value: string): string {
   const resolved = path.resolve(value);
   return existsSync(resolved) ? realpathSync(resolved) : resolved;
-}
-
-function resolveLanguage(): Language {
-  return normalizeLanguage(process.env.SUPERFLOW_LANGUAGE) ?? "zh";
 }

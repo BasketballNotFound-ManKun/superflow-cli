@@ -63,6 +63,17 @@ describe("managed work input", () => {
     );
   });
 
+  it("returns English input errors when English is selected", () => {
+    const root = fixtureRoot();
+    const tasks = path.join(root, "openspec", "changes", "demo", "tasks.md");
+    fs.mkdirSync(path.dirname(tasks), { recursive: true });
+    fs.writeFileSync(tasks, "- [ ] work\n");
+
+    expect(() =>
+      resolveManagedInput(tasks, { projectRoot: root, language: "en" }),
+    ).toThrow("tasks.md is a checklist");
+  });
+
   it("keeps a normal sentence as a direct managed request", () => {
     const root = fixtureRoot();
 
