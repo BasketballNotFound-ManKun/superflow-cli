@@ -17,9 +17,7 @@
     "superflow-tweak",
     "superflow-verify"
   ],
-  "rules": [
-    "superflow-phase-guard.md"
-  ],
+  "rules": ["superflow-phase-guard.md"],
   "scripts": [
     "superflow-verify-integration.sh",
     "superflow-delivery-check.sh",
@@ -31,6 +29,8 @@
     "superflow-integration-evidence-hook.sh",
     "superflow-archive-command-hook.sh",
     "superflow-test-report-lint.py",
+    "superflow-managed-work-check.mjs",
+    "superflow-managed-work-guard.sh",
     "install-sql-pre-commit.sh",
     "sync-settings-json.py"
   ],
@@ -47,7 +47,8 @@
     "superflow-sql-sync-hook.py",
     "superflow-delivery-check.sh",
     "superflow-integration-evidence-hook.sh",
-    "superflow-archive-command-hook.sh"
+    "superflow-archive-command-hook.sh",
+    "superflow-managed-work-guard.sh"
   ],
   "agentHooks": {
     "claude": ["claude-auto-backup-hook.sh"],

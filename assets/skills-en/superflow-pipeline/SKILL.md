@@ -19,6 +19,37 @@ other:
 - Handoff files and state files are the memory boundary. Do not rely on chat
   memory after compaction.
 
+## Managed Work And Dual-Agent Closure
+
+When the user says to use Superflow for managed delivery and provides an
+implementation prompt, change directory, or direct task, use built-in managed
+mode. Do not require the user to name `superflow-pipeline`, roles, or CLI flags:
+
+```bash
+superflow pipeline "<implementation prompt, change directory, or direct task>" --managed --project "<project root>" \
+  --supervisor codex --executor claude
+```
+
+Swap the roles when Claude is the current entry agent. The command always uses
+the independent background service while following the local task journal to a
+terminal state, then the current agent reads the report and summarizes in the
+same conversation. Losing the follower does not stop the task. Read
+`references/managed-work.md` before dispatch. Do not spawn the peer CLI by hand.
+
+Hard gates:
+
+- Persist one supervisor session and one executor session per task; resume exact IDs.
+- Task contract, event journal, review results, and evidence are authoritative.
+- Maximum 5 reviews, 7 executor calls, and 12 total agent calls.
+- Revalidate the frozen contract and hard limits on every start or resume. Engineering work cannot enter review with only one verification category.
+- Resolve a change directory through `.sdd/state.yaml` `implementation_prompt`, reject `tasks.md` as an execution entry, and freeze one prompt snapshot plus SHA-256 for both agents.
+- Supervisor is read-only; executor cannot edit `.superflow/tasks` or commit/push/publish.
+- A passing run stops at `awaiting_git_approval`; Git requires the user's approval.
+- Use `superflow status <project-root>` instead of model polling.
+- `superflow-managed-work-check.mjs` must pass before delivery-ready status.
+- Record the single delivery-ready event only after the integrity script passes.
+- After the managed command returns a terminal state, read the task report and summarize it to the user instead of returning only a task ID.
+
 ## Phase Order
 
 Always route work through this order unless the task is explicitly a tweak or
