@@ -65,6 +65,7 @@
 | 47   | **金额精度边界**                   | **涉及金额、费用、优惠、抵扣、退款、分账、支付、发票、余额、电费、服务费、套餐结算、比例分摊、明细分配、对账或财务展示时强制** | Superpowers 技术详设包含 `Money Precision Boundary` 及金额恒等式、权威总额、独立计算项、差额反推项与公式、计算态来源、中间精度、舍入边界、scale/rounding mode、分配/对账规则、禁止提前舍入点和测试证据；存在加法恒等式且总额是真源时，最后一个组成项必须由权威总额减去其余组成项合计得到，禁止所有组成项分别计算和舍入后重建总额；测试必须覆盖半分、尾差或多明细分配场景 |
 | 48   | **外部集成配置与部署合同**         | **涉及第三方平台/工具、SDK、MQ/Kafka、回调、支付渠道、云服务或其他外部集成时强制** | api.md、sdd-quality-gate.md、Superpowers 技术详设和实现 prompt 包含 `外部集成配置与部署合同` / `External Integration Configuration And Deployment Contract`；列出 endpoint、应用/租户/项目 ID、Topic/Tag/Consumer Group、namespace、webhook、ACL/role、开关、超时和凭据引用在本地/测试/生产的来源与创建方式，以及注入方式、运行 owner、创建 owner/时点、就绪证据、回滚、密钥处理和阻塞项；环境相关值不得只硬编码在注解/常量/业务代码；测试自动创建、历史资源或本地启动成功不能证明生产就绪，缺少生产创建证据必须阻塞发布 |
 | 49   | **并发与幂等归属**                 | **涉及并发、批量下发/开通/续费、重复提交/回调/消费或重复外部调用时强制** | sdd-quality-gate.md、Superpowers 技术详设和实现 prompt 包含 `Concurrency And Idempotency Ownership` / `并发与幂等归属`；明确业务幂等键、应用层原子占用 owner、短事务边界、PENDING/SUCCESS/FAILED 状态流转、重试复用原业务编码、外部调用边界和不确定结果对账；唯一索引不作为默认方案，只能在自然唯一、历史数据、NULL/软删除和冲突处理合同明确后作为可选兜底；测试覆盖并发、重复和重试 |
+| 50   | **复杂度减法评审**                 | **完整 workflow 的 docs/design 阶段强制** | `design.md` 与 Superpowers 技术详设包含 `复杂度减法评审`，逐项记录现有能力/复用证据、必要性、最简实现、删除/拒绝项和证据/阻塞；统计新增表、字段、API、Service/组件、缓存、异步/MQ/事件、定时任务和兼容层；能扩展现有模块、由字段推导或用单事务同步闭环时不得另建平行实现；`sdd-quality-gate.md` 必须给出 PASS/BLOCKED 结论，只有 PASS/通过才能离开 docs/design，存在无证据抽象或未决更简方案时阻塞 |
 
 ### 文档完整性强制检查（新增，全部项目必做）
 

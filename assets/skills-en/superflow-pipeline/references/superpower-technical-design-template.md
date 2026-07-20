@@ -35,6 +35,17 @@ canonical_sources:
 |---|---|---|---|---|---|
 | <R1/S1> | `<file>:<line>` | <observed fact> | <implementation approach> | <files> | <risk> |
 
+## Minimal Design Review
+
+| Design item | Existing capability/reuse evidence | Necessary? | Simplest implementation | Removed/rejected complexity | Evidence/blocker |
+| ----------- | ---------------------------------- | ---------- | ----------------------- | --------------------------- | ---------------- |
+| `<table/API/service/component/sync>` | `<existing source/API/table/dependency>` | `keep/remove/blocked` | `<minimum implementation>` | `<no parallel abstraction/cache/async/compat layer>` | `<anchor or blocker>` |
+
+New-item counts: tables 0; fields 0; APIs 0; services/components 0; caches 0; MQ/events 0; scheduled jobs 0; compatibility layers 0. Replace each count with the actual design total. Extend existing modules first. Do not persist values
+that can be derived safely, and do not add async compensation or caching when a
+single synchronous transaction closes the contract. Every retained item must
+explain why a simpler option fails; remove it when there is no evidence.
+
 ## Architecture Boundary And Call Direction
 
 Use this whenever the change crosses repositories, services, SDKs, MQ,

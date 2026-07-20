@@ -333,15 +333,30 @@ change_has_external_enum_risk() {
     "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
 }
 
+change_contract_docs_without_complexity_budget() {
+  local path
+  for path in proposal.md api.md design.md tests.md spec.md; do
+    [[ -f "$CHANGE_DIR/$path" ]] || continue
+    sed -E '/新增项统计|复杂度预算|New-item counts|Complexity budget/d' \
+      "$CHANGE_DIR/$path"
+  done
+  if [[ -d "$CHANGE_DIR/specs" ]]; then
+    find "$CHANGE_DIR/specs" -path '*/spec.md' -type f \
+      -exec sed -E '/新增项统计|复杂度预算|New-item counts|Complexity budget/d' {} +
+  fi
+}
+
+change_all_docs_without_complexity_budget() {
+  find "$CHANGE_DIR" -maxdepth 2 -name '*.md' -type f \
+    -exec sed -E '/新增项统计|复杂度预算|New-item counts|Complexity budget/d' {} +
+}
+
 change_has_external_config_risk() {
-  grep -RIEiq \
+  local content
+  content="$(change_contract_docs_without_complexity_budget)"
+  grep -Eiq \
     '第三方|外部平台|外部工具|外部集成|third[- ]party|external (platform|tool|integration|system)|SDK|MQ|Kafka|RocketMQ|TDMQ|callback|回调|webhook|支付渠道|payment gateway|cloud service|云服务' \
-    "$CHANGE_DIR/proposal.md" \
-    "$CHANGE_DIR/api.md" \
-    "$CHANGE_DIR/design.md" \
-    "$CHANGE_DIR/tests.md" \
-    "$CHANGE_DIR/spec.md" \
-    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+    <<< "$content"
 }
 
 change_has_concurrency_idempotency_risk() {
@@ -378,9 +393,11 @@ change_has_fx_precision_risk() {
 }
 
 change_has_architecture_boundary_risk() {
-  grep -RIEiq \
+  local content
+  content="$(change_all_docs_without_complexity_budget)"
+  grep -Eiq \
     '跨仓|跨服务|sibling|SDK|MQ|topic|consumer|scheduler|定时|device|设备|callback|回调|third[- ]party|第三方|mini[- ]program|小程序|gateway|网关|adapter|适配|protocol|协议|interconnect|互联互通|调用链|入口|出口' \
-    "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null
+    <<< "$content"
 }
 
 first_prompt_rel() {
@@ -502,6 +519,29 @@ require_money_precision_evidence() {
   fi
 }
 
+require_minimal_design_review() {
+  local path="$1"
+  local label="$2"
+  require_grep '复杂度减法评审|反过度设计评审|Minimal Design Review|Complexity Reduction Review' "$path" "$label"
+  require_grep '复用|reuse|existing capability|existing module' "$path" "$label reuse evidence"
+  require_grep '最简|最小实现|simplest|minimum design|minimal implementation' "$path" "$label simplest implementation"
+  require_grep '删除|拒绝|不新增|移出范围|removed|rejected|do not add|out of scope' "$path" "$label removed or rejected complexity"
+  require_grep '新增项统计|复杂度预算|New-item counts|Complexity budget' "$path" "$label complexity budget"
+  require_grep '表|table' "$path" "$label table count"
+  require_grep '字段|field' "$path" "$label field count"
+  require_grep 'API' "$path" "$label API count"
+  require_grep 'Service|服务|组件|service|component' "$path" "$label service/component count"
+  require_grep '缓存|cache' "$path" "$label cache count"
+  require_grep 'MQ|事件|异步|event|async' "$path" "$label async/event count"
+  require_grep '定时任务|scheduled job|scheduler' "$path" "$label scheduled-job count"
+  require_grep '兼容层|compatibility layer' "$path" "$label compatibility-layer count"
+}
+
+require_minimal_design_pass() {
+  local path="$1"
+  require_grep '(复杂度减法评审|反过度设计评审|Minimal Design Review|Complexity Reduction Review).*(PASS|通过)|(PASS|通过).*(复杂度减法评审|反过度设计评审|Minimal Design Review|Complexity Reduction Review)' "$path" "complexity reduction review PASS verdict"
+}
+
 transition_event=""
 
 if [[ -x "$VALIDATE" && -f "$CHANGE_DIR/.sdd/state.yaml" ]]; then
@@ -531,6 +571,12 @@ case "$PHASE" in
     require_grep 'RED|红绿|GREEN' tests.md "RED/GREEN test contract"
     require_grep 'curl|Postman|Newman|pytest|RestAssured|自动化命令' tests.md "interface automation command"
     require_grep 'handoff_hash|sdd-context|上下文包|防漂移' sdd-quality-gate.md "handoff/context-drift gate"
+    workflow="$(state_get workflow)"
+    if [[ "$workflow" == "full" ]]; then
+      require_minimal_design_review design.md "complexity reduction review"
+      require_grep '复杂度减法评审|反过度设计评审|Minimal Design Review|Complexity Reduction Review' sdd-quality-gate.md "complexity reduction quality gate"
+      require_minimal_design_pass sdd-quality-gate.md
+    fi
     if change_has_external_enum_risk; then
       require_external_enum_contract api.md "external enum binding contract"
       require_external_enum_contract sdd-quality-gate.md "external enum binding quality gate"
@@ -566,6 +612,9 @@ case "$PHASE" in
     require_hash_recorded
     workflow="$(state_get workflow)"
     if [[ "$workflow" == "full" ]]; then
+      require_minimal_design_review design.md "complexity reduction review"
+      require_grep '复杂度减法评审|反过度设计评审|Minimal Design Review|Complexity Reduction Review' sdd-quality-gate.md "complexity reduction quality gate"
+      require_minimal_design_pass sdd-quality-gate.md
       require_optional_state_path technical_design "technical_design"
       technical_design_rel="$(state_get technical_design)"
       if [[ -n "${technical_design_rel:-}" && "$technical_design_rel" != "null" ]]; then
@@ -589,6 +638,7 @@ case "$PHASE" in
         if change_has_money_precision_risk; then
           require_money_precision_contract "$technical_design_rel" "money precision boundary"
         fi
+        require_minimal_design_review "$technical_design_rel" "technical design minimal design review"
       fi
     fi
     require_grep 'Superpowers Technical Design Handoff|Superpower 技术详设|technical_design|源码级 HOW' design.md "Superpowers technical design handoff"

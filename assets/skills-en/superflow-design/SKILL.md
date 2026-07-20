@@ -46,7 +46,17 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
 4. Write:
    `docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md`
    using `../superflow-pipeline/references/superpower-technical-design-template.md`.
-5. For cross-repository, service-to-service, SDK, MQ, scheduler, device,
+5. Complete `Minimal Design Review` before expanding source-level HOW. For
+   every new table, field, API, service/component, abstraction, cache,
+   async/MQ/event flow, scheduled job, or compatibility layer, prove existing
+   reuse options, necessity, and why the simplest direct implementation is
+   insufficient. Prefer one owner, one write path, one transaction, and
+   set-based operations when they satisfy the contract. Remove speculative
+   extension points, duplicate DTO/API layers, derivable persistence,
+   premature caches, and async compensation without measured need. Record
+   retained and removed counts; unresolved simpler alternatives keep the
+   design blocked.
+6. For cross-repository, service-to-service, SDK, MQ, scheduler, device,
    callback, third-party, mini-program, gateway, or adapter changes, include
    `Architecture Boundary And Call Direction`. Prove owner module, call
    direction, existing entry/exit points, proposed entry/exit points, evidence
@@ -54,7 +64,7 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    adapter/protocol translator/device gateway into a business-entry
    orchestrator, stop and return to `$superflow-docs` unless the OpenSpec/SDD
    contract explicitly grants that ownership with approval evidence.
-6. For third-party platforms/tools, SDKs, MQ/Kafka, callbacks, payment
+7. For third-party platforms/tools, SDKs, MQ/Kafka, callbacks, payment
    gateways, cloud services, or other external integrations, include
    `External Integration Configuration And Deployment Contract`. Inventory
    every endpoint, app/tenant/project ID, Topic, Tag, Consumer Group,
@@ -66,7 +76,7 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    auto-creation or pre-existing resources must not be treated as proof that
    production will provision them. Missing production provisioning evidence
    blocks design completion.
-7. For concurrent requests, batch issue/activation/renewal, duplicate callbacks,
+8. For concurrent requests, batch issue/activation/renewal, duplicate callbacks,
    duplicate consumption, or repeated external delivery, include
    `Concurrency And Idempotency Ownership`. Use a stable business idempotency
    key and an application-layer atomic claim in a short transaction; persist
@@ -76,10 +86,10 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    optional fallback with proven natural uniqueness, historical cleanup,
    NULL/soft-delete semantics, and a conflict contract. Check-then-insert,
    process-local locks, and random IDs alone are blocked.
-8. For field/status/enum/sync changes, include `Field And Status Reverse
+9. For field/status/enum/sync changes, include `Field And Status Reverse
    Impact` and prove writers, readers, filters, derived sync paths, consumers,
    and tests. Direct setter-only design is blocked.
-9. For amount, fee, discount, deduction, refund, sharing, payment, invoice,
+10. For amount, fee, discount, deduction, refund, sharing, payment, invoice,
    balance, electricity fee, service fee, package settlement, proration,
    allocation, reconciliation, or financial display changes,
    include `Money Precision Boundary`. Prove calculation-state fields,
@@ -98,12 +108,12 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    level and policy source, deterministic residual strategy with stable
    tie-breaker, and positive/zero/negative evidence. For FX changes, freeze the
    directional rate metadata and one canonical conversion path.
-10. Record state:
+11. Record state:
    ```bash
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> technical_design docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> design_doc design.md
    ```
-11. Update `design.md` with `Superpowers Technical Design Handoff`, update
+12. Update `design.md` with `Superpowers Technical Design Handoff`, update
    `sdd-quality-gate.md` with the technical design path and hash, then run
    `../superflow-pipeline/scripts/superflow-handoff.sh <change-dir> --refresh`.
    If the guard reports a stale or missing hash, record the printed hash in
@@ -111,7 +121,7 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    `--refresh` again. Do not set `design_doc` to the Superpowers document;
    `design_doc` is the OpenSpec/SDD contract design, while `technical_design`
    is the Superpowers HOW document.
-12. Run:
+13. Run:
    ```bash
    ../superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>
    ../superflow-pipeline/scripts/superflow-guard.sh <change-dir> design --apply

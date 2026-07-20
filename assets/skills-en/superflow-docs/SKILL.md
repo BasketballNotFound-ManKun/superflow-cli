@@ -103,6 +103,17 @@ For complex requirements, verify these before writing docs:
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
   any gate is missing from `design.md`, `tests.md`, or quality gate, stop and
   complete the docs first.
+- For full workflow changes, `design.md` must include a `Minimal Design Review`
+  before docs freeze. Inventory every proposed table, field, API,
+  service/component, cache, async/MQ/event flow, scheduled job, compatibility
+  layer, and abstraction. Record existing reuse evidence, necessity, the
+  simplest implementation, removed/rejected complexity, and blockers.
+  Prefer extending current modules and synchronous transactions. Do not keep a
+  layer only for hypothetical future flexibility; remove it without evidence.
+- `sdd-quality-gate.md` must record the minimal-design verdict as `PASS` or
+  `BLOCKED`; only `PASS` may leave docs/design. Missing reuse evidence, parallel APIs/models, redundant persisted
+  fields, speculative cache/async/compensation, or an unresolved simpler option
+  blocks docs completion.
 - `design.md` stays the OpenSpec/SDD design contract: requirement mapping,
   API/DB/field semantics, source facts, real-entry call chain, no-fallback
   boundary, risks, and acceptance hooks. It must not try to own all source-level
@@ -251,6 +262,11 @@ Use references only as needed:
   the relationship judgment as `confirmed/partially confirmed/unknown` when a bug fix hinges on
   existing data or call-chain behavior.
 - `design.md` must reference the frozen `api.md` fields and errors.
+- `design.md` must include `Minimal Design Review` with:
+  `Design item | Existing capability/reuse evidence | Necessary? | Simplest implementation | Removed/rejected complexity | Evidence/blocker`.
+  Count new tables, fields, APIs, services/components, caches, async flows,
+  jobs, and compatibility layers. A zero count is valid and preferred when
+  existing capabilities close the contract.
 - `design.md` must include a "Field Semantic Contract" table for every risky field:
   `Field | Source table/DTO/event | Real semantics | Target field | Target semantics | Equivalent? |
   Evidence anchor | Forbidden usage | Unknowns/owner`.

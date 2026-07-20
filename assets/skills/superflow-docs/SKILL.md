@@ -112,6 +112,17 @@ Binding` with:
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
   any gate is missing from `design.md`, `tests.md`, or quality gate, stop and
   complete the docs first.
+- For full workflow changes, `design.md` must include `复杂度减法评审` before
+  docs freeze. Inventory every proposed table, field, API, Service/component,
+  cache, async/MQ/event flow, scheduled job, compatibility layer, and new
+  abstraction. For each item, record existing reuse evidence, necessity, the
+  simplest implementation, removed/rejected complexity, and blockers.
+  Prefer extending current modules and synchronous transactions. Do not retain
+  a new layer merely for future flexibility; without evidence, remove it.
+- `sdd-quality-gate.md` must record the complexity review verdict as
+  `PASS` or `BLOCKED`; only `PASS` may leave docs/design. Missing reuse evidence, unexplained parallel APIs/models,
+  redundant persisted fields, speculative cache/async/compensation, or an
+  unresolved simpler option blocks docs completion.
 - `design.md` stays the OpenSpec/SDD design contract: requirement mapping,
   API/DB/field semantics, source facts, real-entry call chain, no-fallback
   boundary, risks, and acceptance hooks. It must not try to own all source-level
@@ -260,6 +271,11 @@ Use references only as needed:
   the relationship judgment as `确定/部分确定/不确定` when a bug fix hinges on
   existing data or call-chain behavior.
 - `design.md` must reference the frozen `api.md` fields and errors.
+- `design.md` must include `复杂度减法评审` with:
+  `设计项 | 现有能力/复用证据 | 是否必要 | 最简实现 | 删除/拒绝项 | 证据/阻塞`.
+  It must also count new tables, fields, APIs, services/components, caches,
+  async flows, jobs, and compatibility layers. A zero count is valid and
+  preferable when existing capabilities close the contract.
 - `design.md` must include a "字段语义合同" table for every risky field:
   `字段 | 来源表/DTO/事件 | 真实语义 | 目标字段 | 目标语义 | 是否可等价 |
 证据锚点 | 禁止用法 | 不确定项/owner`.

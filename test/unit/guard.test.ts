@@ -40,6 +40,16 @@ const EXTERNAL_CONFIG_CONTRACT = [
   "",
 ].join("\n");
 
+const MINIMAL_DESIGN_REVIEW = [
+  "## Minimal Design Review",
+  "",
+  "New-item counts: tables 0; fields 0; APIs 0; services/components 0; caches 0; MQ/events 0; scheduled jobs 0; compatibility layers 0.",
+  "Reuse evidence: extend the existing user service and API.",
+  "Simplest implementation: one direct synchronous write path.",
+  "Removed/rejected complexity: do not add a parallel service, cache, async flow, or compatibility layer.",
+  "",
+].join("\n");
+
 async function write(file: string, content: string) {
   await fs.promises.mkdir(path.dirname(file), { recursive: true });
   await fs.promises.writeFile(file, content);
@@ -64,6 +74,7 @@ async function makeCrossServiceChange() {
       "",
       "OpenSpec/SDD remains canonical for WHAT and contracts.",
       "This change crosses services, gateway, and adapter boundaries.",
+      MINIMAL_DESIGN_REVIEW,
       "handoff_hash: pending",
       "",
     ].join("\n"),
@@ -87,6 +98,7 @@ async function makeCrossServiceChange() {
       "# Quality Gate",
       "",
       "Document completeness: proposal.md, api.md, design.md, tasks.md, tests.md.",
+      "Minimal Design Review: PASS.",
       "technical_design: docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md",
       "handoff_hash: pending",
       "",
@@ -106,6 +118,7 @@ async function makeCrossServiceChange() {
       "",
     ].join("\n"),
   );
+  await write(path.join(change, "prompt", "p01.md"), "# Prompt\n");
   await write(
     path.join(change, "specs", "appointment-route", "spec.md"),
     "# Spec\n",
@@ -122,6 +135,7 @@ async function makeCrossServiceChange() {
       "# Superpowers Technical Design",
       "",
       "OpenSpec/SDD remains canonical and must not be overwritten.",
+      MINIMAL_DESIGN_REVIEW,
       "",
     ].join("\n"),
   );
@@ -290,6 +304,7 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
       "## Superpowers Technical Design Handoff",
       "",
       "OpenSpec/SDD remains canonical for WHAT and contracts.",
+      MINIMAL_DESIGN_REVIEW,
       "handoff_hash: pending",
       "",
     ].join("\n"),
@@ -304,6 +319,7 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
       "# Quality Gate",
       "",
       "Document completeness: proposal.md, api.md, design.md, tasks.md, tests.md.",
+      "Minimal Design Review: PASS.",
       "technical_design: docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md",
       "Money Precision Boundary is required.",
       "handoff_hash: pending",
@@ -314,6 +330,7 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "# Superpowers Technical Design",
     "",
     "OpenSpec/SDD remains canonical and must not be overwritten.",
+    MINIMAL_DESIGN_REVIEW,
     "",
     options.legacyDesignContract
       ? LEGACY_MONEY_PRECISION_CONTRACT
@@ -466,6 +483,180 @@ describe("superflow-guard.sh", () => {
       stderr: expect.stringContaining(
         "symlinked OpenSpec change directory is forbidden",
       ),
+    });
+  });
+
+  it("requires a complexity reduction review before docs can pass", async () => {
+    const change = await makeCrossServiceChange();
+    const design = path.join(change, "design.md");
+    await write(
+      design,
+      fs.readFileSync(design, "utf8").replace(MINIMAL_DESIGN_REVIEW, ""),
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("complexity reduction review"),
+    });
+  });
+
+  it("requires a complexity budget instead of a title-only review", async () => {
+    const change = await makeCrossServiceChange();
+    const design = path.join(change, "design.md");
+    await write(
+      design,
+      fs
+        .readFileSync(design, "utf8")
+        .replace(/New-item counts:.*\n/, ""),
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("complexity budget"),
+    });
+  });
+
+  it("requires the same complexity review in the English docs guard", async () => {
+    const change = await makeCrossServiceChange();
+    const design = path.join(change, "design.md");
+    await write(
+      design,
+      fs.readFileSync(design, "utf8").replace(MINIMAL_DESIGN_REVIEW, ""),
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [EN_GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("complexity reduction review"),
+    });
+  });
+
+  it("does not force the full complexity matrix onto tweak workflow", async () => {
+    const change = await makeCrossServiceChange();
+    const design = path.join(change, "design.md");
+    const gate = path.join(change, "sdd-quality-gate.md");
+    await write(
+      design,
+      fs.readFileSync(design, "utf8").replace(MINIMAL_DESIGN_REVIEW, ""),
+    );
+    await write(
+      gate,
+      fs
+        .readFileSync(gate, "utf8")
+        .replace("Minimal Design Review: PASS.\n", ""),
+    );
+    await execFileAsync("bash", [STATE, "init", change, "tweak", "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).resolves.toMatchObject({
+      stdout: expect.stringContaining("guard passed for phase docs"),
+    });
+  });
+
+  it("requires an explicit PASS verdict for the review", async () => {
+    const change = await makeCrossServiceChange();
+    const gate = path.join(change, "sdd-quality-gate.md");
+    await write(
+      gate,
+      fs
+        .readFileSync(gate, "utf8")
+        .replace("Minimal Design Review: PASS.", "Minimal Design Review"),
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("complexity reduction review PASS verdict"),
+    });
+  });
+
+  it("blocks docs when the complexity review verdict is BLOCKED", async () => {
+    const change = await makeCrossServiceChange();
+    const gate = path.join(change, "sdd-quality-gate.md");
+    await write(
+      gate,
+      fs
+        .readFileSync(gate, "utf8")
+        .replace("Minimal Design Review: PASS.", "Minimal Design Review: BLOCKED."),
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("complexity reduction review PASS verdict"),
+    });
+  });
+
+  it("blocks English docs when the complexity review verdict is BLOCKED", async () => {
+    const change = await makeCrossServiceChange();
+    const gate = path.join(change, "sdd-quality-gate.md");
+    await write(
+      gate,
+      fs
+        .readFileSync(gate, "utf8")
+        .replace("Minimal Design Review: PASS.", "Minimal Design Review: BLOCKED."),
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [EN_GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("complexity reduction review PASS verdict"),
+    });
+  });
+
+  it("requires a minimal design review in the source-level technical design", async () => {
+    const change = await makeCrossServiceChange();
+    const technicalDesign = path.join(
+      change,
+      "docs",
+      "superpowers",
+      "specs",
+      "2026-06-22-appointment-route-technical-design.md",
+    );
+    await write(
+      technicalDesign,
+      fs
+        .readFileSync(technicalDesign, "utf8")
+        .replace(MINIMAL_DESIGN_REVIEW, ""),
+    );
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [
+      STATE,
+      "set",
+      change,
+      "technical_design",
+      "docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md",
+    ]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "design"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("technical design minimal design review"),
     });
   });
 

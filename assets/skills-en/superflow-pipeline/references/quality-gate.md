@@ -9,10 +9,18 @@
 - Handoff files exist and hash is current.
 - design.md records OpenSpec/SDD as WHAT and Superpowers as HOW.
 - sdd-quality-gate.md records guard command and result.
+- design.md and sdd-quality-gate.md include a Minimal Design Review with reuse
+  evidence, necessity, simplest implementation, removed/rejected complexity,
+  counts of new tables/fields/APIs/services/caches/async flows/jobs/compatibility
+  layers, and a PASS/BLOCKED verdict. Only PASS may leave docs/design.
 
 ## Design Gate
 
 - Technical design exists for full workflow.
+- Technical design repeats the Minimal Design Review at source level. It extends
+  existing modules first and rejects speculative abstractions, parallel APIs or
+  models, derivable persistence, premature caches, and async compensation when
+  a direct synchronous design satisfies the contract.
 - Field/status reverse impact matrix exists when risky fields or states change.
 - Architecture boundary and call-direction matrix exists for cross-service or
   external flows.

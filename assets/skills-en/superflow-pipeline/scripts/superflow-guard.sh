@@ -322,15 +322,29 @@ change_has_field_status_risk() {
     "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null
 }
 
+change_contract_docs_without_complexity_budget() {
+  local path
+  for path in proposal.md api.md design.md tests.md spec.md; do
+    [[ -f "$CHANGE_DIR/$path" ]] || continue
+    sed -E '/New-item counts|Complexity budget/d' "$CHANGE_DIR/$path"
+  done
+  if [[ -d "$CHANGE_DIR/specs" ]]; then
+    find "$CHANGE_DIR/specs" -path '*/spec.md' -type f \
+      -exec sed -E '/New-item counts|Complexity budget/d' {} +
+  fi
+}
+
+change_all_docs_without_complexity_budget() {
+  find "$CHANGE_DIR" -maxdepth 2 -name '*.md' -type f \
+    -exec sed -E '/New-item counts|Complexity budget/d' {} +
+}
+
 change_has_external_config_risk() {
-  grep -RIEiq \
+  local content
+  content="$(change_contract_docs_without_complexity_budget)"
+  grep -Eiq \
     'third[- ]party|external (platform|tool|integration|system)|SDK|MQ|Kafka|RocketMQ|TDMQ|callback|webhook|payment gateway|cloud service' \
-    "$CHANGE_DIR/proposal.md" \
-    "$CHANGE_DIR/api.md" \
-    "$CHANGE_DIR/design.md" \
-    "$CHANGE_DIR/tests.md" \
-    "$CHANGE_DIR/spec.md" \
-    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+    <<< "$content"
 }
 
 change_has_concurrency_idempotency_risk() {
@@ -367,9 +381,11 @@ change_has_fx_precision_risk() {
 }
 
 change_has_architecture_boundary_risk() {
-  grep -RIEiq \
+  local content
+  content="$(change_all_docs_without_complexity_budget)"
+  grep -Eiq \
     'cross-repo|cross-service|sibling|SDK|MQ|topic|consumer|scheduler|scheduled|device|callback|third[- ]party|mini[- ]program|gateway|adapter|protocol|interconnect|call chain|entry|exit' \
-    "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null
+    <<< "$content"
 }
 
 first_prompt_rel() {
@@ -480,6 +496,29 @@ require_money_precision_evidence() {
   fi
 }
 
+require_minimal_design_review() {
+  local path="$1"
+  local label="$2"
+  require_grep 'Minimal Design Review|Complexity Reduction Review' "$path" "$label"
+  require_grep 'reuse|existing capability|existing module' "$path" "$label reuse evidence"
+  require_grep 'simplest|minimum design|minimal implementation' "$path" "$label simplest implementation"
+  require_grep 'removed|rejected|do not add|out of scope' "$path" "$label removed or rejected complexity"
+  require_grep 'New-item counts|Complexity budget' "$path" "$label complexity budget"
+  require_grep 'table' "$path" "$label table count"
+  require_grep 'field' "$path" "$label field count"
+  require_grep 'API' "$path" "$label API count"
+  require_grep 'service|component' "$path" "$label service/component count"
+  require_grep 'cache' "$path" "$label cache count"
+  require_grep 'MQ|event|async' "$path" "$label async/event count"
+  require_grep 'scheduled job|scheduler' "$path" "$label scheduled-job count"
+  require_grep 'compatibility layer' "$path" "$label compatibility-layer count"
+}
+
+require_minimal_design_pass() {
+  local path="$1"
+  require_grep '(Minimal Design Review|Complexity Reduction Review).*PASS|PASS.*(Minimal Design Review|Complexity Reduction Review)' "$path" "complexity reduction review PASS verdict"
+}
+
 transition_event=""
 
 if [[ -x "$VALIDATE" && -f "$CHANGE_DIR/.sdd/state.yaml" ]]; then
@@ -509,6 +548,12 @@ case "$PHASE" in
     require_grep 'RED|red-green|GREEN' tests.md "RED/GREEN test contract"
     require_grep 'curl|Postman|Newman|pytest|RestAssured|automation command' tests.md "interface automation command"
     require_grep 'handoff_hash|sdd-context|context package|anti-drift' sdd-quality-gate.md "handoff/context-drift gate"
+    workflow="$(state_get workflow)"
+    if [[ "$workflow" == "full" ]]; then
+      require_minimal_design_review design.md "complexity reduction review"
+      require_grep 'Minimal Design Review|Complexity Reduction Review' sdd-quality-gate.md "complexity reduction quality gate"
+      require_minimal_design_pass sdd-quality-gate.md
+    fi
     if change_has_money_precision_risk; then
       require_grep 'Money Precision Boundary' sdd-quality-gate.md "money precision quality gate"
     fi
@@ -540,6 +585,9 @@ case "$PHASE" in
     require_hash_recorded
     workflow="$(state_get workflow)"
     if [[ "$workflow" == "full" ]]; then
+      require_minimal_design_review design.md "complexity reduction review"
+      require_grep 'Minimal Design Review|Complexity Reduction Review' sdd-quality-gate.md "complexity reduction quality gate"
+      require_minimal_design_pass sdd-quality-gate.md
       require_optional_state_path technical_design "technical_design"
       technical_design_rel="$(state_get technical_design)"
       if [[ -n "${technical_design_rel:-}" && "$technical_design_rel" != "null" ]]; then
@@ -560,6 +608,7 @@ case "$PHASE" in
         if change_has_money_precision_risk; then
           require_money_precision_contract "$technical_design_rel" "money precision boundary"
         fi
+        require_minimal_design_review "$technical_design_rel" "technical design minimal design review"
       fi
     fi
     require_grep 'Superpowers Technical Design Handoff|Superpowers Technical Design|technical_design|source-level HOW' design.md "Superpowers technical design handoff"
