@@ -43,6 +43,9 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 
 ## 亮点
 
+- **双 Agent 托管到真实交付。** 当前 Agent 负责监督，另一个 Agent 通过无交互 CLI
+  持续开发、启动和验证；评审整改复用原会话，最多 5 轮评审、7 次执行、12 次总调用。
+  状态和证据全部落盘，终端或网络中断后可恢复，最终停在等待 Git 批准。
 - **9 类翻车场景，沉淀成门禁。** 我们见过的 AI 翻车——需求一次吞、字段漏查消费者、SQL 漂移、mock-only 报告、跨服务只看到"能调"……9 种典型形态都被固化成 guard，AI 想跳过都不行。
 - **跨服务代码必须先答架构 6 问。** 涉及跨仓、跨服务、SDK、MQ、设备、回调、网关的改动，技术详设里必须先回答：owner 是谁、调用方向、新入口是否允许、禁止路径、证据锚点——答不全不让进入实现。
 - **改字段之前先填"字段与状态反向影响"矩阵。** 任何 schema、状态、枚举的改动，必须枚举写入点、读取点、过滤点、派生 / 同步点、跨模块消费者、测试覆盖，还要列反向恢复场景（下线后重上线、旧值不可用但上游没传字段、历史脏数据被新过滤条件消费）。
@@ -115,6 +118,15 @@ export SUPERFLOW_LANG=en
 superflow init
 ```
 
+托管一个 implementation prompt、OpenSpec change 或简单开发任务：
+
+```bash
+superflow pipeline "<prompt 路径、change 目录或任务>" --managed \
+  --project "<项目根目录>"
+```
+
+语言会冻结进任务合同；执行 Prompt、评审、账本、报告、通知和恢复轮次保持一致。
+
 ## SDD 分工
 
 - OpenSpec/SDD 负责 WHAT 和合同：需求、API、DB、SQL、字段语义、tests、真实入口验收和质量门禁。
@@ -145,6 +157,7 @@ superflow init
 | `superflow design [change]` | 校验 SuperBridge Flow design 阶段技能部署 |
 | `superflow implement [task]` | 校验 SuperBridge Flow implement 阶段技能部署 |
 | `superflow pipeline` | 校验 SuperBridge Flow pipeline 阶段技能部署 |
+| `superflow pipeline "<任务>" --managed --project <目录>` | 双 Agent 托管开发并等待交付终态 |
 | `superflow check <change>` | 对照 13 项必备文件清单检查文档完整性 |
 | `superflow config <change> --review-mode <mode>` | 设置代码审查强度（off/standard/thorough） |
 | `superflow config <change> --auto-transition <bool>` | 控制阶段自动流转（true/false） |

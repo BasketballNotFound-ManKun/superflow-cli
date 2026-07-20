@@ -48,6 +48,11 @@ state, and dependency guards for Claude Code, Codex, and OpenCode.
 
 ## Highlights
 
+- **Dual-Agent managed delivery.** The current Agent supervises while the peer
+  Agent develops, starts, and verifies through a non-interactive CLI. Repair
+  rounds resume exact sessions and are capped at 5 reviews, 7 executor calls,
+  and 12 total calls. Durable journals allow recovery after terminal or network
+  interruption, and passing work stops for explicit Git approval.
 - **9 catalogued failure modes, blocked at the gate.** Nine real ways AI breaks
   in production — swallowing the whole PRD then forgetting details, editing
   only the setter while missing consumers, SQL drift across dev/test/DB
@@ -141,6 +146,16 @@ superflow --language en --help
 SUPERFLOW_LANG=en superflow init
 ```
 
+Manage an implementation prompt, OpenSpec change, or direct development task:
+
+```bash
+superflow pipeline "<prompt path, change directory, or task>" --managed \
+  --project "<project root>"
+```
+
+The selected language is frozen into the task contract and reused by Agent
+prompts, reviews, journals, reports, notifications, and resumed rounds.
+
 ## What Init Installs
 
 `superflow init` installs and configures:
@@ -173,6 +188,7 @@ best-effort and does not block initialization.
 | `superflow --language en --help` | Show English CLI help |
 | `superflow scan --language en` | Regenerate project context templates in English |
 | `superflow pipeline` | Check pipeline skill deployment |
+| `superflow pipeline "<task>" --managed --project <path>` | Run Dual-Agent managed development to a terminal delivery state |
 | `superflow docs` | Check docs-phase skill deployment |
 | `superflow design` | Check design-phase skill deployment |
 | `superflow implement` | Check implement-phase skill deployment |
