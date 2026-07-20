@@ -131,7 +131,7 @@ GUARD="$SCRIPT_DIR/superflow-guard.sh"
 VALIDATE="$SCRIPT_DIR/superflow-yaml-validate.sh"
 CHANGE_DIR="$(cd "$CHANGE_DIR" && pwd)"
 CHANGE_NAME="$(basename "$CHANGE_DIR")"
-PROJECT_ROOT="$(cd "$CHANGE_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$CHANGE_DIR/../../.." && pwd)"
 ARCHIVE_ROOT="$PROJECT_ROOT/openspec/changes/archive"
 ARCHIVE_NAME="$CHANGE_NAME"
 
