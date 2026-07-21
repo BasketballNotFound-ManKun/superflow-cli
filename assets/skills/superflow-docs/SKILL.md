@@ -64,6 +64,13 @@ For complex requirements, verify these before writing docs:
   checks when source is insufficient. Graph output or chat explanation alone is
   not sufficient. If this evidence is missing and the relationship affects
   design, stop and return to `$superflow-clarify`.
+- For full-workflow existing-system changes, `source-code-audit.md` must contain
+  the source fact freeze card, current/legacy/unmounted/data-model-only/
+  owner-confirmed/blocked classifications, all writers and real callers, DB
+  evidence or a skip reason, and the owner decision boundary. `List`,
+  `orderIds`, `batchInsert`, or one-to-many schema signals that conflict with a
+  single-item real entry require an explicit conflict audit. Missing evidence
+  blocks docs even when understand-anything contains a plausible summary.
 - For any database-backed design, the docs include table-to-code reverse impact
   evidence: every affected table/field, all writers/readers/filters, sibling
   repo or third-party consumers, real user-facing endpoints, reverse-state
@@ -189,6 +196,7 @@ applicable:
 - `traceability-matrix.md` when tasks are split
 - `mock.md` when external dependencies exist
 - `review-checklist.md` when implementation will be split
+- `source-code-audit.md` for full existing-system, DB, cross-repo, or real-entry changes
 - `.sdd/state.yaml`
 - `.sdd/handoff/sdd-context.md`
 - `.sdd/handoff/sdd-context.json`

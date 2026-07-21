@@ -113,6 +113,19 @@ When the router selects embedded deep clarification, follow these rules inside
 
 ## Non-Negotiable Rules
 
+### 源码事实冻结与提问资格（阻塞级）
+
+- full workflow 涉及现有行为、DB/表关系、跨仓或真实入口时，docs 阶段必须生成
+  `source-code-audit.md`，并填写：
+  `业务结论 | understand定位 | 数据模型 | 所有写入方 | 真实用户入口 |
+  当前调用方 | 遗留冲突 | DB是否必查 | 结论等级 | owner决策`。
+- understand-anything 只作 locator，不作最终事实源。证据必须区分 `current`、
+  `legacy`、`unmounted`、`data-model-only`、`owner-confirmed`、`blocked`。
+- `List`、`orderIds`、`batchInsert` 或一对多模型与单笔真实入口冲突时，必须完成
+  冲突审计；不能从数据结构反推当前产品行为。
+- 提问前必须完成源码、Mapper/SQL、前端/小程序/H5 调用方、sibling repo 和
+  必要的只读 DB 核查。仓库可查事实不得作为澄清题交给用户。
+
 ### OpenSpec change 目录唯一性（阻塞级）
 
 - Superflow 必须遵守 OpenSpec CLI 的单层目录规范：

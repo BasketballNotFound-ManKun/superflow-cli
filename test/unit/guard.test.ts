@@ -50,6 +50,27 @@ const MINIMAL_DESIGN_REVIEW = [
   "",
 ].join("\n");
 
+const SOURCE_CODE_AUDIT = [
+  "# Source Code Audit",
+  "",
+  "## Source Fact Freeze Card",
+  "",
+  "| Business conclusion | understand-anything locator | Data model | All writers | Real user entry | Current callers | Legacy conflict | DB check or skip reason | Conclusion level | owner decision |",
+  "|---|---|---|---|---|---|---|---|---|---|",
+  "| One request follows one current route | graph locator only | one route record | API service | frontend mini-program H5 caller | current controller | legacy batch API is unmounted | DB check skipped because source and callers are sufficient | owner-confirmed | owner approved current behavior |",
+  "",
+  "Evidence classifications: current; legacy; unmounted; data-model-only; owner-confirmed; blocked.",
+  "",
+  "## Question Eligibility Gate",
+  "",
+  "Source search: complete. Mapper and SQL search: complete. Frontend mini-program H5 caller search: complete. Sibling repo search: complete. DB check reason recorded above.",
+  "",
+  "## Conflict Audit",
+  "",
+  "List/orderIds/batchInsert/one-to-many signals were compared with the real current entry and did not redefine current behavior.",
+  "",
+].join("\n");
+
 async function write(file: string, content: string) {
   await fs.promises.mkdir(path.dirname(file), { recursive: true });
   await fs.promises.writeFile(file, content);
@@ -92,6 +113,7 @@ async function makeCrossServiceChange() {
     "# Traceability\n\n| Requirement | Prompt |\n|---|---|\n| R1 | prompt/p01.md |\n",
   );
   await write(path.join(change, "review-checklist.md"), "# Review Checklist\n");
+  await write(path.join(change, "source-code-audit.md"), SOURCE_CODE_AUDIT);
   await write(
     path.join(change, "sdd-quality-gate.md"),
     [
@@ -331,6 +353,10 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "",
     "OpenSpec/SDD remains canonical and must not be overwritten.",
     MINIMAL_DESIGN_REVIEW,
+    "## Architecture Boundary And Call Direction",
+    "",
+    "The business-entry owner calls the existing service entry and outbound adapter; no bypass is allowed.",
+    "",
     "",
     options.legacyDesignContract
       ? LEGACY_MONEY_PRECISION_CONTRACT
@@ -562,6 +588,61 @@ describe("superflow-guard.sh", () => {
 
     await expect(
       execFileAsync("bash", [GUARD, change, "docs"]),
+    ).resolves.toMatchObject({
+      stdout: expect.stringContaining("guard passed for phase docs"),
+    });
+  });
+
+  it("requires source-code-audit for a full existing-system change", async () => {
+    const change = await makeCrossServiceChange();
+    await fs.promises.rm(path.join(change, "source-code-audit.md"));
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("missing file: source-code-audit.md"),
+    });
+    await expect(
+      execFileAsync("bash", [EN_GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("missing file: source-code-audit.md"),
+    });
+  });
+
+  it.each([
+    ["real user entry", "Real user entry", "real user entry"],
+    ["all writers", "All writers", "all writers inventory"],
+    ["current and legacy classification", "Evidence classifications: current; legacy;", "complete evidence classification set"],
+    ["DB check reason", "DB check", "DB check or skip reason"],
+  ])("blocks docs when source fact audit lacks %s", async (_name, removed, expected) => {
+    const change = await makeCrossServiceChange();
+    const audit = path.join(change, "source-code-audit.md");
+    await write(audit, fs.readFileSync(audit, "utf8").replaceAll(removed, ""));
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({ stderr: expect.stringContaining(expected) });
+  });
+
+  it("accepts a complete source fact freeze card in both guards", async () => {
+    const change = await makeCrossServiceChange();
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).resolves.toMatchObject({
+      stdout: expect.stringContaining("guard passed for phase docs"),
+    });
+    await expect(
+      execFileAsync("bash", [EN_GUARD, change, "docs"]),
     ).resolves.toMatchObject({
       stdout: expect.stringContaining("guard passed for phase docs"),
     });

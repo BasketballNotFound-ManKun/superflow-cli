@@ -14,6 +14,9 @@
 - 页面、原型和产品文档都没有的字段，不得进入 API 必填项；若后端需要，必须
   标记为后端默认、后端推导或待确认。
 - 后续联调发现的问题必须作为 CR/Px 追加任务新增 prompt，不得污染已执行 prompt。
+- 存量系统需求必须先完成 `source-code-audit.md` 源码事实冻结卡和提问资格门禁。
+  understand-anything 只定位；源码、Mapper/SQL、真实调用方和必要的只读 DB 才能
+  确认现行业务。数据模型与真实入口冲突时必须单列冲突审计。
 
 ## 2. 每个功能点的固定步骤
 
@@ -103,6 +106,17 @@
 - 待确认：无 / ____
 - 冻结结论：已冻结，可生成 prompt / 不通过
 ```
+
+### `source-code-audit.md`
+
+记录源码事实冻结卡：
+
+| 业务结论 | understand定位 | 数据模型 | 所有写入方 | 真实用户入口 | 当前调用方 | 遗留冲突 | DB是否必查 | 结论等级 | owner决策 |
+|---|---|---|---|---|---|---|---|---|---|
+
+同时记录 `current/legacy/unmounted/data-model-only/owner-confirmed/blocked`
+证据分类、`List/orderIds/batchInsert/一对多` 冲突审计，以及源码、Mapper/SQL、
+前端/小程序/H5、sibling repo、DB 的提问资格检查。
 
 ## 4. API 先行规则
 

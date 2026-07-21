@@ -244,10 +244,13 @@ sync_state() {
   "$state_sh" set "$CHANGE_DIR" context_compression "$context_compression"
   "$state_sh" set "$CHANGE_DIR" handoff_context .sdd/handoff/sdd-context.json
   "$state_sh" set "$CHANGE_DIR" handoff_hash "$context_hash"
-  technical_design_rel="$(
-    find "$CHANGE_DIR/docs/superpowers/specs" -maxdepth 1 -type f -name '*.md' 2>/dev/null \
-      | sort | head -n 1 | sed "s#^$CHANGE_DIR/##"
-  )"
+  technical_design_rel=""
+  if [[ -d "$CHANGE_DIR/docs/superpowers/specs" ]]; then
+    technical_design_rel="$(
+      find "$CHANGE_DIR/docs/superpowers/specs" -maxdepth 1 -type f -name '*.md' \
+        | sort | head -n 1 | sed "s#^$CHANGE_DIR/##"
+    )"
+  fi
   if [[ -n "$technical_design_rel" ]]; then
     "$state_sh" set "$CHANGE_DIR" technical_design "$technical_design_rel"
   fi

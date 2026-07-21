@@ -23,6 +23,21 @@ any full SDD document or implementation prompt is generated.
 - Do not freeze a feature from product text or understand-anything output alone
   when code impact is relevant. Current source, Mapper/XML, database samples,
   API contracts, or real consumer entry points must confirm the design.
+- For features that depend on existing behavior, table relationships, or call
+  chains, create a `source-code-audit.md` Source Fact Freeze Card before
+  freezing: `Business conclusion | understand-anything locator | Data model |
+  All writers | Real user entry | Current callers | Legacy conflict | DB check
+  required | Conclusion level | owner decision`. Treat understand-anything only
+  as a locator and confirm every conclusion in source, Mapper/SQL, current
+  callers, or read-only DB evidence.
+- Classify evidence as `current`, `legacy`, `unmounted`, `data-model-only`,
+  `owner-confirmed`, or `blocked`. If `List`, `orderIds`, `batchInsert`, or a
+  one-to-many relation exists while the real UI/mini-program/H5 submits one
+  item, add a Conflict Audit and do not infer current batch behavior.
+- Before asking the user, record a Question Eligibility Gate covering source,
+  Mapper/SQL, frontend/mini-program/H5 callers, sibling repositories, and the
+  DB check or skip reason. Do not ask the user for facts discoverable from the
+  repository or read-only data; ask only for owner-intent decisions.
 - When the feature depends on existing code relationships, field ownership,
   table joins, data permissions, status transitions, or upstream/downstream
   calls, verify the relationship before freezing with current evidence:
@@ -81,6 +96,8 @@ Create or update these files in the active OpenSpec change directory:
 - `ui-contract.md`: page fields, controls, buttons, list columns, dropdowns, API/DTO/DB mapping.
 - `gap-analysis.md`: UI/document/source gaps and over-design risks.
 - `spec-freeze-review.md`: freeze card for the current feature.
+- `source-code-audit.md`: source fact freeze card, evidence classifications,
+  conflict audit, and question eligibility gate.
 - Platform impact evidence in one of the above documents: discovery method,
   understand-anything index status when available, analyzed platform scope,
   impacted modules/interfaces/tables, regression risks, source/DB/API

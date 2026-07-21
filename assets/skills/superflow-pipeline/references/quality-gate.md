@@ -24,6 +24,7 @@
 | 12  | **Prompt 拆分合理性**              | **如触发拆分条件，已按功能闭环拆分，每份 prompt 边界清晰**                                                                                                                                                  |
 | 13  | **需求/原型字段对账**              | 涉及页面、截图、原型或前端联调时，已建立"页面字段 -> API 字段 -> DTO/VO -> DB -> 测试"映射                                                                                                                  |
 | 14  | **功能点串行门禁**                 | 复杂 PRD、飞书文档、原型图或口头大需求必须具备 `source-ingestion.md`、`feature-gates.md`、`feature-inventory.md`、`ui-contract.md`、`gap-analysis.md`、`spec-freeze-review.md`，且当前功能点状态为 `已冻结` |
+| 14.1 | **源码事实冻结卡** | full workflow 涉及现有行为、DB/表关系、跨仓或真实入口时必须具备 `source-code-audit.md`；覆盖所有写入方、真实入口、current/legacy/unmounted/data-model-only 分类、DB 核查或跳过原因、冲突审计和 owner 边界 |
 
 ### 按需检查项（涉及则必须检查）
 

@@ -111,6 +111,23 @@ When the router selects embedded deep clarification, follow these rules inside
 
 ## Required Artifacts
 
+### Source Fact Freeze And Question Eligibility (Blocking)
+
+- When a full workflow involves existing behavior, DB/table relationships,
+  cross-repository impact, or a real entry, docs must include
+  `source-code-audit.md` with: `Business conclusion | understand-anything
+  locator | Data model | All writers | Real user entry | Current callers |
+  Legacy conflict | DB check required | Conclusion level | owner decision`.
+- understand-anything is a locator, not the final source of truth. Classify
+  evidence as `current`, `legacy`, `unmounted`, `data-model-only`,
+  `owner-confirmed`, or `blocked`.
+- If `List`, `orderIds`, `batchInsert`, or a one-to-many model conflicts with a
+  single-item real entry, complete a Conflict Audit instead of inferring current
+  product behavior from the data structure.
+- Before asking the user, search source, Mapper/SQL, frontend/mini-program/H5
+  callers, sibling repositories, and read-only DB data when needed. Do not turn
+  repository-verifiable facts into clarification questions.
+
 ### Canonical OpenSpec Change Directory (Blocking)
 
 - Superflow must use the OpenSpec CLI single-level layout:
@@ -139,6 +156,7 @@ For a full change, the docs phase must create or refresh:
 - review-checklist.md
 - sdd-quality-gate.md
 - test-report.md
+- source-code-audit.md when the source fact gate is triggered
 - .sdd/state.yaml
 - .sdd/handoff/sdd-context.md
 - .sdd/handoff/sdd-context.json

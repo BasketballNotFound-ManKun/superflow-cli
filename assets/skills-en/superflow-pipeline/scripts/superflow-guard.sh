@@ -369,6 +369,53 @@ change_has_money_precision_risk() {
     "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
 }
 
+change_has_source_fact_risk() {
+  grep -RIEiq \
+    'existing|current behavior|legacy|database|table relationship|Mapper|XML|cross[- ](repo|service)|crosses services|real entry|mini[- ]program|H5' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
+change_has_cardinality_conflict_signal() {
+  grep -RIEiq \
+    'List[<(]|orderIds|batchInsert|one[- ]to[- ]many|relation table' \
+    "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null
+}
+
+require_source_fact_audit() {
+  require_file source-code-audit.md
+  require_grep 'Source Fact Freeze Card' source-code-audit.md "source fact freeze card"
+  require_grep 'Business conclusion' source-code-audit.md "source fact business conclusion"
+  require_grep 'understand.*locator' source-code-audit.md "understand-anything locator evidence"
+  require_grep 'Data model' source-code-audit.md "source fact data model"
+  require_grep 'All writers' source-code-audit.md "all writers inventory"
+  require_grep 'Real user entr' source-code-audit.md "real user entry"
+  require_grep 'Current callers' source-code-audit.md "current callers"
+  require_grep 'Legacy conflict' source-code-audit.md "legacy conflict"
+  require_grep 'DB (check|required|skip|reason)' source-code-audit.md "DB check or skip reason"
+  require_grep 'Conclusion level' source-code-audit.md "conclusion level"
+  require_grep 'owner.*decision' source-code-audit.md "owner decision boundary"
+  require_grep 'current' source-code-audit.md "current evidence classification"
+  require_grep 'legacy' source-code-audit.md "legacy evidence classification"
+  require_grep 'unmounted' source-code-audit.md "unmounted evidence classification"
+  require_grep 'data-model-only' source-code-audit.md "data-model-only evidence classification"
+  require_grep 'owner-confirmed' source-code-audit.md "owner-confirmed evidence classification"
+  require_grep 'blocked' source-code-audit.md "blocked evidence classification"
+  require_grep 'Evidence classifications.*current.*legacy.*unmounted.*data-model-only.*owner-confirmed.*blocked' source-code-audit.md "complete evidence classification set"
+  require_grep 'Question Eligibility Gate' source-code-audit.md "question eligibility gate"
+  require_grep 'Source search' source-code-audit.md "source search evidence"
+  require_grep 'Mapper.*SQL|SQL.*Mapper' source-code-audit.md "Mapper and SQL search evidence"
+  require_grep 'Frontend.*mini[- ]program.*H5' source-code-audit.md "frontend mini-program H5 caller search"
+  require_grep 'sibling.*repo' source-code-audit.md "sibling repository search"
+  if change_has_cardinality_conflict_signal; then
+    require_grep 'Conflict Audit' source-code-audit.md "cardinality conflict audit"
+  fi
+}
+
 change_has_fx_precision_risk() {
   grep -RIEiq \
     '(^|[^[:alnum:]_])(exchange rate|fx rate|currency conversion|cross.currency|base currency|quote currency)([^[:alnum:]_]|$)' \
@@ -553,6 +600,9 @@ case "$PHASE" in
       require_minimal_design_review design.md "complexity reduction review"
       require_grep 'Minimal Design Review|Complexity Reduction Review' sdd-quality-gate.md "complexity reduction quality gate"
       require_minimal_design_pass sdd-quality-gate.md
+      if change_has_source_fact_risk; then
+        require_source_fact_audit
+      fi
     fi
     if change_has_money_precision_risk; then
       require_grep 'Money Precision Boundary' sdd-quality-gate.md "money precision quality gate"

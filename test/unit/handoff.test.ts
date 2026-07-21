@@ -62,6 +62,29 @@ async function makeChangeDir() {
   );
   await write(path.join(change, 'review-checklist.md'), '# Review Checklist\n');
   await write(
+    path.join(change, 'source-code-audit.md'),
+    [
+      '# Source Code Audit',
+      '',
+      '## Source Fact Freeze Card',
+      '',
+      '| Business conclusion | understand-anything locator | Data model | All writers | Real user entry | Current callers | Legacy conflict | DB check or skip reason | Conclusion level | owner decision |',
+      '|---|---|---|---|---|---|---|---|---|---|',
+      '| Reuse the current route | graph locator | config row | coupon service | admin UI | current controller | legacy path unmounted | DB check skipped with source evidence | owner-confirmed | owner decision recorded |',
+      '',
+      'Evidence classifications: current; legacy; unmounted; data-model-only; owner-confirmed; blocked.',
+      '',
+      '## Question Eligibility Gate',
+      '',
+      'Source search complete. Mapper and SQL search complete. Frontend mini-program H5 caller search complete. Sibling repo search complete. DB check skip reason recorded.',
+      '',
+      '## Conflict Audit',
+      '',
+      'List/orderIds/batchInsert/one-to-many signals were checked against the real entry.',
+      '',
+    ].join('\n')
+  );
+  await write(
     path.join(change, 'sdd-quality-gate.md'),
     [
       '# Quality Gate',
@@ -196,5 +219,26 @@ describe('superflow-handoff.sh', () => {
     expect(result.stdout).toContain('guard docs passed');
     const designDoc = await execFileAsync('bash', [STATE, 'get', change, 'design_doc']);
     expect(designDoc.stdout.trim()).toBe('design.md');
+  });
+
+  it('refreshes docs-only handoff without a technical design directory', async () => {
+    const change = await makeChangeDir();
+    await fs.promises.rm(path.join(change, 'docs'), {
+      recursive: true,
+      force: true,
+    });
+    await execFileAsync('bash', [HANDOFF, change, '--write']);
+    await replacePendingHash(change);
+
+    const result = await execFileAsync('bash', [HANDOFF, change, '--refresh']);
+
+    expect(result.stdout).toContain('guard docs passed');
+    const technicalDesign = await execFileAsync('bash', [
+      STATE,
+      'get',
+      change,
+      'technical_design',
+    ]);
+    expect(technicalDesign.stdout.trim()).toBe('null');
   });
 });
