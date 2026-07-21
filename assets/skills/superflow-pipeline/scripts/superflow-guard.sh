@@ -381,6 +381,53 @@ change_has_money_precision_risk() {
     "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
 }
 
+change_has_source_fact_risk() {
+  grep -RIEiq \
+    '现有|现行|遗留|数据库|数据表|表关系|Mapper|XML|跨仓|跨服务|真实入口|小程序|H5|existing|current behavior|legacy|database|table relationship|cross[- ](repo|service)|crosses services|real entry|mini[- ]program' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
+change_has_cardinality_conflict_signal() {
+  grep -RIEiq \
+    'List[<（(]|orderIds|batchInsert|批量插入|一对多|one[- ]to[- ]many|关系表' \
+    "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null
+}
+
+require_source_fact_audit() {
+  require_file source-code-audit.md
+  require_grep '源码事实冻结卡|Source Fact Freeze Card' source-code-audit.md "source fact freeze card"
+  require_grep '业务结论|Business conclusion' source-code-audit.md "source fact business conclusion"
+  require_grep 'understand.*定位|understand.*locator' source-code-audit.md "understand-anything locator evidence"
+  require_grep '数据模型|Data model' source-code-audit.md "source fact data model"
+  require_grep '所有写入方|All writers' source-code-audit.md "all writers inventory"
+  require_grep '真实用户入口|Real user entr' source-code-audit.md "real user entry"
+  require_grep '当前调用方|Current callers' source-code-audit.md "current callers"
+  require_grep '遗留冲突|Legacy conflict' source-code-audit.md "legacy conflict"
+  require_grep 'DB.*(必查|核查|跳过|未执行|reason)|数据库.*(必查|核查|跳过|未执行|原因)|DB (check|required|skip|reason)' source-code-audit.md "DB check or skip reason"
+  require_grep '结论等级|Conclusion level' source-code-audit.md "conclusion level"
+  require_grep 'owner.*(决策|decision)|决策.*owner' source-code-audit.md "owner decision boundary"
+  require_grep 'current|现行入口' source-code-audit.md "current evidence classification"
+  require_grep 'legacy|遗留入口' source-code-audit.md "legacy evidence classification"
+  require_grep 'unmounted|无前端调用' source-code-audit.md "unmounted evidence classification"
+  require_grep 'data-model-only|仅数据模型可表达' source-code-audit.md "data-model-only evidence classification"
+  require_grep 'owner-confirmed|owner 已确认' source-code-audit.md "owner-confirmed evidence classification"
+  require_grep 'blocked|阻塞' source-code-audit.md "blocked evidence classification"
+  require_grep '(证据分类|Evidence classifications).*(current|现行).*(legacy|遗留).*(unmounted|无前端调用).*(data-model-only|仅数据模型可表达).*(owner-confirmed|owner 已确认).*(blocked|阻塞)' source-code-audit.md "complete evidence classification set"
+  require_grep '提问资格门禁|Question Eligibility Gate' source-code-audit.md "question eligibility gate"
+  require_grep '源码检索|Source search' source-code-audit.md "source search evidence"
+  require_grep 'Mapper.*SQL|SQL.*Mapper' source-code-audit.md "Mapper and SQL search evidence"
+  require_grep '前端.*小程序.*H5|Frontend.*mini[- ]program.*H5' source-code-audit.md "frontend mini-program H5 caller search"
+  require_grep 'sibling.*repo|兄弟仓|关联仓' source-code-audit.md "sibling repository search"
+  if change_has_cardinality_conflict_signal; then
+    require_grep '冲突审计|Conflict Audit' source-code-audit.md "cardinality conflict audit"
+  fi
+}
+
 change_has_fx_precision_risk() {
   grep -RIEiq \
     '汇率|换汇|外汇|币种转换|跨币种|兑换率|(^|[^[:alnum:]_])(exchange rate|fx rate|currency conversion|cross.currency|base currency|quote currency)([^[:alnum:]_]|$)' \
@@ -576,6 +623,9 @@ case "$PHASE" in
       require_minimal_design_review design.md "complexity reduction review"
       require_grep '复杂度减法评审|反过度设计评审|Minimal Design Review|Complexity Reduction Review' sdd-quality-gate.md "complexity reduction quality gate"
       require_minimal_design_pass sdd-quality-gate.md
+      if change_has_source_fact_risk; then
+        require_source_fact_audit
+      fi
     fi
     if change_has_external_enum_risk; then
       require_external_enum_contract api.md "external enum binding contract"

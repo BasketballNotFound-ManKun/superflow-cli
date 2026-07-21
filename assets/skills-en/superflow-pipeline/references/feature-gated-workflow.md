@@ -11,7 +11,14 @@ requests. Process one feature at a time.
 - ui-contract.md: screen field to API/DTO/DB/test mapping.
 - gap-analysis.md: unknowns, contradictions, and owner decisions.
 - spec-freeze-review.md: final frozen scope and excluded items.
+- source-code-audit.md: source fact freeze card, evidence classifications,
+  conflict audit, and question eligibility gate.
 
 ## Gate
 
 Do not generate full OpenSpec docs until the target feature is frozen.
+For existing-system work, understand-anything is locator evidence only. Confirm
+current behavior from source, Mapper/SQL, real callers, and read-only DB data
+when needed. Classify current versus legacy/unmounted/data-model-only paths and
+audit any List/orderIds/batchInsert/one-to-many signal that conflicts with a
+single-item real entry before asking an owner question.

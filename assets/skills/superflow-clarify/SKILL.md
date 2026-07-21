@@ -23,6 +23,19 @@ any full SDD document or implementation prompt is generated.
 - Do not freeze a feature from product text or understand-anything output alone
   when code impact is relevant. Current source, Mapper/XML, database samples,
   API contracts, or real consumer entry points must confirm the design.
+- 对依赖存量系统行为、表关系或调用链的功能，冻结前必须生成
+  `source-code-audit.md` 的“源码事实冻结卡”：
+  `业务结论 | understand定位 | 数据模型 | 所有写入方 | 真实用户入口 |
+  当前调用方 | 遗留冲突 | DB是否必查 | 结论等级 | owner决策`。
+  understand-anything 只允许作为定位器；每项结论必须回到源码、Mapper/SQL、
+  当前调用方或只读 DB 证据。
+- 证据必须分类为 `current`、`legacy`、`unmounted`、`data-model-only`、
+  `owner-confirmed` 或 `blocked`。看到 `List`、`orderIds`、`batchInsert`、
+  一对多关系表，而真实 UI/小程序/H5 只提交单笔时，必须写“冲突审计”，禁止
+  直接推导为现行批量业务。
+- 向用户提问前，必须在“提问资格门禁”记录源码、Mapper/SQL、前端/小程序/H5
+  调用方、sibling repo 检索以及 DB 核查或跳过原因。能从仓库或只读数据查明的
+  事实不得转嫁给用户；只有 owner 意图决策才允许提问。
 - When the feature depends on existing code relationships, field ownership,
   table joins, data permissions, status transitions, or upstream/downstream
   calls, verify the relationship before freezing with current evidence:
@@ -81,6 +94,7 @@ Create or update these files in the active OpenSpec change directory:
 - `ui-contract.md`: page fields, controls, buttons, list columns, dropdowns, API/DTO/DB mapping.
 - `gap-analysis.md`: UI/document/source gaps and over-design risks.
 - `spec-freeze-review.md`: freeze card for the current feature.
+- `source-code-audit.md`: 源码事实冻结卡、证据分类、冲突审计和提问资格门禁。
 - Platform impact evidence in one of the above documents: discovery method,
   understand-anything index status when available, analyzed platform scope,
   impacted modules/interfaces/tables, regression risks, source/DB/API

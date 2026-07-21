@@ -13,6 +13,10 @@
   evidence, necessity, simplest implementation, removed/rejected complexity,
   counts of new tables/fields/APIs/services/caches/async flows/jobs/compatibility
   layers, and a PASS/BLOCKED verdict. Only PASS may leave docs/design.
+- Full existing-system, DB/table, cross-repository, or real-entry changes have
+  `source-code-audit.md` with a Source Fact Freeze Card, all writers and real
+  callers, current/legacy/unmounted/data-model-only/owner-confirmed/blocked
+  classifications, DB check or skip reason, conflict audit, and owner boundary.
 
 ## Design Gate
 
