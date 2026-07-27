@@ -59,6 +59,8 @@ hotfix:
 1. clarify: ingest requirements one feature at a time, freeze scope, and produce
    source-ingestion, feature gates, inventory, UI/API gaps, and freeze review.
 2. docs: generate OpenSpec/SDD contract artifacts and the first handoff package.
+   Before closing docs, run source-backed requirement review, repair blocking
+   findings, and record `requirement-review.md`.
 3. design: let Superpowers produce source-level technical design from the frozen
    contract and codebase evidence.
 4. implement: generate implementation prompts, execution plans, worktree/port
@@ -75,6 +77,8 @@ hotfix:
   use `superflow-clarify` in embedded deep-clarification mode. This is a mode
   inside the normal clarify phase, not a separate command the user must remember.
 - New or unclear requirement: use superflow-clarify.
+- Requirement review, reverse review, omission search, design challenge,
+  testability review, or over-design review: use superflow-requirement-review.
 - Confirmed requirement needing full docs: use openspec-propose, then
   superflow-docs.
 - Contract docs exist and code-level HOW is needed: use superflow-design.

@@ -26,6 +26,7 @@ describe('commands/update', () => {
     expect(plan.packageUpdate.enabled).toBe(false);
     expect(plan.skills.total).toBeGreaterThan(10);
     expect(plan.skills.names).toContain('superflow-verify');
+    expect(plan.skills.names).toContain('superflow-requirement-review');
     expect(plan.scripts.names).toContain('superflow-hook-guard.sh');
     expect(plan.hooks.names).toContain('codex-auto-backup-hook.sh');
   });

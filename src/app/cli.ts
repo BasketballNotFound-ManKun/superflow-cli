@@ -114,6 +114,17 @@ program
   });
 
 program
+  .command("review [change]")
+  .alias("requirement-review")
+  .description(helpText.requirementReviewDescription)
+  .option("--agent <agent>", helpText.agentOption, "both")
+  .action(async (change, options) => {
+    const { requirementReviewCommand } =
+      await import("./commands/requirement-review.js");
+    await requirementReviewCommand(change, options);
+  });
+
+program
   .command("design [change]")
   .description(helpText.designDescription)
   .option("--agent <agent>", helpText.agentOption, "both")

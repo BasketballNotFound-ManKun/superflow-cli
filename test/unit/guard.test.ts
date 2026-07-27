@@ -77,6 +77,32 @@ async function write(file: string, content: string) {
   await fs.promises.writeFile(file, content);
 }
 
+async function writeRequirementReview(change: string) {
+  await write(
+    path.join(change, "requirement-review.md"),
+    [
+      "---",
+      "change: test-change",
+      "review_verdict: PASS",
+      "open_blockers: 0",
+      "---",
+      "",
+      "# Requirement Review",
+      "",
+      "## Closure Matrix",
+      "",
+      "| Feature | Input/trigger | Processing | Output | Failure | Recovery/repeat | Evidence | Verdict |",
+      "|---|---|---|---|---|---|---|---|",
+      "| F1 | covered | covered | covered | covered | covered | source-backed | PASS |",
+      "",
+      "## Review Findings",
+      "",
+      "No open BLOCKER or IMPORTANT findings.",
+      "",
+    ].join("\n"),
+  );
+}
+
 async function makeCrossServiceChange() {
   const change = path.join(tmp, "openspec", "changes", "appointment-route");
   await write(
@@ -162,6 +188,7 @@ async function makeCrossServiceChange() {
       "",
     ].join("\n"),
   );
+  await writeRequirementReview(change);
   return change;
 }
 
@@ -253,6 +280,7 @@ async function makeExternalEnumChange() {
       "",
     ].join("\n"),
   );
+  await writeRequirementReview(change);
   return change;
 }
 
@@ -418,6 +446,7 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "",
   ].join("\n");
   await write(path.join(change, "test-report.md"), report);
+  await writeRequirementReview(change);
   return change;
 }
 
@@ -468,10 +497,12 @@ async function replacePendingHash(change: string) {
   }
 }
 
-async function prepareDatabaseChange(options: {
-  releaseSql?: boolean;
-  validHash?: boolean;
-} = {}) {
+async function prepareDatabaseChange(
+  options: {
+    releaseSql?: boolean;
+    validHash?: boolean;
+  } = {},
+) {
   const change = await makeCrossServiceChange();
   const append = async (rel: string, content: string) => {
     const file = path.join(change, rel);
@@ -538,6 +569,20 @@ describe("superflow-guard.sh", () => {
 
   afterEach(async () => {
     await fs.promises.rm(tmp, { recursive: true, force: true });
+  });
+
+  it("rejects full docs without a closed requirement review", async () => {
+    const change = await makeCrossServiceChange();
+    await fs.promises.rm(path.join(change, "requirement-review.md"));
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("missing file: requirement-review.md"),
+    });
   });
 
   it("rejects database design that defers release SQL to implementation", async () => {
@@ -639,9 +684,7 @@ describe("superflow-guard.sh", () => {
     const design = path.join(change, "design.md");
     await write(
       design,
-      fs
-        .readFileSync(design, "utf8")
-        .replace(/New-item counts:.*\n/, ""),
+      fs.readFileSync(design, "utf8").replace(/New-item counts:.*\n/, ""),
     );
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [HANDOFF, change, "--write"]);
@@ -719,20 +762,30 @@ describe("superflow-guard.sh", () => {
   it.each([
     ["real user entry", "Real user entry", "real user entry"],
     ["all writers", "All writers", "all writers inventory"],
-    ["current and legacy classification", "Evidence classifications: current; legacy;", "complete evidence classification set"],
+    [
+      "current and legacy classification",
+      "Evidence classifications: current; legacy;",
+      "complete evidence classification set",
+    ],
     ["DB check reason", "DB check", "DB check or skip reason"],
-  ])("blocks docs when source fact audit lacks %s", async (_name, removed, expected) => {
-    const change = await makeCrossServiceChange();
-    const audit = path.join(change, "source-code-audit.md");
-    await write(audit, fs.readFileSync(audit, "utf8").replaceAll(removed, ""));
-    await execFileAsync("bash", [STATE, "init", change, "docs"]);
-    await execFileAsync("bash", [HANDOFF, change, "--write"]);
-    await replacePendingHash(change);
+  ])(
+    "blocks docs when source fact audit lacks %s",
+    async (_name, removed, expected) => {
+      const change = await makeCrossServiceChange();
+      const audit = path.join(change, "source-code-audit.md");
+      await write(
+        audit,
+        fs.readFileSync(audit, "utf8").replaceAll(removed, ""),
+      );
+      await execFileAsync("bash", [STATE, "init", change, "docs"]);
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      await replacePendingHash(change);
 
-    await expect(
-      execFileAsync("bash", [GUARD, change, "docs"]),
-    ).rejects.toMatchObject({ stderr: expect.stringContaining(expected) });
-  });
+      await expect(
+        execFileAsync("bash", [GUARD, change, "docs"]),
+      ).rejects.toMatchObject({ stderr: expect.stringContaining(expected) });
+    },
+  );
 
   it("accepts a complete source fact freeze card in both guards", async () => {
     const change = await makeCrossServiceChange();
@@ -768,7 +821,9 @@ describe("superflow-guard.sh", () => {
     await expect(
       execFileAsync("bash", [GUARD, change, "docs"]),
     ).rejects.toMatchObject({
-      stderr: expect.stringContaining("complexity reduction review PASS verdict"),
+      stderr: expect.stringContaining(
+        "complexity reduction review PASS verdict",
+      ),
     });
   });
 
@@ -779,7 +834,10 @@ describe("superflow-guard.sh", () => {
       gate,
       fs
         .readFileSync(gate, "utf8")
-        .replace("Minimal Design Review: PASS.", "Minimal Design Review: BLOCKED."),
+        .replace(
+          "Minimal Design Review: PASS.",
+          "Minimal Design Review: BLOCKED.",
+        ),
     );
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [HANDOFF, change, "--write"]);
@@ -788,7 +846,9 @@ describe("superflow-guard.sh", () => {
     await expect(
       execFileAsync("bash", [GUARD, change, "docs"]),
     ).rejects.toMatchObject({
-      stderr: expect.stringContaining("complexity reduction review PASS verdict"),
+      stderr: expect.stringContaining(
+        "complexity reduction review PASS verdict",
+      ),
     });
   });
 
@@ -799,7 +859,10 @@ describe("superflow-guard.sh", () => {
       gate,
       fs
         .readFileSync(gate, "utf8")
-        .replace("Minimal Design Review: PASS.", "Minimal Design Review: BLOCKED."),
+        .replace(
+          "Minimal Design Review: PASS.",
+          "Minimal Design Review: BLOCKED.",
+        ),
     );
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [HANDOFF, change, "--write"]);
@@ -808,7 +871,9 @@ describe("superflow-guard.sh", () => {
     await expect(
       execFileAsync("bash", [EN_GUARD, change, "docs"]),
     ).rejects.toMatchObject({
-      stderr: expect.stringContaining("complexity reduction review PASS verdict"),
+      stderr: expect.stringContaining(
+        "complexity reduction review PASS verdict",
+      ),
     });
   });
 

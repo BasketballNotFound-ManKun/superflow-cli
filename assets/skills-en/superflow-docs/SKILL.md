@@ -131,6 +131,12 @@ For complex requirements, verify these before writing docs:
   `BLOCKED`; only `PASS` may leave docs/design. Missing reuse evidence, parallel APIs/models, redundant persisted
   fields, speculative cache/async/compensation, or an unresolved simpler option
   blocks docs completion.
+- After a reviewable full-workflow contract draft exists, run
+  `$superflow-requirement-review` before docs guard completion. It must create
+  `requirement-review.md`, repair canonical documents for every confirmed
+  `BLOCKER/IMPORTANT` finding, and re-review from source evidence. Record its
+  verdict and unresolved findings in `sdd-quality-gate.md` and `test-report.md`.
+  A missing report or unresolved blocking finding prevents transition to design.
 - `design.md` stays the OpenSpec/SDD design contract: requirement mapping,
   API/DB/field semantics, source facts, real-entry call chain, no-fallback
   boundary, risks, and acceptance hooks. It must not try to own all source-level
@@ -197,6 +203,7 @@ applicable:
 - `traceability-matrix.md` when tasks are split
 - `mock.md` when external dependencies exist
 - `review-checklist.md` when implementation will be split
+- `requirement-review.md` for full-workflow changes before docs completion
 - `source-code-audit.md` for full existing-system, DB, cross-repo, or real-entry changes
 - `release-sql.md` for every database change; omit it only when the docs prove
   that no schema/data migration is required

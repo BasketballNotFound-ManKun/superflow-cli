@@ -62,6 +62,29 @@ async function makeChangeDir() {
   );
   await write(path.join(change, 'review-checklist.md'), '# Review Checklist\n');
   await write(
+    path.join(change, 'requirement-review.md'),
+    [
+      '---',
+      'change: coupon-expiry-reminder',
+      'review_verdict: PASS',
+      'open_blockers: 0',
+      '---',
+      '',
+      '# Requirement Review',
+      '',
+      '## Closure Matrix',
+      '',
+      '| Feature | Input/trigger | Processing | Output | Failure | Recovery/repeat | Evidence | Verdict |',
+      '|---|---|---|---|---|---|---|---|',
+      '| Reminder | covered | covered | covered | covered | covered | source-backed | PASS |',
+      '',
+      '## Review Findings',
+      '',
+      'No open BLOCKER or IMPORTANT findings.',
+      '',
+    ].join('\n')
+  );
+  await write(
     path.join(change, 'source-code-audit.md'),
     [
       '# Source Code Audit',

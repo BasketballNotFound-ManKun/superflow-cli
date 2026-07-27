@@ -13,6 +13,7 @@
     "superflow-hotfix",
     "superflow-implement",
     "superflow-pipeline",
+    "superflow-requirement-review",
     "superflow-table-impact-analysis",
     "superflow-tweak",
     "superflow-verify"

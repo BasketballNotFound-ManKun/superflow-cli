@@ -8,6 +8,7 @@ export interface CliHelpText {
   initDescription: string;
   scanDescription: string;
   clarifyDescription: string;
+  requirementReviewDescription: string;
   docsDescription: string;
   designDescription: string;
   implementDescription: string;
@@ -54,6 +55,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     scanDescription:
       "Rerun project context scaffolding and understand-anything check",
     clarifyDescription: "Check SuperBridge Flow clarify skill deployment",
+    requirementReviewDescription:
+      "Check SuperBridge Flow requirement review skill deployment",
     docsDescription: "Check SuperBridge Flow docs skill deployment",
     designDescription: "Check SuperBridge Flow design skill deployment",
     implementDescription: "Check SuperBridge Flow implement skill deployment",
@@ -106,6 +109,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     scanDescription:
       "单独重跑项目扫描（脚手架 docs/sdd-context/ + understand-anything）",
     clarifyDescription: "校验 SuperBridge Flow clarify 阶段技能部署状态",
+    requirementReviewDescription:
+      "校验 SuperBridge Flow 需求反向评审技能部署状态",
     docsDescription: "校验 SuperBridge Flow docs 阶段技能部署状态",
     designDescription: "校验 SuperBridge Flow design 阶段技能部署状态",
     implementDescription: "校验 SuperBridge Flow implement 阶段技能部署状态",

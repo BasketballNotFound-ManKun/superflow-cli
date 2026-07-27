@@ -52,6 +52,10 @@ superflow pipeline "<implementation-prompt 路径、change 目录或简单任务
   remember.
 - Use `$superflow-clarify` only when product inputs are complex and must be frozen one
   feature at a time before creating OpenSpec artifacts.
+- Use `$superflow-requirement-review` when the user asks for 需求评审、反向评审、
+  挑战需求、找遗漏、查错误、可测性审查、过度设计检查，或要求确认现有
+  OpenSpec/SDD 设计有没有走偏。它在 docs 内形成独立复审闭环，不新增 workflow
+  phase；阻塞级发现必须修正 canonical 文档后复审。
 - Long PRDs, Lark/Feishu exports, screenshot-heavy requirements, and mixed
   product documents must not be converted into proposal/tasks in one pass.
   Route them through `$superflow-clarify` first. The clarify phase must create a
@@ -65,6 +69,9 @@ superflow pipeline "<implementation-prompt 路径、change 目录或简单任务
   output: API-first checks, UI/API/DB/test traceability, real-data test
   evidence, quality gates, and prompt handoff checks. Do not let `$superflow-docs`
   replace the OpenSpec skill workflow for core OpenSpec artifacts.
+- Full-workflow docs must run `$superflow-requirement-review` after a reviewable
+  contract draft exists and before docs guard completion. Record the result in
+  `requirement-review.md`; unresolved `BLOCKER/IMPORTANT` findings block design.
 - Use `$superflow-design` after `$superflow-docs` passes when full workflow needs
   Superpowers source-level HOW, technical design, reverse impact analysis,
   TDD/RED strategy, Worker/Tester/Reviewer split, or worktree/port planning.

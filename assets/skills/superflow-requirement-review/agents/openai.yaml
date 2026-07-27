@@ -1,0 +1,4 @@
+interface:
+  display_name: "Superflow 需求反向评审"
+  short_description: "基于源码反查需求与设计缺口并推动整改复审闭环"
+  default_prompt: "使用 $superflow-requirement-review 对当前 OpenSpec 需求和设计执行反向评审并闭环整改。"

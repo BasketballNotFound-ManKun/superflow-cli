@@ -714,6 +714,11 @@ case "$PHASE" in
     fi
     workflow="$(state_get workflow)"
     if [[ "$workflow" == "full" ]]; then
+      require_file requirement-review.md
+      require_grep '^review_verdict:[[:space:]]*PASS[[:space:]]*$' requirement-review.md "requirement reverse review PASS verdict"
+      require_grep '^open_blockers:[[:space:]]*0[[:space:]]*$' requirement-review.md "requirement reverse review has no open blockers"
+      require_grep '闭环矩阵|Closure Matrix' requirement-review.md "requirement review closure matrix"
+      require_grep '评审发现|Review Findings' requirement-review.md "requirement review findings"
       require_minimal_design_review design.md "complexity reduction review"
       require_grep '复杂度减法评审|反过度设计评审|Minimal Design Review|Complexity Reduction Review' sdd-quality-gate.md "complexity reduction quality gate"
       require_minimal_design_pass sdd-quality-gate.md
