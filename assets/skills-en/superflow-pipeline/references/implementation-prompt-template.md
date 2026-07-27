@@ -17,6 +17,13 @@ the new hash before continuing.
 OpenSpec/SDD is canonical for requirements, API, DB, SQL, tests, and acceptance.
 Superpowers technical design is canonical for source-level HOW and execution.
 
+For a database change, SQL is already frozen in
+[release-sql.md](../release-sql.md). The implementation agent may only copy its
+single SQL block verbatim to the exact `target_sql_path`, normalize line endings
+to LF with one trailing newline, and verify `sql_sha256`. Do not add, remove,
+reorder, split, or optimize SQL. Any omission returns to docs and requires a
+refreshed handoff; never design SQL inside the implementation prompt.
+
 ## Required Preflight
 
 - Real entry located.

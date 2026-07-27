@@ -66,4 +66,15 @@ describe('English skill assets', () => {
     expect(template).toContain('## Minimal Design Review');
     expect(template).toContain('Existing capability/reuse evidence');
   });
+
+  it('keeps frozen release SQL design gates in English assets', () => {
+    const pipeline = fs.readFileSync(EN_PIPELINE_SKILL, 'utf8');
+    const design = fs.readFileSync(EN_DESIGN_SKILL, 'utf8');
+
+    expect(pipeline).toContain('release-sql.md');
+    expect(pipeline).toContain('copy_policy: verbatim');
+    expect(pipeline).toContain('sql_sha256');
+    expect(design).toMatch(/complete executable\s+release SQL/);
+    expect(design).toContain('must not defer SQL design');
+  });
 });

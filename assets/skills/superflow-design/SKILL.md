@@ -21,6 +21,12 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
 
 ## Preconditions
 
+- When the change modifies a database schema, index, constraint, seed data, or
+  historical data, `release-sql.md` must already contain the complete executable
+  release SQL, an exact target `.sql` path, `copy_policy: verbatim`, and a valid
+  `sql_sha256`. Source-level HOW design must not defer SQL design to an
+  implementation prompt.
+
 - `proposal.md`, `api.md`, `design.md`, `tasks.md`, `tests.md`,
   `traceability-matrix.md`, `sdd-quality-gate.md`, and `test-report.md` exist.
 - `.sdd/state.yaml` exists and is in `phase: design`. If still `docs`, run:
@@ -38,15 +44,27 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
 
 1. Read `.sdd/handoff/sdd-context.md` plus original `api.md`, `design.md`,
    `tasks.md`, and `tests.md`.
-2. If design discussion is still evolving, maintain
+2. If the change has any schema, index, constraint, seed-data, or historical
+   migration impact, verify `release-sql.md` before source-level HOW design:
+   - front matter sets `database_change: true`, an exact `target_sql_path`,
+     `copy_policy: verbatim`, and the normalized SQL payload `sql_sha256`;
+   - exactly one `sql` block contains the complete executable release script,
+     including prechecks, DDL/DML, and post-verification required by the
+     contract;
+   - `design.md`, `tasks.md`, and `sdd-quality-gate.md` reference the artifact
+     and prohibit implementation agents from editing its SQL;
+   - unresolved SQL types, defaults, indexes, migration rules, or target paths
+     return to `$superflow-docs`. They must not be deferred to
+     `$superflow-implement`.
+3. If design discussion is still evolving, maintain
    `.sdd/handoff/brainstorm-summary.md` with confirmed, candidate, pending, and
    rejected items. Do not create final technical design from memory only.
-3. Use Superpowers `brainstorming` or equivalent deep design reasoning to
+4. Use Superpowers `brainstorming` or equivalent deep design reasoning to
    decide source-level HOW.
-4. Write:
+5. Write:
    `docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md`
    using `../superflow-pipeline/references/superpower-technical-design-template.md`.
-5. Complete `复杂度减法评审` before expanding source-level HOW. For every new
+6. Complete `复杂度减法评审` before expanding source-level HOW. For every new
    table, field, API, Service/component, abstraction, cache, async/MQ/event
    flow, scheduled job, or compatibility layer, prove existing reuse options,
    necessity, and why the simplest direct implementation is insufficient.
@@ -55,7 +73,7 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    duplicate DTO/API layers, derivable persistence, premature caches, and
    async compensation without measured need. Record the retained and removed
    counts; unresolved simpler alternatives keep the design blocked.
-6. For cross-repository, service-to-service, SDK, MQ, scheduler, device,
+7. For cross-repository, service-to-service, SDK, MQ, scheduler, device,
    callback, third-party, mini-program, gateway, or adapter changes, include
    `Architecture Boundary And Call Direction`. Prove owner module, call
    direction, existing entry/exit points, proposed entry/exit points, evidence
@@ -63,7 +81,7 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    adapter/protocol translator/device gateway into a business-entry
    orchestrator, stop and return to `$superflow-docs` unless the OpenSpec/SDD
    contract explicitly grants that ownership with approval evidence.
-7. For third-party platforms/tools, SDKs, MQ/Kafka, callbacks, payment
+8. For third-party platforms/tools, SDKs, MQ/Kafka, callbacks, payment
    gateways, cloud services, or other external integrations, include
    `External Integration Configuration And Deployment Contract`. Inventory
    every endpoint, app/tenant/project ID, Topic, Tag, Consumer Group,
@@ -75,7 +93,7 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    auto-creation or pre-existing resources must not be treated as proof that
    production will provision them. Missing production provisioning evidence
    blocks design completion.
-8. For concurrent requests, batch issue/activation/renewal, duplicate callbacks,
+9. For concurrent requests, batch issue/activation/renewal, duplicate callbacks,
    duplicate consumption, or repeated external delivery, include
    `Concurrency And Idempotency Ownership`. Use a stable business idempotency
    key and an application-layer atomic claim in a short transaction; persist
@@ -85,17 +103,17 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    optional fallback with proven natural uniqueness, historical cleanup,
    NULL/soft-delete semantics, and a conflict contract. Check-then-insert,
    process-local locks, and random IDs alone are blocked.
-9. For field/status/enum/sync changes, include `Field And Status Reverse
+10. For field/status/enum/sync changes, include `Field And Status Reverse
 Impact` and prove writers, readers, filters, derived sync paths, consumers,
    and tests. Direct setter-only design is blocked.
-10. For third-party, SDK, BEM/parking, payment/refund, financial display,
+11. For third-party, SDK, BEM/parking, payment/refund, financial display,
    source/origin, status sync, or external dictionary fields, include
    `External Enum Binding`. Prove local source fields/enums, external fields,
    external enum values, display/business/financial meaning, source evidence,
    owner confirmation, unresolved handling, and test evidence. A request
    succeeding or a field being non-null is not enough; unconfirmed values are
    blockers and must be returned to `$superflow-docs` or the user.
-11. For amount, fee, discount, deduction, refund, sharing, payment, invoice,
+12. For amount, fee, discount, deduction, refund, sharing, payment, invoice,
    balance, electricity fee, service fee, package settlement, proration,
    allocation, reconciliation, or financial display changes,
    include `Money Precision Boundary`. Prove calculation-state fields,
@@ -114,12 +132,12 @@ Impact` and prove writers, readers, filters, derived sync paths, consumers,
    level and policy source, deterministic residual strategy with stable
    tie-breaker, and positive/zero/negative evidence. For FX changes, freeze the
    directional rate metadata and one canonical conversion path.
-12. Record state:
+13. Record state:
    ```bash
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> technical_design docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md
    ../superflow-pipeline/scripts/superflow-state.sh set <change-dir> design_doc design.md
    ```
-13. Update `design.md` with `Superpowers Technical Design Handoff`, update
+14. Update `design.md` with `Superpowers Technical Design Handoff`, update
    `sdd-quality-gate.md` with the technical design path and hash, then run
    `../superflow-pipeline/scripts/superflow-handoff.sh <change-dir> --refresh`.
    If the guard reports a stale or missing hash, record the printed hash in
@@ -127,7 +145,7 @@ Impact` and prove writers, readers, filters, derived sync paths, consumers,
    `--refresh` again. Do not set `design_doc` to the Superpowers document;
    `design_doc` is the OpenSpec/SDD contract design, while `technical_design`
    is the Superpowers HOW document.
-14. Run:
+15. Run:
 
 ```bash
 ../superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>

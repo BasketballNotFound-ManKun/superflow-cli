@@ -21,6 +21,10 @@ review-checklist.md, sdd-quality-gate.md, test-report.md, and technical design.
 
 - Follow OpenSpec/SDD for WHAT and contract.
 - Follow Superpowers technical design for source-level HOW.
+- For database changes, read `release-sql.md`, copy its single SQL block
+  verbatim to the exact `target_sql_path`, and verify `sql_sha256`. Never
+  author, append, reorder, split, or optimize SQL during implementation. Return
+  omissions to docs and refresh the handoff.
 - Do not change forbidden files or root aggregate docs from a worker batch.
 - Use TDD: record RED failure before GREEN success.
 - Do not mark mock-only or unit-only evidence as real integration.

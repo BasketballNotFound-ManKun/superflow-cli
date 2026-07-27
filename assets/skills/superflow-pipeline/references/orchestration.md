@@ -585,9 +585,9 @@ curl -s http://localhost:{port}{context-path}/actuator/health | grep UP
     - ❌ 错误：不管数据库表结构是否满足设计，直接改业务代码
     - ✅ 正确：先连接开发环境数据库 SHOW CREATE TABLE 确认结构 → 发现缺失时执行汇总 SQL → 确认生效后再写代码
 
-12. **禁止自行创建独立 SQL 文件**
+12. **禁止实现阶段自行设计 SQL**
     - ❌ 错误：每个任务各建一个 SQL 文件
-    - ✅ 正确：所有 SQL 统一追加到需求级汇总 SQL 文件
+    - ✅ 正确：退回 docs 更新 `release-sql.md`，重算哈希并刷新 handoff；研发阶段只原样复制
 
 13. **禁止用代码绕过数据库结构缺失**
     - ❌ 错误：发现字段不存在时加 if-null 判断兼容

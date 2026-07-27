@@ -77,6 +77,16 @@ For complex requirements, verify these before writing docs:
   scenarios, and validation cases. If the docs only describe the write/sync
   path and do not prove consumers, stop and return to `$superflow-clarify`. Use
   `$superflow-table-impact-analysis` when available.
+- For any schema, index, constraint, seed-data, or historical-data change,
+  docs MUST create `release-sql.md` before `$superflow-design` or implementation
+  prompts. It contains exactly one complete executable `sql` block and front
+  matter with `database_change: true`, an exact `target_sql_path`,
+  `copy_policy: verbatim`, and the normalized payload `sql_sha256`. Freeze all
+  prechecks, DDL/DML, post-verification, defaults, constraints, indexes, and
+  migration semantics here. `design.md`, `tasks.md`, and
+  `sdd-quality-gate.md` must reference it and prohibit implementation agents
+  from editing the SQL. Placeholder paths, missing hashes, SQL fragments, or
+  deferred SQL design block docs completion.
 - For any status, enum, sync, derived, default, or compatibility behavior, the
   docs include business semantic evidence:
   `Source field | Source enum | Target field | Target enum | Consumer meaning | Business basis | Unknowns`.
@@ -188,6 +198,8 @@ applicable:
 - `mock.md` when external dependencies exist
 - `review-checklist.md` when implementation will be split
 - `source-code-audit.md` for full existing-system, DB, cross-repo, or real-entry changes
+- `release-sql.md` for every database change; omit it only when the docs prove
+  that no schema/data migration is required
 - `.sdd/state.yaml`
 - `.sdd/handoff/sdd-context.md`
 - `.sdd/handoff/sdd-context.json`

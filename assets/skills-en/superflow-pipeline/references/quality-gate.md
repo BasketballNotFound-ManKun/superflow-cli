@@ -17,6 +17,12 @@
   `source-code-audit.md` with a Source Fact Freeze Card, all writers and real
   callers, current/legacy/unmounted/data-model-only/owner-confirmed/blocked
   classifications, DB check or skip reason, conflict audit, and owner boundary.
+- Database changes have `release-sql.md` with `database_change: true`, an exact
+  placeholder-free `target_sql_path`, `copy_policy: verbatim`, a valid
+  `sql_sha256`, and exactly one complete executable SQL block with required
+  prechecks, DDL/DML, migration, and post-verification. Design, tasks, and the
+  quality gate state that implementation agents may only copy it verbatim;
+  omissions return to docs.
 
 ## Design Gate
 
@@ -55,6 +61,8 @@
   sum(other components)` instead of calculating and rounding every component
   independently.
 - SQL risk review exists for DB changes.
+- Source-level design does not author or defer release SQL; it consumes the
+  already frozen `release-sql.md` contract.
 - No fallback or guesswork is allowed without explicit owner approval.
 
 ## Implementation Gate

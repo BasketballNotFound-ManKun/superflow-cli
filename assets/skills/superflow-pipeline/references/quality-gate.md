@@ -67,6 +67,7 @@
 | 48   | **外部集成配置与部署合同**         | **涉及第三方平台/工具、SDK、MQ/Kafka、回调、支付渠道、云服务或其他外部集成时强制** | api.md、sdd-quality-gate.md、Superpowers 技术详设和实现 prompt 包含 `外部集成配置与部署合同` / `External Integration Configuration And Deployment Contract`；列出 endpoint、应用/租户/项目 ID、Topic/Tag/Consumer Group、namespace、webhook、ACL/role、开关、超时和凭据引用在本地/测试/生产的来源与创建方式，以及注入方式、运行 owner、创建 owner/时点、就绪证据、回滚、密钥处理和阻塞项；环境相关值不得只硬编码在注解/常量/业务代码；测试自动创建、历史资源或本地启动成功不能证明生产就绪，缺少生产创建证据必须阻塞发布 |
 | 49   | **并发与幂等归属**                 | **涉及并发、批量下发/开通/续费、重复提交/回调/消费或重复外部调用时强制** | sdd-quality-gate.md、Superpowers 技术详设和实现 prompt 包含 `Concurrency And Idempotency Ownership` / `并发与幂等归属`；明确业务幂等键、应用层原子占用 owner、短事务边界、PENDING/SUCCESS/FAILED 状态流转、重试复用原业务编码、外部调用边界和不确定结果对账；唯一索引不作为默认方案，只能在自然唯一、历史数据、NULL/软删除和冲突处理合同明确后作为可选兜底；测试覆盖并发、重复和重试 |
 | 50   | **复杂度减法评审**                 | **完整 workflow 的 docs/design 阶段强制** | `design.md` 与 Superpowers 技术详设包含 `复杂度减法评审`，逐项记录现有能力/复用证据、必要性、最简实现、删除/拒绝项和证据/阻塞；统计新增表、字段、API、Service/组件、缓存、异步/MQ/事件、定时任务和兼容层；能扩展现有模块、由字段推导或用单事务同步闭环时不得另建平行实现；`sdd-quality-gate.md` 必须给出 PASS/BLOCKED 结论，只有 PASS/通过才能离开 docs/design，存在无证据抽象或未决更简方案时阻塞 |
+| 51   | **冻结发布 SQL**                   | **涉及表/字段/索引/约束/初始化数据/历史迁移时强制** | docs 阶段已生成 `release-sql.md`；front matter 含 `database_change: true`、无占位符的精确 `target_sql_path`、`copy_policy: verbatim`、有效 `sql_sha256`；仅有一个完整可执行 SQL 代码块且包含合同要求的前置检查、DDL/DML、迁移和后置验证；design/tasks/quality gate 明确研发 Agent 只能原样复制，发现遗漏退回 docs，禁止 prompt 阶段临场设计 SQL |
 
 ### 文档完整性强制检查（新增，全部项目必做）
 
@@ -76,12 +77,12 @@
 | 27  | **顶层文档同步更新**                           | 新增/修改 embedded change 后，`tasks.md`、`traceability-matrix.md`、`sdd-quality-gate.md`、`tests.md`、`test-report.md` 已同步更新                                                                                                                                                 |
 | 28  | **implementation prompt 文档引用**             | prompt 中"必读文档"列表必须包含 `design.md`、`tests.md`、`review-checklist.md`、`sdd-quality-gate.md`，不能只引用 `api.md` 和 `spec.md`                                                                                                                                            |
 | 29  | **无"待后续生成"占位符**                       | 文档中不存在"待后续生成"、"待补充"、"TODO"等未完成的占位标记                                                                                                                                                                                                                       |
-| 30  | **需求级汇总 SQL 文件**                        | 如涉及数据库变更，已创建需求级汇总 SQL 文件（如 `sql/{version}.sql`），且 tasks.md / tests.md / prompt 中已明确引用该文件路径                                                                                                                                                      |
+| 30  | **需求级冻结发布 SQL**                        | 如涉及数据库变更，已创建 `release-sql.md` 并冻结目标版本路径和 SHA-256；tasks.md / tests.md / prompt 明确只能原样复制，不能让研发 Agent 追加或改写                                                                                                                                                      |
 | 31  | **tasks.md 标注 SQL 依赖**                     | 每个涉及数据库的任务已标注依赖的汇总 SQL 文件路径，不需要 SQL 的任务已写明"本任务不新增 SQL，但开始前仍需核查依赖表结构"                                                                                                                                                           |
 | 32  | **tests.md 包含数据库结构核查用例**            | 测试用例中包含 SHOW CREATE TABLE / SHOW COLUMNS 等数据库结构核查用例                                                                                                                                                                                                               |
 | 33  | **汇总 SQL 格式规范**                          | SQL 脚本采用简单直接格式（ALTER TABLE / INSERT），不使用 INFORMATION_SCHEMA 判断、PREPARE/EXECUTE 等过度兼容脚本，按任务编号或功能块追加注释                                                                                                                                       |
 | 34  | **数据库迁移类任务 prompt 强制顺序（阻塞级）** | 涉及表结构重构、旧数据迁移、状态字段变更、分页筛选依赖新表/新状态时：① prompt/pXX-xxx.md 中必须包含"强制执行顺序"章节；② 章节必须覆盖：核对数据库结构 → 执行表结构改造 → 执行旧数据迁移 → 回填 test-report 证据 → 才允许 Java 编码；③ 任一缺失视为文档交付不完整，阻塞进入开发阶段 |
-| 35  | **版本总 SQL 收口对账（阻塞级）**              | 每个涉及数据库的 P/CR 任务必须提供 `P编号                                                                                                                                                                                                                                          | 表       | 字段/索引/数据 | 源码引用             | 总SQL位置  | 开发库状态 | 测试库状态                                                                              | 处理结论` 对账表；开发库已有但源码依赖且总 SQL 缺失时必须补总 SQL；测试库已有字段不得重复 ADD，类型/注释不一致时生成 MODIFY；无对账表不得标记完成 |
+| 35  | **版本总 SQL 收口对账（阻塞级）**              | 每个涉及数据库的 P/CR 任务必须提供 `P编号                                                                                                                                                                                                                                          | 表       | 字段/索引/数据 | 源码引用             | 总SQL位置  | 开发库状态 | 测试库状态                                                                              | 处理结论` 对账表；开发库已有但冻结 SQL 缺失时必须退回 docs 更新 `release-sql.md`、哈希和 handoff，研发 Agent 不得补写；无对账表不得标记完成 |
 | 41  | **跨仓实体字段对账（阻塞级）**                 | 多仓共享表、复制实体、MyBatis-Plus `@TableName`/`BaseMapper` 时：① 必须提供 `表                                                                                                                                                                                                    | 真源结构 | 消费仓         | 实体/Mapper/SQL 字段 | 实际库字段 | 处理结论   | 验证证据`；② 任一消费仓映射不存在列或查询旧字段时阻塞；③ 不得通过给测试库补废弃字段绕过 |
 | 42  | **真实入口与测试端点分级（阻塞级）**           | 涉及外部系统链路时：① test-report 必须分开记录 `Mock 验证`、`测试端点验证`、`真实入口验证`；② 测试 Controller/绕过鉴权端点只能标记局部通过；③ 无真实入口 payload/响应/trace/DB 时，不得写真实链路通过                                                                              |
 | 44  | **Red-Green 证据占位（阻塞级）**               | test-report.md 必须预置 `RED 失败证据`、`GREEN 通过证据`、`接口自动化证据`、`DB 核查证据`、`日志核查证据`、`未自动化/阻塞用例`；每项绑定 tests.md 用例 ID                                                                                                                          |
@@ -142,7 +143,7 @@
 - 如果 D2（表结构改造 SQL）执行失败 → **阻塞**，修复 SQL 后重新执行，禁止先写 Java 代码
 - 如果 D3（旧数据迁移 SQL）执行失败或数量核对不一致 → **阻塞**，必须解决迁移问题，禁止用业务代码绕过
 - 如果 D4（迁移证据）缺失 → **阻塞**，明确"不允许进入编码阶段"，必须补齐 test-report 证据
-- 如果 D6（版本总 SQL 收口）缺失 → **阻塞**，必须补齐汇总 SQL 和对账表，不能只说开发库已存在
+- 如果 D6（版本总 SQL 收口）缺失 → **阻塞**，退回 docs 补齐冻结 SQL、哈希和对账表，不能只说开发库已存在
 - D5 只有通过后才能开始 Phase 1（读取文档）之后的编码工作
 
 ### P0 基线特有加禁
@@ -272,7 +273,7 @@
 - 批次报告中必须包含"数据库前置门禁"章节，写明检查了哪些表/字段/索引/初始化数据。
 - 报告中必须包含汇总 SQL 文件路径、执行的具体脚本、执行结果、复查确认结果。
 - 如果业务代码绕过字段缺失、空 SET、默认值缺失、初始化数据缺失等问题，应优先判断是否是 SQL 未执行导致。
-- 如果根因是 SQL 未执行，修复方向应是执行/补齐汇总 SQL，而不是继续加业务兼容代码。
+- 如果根因是 SQL 未执行，执行冻结 SQL；如果冻结 SQL 有遗漏，退回 docs，不能由研发 Agent 补写或加业务兼容代码。
 - 没有真实数据库结构核查和 SQL 执行证据时，结论必须写"未通过，缺少数据库前置门禁证据"。
 - 检查本需求下是否只维护了一个汇总 SQL 文件，是否存在各任务各自新建的独立 SQL 文件。
 - SQL 脚本是否采用简单直接格式，不存在过度兼容脚本（INFORMATION_SCHEMA 判断、PREPARE/EXECUTE 等）。
@@ -297,7 +298,7 @@
   - {批次/任务}：{缺失的数据库核查/SQL 执行证据} → 处理方式：{fix}
   - {批次/任务}：{发现代码绕过数据库缺失} → 根因判断：{SQL 未执行/设计变更} → 修复方向：{执行 SQL / 改设计}
 - 版本总 SQL 收口缺口：X 项
-  - {批次/任务}：{源码引用/开发库字段/测试库状态/总 SQL 缺口} → 处理方式：{补总 SQL / MODIFY / 不采纳并说明}
+  - {批次/任务}：{源码引用/开发库字段/测试库状态/冻结 SQL 缺口} → 处理方式：{退回 docs 更新 release-sql / 不采纳并说明}
 - 跨仓数据合同缺口：X 项
   - {表/消费仓}：{实体/Mapper/SQL 引用字段} → 实际库：{缺失/类型不一致/查询条件旧口径} → 处理方式：{修代码 / @TableField(exist=false) / 补最终合同 SQL / 阻塞}
 - 真实入口验收缺口：X 项

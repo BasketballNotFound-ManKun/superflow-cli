@@ -32,6 +32,16 @@
 - No-fallback decisions
 - Superpowers technical design handoff
 
+## release-sql.md (required for database changes)
+
+- Front matter: `database_change: true`, exact `target_sql_path`,
+  `copy_policy: verbatim`, and normalized payload `sql_sha256`
+- Exactly one complete executable `sql` block with required prechecks,
+  DDL/DML, migration, and post-verification
+- No placeholder path or deferred SQL design
+- Implementation agents only copy the block verbatim and verify the hash;
+  omissions return to docs
+
 ## tests.md
 
 - Case ID

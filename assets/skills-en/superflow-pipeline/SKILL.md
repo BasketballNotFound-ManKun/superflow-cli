@@ -226,6 +226,13 @@ The workflow must preserve these gates:
 - Architecture boundary and call-direction analysis for multi-repo, service,
   SDK, MQ, scheduler, callback, gateway, adapter, device, or third-party flows.
 - SQL risk review before implementation for DB changes.
+- Frozen release SQL before source design for DB changes. `release-sql.md` must
+  declare `database_change: true`, an exact placeholder-free
+  `target_sql_path`, `copy_policy: verbatim`, and the normalized SQL payload
+  `sql_sha256`, with exactly one complete executable SQL block containing the
+  required prechecks, DDL/DML, migration, and post-verification. Implementation
+  agents may only copy the block verbatim and verify the hash; any SQL design
+  omission returns to docs and requires a refreshed handoff.
 - Real-entry acceptance for integration, device, callback, payment, client, or
   cross-system flows. Mock-only is never real integration.
 - Delivery completeness: runtime code changes must update the relevant task
@@ -244,6 +251,9 @@ Implementation prompts must require:
 - worktree and port plan for parallel work;
 - real-entry validation commands from tests.md;
 - DB SELECT or SHOW CREATE checks when persisted state is touched;
+- `release-sql.md`, its exact target path, verbatim-copy rule, and SHA-256 when
+  the change touches schema or data migration; prompts must never ask an
+  implementation agent to author or append SQL;
 - log checks and error checks;
 - superflow-verify-integration and superflow-delivery-check before completion;
 - a report format that distinguishes Passed, Partially verified, and Blocked.

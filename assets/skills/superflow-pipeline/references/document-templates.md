@@ -70,21 +70,25 @@
 # Tasks: <功能名称>
 
 ## 需求级汇总 SQL 文件
-- 路径：`openspec/changes/{change-id}/sql/{汇总SQL文件名}`（如 `sql/{version}.sql`）
-- 所有新增表、改表、索引、默认值、初始化数据脚本统一追加到该文件
-- 禁止各任务各自新建独立 SQL 文件
+- 详设真源：`openspec/changes/{change-id}/release-sql.md`
+- front matter 必填：`database_change: true`、精确 `target_sql_path`、
+  `copy_policy: verbatim`、`sql_sha256`
+- `release-sql.md` 只允许一个 `sql` 代码块，必须在详设阶段包含完整可执行的前置
+  检查、DDL/DML、迁移和后置验证，不允许占位符或留给研发 Agent 补写
+- 研发任务只把该代码块原样复制到 `target_sql_path` 并核对 SHA-256；禁止自行
+  新建、追加、重排或改写 SQL。发现遗漏退回 `$superflow-docs`
 - 不需要 SQL 的任务也需写明"本任务不新增 SQL，但开始前仍需核查依赖表结构是否已满足设计"
 
 ## 1. Requirement A 实现
 - [ ] 1.1 修改 `FilePath.java`，在 `methodName()` 中增加 X 逻辑
   - 源码锚点：`FilePath.java:line-start-line-end`
   - 验收标准：调用 Y 接口后，Z 状态变为 W
-  - 依赖的汇总 SQL：`openspec/changes/{change-id}/sql/{文件名}` 第 XX-XX 行（或"本任务不新增 SQL，但开始前仍需核查依赖表结构"）
+  - 冻结 SQL：`release-sql.md` → `{target_sql_path}`，仅原样复制并核对 `sql_sha256`（或"本任务不新增 SQL，但开始前仍需核查依赖表结构"）
   - blocked by: 无
 - [ ] 1.2 修改 `FilePath2.java`，调整 `methodName2()` 返回值
   - 源码锚点：`FilePath2.java:line-start-line-end`
   - 验收标准：单元测试通过
-  - 依赖的汇总 SQL：`openspec/changes/{change-id}/sql/{文件名}` 第 XX-XX 行
+  - 冻结 SQL：`release-sql.md` → `{target_sql_path}`，仅原样复制并核对 `sql_sha256`
   - blocked by: 1.1
 ```
 

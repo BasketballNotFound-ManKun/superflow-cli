@@ -322,6 +322,97 @@ change_has_field_status_risk() {
     "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null
 }
 
+change_has_database_change() {
+  grep -RIEiq \
+    'database_change[[:space:]]*:[[:space:]]*true|数据库变更.{0,8}(是|需要|包含)|ALTER[[:space:]]+TABLE|CREATE[[:space:]]+TABLE|ADD[[:space:]]+(COLUMN|INDEX|KEY|CONSTRAINT)|(^|[^不未无])新增.{0,12}(表|字段|索引|约束)|(^|[^不未无])(历史数据|初始化数据).{0,12}(迁移|回填)|schema[ -]migration|database[ -]migration|add.{0,12}(table|column|index|constraint)' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tasks.md" \
+    "$CHANGE_DIR/database-contract.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
+require_frozen_release_sql() {
+  local release_sql="$CHANGE_DIR/release-sql.md"
+  local output
+
+  require_file release-sql.md
+  [[ -f "$release_sql" ]] || return 0
+
+  output="$(mktemp)"
+  if ! python3 - "$release_sql" >"$output" 2>&1 <<'PY'
+import hashlib
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+errors = []
+
+front_match = re.match(r"\A---\n(.*?)\n---(?:\n|\Z)", text, re.S)
+front = front_match.group(1) if front_match else ""
+if not front_match:
+    errors.append("front matter is missing")
+
+def field(name):
+    match = re.search(rf"(?m)^{re.escape(name)}:\s*(.*?)\s*$", front)
+    return match.group(1).strip().strip('"\'') if match else ""
+
+if field("database_change").lower() != "true":
+    errors.append("database_change must be true")
+
+target = field("target_sql_path")
+if not target or not target.lower().endswith(".sql"):
+    errors.append("target_sql_path must be an exact .sql path")
+if re.search(r"[<>{}]|testN|version|待定|pending", target, re.I):
+    errors.append("target_sql_path contains a placeholder")
+
+if field("copy_policy").lower() != "verbatim":
+    errors.append("copy_policy must be verbatim")
+
+declared_hash = field("sql_sha256").lower()
+if not re.fullmatch(r"[0-9a-f]{64}", declared_hash):
+    errors.append("sql_sha256 must be a 64-character lowercase SHA-256")
+
+blocks = re.findall(r"```sql[^\n]*\n(.*?)\n```", text, re.S | re.I)
+if len(blocks) != 1:
+    errors.append("release-sql.md must contain exactly one sql code block")
+else:
+    payload = blocks[0].replace("\r\n", "\n").replace("\r", "\n").rstrip("\n") + "\n"
+    actual_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    if declared_hash and actual_hash != declared_hash:
+        errors.append(
+            f"sql_sha256 mismatch: declared={declared_hash} actual={actual_hash}"
+        )
+    executable = re.sub(r"/\*.*?\*/|--[^\n]*", "", payload, flags=re.S)
+    if not re.search(
+        r"\b(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|MERGE|TRUNCATE|CALL)\b",
+        executable,
+        re.I,
+    ):
+        errors.append("sql block has no executable schema/data change statement")
+    if not re.search(r"\b(SELECT|SHOW|CALL)\b", executable, re.I):
+        errors.append("sql block has no executable verification statement")
+
+if errors:
+    print("; ".join(errors))
+    sys.exit(1)
+PY
+  then
+    issues+=("frozen release SQL invalid: $(tr '\n' ' ' < "$output" | sed -E 's/[[:space:]]+/ /g')")
+  fi
+  rm -f "$output"
+
+  require_grep 'release-sql\.md' design.md "frozen release SQL design reference"
+  require_grep 'release-sql\.md' tasks.md "frozen release SQL task reference"
+  require_grep 'release-sql\.md' sdd-quality-gate.md "frozen release SQL quality-gate reference"
+  require_grep '原样复制|verbatim' tasks.md "verbatim SQL copy task"
+  require_grep '原样复制|verbatim' sdd-quality-gate.md "verbatim SQL copy quality gate"
+}
+
 change_has_external_enum_risk() {
   grep -RIEiq \
     'BEM|payOrigin|payMode|支付来源|支付方式|财务口径|第三方枚举|第三方字段|third[- ]party enum|source system|SDK.*枚举|枚举.*SDK' \
@@ -618,6 +709,9 @@ case "$PHASE" in
     require_grep 'RED|红绿|GREEN' tests.md "RED/GREEN test contract"
     require_grep 'curl|Postman|Newman|pytest|RestAssured|自动化命令' tests.md "interface automation command"
     require_grep 'handoff_hash|sdd-context|上下文包|防漂移' sdd-quality-gate.md "handoff/context-drift gate"
+    if change_has_database_change; then
+      require_frozen_release_sql
+    fi
     workflow="$(state_get workflow)"
     if [[ "$workflow" == "full" ]]; then
       require_minimal_design_review design.md "complexity reduction review"
@@ -660,6 +754,9 @@ case "$PHASE" in
     require_handoff_current
     require_beta_handoff_structure
     require_hash_recorded
+    if change_has_database_change; then
+      require_frozen_release_sql
+    fi
     workflow="$(state_get workflow)"
     if [[ "$workflow" == "full" ]]; then
       require_minimal_design_review design.md "complexity reduction review"
@@ -702,6 +799,9 @@ case "$PHASE" in
     require_handoff_current
     require_beta_handoff_structure
     require_hash_recorded
+    if change_has_database_change; then
+      require_frozen_release_sql
+    fi
     require_any_prompt
     require_prompt_set
     require_grep 'OpenSpec/SDD|设计事实源|canonical|事实源' design.md "canonical source boundary"
@@ -728,6 +828,10 @@ case "$PHASE" in
         fi
       fi
       require_grep '上下文防漂移|handoff_hash|sdd-context' "$prompt_rel" "prompt context drift inheritance"
+      if change_has_database_change; then
+        require_grep 'release-sql\.md' "$prompt_rel" "prompt frozen release SQL reference"
+        require_grep '原样复制|verbatim|sql_sha256' "$prompt_rel" "prompt verbatim SQL copy contract"
+      fi
     fi
     require_state_value build_mode "build_mode"
     require_state_value isolation "isolation"

@@ -27,25 +27,32 @@
 - [api.md](../api.md)
 - [tests.md](../tests.md)
 - [prompt/implementation.md](implementation.md)
-- **本需求汇总 SQL 文件**：`../sql/{汇总SQL文件名}`（如不存在，说明本需求尚无数据库变更，但开始前仍需核查依赖表结构）
+- **冻结发布 SQL**：[release-sql.md](../release-sql.md)（数据库变更时必读；按
+  `target_sql_path` 原样复制并核对 `sql_sha256`）
 
 > Markdown 链接要求：本 prompt 中引用的其他 `.md` 交接文档必须使用相对路径
 > Markdown 链接，且能从当前 prompt 文件位置点击跳转；不要只写纯文本文件名。
 
 ## 数据库前置门禁（强制，在写任何代码前必须完成）
 
+SQL 已在详设阶段冻结。本批只有原样复制权：禁止新增、删除、重排、拆分或优化
+`release-sql.md` 的 SQL；发现遗漏必须停止并退回 `$superflow-docs`，刷新 handoff
+后才能继续。
+
 在修改业务代码前，必须先完成数据库结构核查，确保开发环境数据库与设计文档一致：
 
 1. **列出本批次依赖的表/字段/索引/默认值/初始化数据**：对照 design.md / api.md / spec.md / tasks.md 中涉及的数据库变更，列出本批次需要的全部数据库结构。
 2. **连接开发环境数据库执行核查**：对每个依赖的表执行 `SHOW CREATE TABLE` / `SHOW COLUMNS` / `SELECT` 确认实际结构。
-3. **发现缺失时执行汇总 SQL**：如果数据库结构或数据不满足设计要求，从本需求汇总 SQL 文件中找到对应脚本，连接开发环境数据库执行。
+3. **发现缺失时执行冻结 SQL**：如果数据库结构或数据不满足设计要求，把
+   `release-sql.md` 唯一 SQL 代码块原样复制到 `target_sql_path`，核对 SHA-256 后执行。
 4. **复查确认**：执行成功后再次查询确认结构/数据已生效。
 5. **只有数据库满足设计后，才能继续业务代码开发。**
-6. **完成前必须收口版本总 SQL**：本批新增/修改的表、字段、索引、默认值、初始化数据必须已合并进需求级汇总 SQL 文件，不能只存在于开发库、临时 SQL 或 agent 回复中。
+6. **完成前必须核对冻结 SQL**：目标版本文件必须与 `release-sql.md` 的归一化
+   SQL 正文哈希一致；实现阶段不得产生额外数据库变更。
 
 禁止：
 - 禁止为绕过数据库缺字段、缺默认值、缺初始化数据而修改业务逻辑。
-- 禁止自行创建独立 SQL 文件（所有 SQL 统一追加到需求级汇总 SQL 文件）。
+- 禁止自行设计或创建额外 SQL；只允许原样复制到已冻结的目标版本文件。
 - 禁止用 mock、单测通过或 BUILD SUCCESS 代替真实数据库结构核查。
 - SQL 脚本执行失败时必须停下来报告真实错误，不允许改业务代码绕过。
 - 禁止因为开发库已有字段就跳过总 SQL；测试/发布部署以版本总 SQL 为准。
@@ -56,11 +63,11 @@
 
 | P编号 | 表 | 字段/索引/数据 | 源码引用 | 总SQL位置 | 开发库状态 | 测试库状态 | 处理结论 |
 |---|---|---|---|---|---|---|---|
-| P{batch-id} | {table} | {column/index/data} | {class/mapper/method} | {sql file + line/comment block} | {已存在/缺失/差异} | {已存在/缺失/差异} | {补总SQL/MODIFY/不采纳说明} |
+| P{batch-id} | {table} | {column/index/data} | {class/mapper/method} | {target_sql_path + line/comment block} | {已存在/缺失/差异} | {已存在/缺失/差异} | {原样复制/退回docs/不采纳说明} |
 
 收口规则：
 - 源码/Mapper 会读写的字段，必须能在 `测试库当前结构 + 版本总 SQL 执行后结构` 中找到。
-- 开发库已有但总 SQL 缺失时，必须补总 SQL。
+- 开发库已有但冻结 SQL 缺失时，必须退回 docs 更新 `release-sql.md`、哈希和 handoff。
 - 测试库已有字段不得重复 `ADD COLUMN`；如果字段类型或注释与开发库不一致，生成 `MODIFY` 或写明不采纳理由。
 - 临时 SQL、单个 P 任务 SQL、开发库手工变更都不能替代版本总 SQL。
 
@@ -115,8 +122,8 @@
 
 **禁止事项：**
 - 禁止为绕过数据库缺字段、缺默认值、缺初始化数据、历史数据未迁移而修改业务逻辑
-- 禁止自行创建独立 SQL 文件。所有 SQL 脚本必须追加到需求级汇总 SQL 文件
-- 禁止把 SQL 写在临时说明里但不追加到需求汇总 SQL 文件
+- 禁止自行创建或追加 SQL。只能原样复制 `release-sql.md` 到冻结目标路径
+- 禁止把 SQL 写在临时说明或 Agent 回复里；遗漏必须退回 docs
 - 禁止用 mock、单测通过或 BUILD SUCCESS 代替真实数据库结构核查和数据迁移验证
 - SQL 脚本执行失败时，必须停下来报告真实错误，不允许改业务代码绕过
 - 禁止将本地迁移 SQL 提交到 Git（如项目约定不提交）
@@ -420,7 +427,8 @@ curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt \
 **汇总 SQL 文件**：`openspec/changes/{change-id}/sql/{汇总SQL文件名}`
 
 - 本批次所有数据库变更脚本必须从该文件获取
-- 如果需要新增数据库变更，必须追加到该汇总 SQL 文件（按任务编号注释，如 `-- P16 业务字段补齐`）
+- 如果实现时发现需要新增数据库变更，必须停止并退回 docs 更新
+  `release-sql.md`、`sql_sha256` 和 handoff；研发 Agent 不得追加 SQL
 - SQL 脚本采用简单直接格式（ALTER TABLE / INSERT），不使用 INFORMATION_SCHEMA 判断、PREPARE/EXECUTE 等过度兼容脚本
 - 如果本批次不需要新增 SQL，写明"本批次不新增 SQL，但开始前仍需核查依赖表结构是否已满足设计"
 

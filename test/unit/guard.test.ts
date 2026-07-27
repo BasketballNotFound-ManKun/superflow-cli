@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -467,6 +468,69 @@ async function replacePendingHash(change: string) {
   }
 }
 
+async function prepareDatabaseChange(options: {
+  releaseSql?: boolean;
+  validHash?: boolean;
+} = {}) {
+  const change = await makeCrossServiceChange();
+  const append = async (rel: string, content: string) => {
+    const file = path.join(change, rel);
+    await fs.promises.appendFile(file, content);
+  };
+
+  await append(
+    "proposal.md",
+    "\nDatabase change required: ALTER TABLE app_user ADD COLUMN nickname VARCHAR(64).\n",
+  );
+  await append(
+    "design.md",
+    "\nFrozen release SQL: [release-sql.md](release-sql.md), copy verbatim.\n",
+  );
+  await append(
+    "tasks.md",
+    "\n- [ ] Copy [release-sql.md](release-sql.md) verbatim to the exact target and verify sql_sha256.\n",
+  );
+  await append(
+    "sdd-quality-gate.md",
+    "\nFrozen release SQL gate: [release-sql.md](release-sql.md) must be copied verbatim and its sql_sha256 verified.\n",
+  );
+
+  if (options.releaseSql !== false) {
+    const sql = [
+      "ALTER TABLE app_user",
+      "    ADD COLUMN nickname VARCHAR(64) DEFAULT NULL;",
+      "",
+      "SHOW CREATE TABLE app_user;",
+      "",
+    ].join("\n");
+    const hash = createHash("sha256").update(sql).digest("hex");
+    await write(
+      path.join(change, "release-sql.md"),
+      [
+        "---",
+        "change: app-user-nickname",
+        "database_change: true",
+        "target_sql_path: sql/v1.0.0/v1.0.0.test2.sql",
+        "copy_policy: verbatim",
+        `sql_sha256: ${options.validHash === false ? "0".repeat(64) : hash}`,
+        "---",
+        "",
+        "# Frozen Release SQL",
+        "",
+        "```sql",
+        sql.trimEnd(),
+        "```",
+        "",
+      ].join("\n"),
+    );
+  }
+
+  await execFileAsync("bash", [STATE, "init", change, "docs"]);
+  await execFileAsync("bash", [HANDOFF, change, "--write"]);
+  await replacePendingHash(change);
+  return change;
+}
+
 describe("superflow-guard.sh", () => {
   beforeEach(async () => {
     tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "superflow-guard-"));
@@ -474,6 +538,46 @@ describe("superflow-guard.sh", () => {
 
   afterEach(async () => {
     await fs.promises.rm(tmp, { recursive: true, force: true });
+  });
+
+  it("rejects database design that defers release SQL to implementation", async () => {
+    const change = await prepareDatabaseChange({ releaseSql: false });
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("missing file: release-sql.md"),
+    });
+  });
+
+  it("rejects a frozen release SQL hash mismatch", async () => {
+    const change = await prepareDatabaseChange({ validHash: false });
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("sql_sha256 mismatch"),
+    });
+  });
+
+  it("accepts complete release SQL frozen before implementation", async () => {
+    const change = await prepareDatabaseChange();
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).resolves.toMatchObject({
+      stdout: expect.stringContaining("SDD guard passed for phase docs"),
+    });
+  });
+
+  it("enforces the frozen release SQL gate in English installs", async () => {
+    const change = await prepareDatabaseChange({ releaseSql: false });
+
+    await expect(
+      execFileAsync("bash", [EN_GUARD, change, "docs"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("missing file: release-sql.md"),
+    });
   });
 
   it("rejects a release version used as a nested change directory", async () => {
