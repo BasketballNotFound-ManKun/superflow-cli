@@ -75,17 +75,25 @@ docs -> design -> implement -> verify -> archive
 
 ```bash
 npm install -g @chenmk/superflow
+# 或本地源码：
+# git clone https://github.com/.../superflow-cli && cd superflow-cli && bash install.sh
 ```
 
 完整安装、初始化和日常使用教程见 [INSTALL.md](./INSTALL.md)。
 
+> **💡 装完即全局生效，无需逐项目 init**：`npm install -g @chenmk/superflow`（或 `bash install.sh`）会自动把 superflow hooks 注册到 `~/.claude/settings.json`（全局），**本机上所有项目仓库**都获得 superflow 守门。钩子内部靠 `.sdd-enforced` 标记懒激活（没跑 `superflow clarify` 之前所有钩子静默放行，零干扰）。
+>
+> 只有需要项目级产物（OpenSpec change 目录 / `.sdd/` 任务文件 / 团队约定）时，才在项目根目录跑 `superflow init`。**绝大多数项目不需要这一步**——hooks 已经在全局生效了。
+
 ## 快速开始
+
+> ⚠️ `superflow init` **通常不需要再跑**——参见上文「装完即全局生效」。下面这些命令只在你想加项目级产物或显式重置时使用。
 
 ```bash
 # 交互式选择 Claude Code / Codex / OpenCode（可多选）
 superflow init
 
-# 非交互模式，默认同时安装 Claude Code + Codex
+# 非交互模式，默认同时安装 Claude Code + Codex（默认 --scope global）
 superflow init --yes
 
 # 显式安装 OpenCode

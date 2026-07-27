@@ -98,24 +98,43 @@ if [[ ":$PATH:" != *":$PREFERRED_BIN:"* ]]; then
   log_warn "然后重开 shell"
 fi
 
-# ----- Step 5: 跑 superflow init + doctor -----
-log_info "Step 5 / 5: 跑 superflow init 部署（默认同时部署 Claude Code + Codex）"
-"$BIN_TARGET" --version
-echo ""
+# ----- Step 5: 在 /tmp 临时目录跑 superflow init（--scope global）-----
+# 目的：让本机所有项目仓库自动获得 superflow 守门
+#   - hooks 写入 ~/.claude/settings.json（全局生效，所有项目触发，靠 .sdd-enforced 懒激活）
+#   - skills 写入 ~/.claude/skills/（任何项目 agent 都能用 superflow-* 命令）
+#   - 项目级产物（openspec / .sdd/ 等）写到 /tmp 临时目录，跑完 rm -rf
+#   - 不污染任何真实项目仓库（避免之前"在源码目录跑 init 留临时上下文"的问题）
+log_info "Step 5 / 5: 全局部署 superflow（不污染任何项目）"
 
-# 提供 dry-run 选项
 SDD_INIT_FLAGS=""
 if [ "${1:-}" = "--dry-run" ]; then
   log_info "用户指定 --dry-run，仅打印计划不执行"
   SDD_INIT_FLAGS="--dry-run"
 fi
 
-# install.sh 在 CLI 源码目录跑；Step 5 是 per-project 的脚手架，
-# 会在源码仓库 docs/ 留临时上下文，所以 install 阶段跳过 Step 5
-# 用户在项目根目录单独跑 `superflow init` 才会执行 Step 5
-SDD_INIT_FLAGS="$SDD_INIT_FLAGS --yes --no-openspec-init --no-scan"
+# 自动检测 agent：装了 codex 就 both，否则只 claude（避免 spawn codex ENOENT）
+AGENT_FLAG="--agent claude"
+if command -v codex >/dev/null 2>&1; then
+  AGENT_FLAG="--agent both"
+fi
 
-"$BIN_TARGET" init $SDD_INIT_FLAGS
+INIT_BASE="--yes --no-openspec-init --no-scan --scope global $AGENT_FLAG"
+
+if [ "$SDD_INIT_FLAGS" = "--dry-run" ]; then
+  "$BIN_TARGET" init $INIT_BASE $SDD_INIT_FLAGS
+else
+  BOOTSTRAP_DIR="/tmp/superflow-bootstrap-$$"
+  rm -rf "$BOOTSTRAP_DIR"
+  mkdir -p "$BOOTSTRAP_DIR"
+  pushd "$BOOTSTRAP_DIR" > /dev/null
+  trap 'popd > /dev/null 2>&1; rm -rf "$BOOTSTRAP_DIR"' EXIT
+  "$BIN_TARGET" init $INIT_BASE
+  popd > /dev/null 2>&1
+  rm -rf "$BOOTSTRAP_DIR"
+  trap - EXIT
+fi
+
+log_ok "superflow 全局部署完成：hooks/skills 已写入 ~/.claude/，所有项目均受 superflow 守门（懒激活）"
 
 # ----- 完成 -----
 echo ""
