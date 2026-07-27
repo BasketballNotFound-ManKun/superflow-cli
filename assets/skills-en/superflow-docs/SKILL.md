@@ -136,7 +136,10 @@ For complex requirements, verify these before writing docs:
   `requirement-review.md`, repair canonical documents for every confirmed
   `BLOCKER/IMPORTANT` finding, and re-review from source evidence. Record its
   verdict and unresolved findings in `sdd-quality-gate.md` and `test-report.md`.
-  A missing report or unresolved blocking finding prevents transition to design.
+  Source-resolvable unknowns must be investigated, owner decisions must return to
+  clarification, and implementation-affecting external contracts must be evidenced and frozen.
+  Merely documenting or assigning a blocker does not close it. A missing report, non-READY
+  implementation verdict, or nonzero blocker count prevents transition to design.
 - `design.md` stays the OpenSpec/SDD design contract: requirement mapping,
   API/DB/field semantics, source facts, real-entry call chain, no-fallback
   boundary, risks, and acceptance hooks. It must not try to own all source-level

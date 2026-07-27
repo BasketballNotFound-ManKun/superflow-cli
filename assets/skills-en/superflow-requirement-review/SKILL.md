@@ -31,6 +31,17 @@ read-only database evidence when needed. Missing evidence is a finding, not perm
 2. Establish evidence through platform impact discovery, source, Mapper/SQL, real callers, and
    read-only DB checks. Treat graph output only as a locator. Classify evidence as `current`,
    `legacy`, `unmounted`, `data-model-only`, `owner-confirmed`, or `blocked`.
+   Classify every unresolved item by resolution ownership:
+   - `SOURCE_INVESTIGATION`: source, dependency, configuration, logs, or read-only DB can resolve
+     it. Continue investigating; do not ask the user or exit review.
+   - `OWNER_DECISION`: multiple valid product choices remain. Return to clarification and ask one
+     decision at a time.
+   - `EXTERNAL_CONTRACT`: third-party/cross-service request, response, signing, idempotency,
+     enum, callback, or responsibility contract. If it changes API, SQL, state, security, or test
+     assertions, it blocks PASS until evidence freezes it; merely documenting `Blocked` is not
+     closure.
+   - `EXECUTION_EVIDENCE`: implementation contract is frozen and only deployment, migration,
+     real-call, or runtime evidence remains. It may block delivery, not requirement review.
 3. Reverse-check six dimensions:
    - business closure: input, trigger, precondition, processing, output, failure, recovery, repeat;
    - source facts: real entry, all writers/readers/filters, legacy behavior, cross-repo consumers;
@@ -42,8 +53,11 @@ read-only database evidence when needed. Missing evidence is a finding, not perm
    downgrade when unavailable.
 5. Create or update `requirement-review.md` with baseline, closure matrix, findings, minimal-design
    review, remediation evidence, and final verdict. Its front matter must record the exact
-   machine-readable result: `review_verdict: PASS` and `open_blockers: 0` only after closure;
-   otherwise use `review_verdict: BLOCKED` and the real blocker count.
+   machine-readable result. PASS requires `review_verdict: PASS`,
+   `implementation_readiness: READY`, `open_blockers: 0`, `open_external_contracts: 0`,
+   `open_source_investigations: 0`, and `open_owner_decisions: 0`; otherwise use BLOCKED and real
+   counts. Include an `Open Blockers` table with category, affected implementation contract,
+   resolution owner, next evidence/question, and status.
 
 Use finding levels:
 
@@ -64,8 +78,10 @@ For every confirmed `BLOCKER/IMPORTANT` finding:
 4. Return to `superflow-clarify` if remediation changes an owner-confirmed contract.
 
 Re-review from the original sources and code evidence. Pass only when all blocking/important
-findings are closed, contract drift is explained, minimal-design review passes, owner decisions
-are recorded, and external unknowns remain explicitly blocked.
+findings are closed, contract drift is explained, minimal-design review passes, source
+investigations are exhausted, owner decisions are recorded, and implementation-affecting
+external contracts are evidenced and frozen. Only execution evidence that cannot change the
+implementation contract may remain blocked in tests or release readiness.
 
 After remediation, refresh handoff, run the docs guard and strict OpenSpec validation, and record
 the report path and verdict in `sdd-quality-gate.md` and `test-report.md`.
@@ -78,3 +94,6 @@ the report path and verdict in `sdd-quality-gate.md` and `test-report.md`.
 - Do not invent fallbacks, defaults, states, or compatibility layers to close findings.
 - Do not store findings in another workflow namespace.
 - Do not pass docs/design with unresolved blocking findings.
+- Do not close an implementation-affecting external contract because it is documented, assigned
+  to an owner, or deferred to integration.
+- Do not combine `review_verdict: PASS` with `implementation_readiness: BLOCKED`.

@@ -71,7 +71,9 @@ superflow pipeline "<implementation-prompt 路径、change 目录或简单任务
   replace the OpenSpec skill workflow for core OpenSpec artifacts.
 - Full-workflow docs must run `$superflow-requirement-review` after a reviewable
   contract draft exists and before docs guard completion. Record the result in
-  `requirement-review.md`; unresolved `BLOCKER/IMPORTANT` findings block design.
+  `requirement-review.md`; unresolved source investigations, owner decisions,
+  implementation-affecting external contracts, or `BLOCKER/IMPORTANT` findings block design.
+  A blocker is not closed merely because the docs name it or defer it to integration.
 - Use `$superflow-design` after `$superflow-docs` passes when full workflow needs
   Superpowers source-level HOW, technical design, reverse impact analysis,
   TDD/RED strategy, Worker/Tester/Reviewer split, or worktree/port planning.

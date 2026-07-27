@@ -60,7 +60,9 @@ hotfix:
    source-ingestion, feature gates, inventory, UI/API gaps, and freeze review.
 2. docs: generate OpenSpec/SDD contract artifacts and the first handoff package.
    Before closing docs, run source-backed requirement review, repair blocking
-   findings, and record `requirement-review.md`.
+   findings, resolve all source investigations, owner decisions, and implementation-affecting
+   external contracts, then record `requirement-review.md`. Naming or assigning a blocker does
+   not close it.
 3. design: let Superpowers produce source-level technical design from the frozen
    contract and codebase evidence.
 4. implement: generate implementation prompts, execution plans, worktree/port

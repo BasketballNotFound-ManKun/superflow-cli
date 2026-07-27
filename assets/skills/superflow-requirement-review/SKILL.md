@@ -47,6 +47,18 @@ understand-anything 只作定位。将证据标记为 `current`、`legacy`、`un
 仓库和数据库能查明的事实不得转问用户。只有 owner 取舍才进入澄清，并且一次只问
 一个决策问题。
 
+所有未决项先按解决责任分类，禁止统一写成“外部待确认”：
+
+- `SOURCE_INVESTIGATION`：源码、依赖、配置、日志或只读数据库可以查明。评审者必须
+  继续调查，未查完不得退出评审，也不得转问用户。
+- `OWNER_DECISION`：存在两个以上成立方案，需要产品或业务 owner 取舍。返回
+  `superflow-clarify`，一次只问一个问题。
+- `EXTERNAL_CONTRACT`：第三方请求/响应、签名、幂等、枚举、回调或跨服务责任合同。
+  只要会改变 API、SQL、状态机、安全实现或测试断言，就属于实现阻塞项，必须取得
+  合同证据后才能 PASS；“已在文档标记 Blocked”不算关闭。
+- `EXECUTION_EVIDENCE`：已经冻结实现合同，仅等待部署、真实调用、迁移或运行证据。
+  可以留在 tests/test-report 阻塞交付，但不得伪装成合同未知项。
+
 ### 3. 六向反查
 
 逐项从结果反推前提，不能只沿设计正向复述：
@@ -69,7 +81,11 @@ understand-anything 只作定位。将证据标记为 `current`、`legacy`、`un
 ---
 change: <change-name>
 review_verdict: BLOCKED
+implementation_readiness: BLOCKED
 open_blockers: <number>
+open_external_contracts: <number>
+open_source_investigations: <number>
+open_owner_decisions: <number>
 ---
 
 # 需求反向评审
@@ -88,6 +104,10 @@ open_blockers: <number>
 ## 评审发现
 | ID | 等级 | 维度 | 位置 | 问题 | 证据 | 影响 | 最小修正 | 状态 |
 |---|---|---|---|---|---|---|---|---|
+
+## 未关闭阻塞项
+| ID | 分类 | 影响的实现合同 | 解决责任 | 下一证据/问题 | 状态 |
+|---|---|---|---|---|---|
 
 ## 过度设计与欠设计
 | 设计项 | 现有复用 | 必要性 | 删除/保留结论 | 证据 |
@@ -124,9 +144,15 @@ open_blockers: <number>
 - 所有 `BLOCKER/IMPORTANT` 已关闭并有文件与测试证据。
 - 没有未解释的 UI/API/DB/SQL/status/tests 漂移。
 - 复杂度减法结论成立，没有无证据的新抽象。
-- owner 决策均已记录；外部合同未知项明确标记 `Blocked`。
+- `SOURCE_INVESTIGATION` 已穷尽并回写证据，数量为0。
+- owner 决策均已记录，`OWNER_DECISION` 数量为0。
+- 会改变实现的 `EXTERNAL_CONTRACT` 已取得证据并冻结，数量为0；仅写成
+  `Blocked`、分配 owner 或列入任务不算关闭。
+- 剩余项只能是不会改变实现合同的 `EXECUTION_EVIDENCE`，并已进入测试/发布门禁。
 - `requirement-review.md` 结论为 `PASS`。
-- front matter 精确记录 `review_verdict: PASS` 和 `open_blockers: 0`。
+- front matter 精确记录 `review_verdict: PASS`、`implementation_readiness: READY`、
+  `open_blockers: 0`、`open_external_contracts: 0`、
+  `open_source_investigations: 0` 和 `open_owner_decisions: 0`。
 
 ### 7. 刷新门禁
 
@@ -142,6 +168,8 @@ open_blockers: <number>
 - 禁止为了覆盖边界而虚构默认值、fallback、状态或兼容层。
 - 禁止把评审结果落到其他流程目录，导致 OpenSpec change 无法追踪。
 - 禁止未关闭阻塞问题却将 docs/design 标为通过。
+- 禁止以“文档已记录”“已有 owner”“待联调”关闭会改变实现的外部合同。
+- 禁止 `review_verdict: PASS` 与 `implementation_readiness: BLOCKED` 并存。
 
 ## Handoff
 

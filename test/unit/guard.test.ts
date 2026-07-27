@@ -84,7 +84,11 @@ async function writeRequirementReview(change: string) {
       "---",
       "change: test-change",
       "review_verdict: PASS",
+      "implementation_readiness: READY",
       "open_blockers: 0",
+      "open_external_contracts: 0",
+      "open_source_investigations: 0",
+      "open_owner_decisions: 0",
       "---",
       "",
       "# Requirement Review",
@@ -98,6 +102,12 @@ async function writeRequirementReview(change: string) {
       "## Review Findings",
       "",
       "No open BLOCKER or IMPORTANT findings.",
+      "",
+      "## Open Blockers",
+      "",
+      "| ID | Category | Affected contract | Owner | Next evidence/question | Status |",
+      "|---|---|---|---|---|---|",
+      "| None | None | None | None | None | Closed |",
       "",
     ].join("\n"),
   );
@@ -583,6 +593,44 @@ describe("superflow-guard.sh", () => {
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("missing file: requirement-review.md"),
     });
+  });
+
+  it.each([
+    [
+      "blocked implementation readiness",
+      "implementation_readiness: READY",
+      "implementation_readiness: BLOCKED",
+      "requirement review implementation readiness",
+    ],
+    [
+      "open external contract",
+      "open_external_contracts: 0",
+      "open_external_contracts: 1",
+      "requirement review has no open external contracts",
+    ],
+    [
+      "open source investigation",
+      "open_source_investigations: 0",
+      "open_source_investigations: 1",
+      "requirement review has no open source investigations",
+    ],
+    [
+      "open owner decision",
+      "open_owner_decisions: 0",
+      "open_owner_decisions: 1",
+      "requirement review has no open owner decisions",
+    ],
+  ])("rejects full docs with %s", async (_name, from, to, expected) => {
+    const change = await makeCrossServiceChange();
+    const review = path.join(change, "requirement-review.md");
+    await write(review, fs.readFileSync(review, "utf8").replace(from, to));
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "docs"]),
+    ).rejects.toMatchObject({ stderr: expect.stringContaining(expected) });
   });
 
   it("rejects database design that defers release SQL to implementation", async () => {

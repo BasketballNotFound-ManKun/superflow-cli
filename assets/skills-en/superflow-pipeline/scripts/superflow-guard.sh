@@ -693,9 +693,14 @@ case "$PHASE" in
     if [[ "$workflow" == "full" ]]; then
       require_file requirement-review.md
       require_grep '^review_verdict:[[:space:]]*PASS[[:space:]]*$' requirement-review.md "requirement reverse review PASS verdict"
+      require_grep '^implementation_readiness:[[:space:]]*READY[[:space:]]*$' requirement-review.md "requirement review implementation readiness"
       require_grep '^open_blockers:[[:space:]]*0[[:space:]]*$' requirement-review.md "requirement reverse review has no open blockers"
+      require_grep '^open_external_contracts:[[:space:]]*0[[:space:]]*$' requirement-review.md "requirement review has no open external contracts"
+      require_grep '^open_source_investigations:[[:space:]]*0[[:space:]]*$' requirement-review.md "requirement review has no open source investigations"
+      require_grep '^open_owner_decisions:[[:space:]]*0[[:space:]]*$' requirement-review.md "requirement review has no open owner decisions"
       require_grep 'Closure Matrix' requirement-review.md "requirement review closure matrix"
       require_grep 'Review Findings' requirement-review.md "requirement review findings"
+      require_grep 'Open Blockers' requirement-review.md "requirement review open blocker ledger"
       require_minimal_design_review design.md "complexity reduction review"
       require_grep 'Minimal Design Review|Complexity Reduction Review' sdd-quality-gate.md "complexity reduction quality gate"
       require_minimal_design_pass sdd-quality-gate.md

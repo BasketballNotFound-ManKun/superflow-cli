@@ -32,7 +32,15 @@ describe("superflow requirement review skill", () => {
     expect(skill).toContain("独立复审");
     expect(skill).toContain("superflow-table-impact-analysis");
     expect(skill).toContain("review_verdict: PASS");
+    expect(skill).toContain("implementation_readiness: READY");
     expect(skill).toContain("open_blockers: 0");
+    expect(skill).toContain("open_external_contracts: 0");
+    expect(skill).toContain("open_source_investigations: 0");
+    expect(skill).toContain("open_owner_decisions: 0");
+    expect(skill).toContain("SOURCE_INVESTIGATION");
+    expect(skill).toContain("OWNER_DECISION");
+    expect(skill).toContain("EXTERNAL_CONTRACT");
+    expect(skill).toContain("EXECUTION_EVIDENCE");
   });
 
   it("blocks full docs without a closed requirement review", () => {
@@ -48,6 +56,16 @@ describe("superflow requirement review skill", () => {
       expect(content).toContain("requirement reverse review PASS verdict");
       expect(content).toContain(
         "requirement reverse review has no open blockers",
+      );
+      expect(content).toContain("requirement review implementation readiness");
+      expect(content).toContain(
+        "requirement review has no open external contracts",
+      );
+      expect(content).toContain(
+        "requirement review has no open source investigations",
+      );
+      expect(content).toContain(
+        "requirement review has no open owner decisions",
       );
     }
   });
