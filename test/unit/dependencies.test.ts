@@ -94,6 +94,17 @@ describe('core/dependencies', () => {
     );
   });
 
+  it('Codex 增强插件不可用时不阻塞核心安装', async () => {
+    const source = await fs.readFile(
+      path.resolve('src/app/commands/init.ts'),
+      'utf-8'
+    );
+    expect(source).toContain('继续部署 Superflow 核心能力');
+    expect(source).not.toContain(
+      'throw new Error(`codex superpowers install failed'
+    );
+  });
+
   it('依赖更新脚本使用 Codex 官方 marketplace', async () => {
     const script = await fs.readFile(
       path.resolve('assets/scripts/superflow-dependency-update-hook.sh'),

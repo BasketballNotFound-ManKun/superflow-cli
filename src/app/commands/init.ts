@@ -356,11 +356,17 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
       }
       if (agents.includes('codex')) {
         const sup = await installCodexSuperpowers();
-        if (!sup.ok) throw new Error(`codex superpowers install failed: ${sup.error}`);
-        log(zh
-          ? '  ✓ Codex Superpowers 已安装，包含验证、代码评审和分支收尾技能'
-          : '  ✓ Codex Superpowers installed for verification, code review, and branch closeout'
-        );
+        if (!sup.ok) {
+          warn(zh
+            ? `[WARN] Codex Superpowers 当前不可安装，继续部署 Superflow 核心能力：${sup.error}`
+            : `[WARN] Codex Superpowers is currently unavailable; continuing with core Superflow deployment: ${sup.error}`
+          );
+        } else {
+          log(zh
+            ? '  ✓ Codex Superpowers 已安装，包含验证、代码评审和分支收尾技能'
+            : '  ✓ Codex Superpowers installed for verification, code review, and branch closeout'
+          );
+        }
         const und = await installCodexUnderstand();
         if (!und.ok) warn(`[WARN] codex understand-anything: ${und.error}`);
         const api = await installApiDocChangelog(
