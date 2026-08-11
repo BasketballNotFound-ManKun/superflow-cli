@@ -86,13 +86,49 @@ is_root_markdown_or_config() {
 }
 
 case "$REL" in
-  *.java|*.xml|*.sql|*.yml|*.yaml|*.properties)
+  *.java|*.kt|*.kts|*.xml|*.sql|*.yml|*.yaml|*.properties|*.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.py|*.go|*.rs|*.vue)
     RUNTIME=1
     ;;
   *)
     RUNTIME=0
     ;;
 esac
+
+require_coding_ready() {
+  local change_dir receipt expected_hash
+  change_dir=$(dirname "$(dirname "$STATE_FILE")")
+  receipt="$change_dir/.sdd/readiness/coding-ready.json"
+  expected_hash=$(awk -F':' '$1=="handoff_hash"{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}' "$STATE_FILE" 2>/dev/null)
+  if [ ! -f "$receipt" ] || [ -z "$expected_hash" ]; then
+    cat <<'BLOCK_MSG' >&2
+[SDD Coding Ready] 当前任务没有可用的 Coding Ready 凭证，禁止修改运行时代码。
+请先完成多轮文档评审、环境预检和 docs/design/implement 门禁，再执行：
+superflow check <change> --level coding-ready
+BLOCK_MSG
+    return 2
+  fi
+  python3 - "$receipt" "$expected_hash" <<'PY'
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        receipt = json.load(handle)
+except Exception:
+    raise SystemExit(2)
+if receipt.get("codingReady") is not True:
+    raise SystemExit(2)
+if receipt.get("schemaVersion") != "superflow.coding-ready.v1":
+    raise SystemExit(2)
+if receipt.get("handoffHash") != sys.argv[2]:
+    raise SystemExit(2)
+PY
+  if [ $? -ne 0 ]; then
+    cat <<'BLOCK_MSG' >&2
+[SDD Coding Ready] 凭证已过期或与当前 handoff hash 不一致。
+请重新执行 superflow check <change> --level coding-ready。
+BLOCK_MSG
+    return 2
+  fi
+}
 
 case "$PHASE" in
   docs)
@@ -108,6 +144,9 @@ BLOCK_MSG
     fi
     ;;
   implement|verify)
+    if [ "$RUNTIME" -eq 1 ]; then
+      require_coding_ready || exit 2
+    fi
     exit 0
     ;;
   archive)

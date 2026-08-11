@@ -53,7 +53,7 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 - **5 个阶段 × 5+ 门禁脚本硬阻断。** `superflow-guard.sh` + `superflow-hook-guard.sh` + `superflow-contract-hooks.sh` + `superflow-sql-sync-hook.py` + `superflow-test-report-lint.py` + `superflow-verify-integration.sh`。没有 handoff hash 不进实现，没有真实入口证据不写"通过"。
 - **用 handoff + state + sha256 治上下文漂移。** 长会话压缩、切 agent、并行 worktree——`.sdd/handoff/sdd-context.{md,json}` + sha256 + `.sdd/state.yaml` 让 Worker / Tester / Reviewer 始终基于同一份上下文，hash 对不上的旧 prompt 自动被 guard 拒绝。
 - **用户只说一句话，流水线跑 9 步。** 不用写复杂 prompt：`> 用 SuperFlow 处理这个需求` 触发 clarify → docs → design → implement → verify → archive。阶段推进、guard、hash、hook 全是流程强制，不靠用户自觉。
-- **`superflow check` 一键诊断文档缺口。** 对照 13 项必备 SDD 文件逐项核验，缺失即 exit 1。再也不会进了 implement 才发现 proposal 没写——check 在 docs 阶段就拦住你。
+- **`superflow check` 分级诊断交付就绪度。** `files` 检查必备文件，`docs` 增加逐 Prompt 链接、多轮评审和复杂流程图检查，`coding-ready` 再执行环境预检及 docs/design/implement 全门禁，并生成绑定当前 handoff hash 的可编码凭证。
 - **`superflow config` 按需调整审查强度。** `--review-mode off|standard|thorough` 控制代码审查深度；`--auto-transition` 控制阶段自动流转。不同改动匹配不同强度，省 token 不省质量。
 - **启动自动检查新版本。** 每次执行 superflow 命令，后台静默对比 npm registry。发现新版本时 stderr 输出升级提示，不阻塞、不拖慢。
 
@@ -161,12 +161,12 @@ superflow pipeline "<prompt 路径、change 目录或任务>" --managed \
 | `superflow --language en --help` | 查看英文 CLI help |
 | `superflow scan --language en` | 重新生成英文项目上下文模板 |
 | `superflow clarify [feature]` | 校验 SuperBridge Flow clarify 阶段技能部署 |
-| `superflow docs [change]` | 校验 SuperBridge Flow docs 阶段技能部署 |
+| `superflow docs [change]` | 执行 docs 门禁并校验阶段技能 |
 | `superflow design [change]` | 校验 SuperBridge Flow design 阶段技能部署 |
-| `superflow implement [task]` | 校验 SuperBridge Flow implement 阶段技能部署 |
+| `superflow implement [change]` | 生成当前 Coding Ready 凭证后进入实现阶段 |
 | `superflow pipeline` | 校验 SuperBridge Flow pipeline 阶段技能部署 |
 | `superflow pipeline "<任务>" --managed --project <目录>` | 双 Agent 托管开发并等待交付终态 |
-| `superflow check <change>` | 对照 13 项必备文件清单检查文档完整性 |
+| `superflow check <change> --level files\|docs\|coding-ready` | 分级检查文件、文档交付或可直接编码就绪度 |
 | `superflow config <change> --review-mode <mode>` | 设置代码审查强度（off/standard/thorough） |
 | `superflow config <change> --auto-transition <bool>` | 控制阶段自动流转（true/false） |
 | `superflow status` | 展示所有 active change 的阶段、任务、文档缺口 |

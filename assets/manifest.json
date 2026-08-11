@@ -31,6 +31,9 @@
     "superflow-archive-command-hook.sh",
     "superflow-test-report-lint.py",
     "superflow-managed-work-check.mjs",
+    "superflow-document-audit.mjs",
+    "superflow-environment-preflight.mjs",
+    "superflow-coding-ready.mjs",
     "superflow-managed-work-guard.sh",
     "install-sql-pre-commit.sh",
     "sync-settings-json.py"

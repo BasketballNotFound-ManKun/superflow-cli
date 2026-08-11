@@ -22,12 +22,38 @@ export function resolveChangeDir(change: string): string {
 
 export function runChangeGuard(
   change: string,
-  phase: "design" | "verify",
+  phase: "docs" | "design" | "implement" | "verify",
+  options: { quiet?: boolean } = {},
 ): void {
   const guard = path.join(PIPELINE_SCRIPTS, "superflow-guard.sh");
   execFileSync("bash", [guard, resolveChangeDir(change), phase], {
-    stdio: "inherit",
+    stdio: options.quiet ? "pipe" : "inherit",
   });
+}
+
+export function runCodingReady(
+  change: string,
+  options: { json?: boolean } = {},
+): unknown {
+  const readiness = path.resolve(
+    ASSETS_DIR,
+    "scripts",
+    "superflow-coding-ready.mjs",
+  );
+  const args = [
+    readiness,
+    resolveChangeDir(change),
+    ...(options.json ? ["--json"] : []),
+  ];
+  if (options.json) {
+    const output = execFileSync(process.execPath, args, {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return JSON.parse(output);
+  }
+  execFileSync(process.execPath, args, { stdio: "inherit" });
+  return undefined;
 }
 
 export function runArchiveDryRun(change: string): void {

@@ -588,6 +588,56 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`
 
 任一项未填、填“不确定”但继续编码、或未记录证据，均视为阻塞。
 
+### 文档可交付性自主闭环（阻塞级）
+
+完整 workflow 的文档 Agent 不能把“guard 退出 0”当成“100% 可实施”。交付开发前必须
+基于同一份当前 handoff hash 完成至少三轮独立视角评审，并把机器可验证的结果写入
+`.sdd/reviews/document-review.json`：
+
+1. `source-contract`：核对源码、跨仓调用方、字段/API/状态合同和真实入口；
+2. `architecture-minimality`：核对职责边界、复用、最小实现、失败归属和过度设计；
+3. `e2e-environment`：核对启动顺序、配置环境、模拟器、自动化命令、DB/日志断言和清理。
+
+每轮必须记录 `inputHash`、`lens`、完整 findings 和关闭状态。能够从源码、配置、日志或
+安全探测获得的事实必须由 Agent 自行调查和修订；只有业务 owner 决策、不可获得的凭据/
+权限或外部资源才能写入 `openOwnerDecisions`。问题必须集中收集到最后一次询问，禁止逐个
+打断用户。存在未关闭 finding 或 owner decision 时只能标记 `BLOCKED_FOR_OWNER_BATCH`，
+不得宣称 100%。
+
+测试环境必须在文档阶段按配置文件优先探索，并写入
+`.sdd/readiness/environment.json`。只允许 `file`、`directory`、`executable`、`tcp`、
+`http` 等失败安全探测；不得输出凭据或向生产写数据。每项状态只能是 `READY`、
+`LOCAL_FIXTURE_READY`、`OWNER_HELP_REQUIRED` 或 `BLOCKED`。环境合同约定本地/开发环境时，
+不得擅自要求测试或生产环境。
+
+跨服务、跨仓、设备、MQ、回调、定时任务、状态机、补偿链路或三个以上模块的复杂逻辑，
+`.openspec.yaml` 必须声明 `complex_logic: true` 或 `mermaid: required`，设计文档至少包含
+一张 `sequenceDiagram` 和一张 `flowchart`/`stateDiagram`。图中必须展示失败出口、补偿
+owner 和明确禁止的 fallback。
+
+实现 Prompt 生成完成后执行：
+
+```bash
+superflow check <change> --level coding-ready
+```
+
+该命令必须通过 YAML、OpenSpec、docs/design/implement、全 Prompt 继承与精确交叉链接、
+多轮评审、环境预检和 Mermaid 检查，并生成与当前 handoff hash 绑定的
+`.sdd/readiness/coding-ready.json`。没有当前 Coding Ready 凭证时不得分发开发 Agent，
+也不得把完善 implement 门禁列为开发任务。
+
+### 跨系统失败归属与补偿边界（阻塞级）
+
+跨系统调用必须先记录：
+`失败信号 | 解释方 | 补偿方 | 是否允许重试 | 幂等依据 | 可接受的小窗口 |
+极端兜底 | owner确认`。
+
+当上游能够收到明确失败并负责退款、撤单或状态回退时，下游基础设施/适配层默认采用
+`Fail-fast + Fail-closed + At-most-once + Caller-owned compensation`：返回明确失败，
+不透明重试、不自动改投、不补发、不猜测成功。短暂误失败的代价低于重复副作用时，可以
+接受有边界的小并发窗口。只有业务 owner 明确要求且有幂等依据时才设计额外兜底；详设
+必须把这个例外与其他 owner-only 问题一起集中澄清，不能自行增加分布式补偿机制。
+
 ### 测试先行与接口自动化门禁（阻塞级）
 
 SDD 文档必须先冻结测试，再允许生成实现 prompt。研发 agent 不得先编码再临场补
@@ -956,6 +1006,7 @@ Load only the reference needed for the current phase:
 - API contract: `references/api-design-template.md`
 - OpenSpec format: `references/openspec-format.md`
 - Document quality: `references/quality-standards.md`
+- Document delivery readiness: `references/document-readiness.md`
 - Quality gate: `references/quality-gate.md`
 - 金额精度算法基线：`references/money-precision-algorithms.md`
 - Batch prompt split: `references/batch-split-guide.md`

@@ -29,6 +29,7 @@ import { existsSync, realpathSync } from "fs";
 import type { Language } from "../../types.js";
 import { resolveRuntimeLanguage } from "../../domains/config/cli-help.js";
 import { managedText } from "../../domains/managed-work/i18n.js";
+import { assertCodingReadyForPrompt } from "../../domains/sdd-readiness.js";
 
 const SKILL_NAME = "superflow-pipeline";
 
@@ -80,6 +81,9 @@ async function submitManagedTask(
     profile: options.profile,
     language,
   });
+  if (input.source === "sdd" && input.taskPromptPath && !options.dryRun) {
+    assertCodingReadyForPrompt(input.taskPromptPath);
+  }
   const contract = createManagedTaskContract({
     request: input.request,
     projectRoot: input.projectRoot,

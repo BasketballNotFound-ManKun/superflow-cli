@@ -140,6 +140,23 @@ For complex requirements, verify these before writing docs:
   clarification, and implementation-affecting external contracts must be evidenced and frozen.
   Merely documenting or assigning a blocker does not close it. A missing report, non-READY
   implementation verdict, or nonzero blocker count prevents transition to design.
+- Before developer handoff, a full workflow records three independent reviews
+  against the current handoff hash in `.sdd/reviews/document-review.json`:
+  `source-contract`, `architecture-minimality`, and `e2e-environment`.
+  Resolve discoverable gaps autonomously and ask owner-only blockers once at the end.
+- Explore the declared local/dev/test configuration before handoff and record
+  fail-safe probes in `.sdd/readiness/environment.json`. Tests use verified
+  startup commands, ports, simulators, and dependencies instead of leaving
+  environment discovery to the developer Agent.
+- Cross-repo, cross-service, device, MQ, callback, state-machine, or three-plus
+  module logic includes Mermaid `sequenceDiagram` and `flowchart`/`stateDiagram`.
+- Run `superflow check <change> --level coding-ready` after prompts are complete.
+  A failed implement gate is fixed by the docs workflow, never delegated to the
+  developer Agent.
+- When an upstream caller receives an explicit failure and owns refund/cancel
+  compensation, default to fail-fast, fail-closed, at-most-once, and
+  caller-owned compensation. Transparent retry/reroute/resend requires owner
+  approval in the cross-system failure ownership boundary.
 - `design.md` stays the OpenSpec/SDD design contract: requirement mapping,
   API/DB/field semantics, source facts, real-entry call chain, no-fallback
   boundary, risks, and acceptance hooks. It must not try to own all source-level

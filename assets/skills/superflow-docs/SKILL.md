@@ -150,6 +150,20 @@ Binding` with:
   clarification, and implementation-affecting external contracts must be evidenced and frozen.
   Merely documenting or assigning a blocker does not close it. A missing report, non-READY
   implementation verdict, or nonzero blocker count prevents transition to design.
+- 完整 workflow 在交给开发前，必须针对当前 handoff hash 完成三轮独立评审：
+  `source-contract`、`architecture-minimality`、`e2e-environment`，并写入
+  `.sdd/reviews/document-review.json`。可自行调查的问题继续修订；只把业务 owner、
+  不可获得的权限/凭据和外部资源集中到最后一次澄清。
+- 按配置文件探索本地/开发/测试环境，把失败安全检查写入
+  `.sdd/readiness/environment.json`。`tests.md` 必须使用已验证的启动命令、端口、
+  模拟器和依赖；不能把环境探索留给开发 Agent。
+- 跨仓、跨服务、设备、MQ、回调、状态机或三个以上模块的复杂逻辑必须提供 Mermaid
+  `sequenceDiagram` 与 `flowchart`/`stateDiagram`。
+- 实现 Prompt 完成后必须通过 `superflow check <change> --level coding-ready`，生成与
+  当前 handoff hash 绑定的 Coding Ready 凭证；失败的 implement 门禁不能转交开发 Agent。
+- 跨系统明确失败且上游拥有退款/撤单补偿时，默认快速失败、失败关闭、至多一次和调用方
+  补偿；禁止下游透明重试、改投或补发。额外兜底必须在“跨系统失败归属与补偿边界”中
+  获得 owner 确认。
 - `design.md` stays the OpenSpec/SDD design contract: requirement mapping,
   API/DB/field semantics, source facts, real-entry call chain, no-fallback
   boundary, risks, and acceptance hooks. It must not try to own all source-level

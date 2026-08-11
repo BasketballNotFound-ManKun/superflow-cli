@@ -1,10 +1,17 @@
-import { checkSkillDeployment, type SkillCheckOptions } from '../../domains/skill/check.js';
+import {
+  checkSkillDeployment,
+  type SkillCheckOptions,
+} from "../../domains/skill/check.js";
+import { runChangeGuard } from "./change-guard.js";
 
-const SKILL_NAME = 'superflow-docs';
+const SKILL_NAME = "superflow-docs";
 
 export async function docsCommand(
-  _change?: string,
-  options: SkillCheckOptions = {}
+  change?: string,
+  options: SkillCheckOptions = {},
 ): Promise<void> {
+  if (change) {
+    runChangeGuard(change, "docs");
+  }
   checkSkillDeployment(SKILL_NAME, options);
 }

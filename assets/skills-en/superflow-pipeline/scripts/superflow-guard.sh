@@ -323,6 +323,12 @@ change_has_field_status_risk() {
 }
 
 change_has_database_change() {
+  if grep -Eiq '^[[:space:]]*database:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+    return 1
+  fi
+  if grep -Eiq '^[[:space:]]*database:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+    return 0
+  fi
   grep -RIEiq \
     'database_change[[:space:]]*:[[:space:]]*true|database[ -]change.{0,12}(required|true|yes)|ALTER[[:space:]]+TABLE|CREATE[[:space:]]+TABLE|ADD[[:space:]]+(COLUMN|INDEX|KEY|CONSTRAINT)|schema[ -]migration|database[ -]migration|historical data.{0,12}(migration|backfill)|seed data.{0,12}(migration|backfill)|add.{0,12}(table|column|index|constraint)' \
     "$CHANGE_DIR/proposal.md" \
@@ -431,6 +437,12 @@ change_all_docs_without_complexity_budget() {
 }
 
 change_has_external_config_risk() {
+  if grep -Eiq '^[[:space:]]*external_config:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+    return 1
+  fi
+  if grep -Eiq '^[[:space:]]*external_config:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+    return 0
+  fi
   local content
   content="$(change_contract_docs_without_complexity_budget)"
   grep -Eiq \
@@ -439,6 +451,12 @@ change_has_external_config_risk() {
 }
 
 change_has_concurrency_idempotency_risk() {
+  if grep -Eiq '^[[:space:]]*concurrency:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+    return 1
+  fi
+  if grep -Eiq '^[[:space:]]*concurrency:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+    return 0
+  fi
   grep -RIEiq \
     'concurren|idempoten|race condition|duplicate (request|callback|consumption|delivery)|atomic claim|batch (issue|activate|renew)' \
     "$CHANGE_DIR/proposal.md" \
@@ -450,6 +468,12 @@ change_has_concurrency_idempotency_risk() {
 }
 
 change_has_money_precision_risk() {
+  if grep -Eiq '^[[:space:]]*money:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+    return 1
+  fi
+  if grep -Eiq '^[[:space:]]*money:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+    return 0
+  fi
   grep -RIEiq \
     '(^|[^[:alnum:]_])(amount|fee|fees|price|discount|deduction|refund|payment|invoice|balance|proration|allocation|reconciliation|residual|precision|rounding)([^[:alnum:]_]|$)|revenue sharing|profit sharing|split payment|electricity fee|service fee|package settlement|serviceFee|chargeFee|totalAmount|actualAmount|payAmount|refundAmount|discountAmount|invoiceAmount|balanceAmount' \
     "$CHANGE_DIR/proposal.md" \
@@ -526,8 +550,10 @@ change_has_architecture_boundary_risk() {
     <<< "$content"
 }
 
-first_prompt_rel() {
-  find "$CHANGE_DIR" -path '*/prompt/*.md' -type f | head -n 1 | sed "s#^$CHANGE_DIR/##"
+prompt_rels() {
+  find "$CHANGE_DIR" -path '*/prompt/*.md' -type f -print \
+    | LC_ALL=C sort \
+    | sed "s#^$CHANGE_DIR/##"
 }
 
 require_any_prompt() {
@@ -537,7 +563,7 @@ require_any_prompt() {
 }
 
 require_prompt_set() {
-  local task_count prompt_count non_index_prompt_count
+  local task_count prompt_count non_index_prompt_count prompt_rel document
   require_file prompt/implementation.md
   task_count="$(grep -E '^[[:space:]]*-[[:space:]]+\[[ xX]\]' "$CHANGE_DIR/tasks.md" 2>/dev/null | wc -l | tr -d ' ')"
   prompt_count="$(find "$CHANGE_DIR/prompt" -maxdepth 1 -type f -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
@@ -548,9 +574,15 @@ require_prompt_set() {
   if [[ "$prompt_count" -eq 0 ]]; then
     issues+=("missing prompt/*.md files")
   fi
-  if [[ -f "$CHANGE_DIR/tasks.md" ]] && ! grep -Riq 'prompt/.*\.md' "$CHANGE_DIR/tasks.md" "$CHANGE_DIR/traceability-matrix.md" "$CHANGE_DIR/sdd-quality-gate.md" "$CHANGE_DIR/test-report.md" 2>/dev/null; then
-    issues+=("prompt files are not cross-linked from tasks/traceability/quality gate/test-report")
-  fi
+  for document in tasks.md traceability-matrix.md sdd-quality-gate.md test-report.md; do
+    [[ -f "$CHANGE_DIR/$document" ]] || continue
+    while IFS= read -r prompt_rel; do
+      if ! grep -Fq "]($prompt_rel)" "$CHANGE_DIR/$document" \
+        && ! grep -Fq "](./$prompt_rel)" "$CHANGE_DIR/$document"; then
+        issues+=("$document does not link $prompt_rel")
+      fi
+    done < <(prompt_rels)
+  done
 }
 
 require_money_precision_contract() {
@@ -785,8 +817,8 @@ case "$PHASE" in
     require_any_prompt
     require_prompt_set
     require_grep 'OpenSpec/SDD|canonical design source|canonical|source of truth' design.md "canonical source boundary"
-    prompt_rel="$(first_prompt_rel)"
-    if [[ -n "${prompt_rel:-}" ]]; then
+    while IFS= read -r prompt_rel; do
+      [[ -n "${prompt_rel:-}" ]] || continue
       require_grep 'Superpowers Technical Design inheritance|Superpowers execution strategy inheritance|technical_design|source-level HOW' "$prompt_rel" "prompt Superpower strategy inheritance"
       technical_design_rel="$(state_get technical_design)"
       if [[ -n "${technical_design_rel:-}" && "$technical_design_rel" != "null" ]]; then
@@ -809,7 +841,7 @@ case "$PHASE" in
         require_grep 'release-sql\.md' "$prompt_rel" "prompt frozen release SQL reference"
         require_grep 'verbatim|sql_sha256' "$prompt_rel" "prompt verbatim SQL copy contract"
       fi
-    fi
+    done < <(prompt_rels)
     require_state_value build_mode "build_mode"
     require_state_value isolation "isolation"
     require_state_value tdd_mode "tdd_mode"

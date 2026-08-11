@@ -6,6 +6,7 @@ import {
   resolveChangeDir,
   runArchiveDryRun,
   runChangeGuard,
+  runCodingReady,
 } from "../../src/app/commands/change-guard.js";
 
 let tmp: string;
@@ -37,6 +38,15 @@ describe("change command guards", () => {
 
   it("executes the verify guard instead of only checking skill deployment", () => {
     expect(() => runChangeGuard("sample-change", "verify")).toThrow();
+  });
+
+  it("executes docs and implement guards", () => {
+    expect(() => runChangeGuard("sample-change", "docs")).toThrow();
+    expect(() => runChangeGuard("sample-change", "implement")).toThrow();
+  });
+
+  it("executes the coding-ready gate", () => {
+    expect(() => runCodingReady("sample-change")).toThrow();
   });
 
   it("executes archive dry-run before loading the archive skill", () => {

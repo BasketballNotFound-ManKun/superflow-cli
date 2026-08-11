@@ -134,12 +134,12 @@ program
   });
 
 program
-  .command("implement [task]")
+  .command("implement [change]")
   .description(helpText.implementDescription)
   .option("--agent <agent>", helpText.agentOption, "both")
-  .action(async (task, options) => {
+  .action(async (change, options) => {
     const { implementCommand } = await import("./commands/implement.js");
-    await implementCommand(task, options);
+    await implementCommand(change, options);
   });
 
 program
@@ -255,11 +255,19 @@ program
 
 program
   .command("check <change>")
-  .description("检查 SDD change 的文档完整性")
+  .description("按文件、文档交付或可编码等级检查 SDD change")
+  .option(
+    "--level <level>",
+    "检查等级：files | docs | coding-ready",
+    "files",
+  )
   .option("--json", "输出 JSON")
   .action(async (change, options) => {
     const { checkCommand } = await import("./commands/check.js");
-    await checkCommand(change, { json: options.json });
+    await checkCommand(change, {
+      json: options.json,
+      level: options.level,
+    });
   });
 
 program

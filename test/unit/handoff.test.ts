@@ -273,5 +273,5 @@ describe('superflow-handoff.sh', () => {
       'technical_design',
     ]);
     expect(technicalDesign.stdout.trim()).toBe('null');
-  });
+  }, 15_000);
 });

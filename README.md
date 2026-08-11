@@ -86,10 +86,10 @@ state, and dependency guards for Claude Code, Codex, and OpenCode.
   required: `> use SuperFlow to handle this requirement` triggers clarify →
   docs → design → implement → verify → archive. Phase progression, guards,
   hashes, and hooks are flow-enforced, not user-discipline.
-- **`superflow check` audits document completeness.** Runs against a 13-item
-  required-file checklist per change. Missing a required doc? Exit 1. No more
-  surprises at the implement phase — the gate catches gaps while you're still
-  in docs.
+- **`superflow check` audits delivery readiness by level.** `files` checks the
+  required set, `docs` adds every-prompt links, independent reviews, and complex
+  diagrams, while `coding-ready` adds environment preflight plus the complete
+  docs/design/implement gates and writes a receipt bound to the current handoff hash.
 - **`superflow config` tunes review depth per change.** `--review-mode
   off|standard|thorough` controls code-review intensity; `--auto-transition`
   controls automatic phase progression. Match the rigor to the risk.
@@ -189,12 +189,12 @@ best-effort and does not block initialization.
 | `superflow scan --language en` | Regenerate project context templates in English |
 | `superflow pipeline` | Check pipeline skill deployment |
 | `superflow pipeline "<task>" --managed --project <path>` | Run Dual-Agent managed development to a terminal delivery state |
-| `superflow docs` | Check docs-phase skill deployment |
+| `superflow docs [change]` | Run the docs gate and check the phase skill |
 | `superflow design` | Check design-phase skill deployment |
-| `superflow implement` | Check implement-phase skill deployment |
+| `superflow implement [change]` | Create a current Coding Ready receipt before implementation |
 | `superflow verify` | Check verify-phase skill deployment |
 | `superflow archive` | Check archive-phase skill deployment |
-| `superflow check <change>` | Audit 13-file SDD document completeness |
+| `superflow check <change> --level files\|docs\|coding-ready` | Audit file, document-delivery, or coding readiness |
 | `superflow config <change> --review-mode <mode>` | Set review depth (off/standard/thorough) |
 | `superflow config <change> --auto-transition <bool>` | Toggle automatic phase progression |
 | `superflow status` | List active changes with phase, tasks, and doc gaps |

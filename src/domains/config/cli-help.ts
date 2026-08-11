@@ -57,9 +57,10 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     clarifyDescription: "Check SuperBridge Flow clarify skill deployment",
     requirementReviewDescription:
       "Check SuperBridge Flow requirement review skill deployment",
-    docsDescription: "Check SuperBridge Flow docs skill deployment",
+    docsDescription: "Run the docs gate and check the docs skill deployment",
     designDescription: "Check SuperBridge Flow design skill deployment",
-    implementDescription: "Check SuperBridge Flow implement skill deployment",
+    implementDescription:
+      "Require a Coding Ready receipt before implementation",
     pipelineDescription:
       "Route SDD phases or manage an implementation prompt to terminal delivery",
     verifyDescription: "Check SuperBridge Flow verify skill deployment",
@@ -111,9 +112,9 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     clarifyDescription: "校验 SuperBridge Flow clarify 阶段技能部署状态",
     requirementReviewDescription:
       "校验 SuperBridge Flow 需求反向评审技能部署状态",
-    docsDescription: "校验 SuperBridge Flow docs 阶段技能部署状态",
+    docsDescription: "执行 docs 门禁并校验 SuperBridge Flow docs 技能",
     designDescription: "校验 SuperBridge Flow design 阶段技能部署状态",
-    implementDescription: "校验 SuperBridge Flow implement 阶段技能部署状态",
+    implementDescription: "通过 Coding Ready 门禁后进入实现阶段",
     pipelineDescription:
       "路由 SDD 阶段，或托管实现 Prompt 直到双 Agent 交付终态",
     verifyDescription: "校验 SuperBridge Flow verify 阶段技能部署状态",

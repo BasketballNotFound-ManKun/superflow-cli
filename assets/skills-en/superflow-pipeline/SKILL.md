@@ -196,6 +196,54 @@ Rules:
 
 ## Decision Points
 
+## Autonomous Document Delivery Closure
+
+A full-workflow docs Agent must not equate a successful keyword/file guard with
+100% implementation readiness. Before developer handoff, record at least three
+independent review lenses against the same current handoff hash in
+`.sdd/reviews/document-review.json`:
+
+1. `source-contract`: source, cross-repo callers, contracts, and real entries;
+2. `architecture-minimality`: ownership, reuse, simplest design, failure owner,
+   and overdesign;
+3. `e2e-environment`: startup order, configured environment, simulators,
+   automation, DB/log assertions, and cleanup.
+
+The Agent resolves every source/config/log/probe-discoverable gap itself. Only
+business-owner decisions, unavailable credentials/authority, or external
+resources may remain in `openOwnerDecisions`, and they are asked as one final
+batch. Open findings mean `BLOCKED_FOR_OWNER_BATCH`, never 100%.
+
+Explore the configured environment during docs and record
+`.sdd/readiness/environment.json`. Only fail-safe `file`, `directory`,
+`executable`, `tcp`, and `http` probes are allowed. Never print credentials or
+write production data. Respect the declared local/dev/test scope instead of
+requiring a remote environment by default.
+
+Cross-service, cross-repo, device, MQ, callback, scheduler, state-machine,
+compensation, or three-plus-module logic declares `complex_logic: true` or
+`mermaid: required` in `.openspec.yaml` and includes both a Mermaid
+`sequenceDiagram` and a `flowchart`/`stateDiagram` showing failure exits,
+compensation owner, and forbidden fallback.
+
+Run `superflow check <change> --level coding-ready` after all prompts are ready.
+It validates YAML, OpenSpec, docs/design/implement, every prompt and exact link,
+review receipts, environment probes, and Mermaid diagrams, then writes a receipt
+bound to the current handoff hash. Never delegate a failed implement gate to the
+developer Agent.
+
+## Cross-System Failure Ownership And Compensation Boundary
+
+Record `Failure signal | Interpreter | Compensation owner | Retry allowed? |
+Idempotency basis | Accepted race window | Extreme fallback | Owner approval`.
+When the caller receives an explicit failure and owns refund/cancel/state
+compensation, the downstream adapter defaults to `Fail-fast + Fail-closed +
+At-most-once + Caller-owned compensation`: no transparent retry, reroute,
+resend, or guessed success. Accept a bounded false-negative window when duplicate
+side effects are more harmful. Additional fallback requires explicit owner
+approval and a proven idempotency basis, collected with other owner-only
+questions in one final batch.
+
 Record irreversible or ambiguous decisions in references/decision-point.md
 format. Do not store decisions only in chat memory.
 
@@ -210,6 +258,9 @@ Decision points include:
 - archive confirmation
 
 ## Quality Gates
+
+The machine-readable review, environment, Mermaid, and Coding Ready contracts
+are defined in `references/document-readiness.md`.
 
 The workflow must preserve these gates:
 

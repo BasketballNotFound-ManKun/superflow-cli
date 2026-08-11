@@ -456,6 +456,16 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "",
   ].join("\n");
   await write(path.join(change, "test-report.md"), report);
+  const promptLinks =
+    "\n\n[Implementation](prompt/implementation.md) [P01](prompt/p01.md)\n";
+  for (const document of [
+    "tasks.md",
+    "traceability-matrix.md",
+    "sdd-quality-gate.md",
+    "test-report.md",
+  ]) {
+    await fs.promises.appendFile(path.join(change, document), promptLinks);
+  }
   await writeRequirementReview(change);
   return change;
 }
@@ -1114,6 +1124,56 @@ describe("superflow-guard.sh", () => {
     });
   });
 
+  it("honors explicit applicability decisions over keyword hints", async () => {
+    const change = await prepareMoneyPrecisionChange();
+    const previousHash = fs
+      .readFileSync(
+        path.join(change, ".sdd", "handoff", "sdd-context.sha256"),
+        "utf-8",
+      )
+      .trim();
+    await write(
+      path.join(change, ".openspec.yaml"),
+      [
+        "schema: superflow/v1",
+        "applicability:",
+        "  database: false",
+        "  external_config: false",
+        "  concurrency: false",
+        "  money: false",
+        "",
+      ].join("\n"),
+    );
+    await fs.promises.appendFile(
+      path.join(change, "proposal.md"),
+      "\nNo retry or duplicate request handling is added.\n",
+    );
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    const currentHash = fs
+      .readFileSync(
+        path.join(change, ".sdd", "handoff", "sdd-context.sha256"),
+        "utf-8",
+      )
+      .trim();
+    for (const document of [
+      "design.md",
+      "sdd-quality-gate.md",
+      "test-report.md",
+    ]) {
+      const file = path.join(change, document);
+      fs.writeFileSync(
+        file,
+        fs.readFileSync(file, "utf-8").replaceAll(previousHash, currentHash),
+      );
+    }
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "design"]),
+    ).resolves.toMatchObject({
+      stdout: expect.stringContaining("guard passed for phase design"),
+    });
+  });
+
   it("requires money precision boundary in the English design guard", async () => {
     const change = await prepareMoneyPrecisionChange();
 
@@ -1182,6 +1242,20 @@ describe("superflow-guard.sh", () => {
       execFileAsync("bash", [GUARD, change, "implement"]),
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("prompt money precision inheritance"),
+    });
+  });
+
+  it("checks inheritance in every implementation prompt", async () => {
+    const change = await prepareMoneyPrecisionChange({
+      designContract: true,
+      promptContract: true,
+    });
+    await write(path.join(change, "prompt", "p01.md"), "# Incomplete Prompt\n");
+
+    await expect(
+      execFileAsync("bash", [GUARD, change, "implement"]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("prompt Superpower strategy inheritance"),
     });
   });
 
