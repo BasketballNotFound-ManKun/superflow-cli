@@ -155,8 +155,9 @@ Binding` with:
   `.sdd/reviews/document-review.json`。可自行调查的问题继续修订；只把业务 owner、
   不可获得的权限/凭据和外部资源集中到最后一次澄清。
 - 按配置文件探索本地/开发/测试环境，把失败安全检查写入
-  `.sdd/readiness/environment.json`。`tests.md` 必须使用已验证的启动命令、端口、
-  模拟器和依赖；不能把环境探索留给开发 Agent。
+  `.sdd/readiness/environment.json`，并用 v2 `executionContract` 唯一冻结应用位置、依赖
+  策略、配置来源和允许/禁止覆盖项。`tests.md` 必须使用已验证的启动命令、端口、模拟器和
+  依赖；不能把环境探索留给开发 Agent，也不能只用“地址可连接”代替环境合同。
 - 跨仓、跨服务、设备、MQ、回调、状态机或三个以上模块的复杂逻辑必须提供 Mermaid
   `sequenceDiagram` 与 `flowchart`/`stateDiagram`。
 - 实现 Prompt 完成后必须通过 `superflow check <change> --level coding-ready`，生成与

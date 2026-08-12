@@ -24,9 +24,9 @@ const report = readReport(reportPath, issues);
 const handoffHash = readHandoffHash(changeDir, issues);
 
 if (report) {
-  if (report.schemaVersion !== "superflow.environment-readiness.v1") {
+  if (report.schemaVersion !== "superflow.environment-readiness.v2") {
     issues.push(
-      "环境报告 schemaVersion 必须为 superflow.environment-readiness.v1",
+      "环境报告 schemaVersion 必须为 superflow.environment-readiness.v2",
     );
   }
   if (report.handoffHash !== handoffHash) {
@@ -39,11 +39,22 @@ if (report) {
   if ((report.ownerHelpRequired?.length ?? 0) > 0) {
     issues.push("仍有需要用户协助的环境问题，必须集中澄清后再交付开发");
   }
+  const contractTargets = validateExecutionContract(
+    report.executionContract,
+    issues,
+  );
+  const referencedTargets = new Set();
   if (!Array.isArray(report.checks) || report.checks.length === 0) {
     issues.push("环境报告至少需要一项可执行检查");
   } else {
     for (const check of report.checks) {
+      validateContractRef(check, contractTargets, referencedTargets, issues);
       await probe(check, issues);
+    }
+    for (const target of contractTargets) {
+      if (!referencedTargets.has(target)) {
+        issues.push(`${target}: 缺少对应的失败安全检查`);
+      }
     }
   }
 }
@@ -110,6 +121,183 @@ async function probe(check, targetIssues) {
   } catch (error) {
     targetIssues.push(`${check.id}: ${safeError(error)}`);
   }
+}
+
+function validateExecutionContract(contract, targetIssues) {
+  const targets = new Set();
+  if (!contract || typeof contract !== "object") {
+    targetIssues.push("缺少结构化环境执行合同 executionContract");
+    return targets;
+  }
+
+  const applicationLocations = new Set(["local", "dev", "test"]);
+  if (!applicationLocations.has(contract.applicationLocation)) {
+    targetIssues.push("executionContract.applicationLocation 必须为 local/dev/test");
+  }
+
+  const dependencyPolicies = new Set([
+    "local-isolated",
+    "shared-dev",
+    "shared-test",
+    "mixed",
+  ]);
+  if (!dependencyPolicies.has(contract.dependencyPolicy)) {
+    targetIssues.push(
+      "executionContract.dependencyPolicy 必须为 local-isolated/shared-dev/shared-test/mixed",
+    );
+  }
+  if (typeof contract.allowLocalProvisioning !== "boolean") {
+    targetIssues.push("executionContract.allowLocalProvisioning 必须为布尔值");
+  }
+  if (typeof contract.allowRemoteDevDependencies !== "boolean") {
+    targetIssues.push("executionContract.allowRemoteDevDependencies 必须为布尔值");
+  }
+  if (
+    contract.dependencyPolicy === "shared-dev" &&
+    contract.allowLocalProvisioning === true
+  ) {
+    targetIssues.push("dependencyPolicy=shared-dev 禁止自建本地依赖");
+  }
+  if (
+    contract.dependencyPolicy === "local-isolated" &&
+    contract.allowRemoteDevDependencies === true
+  ) {
+    targetIssues.push("dependencyPolicy=local-isolated 禁止使用远程开发依赖");
+  }
+
+  validateOverrides(contract, targetIssues);
+  validateContractItems(
+    contract.services,
+    "service",
+    contract.dependencyPolicy,
+    targets,
+    targetIssues,
+  );
+  validateContractItems(
+    contract.dependencies,
+    "dependency",
+    contract.dependencyPolicy,
+    targets,
+    targetIssues,
+  );
+  return targets;
+}
+
+function validateOverrides(contract, targetIssues) {
+  const allowed = contract.allowedOverrides;
+  const forbidden = contract.forbiddenOverrides;
+  if (!isStringArray(allowed)) {
+    targetIssues.push("executionContract.allowedOverrides 必须为字符串数组");
+  }
+  if (!isStringArray(forbidden)) {
+    targetIssues.push("executionContract.forbiddenOverrides 必须为字符串数组");
+  }
+  if (!isStringArray(allowed) || !isStringArray(forbidden)) return;
+  const forbiddenSet = new Set(forbidden);
+  const overlap = [...new Set(allowed)].filter((item) => forbiddenSet.has(item));
+  if (overlap.length > 0) {
+    targetIssues.push(`允许覆盖项与禁止覆盖项重复: ${overlap.join(", ")}`);
+  }
+}
+
+function validateContractItems(
+  items,
+  type,
+  dependencyPolicy,
+  targets,
+  targetIssues,
+) {
+  const label = type === "service" ? "services" : "dependencies";
+  if (!Array.isArray(items) || items.length === 0) {
+    targetIssues.push(`executionContract.${label} 至少需要一项`);
+    return;
+  }
+  for (const item of items) {
+    if (!item?.id || typeof item.id !== "string") {
+      targetIssues.push(`${label}: 缺少 id`);
+      continue;
+    }
+    const reference = `${type}:${item.id}`;
+    if (targets.has(reference)) {
+      targetIssues.push(`${reference}: id 重复`);
+    }
+    targets.add(reference);
+    if (!isConfigSource(item.configSource)) {
+      targetIssues.push(`${item.id}: 缺少 configSource`);
+    }
+    if (
+      type === "service" &&
+      (!item.startupCommandSource ||
+        typeof item.startupCommandSource !== "string")
+    ) {
+      targetIssues.push(`${item.id}: 缺少 startupCommandSource`);
+    }
+    if (type === "dependency") {
+      validateDependency(item, dependencyPolicy, targetIssues);
+    }
+  }
+}
+
+function validateDependency(dependency, dependencyPolicy, targetIssues) {
+  const provisioningValues = new Set([
+    "local-isolated",
+    "shared-dev",
+    "shared-test",
+  ]);
+  if (!dependency.kind || typeof dependency.kind !== "string") {
+    targetIssues.push(`${dependency.id}: 缺少 kind`);
+  }
+  if (!provisioningValues.has(dependency.provisioning)) {
+    targetIssues.push(`${dependency.id}: provisioning 不合法`);
+    return;
+  }
+  if (
+    dependencyPolicy !== "mixed" &&
+    dependencyPolicy !== dependency.provisioning
+  ) {
+    targetIssues.push(
+      `${dependency.id}: provisioning 与 dependencyPolicy 不一致`,
+    );
+  }
+}
+
+function validateContractRef(
+  check,
+  contractTargets,
+  referencedTargets,
+  targetIssues,
+) {
+  if (!check?.id) return;
+  if (!check.contractRef || typeof check.contractRef !== "string") {
+    targetIssues.push(`${check.id}: 缺少 contractRef`);
+    return;
+  }
+  if (!contractTargets.has(check.contractRef)) {
+    targetIssues.push(`${check.id}: contractRef 未指向已声明的服务或依赖`);
+    return;
+  }
+  referencedTargets.add(check.contractRef);
+}
+
+function isStringArray(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isConfigSource(value) {
+  const types = new Set([
+    "bundled-profile",
+    "external-file",
+    "environment",
+    "cli-override",
+    "generated-fixture",
+  ]);
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      types.has(value.type) &&
+      typeof value.ref === "string" &&
+      value.ref.length > 0,
+  );
 }
 
 function resolveSafeTarget(target) {

@@ -63,31 +63,55 @@ applicability:
 
 ```json
 {
-  "schemaVersion": "superflow.environment-readiness.v1",
+  "schemaVersion": "superflow.environment-readiness.v2",
   "handoffHash": "<当前 handoff hash>",
   "scope": "local-dev",
   "overall": "READY",
   "ownerHelpRequired": [],
+  "executionContract": {
+    "applicationLocation": "local",
+    "dependencyPolicy": "shared-dev",
+    "allowLocalProvisioning": false,
+    "allowRemoteDevDependencies": true,
+    "allowedOverrides": ["server.port"],
+    "forbiddenOverrides": ["spring.datasource.url"],
+    "services": [
+      {
+        "id": "service-a",
+        "configSource": {
+          "type": "bundled-profile",
+          "ref": "application-prod.yml"
+        },
+        "startupCommandSource": "tests.md#启动命令"
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "redis",
+        "kind": "redis",
+        "provisioning": "shared-dev",
+        "configSource": {
+          "type": "bundled-profile",
+          "ref": "application-prod.yml#spring.redis"
+        }
+      }
+    ]
+  },
   "checks": [
     {
       "id": "service-config",
       "type": "file",
-      "target": "../../../service-a/src/main/resources/application-dev.yml",
+      "target": "../../../service-a/src/main/resources/application-prod.yml",
+      "contractRef": "service:service-a",
       "status": "READY"
     },
     {
       "id": "redis",
       "type": "tcp",
-      "host": "127.0.0.1",
+      "host": "redis.dev.internal",
       "port": 6379,
       "timeoutMs": 1500,
-      "status": "READY"
-    },
-    {
-      "id": "service-health",
-      "type": "http",
-      "url": "http://127.0.0.1:8080/actuator/health",
-      "expectedStatus": [200],
+      "contractRef": "dependency:redis",
       "status": "READY"
     }
   ]
@@ -97,6 +121,13 @@ applicability:
 可用检查类型：`file`、`directory`、`executable`、`tcp`、`http`。禁止在 URL 中嵌入
 用户名、密码或 Token。数据库、Redis、MQ 的写操作和生产调用不属于预检；需要真实数据
 时在测试合同中单独声明安全边界。
+
+`executionContract` 是唯一环境事实源，必须在交付开发前冻结：应用运行位置、依赖策略、
+能否自建本地依赖、能否连接共享开发依赖、允许/禁止覆盖的配置，以及每个服务和依赖的
+配置来源。`configSource.type` 只能为 `bundled-profile`、`external-file`、`environment`、
+`cli-override` 或 `generated-fixture`。`local-isolated`、`shared-dev`、`shared-test` 不能互相
+混用；确需混用时显式使用 `mixed`，并逐项声明 `provisioning`。每个服务和依赖必须至少由
+一项 `contractRef` 检查覆盖。旧版 v1 只证明目标可访问，不能作为 Coding Ready 凭证。
 
 ## 复杂逻辑图
 

@@ -145,9 +145,11 @@ For complex requirements, verify these before writing docs:
   `source-contract`, `architecture-minimality`, and `e2e-environment`.
   Resolve discoverable gaps autonomously and ask owner-only blockers once at the end.
 - Explore the declared local/dev/test configuration before handoff and record
-  fail-safe probes in `.sdd/readiness/environment.json`. Tests use verified
-  startup commands, ports, simulators, and dependencies instead of leaving
-  environment discovery to the developer Agent.
+  fail-safe probes in `.sdd/readiness/environment.json`. Its v2
+  `executionContract` uniquely freezes the application location, dependency
+  policy, config sources, and allowed/forbidden overrides. Tests use verified
+  startup commands, ports, simulators, and dependencies; reachability alone is
+  not an environment contract and discovery is not deferred to the developer.
 - Cross-repo, cross-service, device, MQ, callback, state-machine, or three-plus
   module logic includes Mermaid `sequenceDiagram` and `flowchart`/`stateDiagram`.
 - Run `superflow check <change> --level coding-ready` after prompts are complete.

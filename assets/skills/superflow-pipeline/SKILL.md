@@ -608,7 +608,9 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`
 `.sdd/readiness/environment.json`。只允许 `file`、`directory`、`executable`、`tcp`、
 `http` 等失败安全探测；不得输出凭据或向生产写数据。每项状态只能是 `READY`、
 `LOCAL_FIXTURE_READY`、`OWNER_HELP_REQUIRED` 或 `BLOCKED`。环境合同约定本地/开发环境时，
-不得擅自要求测试或生产环境。
+不得擅自要求测试或生产环境。报告必须使用 `superflow.environment-readiness.v2`，把应用
+运行位置、`local-isolated/shared-dev/shared-test/mixed` 依赖策略、配置来源、允许/禁止覆盖项
+和每项检查的 `contractRef` 冻结为唯一环境执行合同；不能只证明某个地址当前可连接。
 
 跨服务、跨仓、设备、MQ、回调、定时任务、状态机、补偿链路或三个以上模块的复杂逻辑，
 `.openspec.yaml` 必须声明 `complex_logic: true` 或 `mermaid: required`，设计文档至少包含

@@ -122,22 +122,84 @@ async function prepareReadyChange(): Promise<void> {
     ".sdd/readiness/environment.json",
     JSON.stringify(
       {
-        schemaVersion: "superflow.environment-readiness.v1",
+        schemaVersion: "superflow.environment-readiness.v2",
         handoffHash: hash,
         scope: "local-dev",
         overall: "READY",
         ownerHelpRequired: [],
+        executionContract: {
+          applicationLocation: "local",
+          dependencyPolicy: "local-isolated",
+          allowLocalProvisioning: true,
+          allowRemoteDevDependencies: false,
+          allowedOverrides: ["server.port"],
+          forbiddenOverrides: ["spring.datasource.url"],
+          services: [
+            {
+              id: "service-a",
+              configSource: {
+                type: "bundled-profile",
+                ref: "application-local.yml",
+              },
+              startupCommandSource: "tests.md",
+            },
+            {
+              id: "service-b",
+              configSource: {
+                type: "bundled-profile",
+                ref: "application-local.yml",
+              },
+              startupCommandSource: "tests.md",
+            },
+          ],
+          dependencies: [
+            {
+              id: "service-a-fixture",
+              kind: "file",
+              provisioning: "local-isolated",
+              configSource: {
+                type: "generated-fixture",
+                ref: "tests.md",
+              },
+            },
+            {
+              id: "service-b-fixture",
+              kind: "file",
+              provisioning: "local-isolated",
+              configSource: {
+                type: "generated-fixture",
+                ref: "tests.md",
+              },
+            },
+          ],
+        },
         checks: [
+          {
+            id: "service-a-config",
+            type: "file",
+            target: "fixtures/service-a.txt",
+            contractRef: "service:service-a",
+            status: "READY",
+          },
+          {
+            id: "service-b-config",
+            type: "file",
+            target: "fixtures/service-b.txt",
+            contractRef: "service:service-b",
+            status: "READY",
+          },
           {
             id: "service-a",
             type: "file",
             target: "fixtures/service-a.txt",
+            contractRef: "dependency:service-a-fixture",
             status: "READY",
           },
           {
             id: "service-b",
             type: "file",
             target: "fixtures/service-b.txt",
+            contractRef: "dependency:service-b-fixture",
             status: "READY",
           },
         ],
@@ -237,6 +299,102 @@ describe("document delivery readiness", () => {
       execFileAsync("node", [ENV_PREFLIGHT, change]),
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("service-b"),
+    });
+  });
+
+  it("rejects the legacy report because it lacks an execution contract", async () => {
+    const reportFile = path.join(
+      change,
+      ".sdd",
+      "readiness",
+      "environment.json",
+    );
+    const report = JSON.parse(await fs.promises.readFile(reportFile, "utf-8"));
+    report.schemaVersion = "superflow.environment-readiness.v1";
+    delete report.executionContract;
+    await fs.promises.writeFile(reportFile, JSON.stringify(report));
+    await expect(
+      execFileAsync("node", [ENV_PREFLIGHT, change]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("缺少结构化环境执行合同"),
+    });
+  });
+
+  it("rejects shared development dependencies with local provisioning", async () => {
+    const reportFile = path.join(
+      change,
+      ".sdd",
+      "readiness",
+      "environment.json",
+    );
+    const report = JSON.parse(await fs.promises.readFile(reportFile, "utf-8"));
+    report.executionContract.dependencyPolicy = "shared-dev";
+    report.executionContract.allowRemoteDevDependencies = true;
+    for (const dependency of report.executionContract.dependencies) {
+      dependency.provisioning = "shared-dev";
+    }
+    await fs.promises.writeFile(reportFile, JSON.stringify(report));
+    await expect(
+      execFileAsync("node", [ENV_PREFLIGHT, change]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("shared-dev 禁止自建本地依赖"),
+    });
+  });
+
+  it("rejects local isolation with remote development dependencies", async () => {
+    const reportFile = path.join(
+      change,
+      ".sdd",
+      "readiness",
+      "environment.json",
+    );
+    const report = JSON.parse(await fs.promises.readFile(reportFile, "utf-8"));
+    report.executionContract.allowRemoteDevDependencies = true;
+    await fs.promises.writeFile(reportFile, JSON.stringify(report));
+    await expect(
+      execFileAsync("node", [ENV_PREFLIGHT, change]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("local-isolated 禁止使用远程开发依赖"),
+    });
+  });
+
+  it("rejects overlapping allowed and forbidden overrides", async () => {
+    const reportFile = path.join(
+      change,
+      ".sdd",
+      "readiness",
+      "environment.json",
+    );
+    const report = JSON.parse(await fs.promises.readFile(reportFile, "utf-8"));
+    report.executionContract.forbiddenOverrides.push("server.port");
+    await fs.promises.writeFile(reportFile, JSON.stringify(report));
+    await expect(
+      execFileAsync("node", [ENV_PREFLIGHT, change]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("允许覆盖项与禁止覆盖项重复"),
+    });
+  });
+
+  it("requires configuration sources and linked dependency checks", async () => {
+    const reportFile = path.join(
+      change,
+      ".sdd",
+      "readiness",
+      "environment.json",
+    );
+    const report = JSON.parse(await fs.promises.readFile(reportFile, "utf-8"));
+    delete report.executionContract.services[0].configSource;
+    delete report.checks[0].contractRef;
+    await fs.promises.writeFile(reportFile, JSON.stringify(report));
+    await expect(
+      execFileAsync("node", [ENV_PREFLIGHT, change]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("service-a: 缺少 configSource"),
+    });
+    await expect(
+      execFileAsync("node", [ENV_PREFLIGHT, change]),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining("service-a-config: 缺少 contractRef"),
     });
   });
 });

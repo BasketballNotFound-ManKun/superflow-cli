@@ -218,7 +218,11 @@ Explore the configured environment during docs and record
 `.sdd/readiness/environment.json`. Only fail-safe `file`, `directory`,
 `executable`, `tcp`, and `http` probes are allowed. Never print credentials or
 write production data. Respect the declared local/dev/test scope instead of
-requiring a remote environment by default.
+requiring a remote environment by default. Use
+`superflow.environment-readiness.v2` to freeze the application location,
+`local-isolated/shared-dev/shared-test/mixed` dependency policy, config sources,
+allowed/forbidden overrides, and a `contractRef` for every probe. Reachability
+alone is not an environment execution contract.
 
 Cross-service, cross-repo, device, MQ, callback, scheduler, state-machine,
 compensation, or three-plus-module logic declares `complex_logic: true` or

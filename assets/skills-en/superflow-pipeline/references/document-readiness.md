@@ -50,15 +50,37 @@ Path: `.sdd/readiness/environment.json`
 
 ```json
 {
-  "schemaVersion": "superflow.environment-readiness.v1",
+  "schemaVersion": "superflow.environment-readiness.v2",
   "handoffHash": "<current hash>",
   "scope": "local-dev",
   "overall": "READY",
   "ownerHelpRequired": [],
+  "executionContract": {
+    "applicationLocation": "local",
+    "dependencyPolicy": "shared-dev",
+    "allowLocalProvisioning": false,
+    "allowRemoteDevDependencies": true,
+    "allowedOverrides": ["server.port"],
+    "forbiddenOverrides": ["spring.datasource.url"],
+    "services": [
+      {
+        "id": "service-a",
+        "configSource": { "type": "bundled-profile", "ref": "application-prod.yml" },
+        "startupCommandSource": "tests.md#startup"
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "redis",
+        "kind": "redis",
+        "provisioning": "shared-dev",
+        "configSource": { "type": "bundled-profile", "ref": "application-prod.yml#spring.redis" }
+      }
+    ]
+  },
   "checks": [
-    { "id": "service-config", "type": "file", "target": "../../../service-a/application-dev.yml", "status": "READY" },
-    { "id": "redis", "type": "tcp", "host": "127.0.0.1", "port": 6379, "status": "READY" },
-    { "id": "service-health", "type": "http", "url": "http://127.0.0.1:8080/health", "expectedStatus": [200], "status": "READY" }
+    { "id": "service-config", "type": "file", "target": "../../../service-a/application-prod.yml", "contractRef": "service:service-a", "status": "READY" },
+    { "id": "redis", "type": "tcp", "host": "redis.dev.internal", "port": 6379, "contractRef": "dependency:redis", "status": "READY" }
   ]
 }
 ```
@@ -66,6 +88,16 @@ Path: `.sdd/readiness/environment.json`
 Supported checks are `file`, `directory`, `executable`, `tcp`, and `http`.
 Never embed credentials or tokens in URLs. Production writes and DB/Redis/MQ
 mutations are not preflight operations.
+
+`executionContract` is the single environment source of truth. Freeze the
+application location, dependency policy, local-provisioning and shared-dev
+permissions, allowed/forbidden overrides, and the config source for every
+service and dependency. `configSource.type` is one of `bundled-profile`,
+`external-file`, `environment`, `cli-override`, or `generated-fixture`.
+Do not mix `local-isolated`, `shared-dev`, and `shared-test`; use `mixed` and
+declare each dependency's `provisioning` when mixing is intentional. Every
+service and dependency needs a matching `contractRef` probe. Legacy v1 reports
+prove reachability only and cannot satisfy Coding Ready.
 
 ## Complex Diagrams
 
