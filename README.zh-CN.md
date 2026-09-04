@@ -57,6 +57,32 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 - **`superflow config` 按需调整审查强度。** `--review-mode off|standard|thorough` 控制代码审查深度；`--auto-transition` 控制阶段自动流转。不同改动匹配不同强度，省 token 不省质量。
 - **启动自动检查新版本。** 每次执行 superflow 命令，后台静默对比 npm registry。发现新版本时 stderr 输出升级提示，不阻塞、不拖慢。
 
+## 托管交付：有上限的评审—整改闭环
+
+![有上限的评审闭环：任务或合同进入，评审把问题送回实现，只有通过才进入交付。](./assets/brand/managed-review-loop.png)
+
+你可以给 Superflow 一条简单开发任务，也可以给它一份冻结的 Superflow / SDD
+合同。对端 Agent 负责实现和验证；当前正在与你对话的 Host 负责审查工作区、门禁和证据。
+
+```text
+简单任务或冻结合同
+        ↓
+对端 Agent 实现并验证
+        ↓
+当前 Host 审查源码、门禁与证据
+   ├─ 未通过 → finding + 历史证据 → 对端 Agent 整改 ↺
+   └─ 通过 → 进入交付就绪状态 → 等待你决定 Git / 发布
+```
+
+这是一个刻意有上限的工程闭环，不是无人看管的 Agent 群：
+
+- Host 只负责语义评审；对端只负责改源码和做验证，职责不混淆。
+- 评审未通过时，系统会带着精确 finding 和已经有效的证据回到对端；它在当前工作区整改，不会拿一份空 Prompt 从头猜。
+- 默认最多 5 轮 Host 评审、7 次对端调用、12 次总调用；账本让中断后的恢复可审计。
+- 通过只表示满足冻结的交付合同，不表示“绝对无风险”；系统也绝不会自动提交、推送、部署或写生产。
+
+完整角色边界、状态流转与恢复规则见[托管交付闭环说明](./docs/managed-delivery-loop.md)。
+
 ## 工作流
 
 ```text

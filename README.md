@@ -99,6 +99,39 @@ off|standard|thorough` controls code-review intensity; `--auto-transition`
   installed version against the npm registry. A new version triggers a
   non-blocking upgrade hint on stderr.
 
+## Managed delivery: a bounded review loop
+
+![A bounded review loop: task and contract enter, review returns fixes to
+implementation, and only a passing result reaches delivery.](./assets/brand/managed-review-loop.png)
+
+Give Superflow a straightforward development task or a frozen Superflow / SDD
+contract. The peer Agent implements and verifies; the current Host reviews the
+workspace, gates, and evidence.
+
+```text
+Task or frozen contract
+          ↓
+Peer Agent builds and verifies
+          ↓
+Current Host reviews source, gates, and evidence
+     ├─ needs_fix → findings + prior evidence → Peer Agent ↺
+     └─ pass → delivery-ready state → waits for your Git / release approval
+```
+
+The loop is deliberately bounded, not an unattended agent swarm:
+
+- The Host owns semantic review; the peer owns source changes and verification.
+- A failed review returns precise findings and durable evidence, so the peer
+  repairs the current workspace instead of restarting from a blank prompt.
+- Default budgets cap the work at 5 Host reviews, 7 peer invocations, and 12
+  total Agent calls. Journals make interruption recovery auditable.
+- A pass means the frozen delivery contract is satisfied. It never means an
+  absolute risk guarantee, and it never auto-commits, pushes, deploys, or
+  writes to production.
+
+Read the [managed delivery loop guide](./docs/managed-delivery-loop.en.md) for
+the role boundary, transition rules, and recovery behavior.
+
 ## Workflow
 
 ```text
