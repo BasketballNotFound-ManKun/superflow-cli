@@ -1,5 +1,16 @@
 # Superflow CLI 仓库指引
 
+## 全局设计与评价纲领
+
+修改 Superflow CLI 前，必须完整阅读：
+
+- `docs/superflow-cli-design-principles.md`
+- `docs/superflow-cli-evaluation-framework.md`
+
+先判定问题属于文档合同、确定性门禁、Agent 语义评审、宿主适配或安装升级闭环，再在对应层做
+最小修改。每项优化必须记录问题证据、基线、假设、代表性实例、前后结果、结论和回滚条件；
+中英文文档、Skill、Prompt、CLI 帮助和测试必须保持一致。
+
 ## 版本升级触发规则
 
 用户只要提到“升级版本”“发布版本”“发版”“推送 npm”或同等含义，就视为授权执行

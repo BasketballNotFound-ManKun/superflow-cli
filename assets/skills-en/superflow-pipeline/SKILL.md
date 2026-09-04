@@ -5,6 +5,11 @@ description: Use when a user asks for the SuperBridge Flow, SDD, OpenSpec, requi
 
 # SuperBridge Flow Pipeline
 
+When maintaining Superflow CLI itself, first read repository-root
+`docs/superflow-cli-design-principles.en.md` and
+`docs/superflow-cli-evaluation-framework.en.md`. Identify the owner layer before editing,
+then record baseline, hypothesis, scenario, result, and rollback condition.
+
 ## Role
 
 This is the main router and stateful workflow orchestrator for SuperBridge Flow.

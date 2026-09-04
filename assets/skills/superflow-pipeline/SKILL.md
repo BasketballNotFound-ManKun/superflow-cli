@@ -7,6 +7,11 @@ description: SDD 总入口和路由技能。Use when the user says sdd, SDD 流�
 
 This is the lightweight SDD router. Do not load the whole SDD process when a smaller phase skill is enough.
 
+维护 Superflow CLI 自身时，必须先读取仓库根目录
+`docs/superflow-cli-design-principles.md` 和
+`docs/superflow-cli-evaluation-framework.md`。先判定责任层，再按统一评价体系留下基线、假设、
+实例、结果和回滚条件。
+
 ## 托管任务与双 Agent 闭环
 
 当用户说“用 Superflow 托管完成”并给出 implementation prompt、change 目录或一个简单
