@@ -6,6 +6,7 @@ import { createManagedTaskContract } from "../../src/domains/managed-work/contra
 import {
   appendManagedEvent,
   readManagedEvents,
+  rebuildManagedJournalAfterSecurityRedaction,
   verifyManagedJournal,
 } from "../../src/domains/managed-work/journal.js";
 import { createManagedTaskFiles } from "../../src/domains/managed-work/storage.js";
@@ -56,6 +57,65 @@ describe("managed work journal", () => {
     );
     fs.appendFileSync(journal, '{"sequence":99}\n');
     expect(verifyManagedJournal(state)).toBe(false);
+  });
+
+  it("rehashes redacted history with an explicit audit event", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-journal-"));
+    roots.push(root);
+    const contract = createManagedTaskContract({
+      request: "安全脱敏迁移",
+      projectRoot: root,
+    });
+    const state = initManagedRunState(contract);
+    const env = { ...process.env, SUPERFLOW_HOME: path.join(root, "home") };
+    createManagedTaskFiles(contract, state, env);
+    const secret = "journal-history-secret";
+    appendManagedEvent(state, {
+      eventType: "executor.progress",
+      actor: "claude",
+      role: "executor",
+      summary: `R38_DB_PASSWORD=${secret}`,
+    });
+    const journal = path.join(
+      root,
+      ".superflow",
+      "tasks",
+      contract.taskId,
+      "runs",
+      state.runId,
+      "progress.jsonl",
+    );
+    const changed = fs
+      .readFileSync(journal, "utf-8")
+      .replace("<redacted>", secret);
+    fs.writeFileSync(journal, changed, "utf-8");
+    fs.writeFileSync(
+      path.join(path.dirname(journal), "executor-progress-1.jsonl"),
+      `${JSON.stringify({ summary: `R38_DB_PASSWORD=${secret}` })}\n`,
+      "utf-8",
+    );
+    expect(verifyManagedJournal(state)).toBe(false);
+
+    const manifest = rebuildManagedJournalAfterSecurityRedaction(
+      state,
+      "清除历史凭据并重建哈希链",
+    );
+
+    expect(verifyManagedJournal(state)).toBe(true);
+    expect(fs.existsSync(manifest)).toBe(true);
+    expect(fs.readFileSync(journal, "utf-8")).toContain(
+      "journal.security_redaction_migrated",
+    );
+    expect(fs.readFileSync(journal, "utf-8")).not.toContain(secret);
+    expect(
+      fs.readFileSync(
+        path.join(path.dirname(journal), "executor-progress-1.jsonl"),
+        "utf-8",
+      ),
+    ).not.toContain(secret);
+    expect(fs.readFileSync(manifest, "utf-8")).toContain(
+      '"migrationType": "security_redaction"',
+    );
   });
 
   it("writes English progress and report artifacts for English contracts", () => {

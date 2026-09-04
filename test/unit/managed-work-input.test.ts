@@ -52,6 +52,21 @@ describe("managed work input", () => {
     expect(result.profile).toBe("sdd");
   });
 
+  it("extracts the user-specified prompt path from a host instruction", () => {
+    const root = fixtureRoot();
+    const prompt = path.join(root, "prompt", "implementation.md");
+    fs.mkdirSync(path.dirname(prompt), { recursive: true });
+    fs.writeFileSync(prompt, "# implementation\n");
+
+    const result = resolveManagedInput(
+      `使用托管，按照 ${prompt} 完成全部任务`,
+      { projectRoot: root },
+    );
+
+    expect(result.taskPromptPath).toBe(fs.realpathSync(prompt));
+    expect(result.source).toBe("task_file");
+  });
+
   it("rejects tasks.md as the SDD execution entry", () => {
     const root = fixtureRoot();
     const tasks = path.join(root, "openspec", "changes", "demo", "tasks.md");

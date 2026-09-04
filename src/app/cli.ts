@@ -30,7 +30,12 @@ function resolveTargetPathArg(
 
   const index = process.argv.indexOf(commandName);
   if (index >= 0) {
-    const valueOptions = new Set(["--agent", "--scope"]);
+    const valueOptions = new Set([
+      "--agent",
+      "--scope",
+      "--language",
+      "--lang",
+    ]);
     for (let i = index + 1; i < process.argv.length; i++) {
       const arg = process.argv[i];
       if (valueOptions.has(arg)) {
@@ -146,20 +151,58 @@ program
   .command("pipeline [request]")
   .description(helpText.pipelineDescription)
   .option("--agent <agent>", helpText.agentOption, "both")
-  .option(
-    "--managed",
-    helpText.managedOption,
-  )
+  .option("--managed", helpText.managedOption)
+  .option("--manual", "创建受控人工执行任务，不自动启动实现者")
   .option("--project <path>", helpText.managedProjectOption)
-  .option(
-    "--profile <profile>",
-    helpText.managedProfileOption,
-    "auto",
-  )
-  .option("--supervisor <agent>", helpText.managedSupervisorOption, "codex")
-  .option("--executor <agent>", helpText.managedExecutorOption)
+  .option("--profile <profile>", helpText.managedProfileOption, "auto")
+  .option("--supervisor <agent>", helpText.managedSupervisorOption, "current")
+  .option("--executor <agent>", helpText.managedExecutorOption, "peer")
   .option("--add-dir <paths...>", helpText.managedAddDirOption)
   .option("--resume-task <taskId>", helpText.managedResumeOption)
+  .option("--submit-host-review <path>", helpText.managedSubmitHostReviewOption)
+  .option("--submit-manual-delivery <path>", "提交人工执行者的结构化交付 JSON")
+  .option("--reopen-delivery <reason>", helpText.managedReopenDeliveryOption)
+  .option(
+    "--replace-executor-session <sessionId>",
+    helpText.managedReplaceExecutorSessionOption,
+  )
+  .option(
+    "--reset-executor-session <reason>",
+    helpText.managedResetExecutorSessionOption,
+  )
+  .option(
+    "--retry-blocked-executor <reason>",
+    helpText.managedRetryBlockedExecutorOption,
+  )
+  .option(
+    "--provider-switched <reason>",
+    helpText.managedProviderSwitchedOption,
+  )
+  .option(
+    "--credit-infrastructure-invocations <count>",
+    helpText.managedInfrastructureCreditsOption,
+  )
+  .option(
+    "--max-executor-invocations <count>",
+    helpText.managedMaxExecutorInvocationsOption,
+  )
+  .option("--max-review-rounds <count>", helpText.managedMaxReviewRoundsOption)
+  .option(
+    "--max-total-agent-invocations <count>",
+    helpText.managedMaxTotalAgentInvocationsOption,
+  )
+  .option(
+    "--budget-override-reason <reason>",
+    helpText.managedBudgetOverrideReasonOption,
+  )
+  .option(
+    "--unlimited-agent-budget",
+    helpText.managedUnlimitedAgentBudgetOption,
+  )
+  .option(
+    "--additional-executor-invocations <count>",
+    helpText.managedAdditionalExecutorInvocationsOption,
+  )
   .option("--language <language>", helpText.languageOption)
   .option("--dry-run", helpText.dryRun)
   .action(async (request, options) => {
@@ -205,6 +248,29 @@ program
   });
 
 program
+  .command("mcp [action]")
+  .description(helpText.mcpDescription)
+  .option("--agent <agent>", helpText.agentOption, "both")
+  .option("--dry-run", helpText.dryRun)
+  .option("--json", helpText.jsonOption)
+  .option("--language <language>", helpText.languageOption)
+  .action(async (action = "status", options) => {
+    const { mcpCommand } = await import("./commands/mcp.js");
+    await mcpCommand(action, commandOptions(options));
+  });
+
+program
+  .command("eval <taskPaths...>")
+  .description(helpText.evalDescription)
+  .option("--json", helpText.jsonOption)
+  .option("--summary", helpText.summaryOption)
+  .option("--language <language>", helpText.languageOption)
+  .action(async (taskPaths, options) => {
+    const { evalCommand } = await import("./commands/eval.js");
+    await evalCommand(taskPaths, commandOptions(options));
+  });
+
+program
   .command("update [targetPath]")
   .description(helpText.updateDescription)
   .option("--agent <agent>", helpText.agentOption, "both")
@@ -227,6 +293,7 @@ program
   .description(helpText.doctorDescription)
   .option("--agent <agent>", helpText.agentOption, "both")
   .option("--scope <scope>", helpText.commandScopeOption, "global")
+  .option("--language <language>", helpText.languageOption)
   .option("--json", helpText.jsonOption)
   .action(async (targetPath, options) => {
     const { doctorCommand } = await import("./commands/doctor.js");
@@ -256,11 +323,7 @@ program
 program
   .command("check <change>")
   .description("按文件、文档交付或可编码等级检查 SDD change")
-  .option(
-    "--level <level>",
-    "检查等级：files | docs | coding-ready",
-    "files",
-  )
+  .option("--level <level>", "检查等级：files | docs | coding-ready", "files")
   .option("--json", "输出 JSON")
   .action(async (change, options) => {
     const { checkCommand } = await import("./commands/check.js");

@@ -4,6 +4,7 @@ import {
   mkdirSync,
   readFileSync,
   renameSync,
+  rmSync,
   writeFileSync,
 } from "fs";
 import path from "path";
@@ -16,6 +17,13 @@ import type {
 } from "./types.js";
 import { managedRegistryPath, managedRunDir, managedTaskDir } from "./paths.js";
 import { managedList, managedText } from "./i18n.js";
+import { writeManagedContextManifest } from "./context-manifest.js";
+import {
+  artifactLevelFor,
+  writeManagedExecutionContract,
+} from "./execution-contract.js";
+import { generatedStandardPromptContent } from "./contract.js";
+import { writeManagedWorkspaceBinding } from "./workspace-binding.js";
 
 export function writeJsonAtomic(file: string, value: unknown): void {
   mkdirSync(path.dirname(file), { recursive: true });
@@ -39,53 +47,61 @@ export function createManagedTaskFiles(
     contract.taskId,
     runState.runId,
   );
-  mkdirSync(runDir, { recursive: true });
-  writeTaskPromptSnapshot(contract);
-  writeFileSync(
-    path.join(taskDir, "request.md"),
-    buildRequestMarkdown(contract),
-    "utf-8",
-  );
-  writeFileSync(
-    path.join(taskDir, "task-brief.md"),
-    buildTaskBrief(contract),
-    "utf-8",
-  );
-  writeJsonAtomic(path.join(taskDir, "task.json"), contract);
-  writeJsonAtomic(path.join(runDir, "run-state.json"), runState);
-  writeFileSync(path.join(runDir, "progress.jsonl"), "", "utf-8");
-  writeFileSync(
-    path.join(runDir, "progress.md"),
-    managedText(
-      contract.language,
-      "# 托管任务进度\n\n状态：已创建\n",
-      "# Managed Task Progress\n\nStatus: created\n",
-    ),
-    "utf-8",
-  );
-  writeFileSync(
-    path.join(runDir, "task-report.md"),
-    managedText(
-      contract.language,
-      "# 托管任务报告\n\n状态：执行中\n",
-      "# Managed Task Report\n\nStatus: running\n",
-    ),
-    "utf-8",
-  );
-  upsertRegistryEntry(
-    {
-      taskId: contract.taskId,
-      projectRoot: contract.projectRoot,
-      status: contract.status,
-      profile: contract.profile,
-      language: contract.language,
-      activeRunId: runState.runId,
-      createdAt: contract.createdAt,
-      updatedAt: contract.updatedAt,
-      servicePid: null,
-    },
-    env,
-  );
+  try {
+    mkdirSync(runDir, { recursive: true });
+    writeTaskPromptSnapshot(contract);
+    writeFileSync(
+      path.join(taskDir, "request.md"),
+      buildRequestMarkdown(contract),
+      "utf-8",
+    );
+    writeFileSync(
+      path.join(taskDir, "task-brief.md"),
+      buildTaskBrief(contract),
+      "utf-8",
+    );
+    writeJsonAtomic(path.join(taskDir, "task.json"), contract);
+    writeManagedWorkspaceBinding(contract);
+    writeManagedExecutionContract(contract);
+    writeManagedContextManifest(contract);
+    writeJsonAtomic(path.join(runDir, "run-state.json"), runState);
+    writeFileSync(path.join(runDir, "progress.jsonl"), "", "utf-8");
+    writeFileSync(
+      path.join(runDir, "progress.md"),
+      managedText(
+        contract.language,
+        "# 托管任务进度\n\n状态：已创建\n",
+        "# Managed Task Progress\n\nStatus: created\n",
+      ),
+      "utf-8",
+    );
+    writeFileSync(
+      path.join(runDir, "task-report.md"),
+      managedText(
+        contract.language,
+        "# 托管任务报告\n\n状态：执行中\n",
+        "# Managed Task Report\n\nStatus: running\n",
+      ),
+      "utf-8",
+    );
+    upsertRegistryEntry(
+      {
+        taskId: contract.taskId,
+        projectRoot: contract.projectRoot,
+        status: contract.status,
+        profile: contract.profile,
+        language: contract.language,
+        activeRunId: runState.runId,
+        createdAt: contract.createdAt,
+        updatedAt: contract.updatedAt,
+        servicePid: null,
+      },
+      env,
+    );
+  } catch (error) {
+    rmSync(taskDir, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 export function loadManagedTask(
@@ -183,6 +199,22 @@ export function updateTaskReportStatus(
   );
 }
 
+export function resolveTaskReportBlockers(state: ManagedRunState): void {
+  const file = path.join(
+    managedRunDir(state.projectRoot, state.taskId, state.runId),
+    "task-report.md",
+  );
+  const content = readFileSync(file, "utf-8");
+  const resolved =
+    state.language === "en"
+      ? content.replaceAll(
+          "## Current blocker",
+          "## Historical blocker (resolved)",
+        )
+      : content.replaceAll("## 当前阻塞", "## 历史阻塞（已解除）");
+  if (resolved !== content) writeFileSync(file, resolved, "utf-8");
+}
+
 function buildRequestMarkdown(contract: ManagedTaskContract): string {
   if (contract.language === "en") {
     return [
@@ -216,13 +248,14 @@ function buildTaskBrief(contract: ManagedTaskContract): string {
       "",
       `Task ID: ${contract.taskId}`,
       `Task profile: ${contract.profile}`,
+      `Artifact level: ${artifactLevelFor(contract)}`,
       `Related repositories: ${managedList(contract.language, contract.relatedProjectRoots)}`,
       `Supervisor Agent: ${contract.supervisorAgent}`,
       `Executor Agent: ${contract.executorAgent}`,
       `Contract hash: ${contract.contractHash}`,
       ...(contract.taskPrompt
         ? [
-            `Original task prompt: ${contract.taskPrompt.originalPath}`,
+            `${contract.taskPrompt.origin === "generated_standard" ? "Generated standard execution contract" : "Original task prompt"}: ${contract.taskPrompt.originalPath}`,
             `Frozen prompt snapshot: ${contract.taskPrompt.snapshotPath}`,
             `Prompt SHA-256: ${contract.taskPrompt.sha256}`,
           ]
@@ -238,6 +271,14 @@ function buildTaskBrief(contract: ManagedTaskContract): string {
       "",
       "## Permission boundaries",
       "",
+      ...(contract.mandatoryEngineeringRules?.length
+        ? [
+            "## Mandatory engineering rules frozen by the host",
+            "",
+            ...contract.mandatoryEngineeringRules.map((rule) => `- ${rule}`),
+            "",
+          ]
+        : []),
       "- Maximum autonomy within safety boundaries.",
       "- Never commit or push Git, publish, or write to production automatically.",
       "- Never bypass sandbox or permission checks.",
@@ -249,13 +290,14 @@ function buildTaskBrief(contract: ManagedTaskContract): string {
     "",
     `任务编号：${contract.taskId}`,
     `任务档位：${contract.profile}`,
+    `文档等级：${artifactLevelFor(contract)}`,
     `关联仓库：${contract.relatedProjectRoots.join("、") || "无"}`,
     `监督 Agent：${contract.supervisorAgent}`,
     `执行 Agent：${contract.executorAgent}`,
     `合同哈希：${contract.contractHash}`,
     ...(contract.taskPrompt
       ? [
-          `原始任务 Prompt：${contract.taskPrompt.originalPath}`,
+          `${contract.taskPrompt.origin === "generated_standard" ? "自动生成的标准执行合同" : "原始任务 Prompt"}：${contract.taskPrompt.originalPath}`,
           `冻结 Prompt 快照：${contract.taskPrompt.snapshotPath}`,
           `Prompt SHA-256：${contract.taskPrompt.sha256}`,
         ]
@@ -271,6 +313,14 @@ function buildTaskBrief(contract: ManagedTaskContract): string {
     "",
     "## 权限边界",
     "",
+    ...(contract.mandatoryEngineeringRules?.length
+      ? [
+          "## Host 冻结的强制工程规则",
+          "",
+          ...contract.mandatoryEngineeringRules.map((rule) => `- ${rule}`),
+          "",
+        ]
+      : []),
     "- 安全边界内最大自治。",
     "- 禁止自动 Git 提交、推送、发布和生产写入。",
     "- 禁止跳过沙箱或权限检查。",
@@ -280,7 +330,14 @@ function buildTaskBrief(contract: ManagedTaskContract): string {
 
 function writeTaskPromptSnapshot(contract: ManagedTaskContract): void {
   if (!contract.taskPrompt) return;
-  const content = readFileSync(contract.taskPrompt.originalPath, "utf-8");
+  const content =
+    contract.taskPrompt.origin === "generated_standard"
+      ? generatedStandardPromptContent(
+          contract.request,
+          contract.profile,
+          contract.language,
+        )
+      : readFileSync(contract.taskPrompt.originalPath, "utf-8");
   const actual = createHash("sha256").update(content).digest("hex");
   if (actual !== contract.taskPrompt.sha256) {
     throw new Error(

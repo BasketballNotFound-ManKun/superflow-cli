@@ -1,6 +1,6 @@
 # SuperBridge Flow 安装、初始化与日常使用教程
 
-`@chenmk/superflow` 是面向 Claude Code、Codex 和 OpenCode 的 SDD 开发工作流 CLI。它把
+`@chenmk/superflow` 是面向 Claude Code 和 Codex 的 SDD 开发工作流 CLI。它把
 OpenSpec、Superpowers、SuperBridge Flow 技能、状态机、handoff 上下文包、hook 脚本和
 质量门禁安装到你的 agent 环境里，让一个需求可以沿着固定阶段推进：
 
@@ -24,7 +24,7 @@ docs -> design -> implement -> verify -> archive
 | Node.js | 20+ | `node -v` |
 | npm | 9+ | `npm -v` |
 | Git | 已安装 | `git --version` |
-| Agent | Claude Code、Codex 或 OpenCode 至少一个 | `claude --version` / `codex --version` / `opencode --version` |
+| Agent | Claude Code、Codex 至少一个 | `claude --version` / `codex --version` |
 | Shell | macOS/Linux 原生 shell；Windows 使用 Git Bash 或兼容 shell | `bash --version` |
 | Python | hook 中的 Python 脚本需要 | `python3 --version` |
 
@@ -68,6 +68,9 @@ macOS/Linux 也可以使用仓库里的脚本：
 bash install.sh
 ```
 
+源码安装脚本会自动检测本机已有的 Codex/Claude，完成 CLI、Skills/Hooks 和对应
+托管 MCP 注册；任意单侧或组合安装都不会被强行注册成 `both`。完成后只需重启检测到的 Agent。
+
 Windows PowerShell：
 
 ```powershell
@@ -83,7 +86,7 @@ cd your-project
 superflow init
 ```
 
-CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code、只选 OpenCode，
+CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code，
 也可以选择多个工具。
 选择结果会替代手写 `--agent codex` / `--agent claude`。
 
@@ -94,13 +97,12 @@ CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code、�
 3. 在当前项目目录执行 OpenSpec 原生初始化，并把你选择的工具下发给
    OpenSpec，例如 `openspec init <project> --tools claude,codex --profile custom`。
 4. 为 Claude Code / Codex 安装 Superpowers；这是 Superflow 的核心 HOW/TDD
-   依赖，安装失败会中断初始化。OpenCode 侧会部署 SuperBridge Flow skills
-   和 commands，不注册原生 hook。
+   依赖，安装失败会中断初始化。
 5. 尝试安装 understand-anything，并复制 api-doc-changelog；失败只警告，
    不阻断初始化。
 6. 部署 SuperBridge Flow/OpenSpec skills。
 7. 部署 hook/command 脚本；Codex 写入 `hooks.json`，Claude Code 写入
-   `settings.json`，OpenCode 写入 `.opencode/commands`。
+   `settings.json`。
 8. 部署 SuperBridge Flow 防漂移规则。
 9. 初始化 `docs/sdd-context/` 项目上下文模板，并提示
    understand-anything 扫描状态。
@@ -111,9 +113,8 @@ CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code、�
 请选择要初始化的 agent 工具（可多选）：
   1) Claude Code
   2) Codex
-  3) OpenCode
-  a) 安装 Claude Code + Codex（默认）；输入 all 会包含 OpenCode
-输入序号，例如 1,2 / 2,3 / all / a：
+  a) 安装 Claude Code + Codex（默认）
+输入序号，例如 1,2 / all / a：
 ```
 
 选择结果会同时影响：
@@ -128,10 +129,8 @@ CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code、�
 
 | 命令 | 说明 |
 |------|------|
-| `superflow init` | 交互式初始化，可多选 Codex / Claude Code / OpenCode |
+| `superflow init` | 交互式初始化，可多选 Codex / Claude Code |
 | `superflow init --yes` | 非交互执行，默认初始化 Claude Code + Codex |
-| `superflow init --agent opencode` | 只初始化 OpenCode |
-| `superflow init --agent all` | 初始化 Claude Code + Codex + OpenCode |
 | `superflow init --scope global` | 安装到用户主目录，默认值 |
 | `superflow init --scope project` | 安装到当前项目目录 |
 | `superflow init --no-hooks` | 只安装技能和脚本，不注册 hook |
@@ -165,20 +164,55 @@ superflow scan --language en --force
 `scan` 默认保留已经编辑过的文件；加 `--force` 才会覆盖
 `docs/sdd-context/` 下的 4 个模板文件。
 
-初始化后建议重启 Claude Code、Codex 或 OpenCode，让 agent 重新加载技能列表。
+初始化后建议重启 Claude Code 或 Codex，让 agent 重新加载技能列表。
+
+### 3.1 注册托管 MCP（推荐）
+
+如果希望直接在当前 Codex 或 Claude 主 Agent 会话中发起托管，并由 Superflow
+在后台只启动对端研发 Agent，请注册 stdio MCP：
+
+```bash
+superflow mcp install --agent both
+superflow mcp status --agent both
+```
+
+注册完成后重启 Codex/Claude。当前主 Agent 继续负责与用户沟通和独立评审，MCP
+创建的任务固定使用 `external_host`，不会再额外启动一个同类型 Supervisor CLI。
+因此可以避免重复传递完整上下文、嵌套会话 401 重试，以及监督侧 Token 重复消耗。
+
+托管期间应使用 `superflow_managed_wait` 默认最长等待 12 小时；活动请求通过标准 MCP
+progress notification 展示健康进度，单个监督点不会唤醒，连续两个无有效里程碑才返回，
+不会通过模型回合做固定频率轮询或重复回传大段证据。任务进入
+`waiting_for_host_review` 后，当前主 Agent 一次性完成全量
+评审并提交结构化结果。进入三段交付状态之一后停止，不会自动提交、推送、部署或写入生产环境。
+
+如需移除注册：
+
+```bash
+superflow mcp remove --agent both
+```
+
+Superflow 不再提供后台 Supervisor CLI 模式。历史任务恢复时会自动迁移为当前 Host
+直接评审，任何入口都不会再启动第二个监督 Agent 进程。
 
 ## 4. 验证安装
 
 ```bash
 superflow doctor --agent codex
 superflow doctor --agent claude
-superflow doctor --agent opencode
 ```
 
 也可以同时检查两侧：
 
 ```bash
 superflow doctor
+```
+
+若已注册托管 MCP，还可以检查两侧配置：
+
+```bash
+codex mcp get superflow
+claude mcp get superflow
 ```
 
 `doctor` 会检查：
@@ -188,7 +222,7 @@ superflow doctor
 - Superpowers、understand-anything、api-doc-changelog 是否可检测。
 - SuperBridge Flow skills 是否完整。
 - hook 脚本是否存在。
-- hook 是否已注册；OpenCode 当前检查 command alias，不把原生 hook 作为硬门禁。
+- hook 是否已注册。
 - SDD rule 是否已部署。
 - 当前项目里的 `.sdd/state.yaml` 是否符合状态机字段约束。
 
@@ -196,7 +230,6 @@ superflow doctor
 
 ```bash
 superflow pipeline --agent codex
-superflow pipeline --agent opencode
 superflow docs --agent codex
 superflow design --agent codex
 superflow implement --agent codex
@@ -208,21 +241,18 @@ superflow archive --agent codex
 
 ### 5.1 开始一个完整需求
 
-Codex、Claude Code 和 OpenCode 的触发方式不同：
+Codex、Claude Code 的触发方式不同：
 
 - Codex：通常用自然语言或 `$skill-name` 触发，例如“请使用 SuperBridge Flow 流程”或
   `$superflow-pipeline`。
 - Claude Code：安装后可以直接使用 slash command，例如
   `/superflow-pipeline`、`/superflow-clarify`、`/superflow-docs`、`/superflow-design`、
   `/superflow-implement`、`/superflow-verify`、`/superflow-archive`。
-- OpenCode：安装后使用 `.opencode/commands` 里的 slash command，例如
-  `/superflow-pipeline`、`/superflow-docs`、`/superflow-design`、`/superflow-verify`。
 
 普通使用建议始终先走总路由，让 SDD 自己判断阶段：
 
 - Codex：优先 `$superflow-pipeline` 或自然语言“请使用 SuperBridge Flow 流程”。
 - Claude Code：优先 `/superflow-pipeline`。
-- OpenCode：优先 `/superflow-pipeline`。
 
 只有你非常明确当前就是需求澄清、文档补齐、技术详设或实现阶段时，才直达
 `$superflow-clarify` / `/superflow-clarify`、`$superflow-docs` / `/superflow-docs` 等阶段命令。
@@ -234,12 +264,6 @@ Codex、Claude Code 和 OpenCode 的触发方式不同：
 ```
 
 在 Claude Code 会话里可以直接运行：
-
-```text
-/superflow-pipeline 处理这个需求：……
-```
-
-在 OpenCode 会话里同样可以运行：
 
 ```text
 /superflow-pipeline 处理这个需求：……
@@ -491,7 +515,7 @@ Claude Code 里也可以直接用当前阶段命令继续，例如：
 
 - `@chenmk/superflow`
 - `@fission-ai/openspec`
-- Claude Code / Codex 的 Superpowers 插件；OpenCode 侧刷新 SuperBridge Flow assets
+- Claude Code / Codex 的 Superpowers 插件
 
 同一会话只检查一次；默认只提示，不自动安装。至少间隔 6 小时才真正访问
 npm/plugin 源，避免每次 prompt 都联网。可用：
@@ -503,7 +527,7 @@ export SUPERFLOW_AUTO_UPDATE=check
 # 关闭自动检查
 export SUPERFLOW_AUTO_UPDATE=0
 
-# 个人机器可选：检查到新版本后自动安装
+# 个人机器可选：自动完整更新 CLI、Skills、Hooks、规则、脚本和托管 MCP
 export SUPERFLOW_AUTO_UPDATE=apply
 
 # 调整最小检查间隔，默认 21600 秒（6 小时）
@@ -513,6 +537,10 @@ export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 团队或企业环境建议保持默认 `check`，由开发者显式执行
 `superflow update --with-package` 更新；个人机器如果接受自动升级风险，再设置
 `SUPERFLOW_AUTO_UPDATE=apply`。
+
+显式更新和 Hook `apply` 使用同一闭环：先更新依赖包，再由新版本 CLI 重新部署全部 Agent
+资产并刷新 MCP 注册。任一步失败会记录日志、删除本轮节流戳并允许下次会话重试；成功后需
+重启 Agent 才会加载新的 MCP 进程。
 
 ### 8.2 手动更新
 
@@ -529,8 +557,8 @@ superflow update --agent claude
 superflow update --with-package
 ```
 
-该命令会统一更新 `@chenmk/superflow`、`@fission-ai/openspec` 和已选择
-agent 的 Superpowers 插件。
+该命令会统一更新 `@chenmk/superflow`、`@fission-ai/openspec`、已选择 agent 的
+Superpowers 插件、Skills、Hooks、规则、脚本和托管 MCP 注册。
 
 只查看更新计划：
 
@@ -599,13 +627,11 @@ python3 --version
 
 ### 技能装好了，但 agent 没触发
 
-重启 Claude Code、Codex 或 OpenCode。若仍不触发：
+重启 Claude Code 或 Codex。若仍不触发：
 
 ```bash
 superflow doctor --agent codex
-superflow doctor --agent opencode
 superflow pipeline --agent codex
-superflow pipeline --agent opencode
 ```
 
 然后在会话里明确说：

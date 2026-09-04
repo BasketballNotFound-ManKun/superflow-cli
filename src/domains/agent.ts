@@ -1,7 +1,6 @@
 import type { Agent, AgentSelection, InstallScope } from '../types.js';
 
 export const DEFAULT_AGENTS: Agent[] = ['claude', 'codex'];
-export const ALL_AGENTS: Agent[] = ['claude', 'codex', 'opencode'];
 
 export function parseInstallScope(value: unknown): InstallScope {
   if (value === undefined || value === null || value === '') return 'global';
@@ -16,11 +15,8 @@ export function resolveAgents(selection: AgentSelection): Agent[] {
   switch (selection) {
     case 'both':
       return DEFAULT_AGENTS;
-    case 'all':
-      return ALL_AGENTS;
     case 'claude':
     case 'codex':
-    case 'opencode':
       return [selection];
     default:
       throw new Error(`Unknown agent selection: ${selection}`);
@@ -30,11 +26,10 @@ export function resolveAgents(selection: AgentSelection): Agent[] {
 export function parseAgentSelection(value: unknown): AgentSelection {
   if (value === undefined || value === null || value === '') return 'both';
   if (typeof value !== 'string') {
-    throw new Error(`--agent must be one of: claude, codex, opencode, both, all`);
+    throw new Error(`--agent must be one of: claude, codex, both`);
   }
   const normalized = value.trim().toLowerCase();
   if (normalized === 'both') return 'both';
-  if (normalized === 'all') return 'all';
   const parts = normalized
     .split(/[,\s]+/)
     .map((part) => part.trim())
@@ -42,10 +37,10 @@ export function parseAgentSelection(value: unknown): AgentSelection {
   if (parts.length === 0) return 'both';
   const selected = new Set<Agent>();
   for (const part of parts) {
-    if (part === 'claude' || part === 'codex' || part === 'opencode') {
+    if (part === 'claude' || part === 'codex') {
       selected.add(part);
     } else {
-      throw new Error(`--agent must be one of: claude, codex, opencode, both, all`);
+      throw new Error(`--agent must be one of: claude, codex, both`);
     }
   }
   const agents = [...selected];
@@ -54,6 +49,5 @@ export function parseAgentSelection(value: unknown): AgentSelection {
       DEFAULT_AGENTS.every((agent) => selected.has(agent))) {
     return 'both';
   }
-  if (agents.length === ALL_AGENTS.length) return 'all';
   return agents;
 }

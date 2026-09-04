@@ -7,6 +7,8 @@ export const EXECUTOR_RESULT_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
+    protocolVersion: { type: "string", const: "superflow.executor.v2" },
+    messageType: { type: "string", const: "executor_delivery" },
     status: { type: "string", enum: ["ready_for_review", "blocked", "failed"] },
     summary: { type: "string" },
     changedFiles: { type: "array", items: { type: "string" } },
@@ -19,19 +21,66 @@ export const EXECUTOR_RESULT_SCHEMA = {
           command: { type: "string" },
           exitCode: { type: "integer" },
           result: { type: "string" },
+          categories: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: ["build", "test", "startup", "invocation", "runtime"],
+            },
+          },
+          assertion: {
+            type: "string",
+            enum: ["positive", "negative"],
+          },
         },
         required: ["command", "exitCode", "result"],
       },
     },
     evidence: { type: "array", items: { type: "string" } },
+    releasePrerequisites: { type: "array", items: { type: "string" } },
     blockers: { type: "array", items: { type: "string" } },
+    taskEvidence: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          taskId: { type: "string" },
+          category: {
+            type: "string",
+            enum: [
+              "local_required",
+              "environment_required",
+              "release_required",
+            ],
+          },
+          owner: {
+            type: "string",
+            enum: ["executor", "tester", "dba", "sre", "user"],
+          },
+          evidencePaths: { type: "array", items: { type: "string" } },
+          verificationCommands: { type: "array", items: { type: "string" } },
+          changedFiles: { type: "array", items: { type: "string" } },
+        },
+        required: [
+          "taskId",
+          "category",
+          "owner",
+          "evidencePaths",
+          "verificationCommands",
+          "changedFiles",
+        ],
+      },
+    },
   },
   required: [
+    "protocolVersion",
+    "messageType",
     "status",
     "summary",
-    "changedFiles",
     "commands",
     "evidence",
+    "releasePrerequisites",
     "blockers",
   ],
 } as const;
@@ -40,6 +89,8 @@ export const REVIEW_RESULT_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
+    protocolVersion: { type: "string", const: "superflow.review.v2" },
+    messageType: { type: "string", const: "host_review" },
     result: { type: "string", enum: ["pass", "needs_fix", "blocked"] },
     summary: { type: "string" },
     findings: {
@@ -74,8 +125,27 @@ export const REVIEW_RESULT_SCHEMA = {
         ],
       },
     },
+    verificationCommands: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          command: { type: "string" },
+          exitCode: { type: "integer" },
+          result: { type: "string" },
+        },
+        required: ["command", "exitCode", "result"],
+      },
+    },
   },
-  required: ["result", "summary", "findings"],
+  required: [
+    "protocolVersion",
+    "messageType",
+    "result",
+    "summary",
+    "findings",
+  ],
 } as const;
 
 export function writeManagedSchemas(state: ManagedRunState): {

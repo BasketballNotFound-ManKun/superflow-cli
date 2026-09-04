@@ -16,7 +16,9 @@ describe("managed work contract", () => {
     expect(classifyManagedProfile("Implement login validation and tests")).toBe(
       "engineering",
     );
-    expect(classifyManagedProfile("Change a database API across repos")).toBe("sdd");
+    expect(classifyManagedProfile("Change a database API across repos")).toBe(
+      "sdd",
+    );
   });
 
   it("creates a bounded two-agent contract", () => {
@@ -27,11 +29,42 @@ describe("managed work contract", () => {
     });
 
     expect(contract.executorAgent).toBe("claude");
+    expect(contract.supervisorExecution).toBe("external_host");
     expect(contract.permissions.gitCommit).toBe(false);
+    expect(contract.budgets.maxExecutorTokenUnits).toBe(2_000_000);
+    expect(contract.budgets.maxExecutorCostUsd).toBeUndefined();
+    expect(contract.budgets.stalledTimeoutMinutes).toBe(60);
+    expect(contract.budgets.maxSingleInvocationHours).toBe(2);
     expect(contract.budgets.maxReviewRounds).toBe(5);
     expect(contract.budgets.maxExecutorInvocations).toBe(7);
     expect(contract.budgets.maxTotalAgentInvocations).toBe(12);
     expect(contract.contractHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("supports the current Codex host as the supervisor", () => {
+    const contract = createManagedTaskContract({
+      request: "修复一个代码问题",
+      projectRoot: ".",
+    });
+
+    expect(contract.supervisorExecution).toBe("external_host");
+    expect(() => validateManagedTaskContract(contract)).not.toThrow();
+  });
+
+  it("freezes the human-directed mode into the same task contract", () => {
+    const delegated = createManagedTaskContract({
+      request: "修复一个代码问题",
+      projectRoot: ".",
+    });
+    const manual = createManagedTaskContract({
+      request: "修复一个代码问题",
+      projectRoot: ".",
+      executionMode: "human_directed",
+    });
+
+    expect(manual.executionMode).toBe("human_directed");
+    expect(manual.status).toBe("waiting_for_human");
+    expect(manual.contractHash).not.toBe(delegated.contractHash);
   });
 
   it("freezes English into the contract and completion criteria", () => {
@@ -53,7 +86,7 @@ describe("managed work contract", () => {
       createManagedTaskContract({
         request: "测试任务",
         projectRoot: ".",
-        budgets: { maxReviewRounds: 6 },
+        budgets: { maxReviewRounds: 11 },
       }),
     ).toThrow("硬上限");
   });
@@ -63,7 +96,7 @@ describe("managed work contract", () => {
       request: "测试任务",
       projectRoot: ".",
     });
-    contract.budgets.maxReviewRounds = 6;
+    contract.budgets.maxReviewRounds = 11;
 
     expect(() => validateManagedTaskContract(contract)).toThrow("硬上限");
   });

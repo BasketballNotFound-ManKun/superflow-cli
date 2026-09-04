@@ -130,6 +130,13 @@ Binding` with:
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
   any gate is missing from `design.md`, `tests.md`, or quality gate, stop and
   complete the docs first.
+- Low-freedom means the Executor has no unresolved implementation or test-design
+  choice. `design.md` names reusable modules, exact change points, call/data flow,
+  transaction and concurrency boundaries, error behavior, and implementation
+  order. `tests.md` names environment, fixtures, startup command, steps,
+  automation command, response/DB/log assertions, cleanup, and evidence paths.
+  If two materially different implementations or acceptance paths remain valid,
+  return to clarification/design instead of delegating the choice to development.
 - For full workflow changes, `design.md` must include `复杂度减法评审` before
   docs freeze. Inventory every proposed table, field, API, Service/component,
   cache, async/MQ/event flow, scheduled job, compatibility layer, and new
@@ -225,6 +232,9 @@ applicable:
 - `specs/<capability>/spec.md`
 - `design.md`
 - `tasks.md`
+- `tasks.md` 每个 checkbox 必须带且只带一个机器分类：`[local_required]`、
+  `[environment_required]` 或 `[release_required]`。能够在本地完成的编码、测试、启动和浏览器
+  验证必须是 local_required；不得用自由文本 Blocker/owner 代替分类。
 - `tests.md`
 - `test-report.md` skeleton
 - `sdd-quality-gate.md`
@@ -351,8 +361,23 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
 - `tests.md` is a pre-implementation contract. It must not be a vague checklist.
   Every case must include:
   `用例ID | 需求/Scenario | 层级L1/L2/L3/L4 | 前置数据 | 操作步骤 |
-自动化命令 | 响应断言 | DB断言 | 日志断言 | RED预期失败 | GREEN预期通过 |
-test-report证据位置`.
+  自动化命令 | 响应断言 | DB断言 | 日志断言 | RED预期失败 | GREEN预期通过 |
+  test-report证据位置`.
+- 对 L3/L4 的输入校验、协议拒绝或异常分支，`tests.md` 还必须冻结真实注入载荷及其到达
+  目标解析/校验分支的证据；仅断言同一个 HTTP 状态码不算覆盖。原始畸形 JSON、错误
+  Content-Type、越权身份或非法字段必须按真实线协议发送，并同时断言无副作用。
+- 当任务新增或复制本地进程、容器或临时资源的 owner/清理原语时，`design.md`、`tests.md`
+  与 `test-report.md` 必须冻结资源身份字段、生产方与消费方的相等关系及每个不匹配时拒绝
+  清理的用例（例如 nonce、PID、端口、进程签名）。复用未改动的认证 owner helper 时，
+  只记录其完整性、任务参数、一次失败清理和最终零残留，不重复写成框架认证。
+- When a design uses a version field for optimistic locking, `design.md` must
+  freeze the database-level atomic compare-and-set boundary, conflict response,
+  and zero-row distinction between missing data and stale version. A
+  read-then-write check alone is blocked. `tests.md` must include two concurrent
+  requests holding the same old version and assert exactly one success, one
+  conflict, and one version increment. The implementation prompt only inherits
+  these frozen case IDs and commands; managed orchestration must not invent the
+  business design later.
 - Each visible UI field, button action, list column, dropdown, and enum must map to API/DTO/DB/tests or be explicitly out of scope.
 - Every spec scenario must have at least one test case.
 - Every implementation batch must have at least one test that can fail before
@@ -386,6 +411,26 @@ test-report证据位置`.
   `RED 失败证据`, `GREEN 通过证据`, `接口自动化证据`, `DB 核查证据`,
   `日志核查证据`, `未自动化/阻塞用例`, and `Partially verified 边界`.
   Each section must reference concrete `tests.md` case IDs.
+- `tests.md` must freeze runtime-specific acceptance instead of leaving it to
+  managed orchestration:
+  - Spring Boot/backend services: verified startup command, dynamic or planned
+    isolated port, readiness condition, at least one real HTTP invocation, and
+    failure evidence when the environment blocks startup.
+  - `.vue/.tsx/.jsx`, frontend API registration, page permission, or visible UI
+    behavior: frontend startup plus real-browser Playwright/Cypress cases and
+    page assertions; build, static inspection, and mocks are supplementary only.
+  - Controller/API DTO plus frontend request changes: backend Controller contract,
+    frontend request contract, and dynamic API export/call-resolution snapshot
+    when applicable.
+  - Named runtime backends such as MySQL, Testcontainers, a real browser, or a
+    real service: exact backend and command; H2, mocks, stubs, in-memory stores,
+    and compatibility modes never close the named gate.
+  - Multi-repository/service changes: build/runtime checks for every affected
+    repository plus the real cross-repository path; one repository's evidence
+    never substitutes for another.
+  `design.md` records why each runtime and repository is in scope; `tasks.md`
+  classifies local, environment, and release work; the implementation prompt
+  inherits the exact case IDs, commands, assertions, and evidence paths.
 - For money-related changes, `test-report.md` must also include `Money Precision
   Boundary` evidence: original calculation inputs and precision, actual rounding
   boundary and mode, half-cent/residual/multi-detail cases, and reconciliation

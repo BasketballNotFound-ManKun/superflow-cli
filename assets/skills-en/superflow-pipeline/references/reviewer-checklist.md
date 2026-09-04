@@ -22,6 +22,13 @@
   rounding explicit, without early rate rounding or synthesized inverses?
 - Are SQL changes reviewed and tied to total version SQL when needed?
 - Are RED/GREEN evidence and real-entry evidence present?
+- For L3/L4 negative controls, does the raw malformed or forbidden payload reach
+  the intended parser/validation branch, rather than merely returning the same
+  status code?
+- For task-owned resource cleanup, are every frozen identity field (nonce, PID,
+  port, signature, etc.) compared and mismatch refusal proven? An unchanged
+  certified helper needs integrity, task parameters, one failure cleanup, and
+  final zero residue only.
 - Are mock-only results clearly labeled?
 - Did workers stay inside allowed file boundaries?
 - Did hooks and guard scripts pass?

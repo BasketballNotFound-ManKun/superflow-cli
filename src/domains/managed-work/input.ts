@@ -2,10 +2,7 @@ import { execFileSync } from "child_process";
 import { existsSync, readFileSync, realpathSync, statSync } from "fs";
 import path from "path";
 import type { Language } from "../../types.js";
-import type {
-  ManagedProfile,
-  ManagedTaskContract,
-} from "./types.js";
+import type { ManagedProfile, ManagedTaskContract } from "./types.js";
 import { managedText } from "./i18n.js";
 
 export interface ResolveManagedInputOptions {
@@ -31,11 +28,20 @@ export function resolveManagedInput(
   const request = rawInput.trim();
   if (!request) {
     throw new Error(
-      managedText(options.language, "托管任务内容不能为空", "Managed task cannot be empty"),
+      managedText(
+        options.language,
+        "托管任务内容不能为空",
+        "Managed task cannot be empty",
+      ),
     );
   }
   const configuredRoot = canonicalRoot(options.projectRoot ?? process.cwd());
-  const candidate = path.resolve(configuredRoot, request);
+  const embeddedPath = extractExistingPromptPath(
+    request,
+    configuredRoot,
+    options.language,
+  );
+  const candidate = embeddedPath ?? path.resolve(configuredRoot, request);
   if (!existsSync(candidate)) {
     return {
       request,
@@ -53,7 +59,7 @@ export function resolveManagedInput(
   rejectSddTasksChecklist(promptPath, options.language);
   const projectRoot = options.projectRoot
     ? configuredRoot
-    : gitProjectRoot(path.dirname(promptPath)) ?? configuredRoot;
+    : (gitProjectRoot(path.dirname(promptPath)) ?? configuredRoot);
   const relatedProjectRoots = normalizeRoots(options.relatedProjectRoots);
   assertPromptInsideAllowedRoots(
     promptPath,
@@ -75,6 +81,40 @@ export function resolveManagedInput(
     source: isSdd ? "sdd" : "task_file",
     taskPromptPath: promptPath,
   };
+}
+
+function extractExistingPromptPath(
+  request: string,
+  projectRoot: string,
+  language?: Language,
+): string | null {
+  const candidates = new Set<string>();
+  const markdownLinks = request.matchAll(/\[[^\]]*\]\(([^)]+)\)/g);
+  for (const match of markdownLinks) candidates.add(match[1].trim());
+  const quoted = request.matchAll(/["'“‘`]([^"'”’`]+)["'”’`]/g);
+  for (const match of quoted) candidates.add(match[1].trim());
+  const absolute = request.matchAll(/(?:^|\s)(\/(?:[^\s，。；;]+))/g);
+  for (const match of absolute) candidates.add(match[1].trim());
+
+  const existing = [...candidates]
+    .map((candidate) => candidate.replace(/[，。；;：:]+$/, ""))
+    .map((candidate) =>
+      path.isAbsolute(candidate)
+        ? candidate
+        : path.resolve(projectRoot, candidate),
+    )
+    .filter((candidate) => existsSync(candidate));
+  if (existing.length === 0) return null;
+  if (existing.length > 1) {
+    throw new Error(
+      managedText(
+        language,
+        `托管请求中检测到多个有效路径，请明确指定唯一任务 Prompt：${existing.join("、")}`,
+        `Multiple valid paths were detected; specify exactly one task prompt: ${existing.join(", ")}`,
+      ),
+    );
+  }
+  return existing[0];
 }
 
 function promptFromChangeDirectory(
@@ -152,7 +192,10 @@ function assertPromptInsideAllowedRoots(
 
 function isInside(file: string, root: string): boolean {
   const relative = path.relative(canonicalRoot(root), canonicalRoot(file));
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  );
 }
 
 function normalizeRoots(roots: string[] = []): string[] {

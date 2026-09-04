@@ -7,8 +7,10 @@ description: Use when a user asks for the SuperBridge Flow, SDD, OpenSpec, requi
 
 When maintaining Superflow CLI itself, first read repository-root
 `docs/superflow-cli-design-principles.en.md` and
-`docs/superflow-cli-evaluation-framework.en.md`. Identify the owner layer before editing,
-then record baseline, hypothesis, scenario, result, and rollback condition.
+`docs/superflow-cli-evaluation-framework.en.md`; managed-work changes also read
+the managed constitution and protocol. Identify the owner layer before editing,
+then record baseline, hypothesis, scenario, result, and rollback condition under
+the unified evaluation framework.
 
 ## Role
 
@@ -26,35 +28,93 @@ other:
 
 ## Managed Work And Dual-Agent Closure
 
+When the Superflow MCP is installed for the host Agent, prefer
+`superflow_managed_start/status/wait/message/submit_review` instead of manually
+spawning `superflow pipeline` from chat. MCP tasks are always `external_host`:
+the current host keeps the user conversation and reviews directly, while the
+background service starts only the peer executor. Never spawn a nested
+supervisor CLI. Wait with `superflow_managed_wait` locally instead of spending
+model turns on periodic status checks. Use the CLI equivalent below only when
+MCP is unavailable.
+Call `superflow_managed_runtime` before task creation. If its fingerprint is
+stale, require a Host restart and never start a new validation task through the
+pre-install MCP process.
+
 When the user says to use Superflow for managed delivery and provides an
 implementation prompt, change directory, or direct task, use built-in managed
 mode. Do not require the user to name `superflow-pipeline`, roles, or CLI flags:
 
+Before start, perform one Host semantic routing step. Docs-only requests stop
+after autonomous document review and Coding Ready without a managed Task. A
+user-approved change/prompt is frozen from its original path. Only a bounded
+verbal request enters minimal or standard directly. Direction-changing API,
+data, concurrency, cross-repository, or owner choices return to
+clarification/documents; Runner regexes and Executor improvisation do not decide them.
+
 ```bash
 superflow pipeline "<implementation prompt, change directory, or direct task>" --managed --project "<project root>" \
-  --supervisor codex --executor claude --language en
+  --supervisor current --executor peer --language en
 ```
 
-Swap the roles when Claude is the current entry agent. The command always uses
-the independent background service while following the local task journal to a
-terminal state, then the current agent reads the report and summarizes in the
-same conversation. Losing the follower does not stop the task. Read
-`references/managed-work.md` before dispatch. Do not spawn the peer CLI by hand.
+`current/peer` resolves the host automatically: a Codex host drives Claude and a
+Claude host drives Codex. Ambiguous environments fail closed and require explicit
+roles. The background service
+invokes only the executor; the current host agent performs the read-only review
+without spawning another copy of itself. After executor delivery, read
+`host-review-N.md`, write the structured review JSON, then resume with
+`--resume-task <task-id> --submit-host-review <json>`. Losing the follower does
+not stop the task. Read `references/managed-work.md` before dispatch.
+
+Managed delivery uses the lower-cost executor for implementation and validation;
+the more expensive host only freezes the goal, supervises, and reviews delivery
+quality. The host must not code, build, start, test, or manage executor processes.
+When the task reaches `external_supervisor_review_required`, review, submit, and
+resume automatically in the same turn; it must not stop and wait for manual user handoff.
+Only an owner decision, unavailable external authority, or final Git approval may
+interrupt the user.
 
 Hard gates:
 
-- Persist one supervisor session and one executor session per task; resume exact IDs.
+- Use a fresh short session for every execution and repair call. Hand off through
+  the current workspace, frozen prompt, persisted result, and findings; keep old
+  session IDs only for audit and never resume a long session indefinitely.
+- The first invocation must receive the frozen task prompt automatically. Every
+  later invocation must first receive and read a condensed handoff containing at
+  least the prompt path/hash, task progress, local pending work, external
+  prerequisites, all current findings, diff stat, and recent report. Old and new
+  sessions both treat the handoff and current workspace as authoritative.
+- In `external_host` mode the current agent reviews; the service must not spawn a
+  nested Codex or Claude CLI for the supervisor role.
+- Host conversation and review do not count as background Agent invocations;
+  only real executor calls consume the execution budget.
 - Task contract, event journal, review results, and evidence are authoritative.
 - Maximum 5 reviews, 7 executor calls, and 12 total agent calls.
 - Revalidate the frozen contract and hard limits on every start or resume. Engineering work cannot enter review with only one verification category.
 - Resolve a change directory through `.sdd/state.yaml` `implementation_prompt`, reject `tasks.md` as an execution entry, and freeze one prompt snapshot plus SHA-256 for both agents.
 - Supervisor is read-only; executor cannot edit `.superflow/tasks` or commit/push/publish.
-- A passing run stops at `awaiting_git_approval`; Git requires the user's approval.
-- Use `superflow status <project-root>` instead of model polling.
+- Frozen requirements, designs, prompts, handoffs, rules, and task facts are
+  immutable protected inputs. Tasks and test reports are retained progress
+  evidence that may be updated but not deleted. Executor cleans runtime and
+  workspace-temporary resources and keeps delivery artifacts and protected
+  contracts for Host review.
+- Never use pkill, killall, a bare kill, port/name-only cleanup, or rm -rf
+  without owner-helper verification. Native hooks block before mutation and
+  preflight/final gates verify every Host.
+- A passing run enters `environment_validation_blocked`, `local_delivery_ready`, or `release_ready`; Git always requires user approval.
+- Default MCP waits to a 240-second Host-compatible transport window. On window
+  expiry, immediately continue only from returned `latestSequence`; do not call
+  status, read full events, or restart Executor. Hosts with longer tool limits may
+  explicitly request up to twelve hours; semantic supervision runs only for attention.
+- When the user names a task-prompt document, pass its original path to start and verify the frozen SHA-256; never replace it with a host summary.
+- Page/permission changes require frontend startup and real-browser E2E; cross-stack API changes require both backend and frontend contract tests.
 - `superflow-managed-work-check.mjs` must pass before delivery-ready status.
 - Record the single delivery-ready event only after the integrity script passes.
 - After the managed command returns a terminal state, read the task report and summarize it to the user instead of returning only a task ID.
 - Freeze the selected language into the task contract. Executor and reviewer prompts, resumed rounds, journals, reports, notifications, and errors must inherit that language without switching mid-run.
+- Claude Executor long sessions use early auto-compaction by default, while
+  explicit user environment values win. Reload the frozen prompt and handoff after
+  compaction. Final `result.usage` is authoritative; a large value alone does not
+  prove Runner double counting.
 
 ## Phase Order
 
@@ -127,8 +187,8 @@ When the router selects embedded deep clarification, follow these rules inside
 - When a full workflow involves existing behavior, DB/table relationships,
   cross-repository impact, or a real entry, docs must include
   `source-code-audit.md` with: `Business conclusion | understand-anything
-  locator | Data model | All writers | Real user entry | Current callers |
-  Legacy conflict | DB check required | Conclusion level | owner decision`.
+locator | Data model | All writers | Real user entry | Current callers |
+Legacy conflict | DB check required | Conclusion level | owner decision`.
 - understand-anything is a locator, not the final source of truth. Classify
   evidence as `current`, `legacy`, `unmounted`, `data-model-only`,
   `owner-confirmed`, or `blocked`.

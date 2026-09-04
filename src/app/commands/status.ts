@@ -15,6 +15,10 @@ import {
   loadManagedRun,
   loadRegistry,
 } from "../../domains/managed-work/storage.js";
+import {
+  effectiveExecutorInvocations,
+  effectiveTotalAgentInvocations,
+} from "../../domains/managed-work/state.js";
 import { collectCheck } from "./check.js";
 import type { Language } from "../../types.js";
 import { isProcessAlive } from "../../platform/process-liveness.js";
@@ -56,16 +60,32 @@ export interface ManagedTaskStatus {
   reviewRound: number;
   maxReviewRounds: number;
   executorInvocations: number;
+  physicalExecutorInvocations: number;
+  executorInvocationCredits: number;
   maxExecutorInvocations: number;
   totalAgentInvocations: number;
+  physicalTotalAgentInvocations: number;
+  totalAgentInvocationCredits: number;
+  connectivityRetryCount: number;
   maxTotalAgentInvocations: number;
   supervisorSession: string;
   executorSession: string;
   blocker: string | null;
   taskPrompt: string | null;
+  hostReviewPrompt: string | null;
   progressPath: string;
   reportPath: string;
   updatedAt: string;
+  deliveryProgress: string;
+  runtimePhase: string;
+  executorStage: string;
+  executorMilestone: string;
+  runtimeModel: string;
+  runtimeTools: string;
+  invocationElapsedSeconds: number | null;
+  sinceProgressSeconds: number | null;
+  executorTokens: string;
+  hostTokens: string;
 }
 
 export async function statusCommand(
@@ -122,12 +142,7 @@ export async function collectStatus(
       tasksCompleted: tasks.done,
       tasksTotal: tasks.total,
       nextCommand: nextCommand(entry, state.phase),
-      nextReason: nextReason(
-        state.phase,
-        tasks,
-        state.verify_result,
-        language,
-      ),
+      nextReason: nextReason(state.phase, tasks, state.verify_result, language),
       risks: buildRisks(changeDir, state, tasks, language),
       docGaps: docCheck.failed,
     });
@@ -322,8 +337,41 @@ function printStatus(result: StatusResult, language: Language): void {
       console.log(
         managedText(
           language,
-          `  轮次 ${task.reviewRound}/${task.maxReviewRounds} | 执行 ${task.executorInvocations}/${task.maxExecutorInvocations} | 总调用 ${task.totalAgentInvocations}/${task.maxTotalAgentInvocations}`,
-          `  reviews ${task.reviewRound}/${task.maxReviewRounds} | executor ${task.executorInvocations}/${task.maxExecutorInvocations} | total calls ${task.totalAgentInvocations}/${task.maxTotalAgentInvocations}`,
+          `  交付进度：${task.deliveryProgress} | 连接重试 ${task.connectivityRetryCount}`,
+          `  delivery progress: ${task.deliveryProgress} | connectivity retries ${task.connectivityRetryCount}`,
+        ),
+      );
+      console.log(
+        managedText(
+          language,
+          `  运行遥测：${task.runtimePhase} | 当前阶段 ${task.executorStage} | 已达里程碑 ${task.executorMilestone} | 模型 ${task.runtimeModel} | 工具 ${task.runtimeTools} | 调用耗时 ${task.invocationElapsedSeconds ?? "-"}s | 最近进展 ${task.sinceProgressSeconds ?? "-"}s`,
+          `  runtime telemetry: ${task.runtimePhase} | active stage ${task.executorStage} | reached milestone ${task.executorMilestone} | model ${task.runtimeModel} | tools ${task.runtimeTools} | invocation elapsed ${task.invocationElapsedSeconds ?? "-"}s | since progress ${task.sinceProgressSeconds ?? "-"}s`,
+        ),
+      );
+      console.log(
+        managedText(
+          language,
+          `  Token：研发 ${task.executorTokens} | 主 Agent ${task.hostTokens}`,
+          `  tokens: executor ${task.executorTokens} | host ${task.hostTokens}`,
+        ),
+      );
+      if (
+        task.executorInvocationCredits > 0 ||
+        task.totalAgentInvocationCredits > 0
+      ) {
+        console.log(
+          managedText(
+            language,
+            `  物理调用：执行 ${task.physicalExecutorInvocations}、总计 ${task.physicalTotalAgentInvocations}；基础设施抵扣 ${task.executorInvocationCredits}`,
+            `  physical calls: executor ${task.physicalExecutorInvocations}, total ${task.physicalTotalAgentInvocations}; infrastructure credits ${task.executorInvocationCredits}`,
+          ),
+        );
+      }
+      console.log(
+        managedText(
+          language,
+          `  Host ${task.reviewRound}/${task.maxReviewRounds} | 有效研发 ${task.executorInvocations}/${task.maxExecutorInvocations} | 有效总调用 ${task.totalAgentInvocations}/${task.maxTotalAgentInvocations}`,
+          `  Host ${task.reviewRound}/${task.maxReviewRounds} | effective executor ${task.executorInvocations}/${task.maxExecutorInvocations} | effective total ${task.totalAgentInvocations}/${task.maxTotalAgentInvocations}`,
         ),
       );
       console.log(
@@ -334,13 +382,46 @@ function printStatus(result: StatusResult, language: Language): void {
         ),
       );
       if (task.blocker) {
-        console.log(managedText(language, `  阻塞：${task.blocker}`, `  blocker: ${task.blocker}`));
+        console.log(
+          managedText(
+            language,
+            `  阻塞：${task.blocker}`,
+            `  blocker: ${task.blocker}`,
+          ),
+        );
       }
       if (task.taskPrompt) {
-        console.log(managedText(language, `  任务 Prompt：${task.taskPrompt}`, `  task prompt: ${task.taskPrompt}`));
+        console.log(
+          managedText(
+            language,
+            `  任务 Prompt：${task.taskPrompt}`,
+            `  task prompt: ${task.taskPrompt}`,
+          ),
+        );
       }
-      console.log(managedText(language, `  进度：${task.progressPath}`, `  progress: ${task.progressPath}`));
-      console.log(managedText(language, `  报告：${task.reportPath}`, `  report: ${task.reportPath}`));
+      if (task.hostReviewPrompt) {
+        console.log(
+          managedText(
+            language,
+            `  Host 评审 Prompt：${task.hostReviewPrompt}`,
+            `  host review prompt: ${task.hostReviewPrompt}`,
+          ),
+        );
+      }
+      console.log(
+        managedText(
+          language,
+          `  进度：${task.progressPath}`,
+          `  progress: ${task.progressPath}`,
+        ),
+      );
+      console.log(
+        managedText(
+          language,
+          `  报告：${task.reportPath}`,
+          `  report: ${task.reportPath}`,
+        ),
+      );
     }
     if (result.changes.length > 0) console.log("");
   }
@@ -353,9 +434,14 @@ function printStatus(result: StatusResult, language: Language): void {
       change.tasksTotal > 0
         ? ` | tasks ${change.tasksCompleted}/${change.tasksTotal}`
         : "";
-    const docGap = change.docGaps > 0
-      ? managedText(language, ` 📋缺${change.docGaps}文档`, ` 📋${change.docGaps} docs missing`)
-      : "";
+    const docGap =
+      change.docGaps > 0
+        ? managedText(
+            language,
+            ` 📋缺${change.docGaps}文档`,
+            ` 📋${change.docGaps} docs missing`,
+          )
+        : "";
     console.log(
       `- ${change.name}: phase=${change.phase}, workflow=${change.workflow}, review=${change.reviewMode}, auto=${change.autoTransition}${tasks}${docGap}`,
     );
@@ -376,7 +462,10 @@ function collectManagedTasks(
 ): ManagedTaskStatus[] {
   const registry = loadRegistry();
   return registry.tasks
-    .filter((entry) => canonicalPath(entry.projectRoot) === canonicalPath(projectPath))
+    .filter(
+      (entry) =>
+        canonicalPath(entry.projectRoot) === canonicalPath(projectPath),
+    )
     .map((entry) => {
       try {
         const state = loadManagedRun(
@@ -401,6 +490,7 @@ function collectManagedTasks(
             maxReviewRounds: number;
             maxExecutorInvocations: number;
             maxTotalAgentInvocations: number;
+            maxSingleInvocationHours?: number;
           };
         };
         const runDir = managedRunDir(
@@ -415,17 +505,42 @@ function collectManagedTasks(
           currentStep: state.currentStep,
           reviewRound: state.reviewRound,
           maxReviewRounds: task.budgets.maxReviewRounds,
-          executorInvocations: state.executorInvocations,
+          executorInvocations: effectiveExecutorInvocations(state),
+          physicalExecutorInvocations: state.executorInvocations,
+          executorInvocationCredits: state.executorInvocationCredits ?? 0,
           maxExecutorInvocations: task.budgets.maxExecutorInvocations,
-          totalAgentInvocations: state.totalAgentInvocations,
+          totalAgentInvocations: effectiveTotalAgentInvocations(state),
+          physicalTotalAgentInvocations: state.totalAgentInvocations,
+          totalAgentInvocationCredits: state.totalAgentInvocationCredits ?? 0,
+          connectivityRetryCount: state.connectivityRetryCount ?? 0,
           maxTotalAgentInvocations: task.budgets.maxTotalAgentInvocations,
           supervisorSession: shortSession(state.supervisorSession.sessionId),
           executorSession: shortSession(state.executorSession.sessionId),
           blocker: state.blocker,
           taskPrompt: task.taskPrompt?.originalPath ?? null,
+          hostReviewPrompt: state.pendingExternalReview?.promptPath ?? null,
           progressPath: path.join(runDir, "progress.md"),
           reportPath: path.join(runDir, "task-report.md"),
           updatedAt: state.updatedAt,
+          deliveryProgress: deliveryProgressText(state.deliveryProgress),
+          runtimePhase: state.runtimeTelemetry?.phase ?? "idle",
+          executorStage:
+            state.executorActiveStage ?? state.executorStage ?? "unknown",
+          executorMilestone: state.executorStage ?? "unknown",
+          runtimeModel: state.runtimeTelemetry?.model ?? "unknown",
+          runtimeTools: state.runtimeTelemetry?.tools.join(",") || "unknown",
+          invocationElapsedSeconds: state.activeSince
+            ? Math.round((Date.now() - Date.parse(state.activeSince)) / 1_000)
+            : null,
+          sinceProgressSeconds: state.runtimeTelemetry?.lastProgressAt
+            ? Math.round(
+                (Date.now() -
+                  Date.parse(state.runtimeTelemetry.lastProgressAt)) /
+                  1_000,
+              )
+            : null,
+          executorTokens: usageText(state.executorUsage),
+          hostTokens: usageText(state.hostUsage),
         };
       } catch {
         return {
@@ -436,8 +551,13 @@ function collectManagedTasks(
           reviewRound: 0,
           maxReviewRounds: 0,
           executorInvocations: 0,
+          physicalExecutorInvocations: 0,
+          executorInvocationCredits: 0,
           maxExecutorInvocations: 0,
           totalAgentInvocations: 0,
+          physicalTotalAgentInvocations: 0,
+          totalAgentInvocationCredits: 0,
+          connectivityRetryCount: 0,
           maxTotalAgentInvocations: 0,
           supervisorSession: "--",
           executorSession: "--",
@@ -447,9 +567,20 @@ function collectManagedTasks(
             "Local task state is missing; recovery is required",
           ),
           taskPrompt: null,
+          hostReviewPrompt: null,
           progressPath: "",
           reportPath: "",
           updatedAt: entry.updatedAt,
+          deliveryProgress: "source 0/0, environment 0/0, release 0/0",
+          runtimePhase: "unknown",
+          executorStage: "unknown",
+          executorMilestone: "unknown",
+          runtimeModel: "unknown",
+          runtimeTools: "unknown",
+          invocationElapsedSeconds: null,
+          sinceProgressSeconds: null,
+          executorTokens: "unknown",
+          hostTokens: "unknown",
         };
       }
     });
@@ -457,6 +588,34 @@ function collectManagedTasks(
 
 function shortSession(sessionId: string | null): string {
   return sessionId?.slice(0, 8) ?? "--";
+}
+
+function deliveryProgressText(
+  progress:
+    | {
+        source: { completed: number; total: number };
+        environment: { completed: number; total: number };
+        release: { completed: number; total: number };
+      }
+    | undefined,
+): string {
+  const value = progress ?? {
+    source: { completed: 0, total: 0 },
+    environment: { completed: 0, total: 0 },
+    release: { completed: 0, total: 0 },
+  };
+  return `source ${value.source.completed}/${value.source.total}, environment ${value.environment.completed}/${value.environment.total}, release ${value.release.completed}/${value.release.total}`;
+}
+
+function usageText(
+  usage:
+    | { inputTokens: number | null; outputTokens: number | null }
+    | undefined,
+): string {
+  if (!usage || (usage.inputTokens == null && usage.outputTokens == null)) {
+    return "unknown";
+  }
+  return `input ${usage.inputTokens ?? "?"}, output ${usage.outputTokens ?? "?"}`;
 }
 
 function canonicalPath(value: string): string {

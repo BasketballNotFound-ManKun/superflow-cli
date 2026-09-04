@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import type { SddState, Agent, PlatformState, Language } from '../types.js';
 
-const SUPPORTED_AGENTS: Agent[] = ['claude', 'codex', 'opencode'];
+const SUPPORTED_AGENTS: Agent[] = ['claude', 'codex'];
 
 export function loadState(file: string): SddState | null {
   if (!existsSync(file)) return null;
@@ -45,7 +45,6 @@ export function initState(version: string, _agent: Agent, language: Language = '
     platforms: {
       claude: { ...emptyPlatform },
       codex: { ...emptyPlatform },
-      opencode: { ...emptyPlatform },
     },
     backups: {
       settingsFiles: [],

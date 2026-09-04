@@ -28,16 +28,12 @@ describe("core/manifest", () => {
     expect(codexScripts).toContain("superflow-document-audit.mjs");
     expect(codexScripts).toContain("superflow-environment-preflight.mjs");
     expect(codexScripts).toContain("superflow-coding-ready.mjs");
+    expect(codexScripts).toContain("superflow-managed-executor-preflight.mjs");
+    expect(codexScripts).toContain("superflow-managed-owner-verification.sh");
+    expect(codexScripts).toContain("superflow-managed-command-guard.py");
     expect(codexScripts).toContain("superflow-managed-work-guard.sh");
     expect(codexScripts).toContain("codex-auto-backup-hook.sh");
     expect(claudeScripts).toContain("claude-auto-backup-hook.sh");
-    expect(getManifestScripts("opencode")).toContain("superflow-hook-guard.sh");
-    expect(getManifestScripts("opencode")).not.toContain(
-      "codex-auto-backup-hook.sh",
-    );
-    expect(getManifestScripts("opencode")).not.toContain(
-      "claude-auto-backup-hook.sh",
-    );
   });
 
   it("registers the direct archive command gate for native-hook agents", () => {
@@ -52,12 +48,8 @@ describe("core/manifest", () => {
     );
   });
 
-  it("manifest declares Codex, Claude, and OpenCode agents", () => {
-    expect(getManifest().agents).toEqual(["claude", "codex", "opencode"]);
-  });
-
-  it("OpenCode does not inherit Codex or Claude hook registration", () => {
-    expect(getManifestHooks("opencode")).toEqual([]);
+  it("manifest declares Codex and Claude agents", () => {
+    expect(getManifest().agents).toEqual(["claude", "codex"]);
   });
 
   it("manifest exposes SDD anti-drift rules", () => {

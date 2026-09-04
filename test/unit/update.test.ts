@@ -5,6 +5,7 @@ import path from 'path';
 import {
   buildPackageUpdateArgs,
   buildOpenSpecUpdateArgs,
+  buildPostPackageRefreshArgs,
   createUpdatePlan,
   detectPackageScope,
   detectInstalledTargets,
@@ -29,13 +30,7 @@ describe('commands/update', () => {
     expect(plan.skills.names).toContain('superflow-requirement-review');
     expect(plan.scripts.names).toContain('superflow-hook-guard.sh');
     expect(plan.hooks.names).toContain('codex-auto-backup-hook.sh');
-  });
-
-  it('creates an OpenCode update plan without native hooks', () => {
-    const plan = createUpdatePlan(['opencode']);
-    expect(plan.agents).toEqual(['opencode']);
-    expect(plan.scripts.names).toContain('superflow-hook-guard.sh');
-    expect(plan.hooks.names).toEqual([]);
+    expect(plan.mcp).toEqual({ enabled: true, agents: ['codex'] });
   });
 
   it('preserves the installed English language during update', () => {
@@ -49,7 +44,6 @@ describe('commands/update', () => {
       platforms: {
         claude: { skills: [], scripts: [], hooks: [] },
         codex: { skills: [], scripts: [], hooks: [] },
-        opencode: { skills: [], scripts: [], hooks: [] },
       },
       backups: { settingsFiles: [], skills: [] },
       previousVersion: null,
@@ -106,6 +100,40 @@ describe('commands/update', () => {
     expect(formatDependencyUpdateCommands(['codex'], 'global')).toContain(
       'codex plugin add superpowers@openai-api-curated'
     );
+  });
+
+  it('re-enters the freshly installed CLI for a complete deployment refresh', () => {
+    expect(buildPostPackageRefreshArgs({
+      cliPath: '/opt/lib/node_modules/@chenmk/superflow/dist/app/cli.js',
+      agents: ['codex', 'claude'],
+      projectPath: '/workspace/demo',
+      requestedScope: 'global',
+      language: 'en',
+      noHooks: false,
+      json: true,
+    })).toEqual([
+      '/opt/lib/node_modules/@chenmk/superflow/dist/app/cli.js',
+      'update',
+      '/workspace/demo',
+      '--agent',
+      'codex,claude',
+      '--scope',
+      'global',
+      '--language',
+      'en',
+      '--json',
+    ]);
+  });
+
+  it('将 Claude Superpowers 更新失败纳入带包更新的失败结果', () => {
+    const source = fs.readFileSync(
+      path.resolve('src/app/commands/update.ts'),
+      'utf-8',
+    );
+    expect(source).toContain(
+      'failures.push(`claude superpowers update failed: ${result.error}`)',
+    );
+    expect(source).not.toContain('Claude Superpowers update skipped');
   });
 
   it('detects package scope from project dependencies', () => {

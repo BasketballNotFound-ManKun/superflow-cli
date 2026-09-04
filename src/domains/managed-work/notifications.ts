@@ -1,11 +1,12 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
 import path from "path";
-import { spawnSync } from "child_process";
 import { createHash } from "crypto";
 import { managedHome } from "./paths.js";
 
 export type ManagedNotificationType =
   | "delivery_ready"
+  | "review_required"
+  | "provider_change"
   | "human_required"
   | "budget_exhausted"
   | "service_failed";
@@ -38,12 +39,6 @@ export function notifyManagedTask(
     createdAt: new Date().toISOString(),
   };
   appendFileSync(file, `${JSON.stringify(event)}\n`, "utf-8");
-  if (
-    process.platform === "darwin" &&
-    env.SUPERFLOW_DISABLE_OS_NOTIFICATIONS !== "1"
-  ) {
-    sendMacNotification(event.title, event.message);
-  }
   return true;
 }
 
@@ -61,16 +56,4 @@ function existingKeys(file: string): Set<string> {
         }
       }),
   );
-}
-
-function sendMacNotification(title: string, message: string): void {
-  const script = `display notification ${appleString(message)} with title ${appleString(title)}`;
-  spawnSync("osascript", ["-e", script], {
-    stdio: "ignore",
-    timeout: 5_000,
-  });
-}
-
-function appleString(value: string): string {
-  return JSON.stringify(value.slice(0, 300));
 }

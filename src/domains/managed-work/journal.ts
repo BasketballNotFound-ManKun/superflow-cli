@@ -1,7 +1,14 @@
 import { createHash, randomUUID } from "crypto";
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "fs";
+import {
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "fs";
 import path from "path";
 import { managedRunDir } from "./paths.js";
+import { redactManagedLog, redactManagedValue } from "./redaction.js";
 import type { ManagedEvent, ManagedRunState } from "./types.js";
 
 export interface AppendManagedEventInput {
@@ -27,8 +34,8 @@ export function appendManagedEvent(
     role: input.role,
     timestamp: new Date().toISOString(),
     status: state.status,
-    summary: input.summary,
-    evidencePaths: input.evidencePaths ?? [],
+    summary: redactManagedLog(input.summary),
+    evidencePaths: (input.evidencePaths ?? []).map(redactManagedLog),
     previousEventHash: previous?.eventHash ?? null,
   };
   const event: ManagedEvent = {
@@ -67,6 +74,101 @@ export function verifyManagedJournal(state: ManagedRunState): boolean {
     previous = eventHash;
   }
   return true;
+}
+
+export function rebuildManagedJournalAfterSecurityRedaction(
+  state: ManagedRunState,
+  reason: string,
+): string {
+  if (!reason.trim()) {
+    throw new Error("Security redaction migration requires an audit reason");
+  }
+  const runDir = managedRunDir(state.projectRoot, state.taskId, state.runId);
+  const journal = path.join(runDir, "progress.jsonl");
+  const redactedArtifacts = redactHistoricalRunArtifacts(runDir);
+  const events = readManagedEvents(state);
+  const previousHead = events.at(-1)?.eventHash ?? null;
+  let previous: string | null = null;
+  const rebuilt = events.map((event) => {
+    const { eventHash: _oldHash, ...base } = event;
+    base.summary = redactManagedLog(base.summary);
+    base.evidencePaths = base.evidencePaths.map(redactManagedLog);
+    base.previousEventHash = previous;
+    const eventHash = createHash("sha256")
+      .update(JSON.stringify(base))
+      .digest("hex");
+    previous = eventHash;
+    return { ...base, eventHash };
+  });
+  writeFileSync(
+    journal,
+    `${rebuilt.map((event) => JSON.stringify(event)).join("\n")}\n`,
+    "utf-8",
+  );
+  const timestamp = new Date().toISOString();
+  const manifest = path.join(
+    runDir,
+    `journal-security-redaction-${timestamp.replaceAll(":", "-")}.json`,
+  );
+  writeFileSync(
+    manifest,
+    `${JSON.stringify(
+      {
+        migrationType: "security_redaction",
+        taskId: state.taskId,
+        runId: state.runId,
+        reason: reason.trim(),
+        previousHead,
+        rebuiltHead: previous,
+        eventCount: rebuilt.length,
+        redactedArtifacts,
+        migratedAt: timestamp,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf-8",
+  );
+  appendManagedEvent(state, {
+    eventType: "journal.security_redaction_migrated",
+    actor: "superflow-pipeline",
+    role: "runner",
+    summary: reason.trim(),
+    evidencePaths: [manifest],
+  });
+  return manifest;
+}
+
+function redactHistoricalRunArtifacts(runDir: string): string[] {
+  if (!existsSync(runDir)) return [];
+  return readdirSync(runDir)
+    .filter((name) => isManagedTextArtifact(name))
+    .filter((name) => redactManagedArtifact(path.join(runDir, name)))
+    .sort();
+}
+
+function isManagedTextArtifact(name: string): boolean {
+  return /^(?:executor-progress-\d+\.jsonl|executor-result-\d+(?:-invalid)?\.json|executor-\d+(?:-invalid)?-events(?:-part-\d+)?\.jsonl|executor-\d+(?:-invalid)?-stderr(?:-part-\d+)?\.log|review-facts-\d+\.json|review-result-\d+\.json|progress\.md|task-report\.md)$/.test(
+    name,
+  );
+}
+
+function redactManagedArtifact(file: string): boolean {
+  const original = readFileSync(file, "utf-8");
+  const redacted = file.endsWith(".json")
+    ? redactJsonArtifact(original)
+    : redactManagedLog(original);
+  if (redacted === original) return false;
+  writeFileSync(file, redacted, "utf-8");
+  return true;
+}
+
+function redactJsonArtifact(value: string): string {
+  try {
+    return `${JSON.stringify(redactManagedValue(JSON.parse(value)), null, 2)}\n`;
+  } catch {
+    return redactManagedLog(value);
+  }
 }
 
 function lastEvent(file: string): ManagedEvent | null {

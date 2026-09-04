@@ -31,8 +31,5 @@ export function getManifestScripts(agent: Agent): string[] {
 }
 
 export function getManifestHooks(agent: Agent): string[] {
-  if (agent === 'opencode') {
-    return [...(manifest.agentHooks[agent] ?? [])];
-  }
   return [...(manifest.agentHooks[agent] ?? []), ...manifest.hooks];
 }

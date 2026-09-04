@@ -24,7 +24,7 @@ describe('core/state', () => {
     expect(loaded?.platforms.claude.skills).toContain('superflow-clarify');
   });
 
-  it('loadState 兼容没有 OpenCode 平台字段的旧状态', () => {
+  it('loadState 兼容已有双端平台字段的旧状态', () => {
     fs.writeFileSync(TEST_STATE, JSON.stringify({
       version: '0.1.0',
       lastInit: new Date().toISOString(),
@@ -39,7 +39,7 @@ describe('core/state', () => {
 
     const loaded = loadState(TEST_STATE);
 
-    expect(loaded?.platforms.opencode).toEqual({ skills: [], scripts: [], hooks: [] });
+    expect(loaded?.platforms.codex).toEqual({ skills: [], scripts: [], hooks: [] });
   });
 
   it('initState 创建默认结构', () => {

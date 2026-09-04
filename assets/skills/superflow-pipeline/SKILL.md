@@ -9,41 +9,80 @@ This is the lightweight SDD router. Do not load the whole SDD process when a sma
 
 维护 Superflow CLI 自身时，必须先读取仓库根目录
 `docs/superflow-cli-design-principles.md` 和
-`docs/superflow-cli-evaluation-framework.md`。先判定责任层，再按统一评价体系留下基线、假设、
-实例、结果和回滚条件。
+`docs/superflow-cli-evaluation-framework.md`；涉及托管时再读取托管专项宪章与协议。
+先判定责任层，再修改并按统一评价体系留下基线、假设、实例、结果和回滚条件。
 
 ## 托管任务与双 Agent 闭环
+
+主 Agent 已安装 Superflow MCP 时，优先使用
+`superflow_managed_start/status/wait/message/submit_review`，不要再从聊天中手工启动
+`superflow pipeline` 子进程。MCP 任务固定为 `external_host`：当前主 Agent 与用户保持对话并
+直接评审，后台只启动对端研发 Agent，禁止嵌套 Supervisor CLI。等待进度必须调用
+`superflow_managed_wait` 在本地阻塞，不得用模型回合定时查询。MCP 不可用时才使用下面的
+CLI 等价流程。
+创建任务前先调用 `superflow_managed_runtime`。若运行时指纹过期，必须要求重启当前 Host，
+禁止用安装前的旧 MCP 进程启动新验证任务。
 
 当用户说“用 Superflow 托管完成”并给出 implementation prompt、change 目录或一个简单
 任务时，直接使用内建托管模式。不要要求用户说出 `superflow-pipeline`、角色参数或底层
 CLI 命令：
 
+启动前先做一次 Host 语义分流：用户只要求文档时，完成文档自主评审和 Coding Ready 后
+停止，不创建托管 Task；已有用户评审通过的 change/Prompt 时原路径冻结；只有边界清晰的
+口头小需求才直接进入 minimal/standard。若口头需求存在会改变实现方向的 API、数据、
+并发、跨仓或 owner 决策，先进入澄清/文档流程，不能把这一判断交给 Runner 正则或 Executor。
+
 ```bash
 superflow pipeline "<implementation-prompt 路径、change 目录或简单任务>" --managed --project "<项目根目录>" \
-  --supervisor codex --executor claude --language zh
+  --supervisor current --executor peer --language zh
 ```
 
-当前入口是 Claude 时交换两个角色。命令默认由独立后台服务执行，同时监听本地任务账本
-直到终态，再由当前 Agent 读取报告并在同一会话汇总。监听中断不影响后台任务。执行前
-必须阅读 `references/managed-work.md`，不得直接手工递归启动 peer CLI。
+`current/peer` 会自动识别当前 Host：Codex Host 驱动 Claude，Claude Host 驱动 Codex；
+识别不明确时失败关闭并要求显式指定。后台只调用执行 Agent；当前 Host Agent 直接完成只读
+评审，不得再启动同名嵌套 CLI。执行者返回后，读取 `host-review-N.md`，把结构化评审写入
+JSON，再用 `--resume-task <task-id> --submit-host-review <json>` 恢复。监听中断不影响后台
+任务。执行前必须阅读 `references/managed-work.md`，不得手工递归启动 peer CLI。
+
+托管目标是用相对低成本的研发 Agent 承担实现与验证，让高成本主 Agent 只负责目标冻结、
+监督和交付质量评审。主 Agent 不参与编码、构建、启动、测试或进程管理。收到
+`external_supervisor_review_required` 后必须在当前回合自动评审、提交结果并继续等待；
+不得停下来等待用户人工接力。只有业务 owner 决策、不可获得的外部权限或最终 Git 批准
+可以中断用户。
 
 硬规则：
 
-- 每个任务固定监督会话和执行会话，后续轮次按明确 session ID 恢复。
+- 每次执行与整改都创建短会话，以当前工作区、冻结 Prompt、落盘结果和 finding 交接；
+  禁止无限恢复长会话。旧 session ID 只用于审计。
+- 第一轮必须自动下发冻结的任务 Prompt；后续每轮必须先生成并完整读取压缩交接包，至少
+  包含 Prompt 路径与哈希、任务完成度、本地剩余项、外部前置、当前全部 finding、差异统计
+  和最近报告。旧会话或新会话接手都以交接包和当前工作区为准。
+- `external_host` 模式由当前 Agent 评审，后台不得启动第二个 Codex/Claude CLI。
+- MCP Host 的对话和评审不计后台 Agent 调用；只有真实研发 Agent 调用进入执行预算。
 - 任务合同、事件账本、检查结果和证据文件是事实源，不依赖聊天上下文。
 - 正式检查最多 5 轮、执行最多 7 次、Agent 总调用最多 12 次。
 - 每次启动和恢复都校验冻结合同与硬上限；工程任务只有一类验证证据时不得进入检查。
 - 输入是 change 目录时必须从 `.sdd/state.yaml` 解析 `implementation_prompt`；输入是
   `tasks.md` 时必须阻塞。执行前冻结 Prompt 快照和 SHA-256，两个 Agent 使用同一快照。
 - 监督角色只读，执行角色禁止修改 `.superflow/tasks` 和自动 Git 提交/推送/发布。
-- 最终通过后状态必须停在 `awaiting_git_approval`，当前主 Agent 汇总并获得用户批准后
-  才能提交 Git。
-- 使用 `superflow status <project-root>` 查看状态；不得通过模型轮询询问进度。
+- 冻结需求、设计、Prompt、handoff、规则和任务事实属于 immutable 受保护输入；tasks 与
+  test-report 属于 retain 进度证据，可回填但不可删除。runtime 和 workspace-temporary 由
+  Executor 清理，delivery-artifacts 和 protected-contracts 必须保留到 Host 评审。
+- 禁止 pkill、killall、裸 kill、只按端口/进程名清理和未经 owner helper 校验的 rm -rf；
+  原生 Hook 写入前阻断，preflight/最终门禁对所有 Host 复核。
+- 最终通过后按三套进度进入 `environment_validation_blocked`、`local_delivery_ready` 或
+  `release_ready`；任何状态都必须获得用户批准后才能提交 Git。
+- 使用 MCP 等待时默认采用 240 秒 Host 兼容传输窗口；窗口超时后只用返回的
+  `latestSequence` 立即续接，不调用 status、不读取完整事件、不重启 Executor。支持长工具
+  调用的 Host 可显式提高到 12 小时；仅 attention 状态执行语义监督。
+- 用户指定任务 Prompt 文档时必须把原路径传给 start 并核对冻结 SHA-256，禁止用主 Agent 摘要替代。
+- 页面/权限变更必须启动前端并执行真实浏览器 E2E；跨端 API 变更必须执行前后端合同测试。
 - 运行产物完整性必须通过 `superflow-managed-work-check.mjs`。
 - 只有完整性脚本先通过，状态机才能记录唯一的交付就绪事件。
 - 托管命令返回终态后，当前 Agent 必须读取任务报告并向用户汇总；不能只报告任务编号。
 - 语言必须冻结进任务合同；执行 Prompt、恢复轮次、进度账本、任务报告、通知和错误提示
   必须继承合同语言，不能在中途切换。
+- Claude Executor 长会话默认提前自动压缩，显式用户环境值优先；压缩后重读冻结 Prompt 和
+  handoff。最终 `result.usage` 是权威调用用量，不得仅凭数值大就判断 Runner 重复累计。
 
 ## Choose The Right SDD Skill
 
@@ -132,7 +171,7 @@ When the router selects embedded deep clarification, follow these rules inside
 - full workflow 涉及现有行为、DB/表关系、跨仓或真实入口时，docs 阶段必须生成
   `source-code-audit.md`，并填写：
   `业务结论 | understand定位 | 数据模型 | 所有写入方 | 真实用户入口 |
-  当前调用方 | 遗留冲突 | DB是否必查 | 结论等级 | owner决策`。
+当前调用方 | 遗留冲突 | DB是否必查 | 结论等级 | owner决策`。
 - understand-anything 只作 locator，不作最终事实源。证据必须区分 `current`、
   `legacy`、`unmounted`、`data-model-only`、`owner-confirmed`、`blocked`。
 - `List`、`orderIds`、`batchInsert` 或一对多模型与单笔真实入口冲突时，必须完成
@@ -344,6 +383,7 @@ context_compression | created_at | verified_at | updated_at`
 `traceability-matrix.md` 里留一条链接就进入实现。
 
 **任务本地必备文件：**
+
 - `.openspec.yaml`
 - `proposal.md`，说明背景、目标、非目标、影响范围、验收标准
 - `bug-fix-plan.md`，仅 bug fix / incident / report-driven 修复必备
@@ -359,6 +399,7 @@ context_compression | created_at | verified_at | updated_at`
 - `prompt/<p-or-cr-task-name>.md`
 
 **根级挂接必备：**
+
 - 根级 `tasks.md` 必须链接任务目录、任务 prompt、`api.md`、`tests.md`、
   `test-report.md`。
 - 根级 `tests.md` 必须挂入任务用例 ID、自动化命令、DB/log 断言和真实入口。
@@ -370,6 +411,7 @@ context_compression | created_at | verified_at | updated_at`
   prompt。
 
 **阻塞规则：**
+
 - 缺任一任务本地必备文件，阻塞生成实现 prompt 或进入编码。
 - 只有根级 prompt、没有任务本地 `prompt/`，阻塞。
 - 只有根级 traceability、没有任务本地 `traceability-matrix.md`，阻塞。
@@ -385,6 +427,7 @@ locator / 代码地图 / 影响面初筛工具，不能作为设计事实源，�
 Mapper/XML、数据库样例、接口契约和真实消费入口验证。
 
 **影响面发现方式（优先但可降级）：**
+
 - 优先检查当前仓库是否存在 understand-anything 相关索引/产物，例如
   `.understand-anything/`、`understand-anything.md`、`understand anything.md`、
   或项目约定的 understand-anything 图谱文件。
@@ -401,6 +444,7 @@ Mapper/XML、数据库样例、接口契约和真实消费入口验证。
   跨仓数据合同门禁和真实集成测试门禁。
 
 **阻塞规则：**
+
 - 没有任何平台级影响面发现证据，只阅读当前文件、当前 Service、当前接口，阻塞。
 - 只阅读当前文件、当前 Service、当前接口，不分析平台级调用和消费方，阻塞。
 - 把 understand-anything 图谱、聊天解释或旧索引当成最终事实源，未回读当前源码、
@@ -452,6 +496,7 @@ Mapper/XML、数据库样例、接口契约和真实消费入口验证。
 本节规则执行并在交付中说明降级原因。
 
 **触发条件（任一满足即触发）：**
+
 - 新增/修改表、字段、索引、枚举、默认值、初始化数据或同步规则。
 - 引入状态字段，例如 `running_status`、`connector_status`、`own_status`、
   `is_online`、`is_use`、`deleted/is_deleted`。
@@ -459,6 +504,7 @@ Mapper/XML、数据库样例、接口契约和真实消费入口验证。
   第三方适配器或启动/扫码/支付/退款等业务入口间接使用。
 
 **强制反查步骤：**
+
 1. 以每张表和字段为 key 反查全部引用。understand-anything 可用时作为定位工具；
    不可用或不可信时，必须用 `rg`、Mapper/XML、实体注解、SQL、DTO、枚举、
    日志模板、配置和 sibling repo 搜索完成反查。
@@ -472,6 +518,7 @@ Mapper/XML、数据库样例、接口契约和真实消费入口验证。
    任务本身成功。
 
 **阻塞规则：**
+
 - 只证明“同步任务执行成功”，没有证明消费该表的真实入口通过，阻塞。
 - 只看写入方，不反查读取/过滤/启动前校验/扫码/小程序入口，阻塞。
 - 状态字段只测置为不可用，不测恢复可用和旧值清理，阻塞。
@@ -485,6 +532,7 @@ SDD 设计、评审、实现 prompt 和测试报告中，字段/状态/枚举/�
 当作正确结果。
 
 **强制设计要求：**
+
 - 对每个状态字段、枚举字段、同步字段，必须写清：
   `真源字段 | 真源枚举 | 目标字段 | 目标枚举 | 消费方解释 | 业务依据 | 不确定项`。
 - 如果上下游字段名相似、数值相同或看起来可转换，仍必须回到源码、数据库样例、
@@ -498,6 +546,7 @@ SDD 设计、评审、实现 prompt 和测试报告中，字段/状态/枚举/�
   不能只断言字段存在、非空、接口 200 或同步任务成功。
 
 **阻塞规则：**
+
 - 只写默认值/兜底值，没有业务依据和 owner 确认，阻塞。
 - 用“有值”的字段替代真实业务真源，例如用枪口状态替代桩运行状态，阻塞。
 - 只验证返回有值或链路成功，不验证值是否符合消费方业务语义，阻塞。
@@ -536,6 +585,7 @@ prompt、代码评审、测试到 verify 继承同一份 `Money Precision Bounda
 证据锚点 | 禁止用法 | 不确定项/owner`
 
 要求：
+
 - 不能用字段名相似、类型相同、值非空来判断两个字段等价。
 - 像 `{externalDeviceId}`、`{siteId}`、`{portId}`、`{tenantId}`、
   `{businessId}`、`{contractId}`、`{benefitType}` 这类字段，
@@ -551,6 +601,7 @@ prompt、代码评审、测试到 verify 继承同一份 `Money Precision Bounda
 DB column | 后续读取方 | 消费入口 | 验证 SQL | 测试用例`
 
 要求：
+
 - 只看到 Java setter 不等于已落库；必须核对 Mapper XML、注解 SQL、BaseMapper、
   resultMap 和条件更新。
 - 成组字段必须作为一个合同验证，例如业务绑定三元组
@@ -565,6 +616,7 @@ DB column | 后续读取方 | 消费入口 | 验证 SQL | 测试用例`
 DB 状态 | 结算/通知/展示消费点 | 真实验证方式`
 
 要求：
+
 - 不能只写 Service 方法或工具类；必须写到 Controller/RPC/MQ/定时任务/设备/小程序/
   第三方真实入口。
 - 同一能力存在多条路径时必须拆开，例如用户入口、后台操作、外部集成、MQ 补偿。
@@ -651,10 +703,11 @@ SDD 文档必须先冻结测试，再允许生成实现 prompt。研发 agent �
 测试，也不得把人工随手调用、编译成功或接口 200 当作验收。
 
 **测试冻结要求：**
+
 - `tests.md` 必须为每个 spec scenario、API、状态/枚举分支、DB 写入闭环和真实
   消费入口生成可执行测试用例，包含：
   `用例ID | 层级L1/L2/L3/L4 | 前置数据 | 操作步骤 | 自动化命令 | 断言 |
-  RED预期失败 | GREEN预期通过 | DB核查 | 日志核查 | test-report证据位置`。
+RED预期失败 | GREEN预期通过 | DB核查 | 日志核查 | test-report证据位置`。
 - 涉及接口、CRUD、Mapper/XML、数据库字段、配置驱动行为或跨系统链路时，至少
   有一个 L3/L4 自动化接口用例。用例必须写出完整 Base URL、token/cookie 获取
   方式、curl/Postman/Newman/pytest/RestAssured 等可执行命令、请求体、响应断言、
@@ -669,6 +722,7 @@ SDD 文档必须先冻结测试，再允许生成实现 prompt。研发 agent �
   不得把 mock-only 或跳过测试写成 Passed。
 
 **实现前阻塞规则：**
+
 - `tests.md` 没有可执行自动化命令，阻塞。
 - `test-report.md` 没有 Red-Green 证据占位和接口自动化证据表，阻塞。
 - prompt 未引用 `tests.md` 的具体用例 ID、自动化命令和 RED/GREEN 要求，阻塞。
@@ -764,6 +818,7 @@ SDD 文档必须先冻结测试，再允许生成实现 prompt。研发 agent �
 6. 当前阶段未生成 prompt，且用户没有明确禁止生成 prompt
 
 **以上任一条件触发时，必须阻止进入开发阶段，并在输出中显式报告：**
+
 > ⚠️ Prompt 衔接检查未通过：P{xx} 缺少实现 prompt 或交叉挂接。必须先生成
 > `prompt/pXX-xxx.md` 并更新 `prompt/implementation.md`、`tasks.md`、
 > `traceability-matrix.md`、`tests.md`、`test-report.md`，不得只提醒后续生成。
@@ -792,12 +847,14 @@ starter、connector 或任何被当前项目引用的外部项目时，必须把
 不能只改本地源码或同版本 SNAPSHOT。
 
 **触发条件（任一满足即触发）：**
+
 - 修改 `*-api`、`*-sdk`、公共 jar、协议类、DTO、枚举、校验注解或序列化字段类型。
 - 修改 sibling repo 后，当前仓库通过 Maven/Gradle 依赖、RPC、HTTP SDK 或本地 jar 消费它。
 - 字段类型、方法签名、setter/getter、接口入参出参发生变化。
 - 需要先在另一个仓库 `mvn install/deploy`，当前仓库才能编译或运行。
 
 **强制要求：**
+
 - 在 `bug-fix-plan.md` / `design.md` / `tasks.md` / prompt 中写明：
   `引用项目 | 当前版本 | 目标版本 | 当前仓库依赖文件 | 发布/安装命令 | 验证命令`。
 - 修改被引用项目的协议/API 时，必须升级版本号，例如 `1.0.8-SNAPSHOT -> 1.0.9-SNAPSHOT`；
@@ -808,6 +865,7 @@ starter、connector 或任何被当前项目引用的外部项目时，必须把
 - 如果版本号由发布平台统一管理，必须把"由谁发布/发布到哪里/当前仓库如何引用"写成阻塞项。
 
 **阻塞规则：**
+
 - 被引用项目改了代码但未升级版本号，阻塞。
 - 当前仓库未更新依赖版本，阻塞。
 - 只在本机同版本 SNAPSHOT 覆盖安装，阻塞。
@@ -850,6 +908,7 @@ starter、connector 或任何被当前项目引用的外部项目时，必须把
 同一张业务表被多个服务读取、复制实体、复用 Mapper 或通过外部集成/网关链路间接消费时，必须把表结构当作跨仓合同处理。单仓 SQL 执行成功不代表其他消费仓可运行。
 
 **触发条件（任一满足即触发）：**
+
 - 多仓共享同一数据库表、视图、字典或初始化数据
 - 一个仓库复制了另一个仓库的 PO/Entity/Mapper/DTO
 - MyBatis-Plus `@TableName` + `BaseMapper` 自动 SELECT 实体字段
@@ -858,6 +917,7 @@ starter、connector 或任何被当前项目引用的外部项目时，必须把
 - 真实链路入口在 A 服务，业务校验落在 B 服务或 sibling service
 
 **强制要求：**
+
 1. 指定表结构真源：明确本需求以哪个 SQL 文件、哪个库的 `SHOW CREATE TABLE`、哪个仓库模型作为最终合同。
 2. 列出全部消费仓：包括直接 CRUD 仓库、外部集成仓库、定时任务、回调服务、导入导出服务和测试端点。
 3. 对每个消费仓执行字段对账：`@TableName` 实体字段、`BaseMapper` 默认查询列、Mapper XML/resultMap、手写 SQL、查询条件必须逐项对照 `information_schema.columns` 或 `SHOW CREATE TABLE`。
@@ -867,6 +927,7 @@ starter、connector 或任何被当前项目引用的外部项目时，必须把
 7. test-report 必须记录跨仓对账表：`表 | 真源结构 | 消费仓 | 实体/Mapper/SQL 字段 | 实际库字段 | 处理结论 | 验证证据`。
 
 **阻塞规则：**
+
 - 任一消费仓存在实体映射不存在列、Mapper 查询不存在列、查询条件依赖已删除字段时，阻塞进入真实验收。
 - 只有主仓编译通过、主仓 SQL 执行成功、主仓接口通过，不能关闭跨仓数据合同任务。
 - 测试库缺字段时，必须先判断字段是否属于当前最终合同；如果不是最终合同字段，禁止补库绕过，必须修消费仓代码。
@@ -874,6 +935,7 @@ starter、connector 或任何被当前项目引用的外部项目时，必须把
 #### 数据库迁移类任务硬门禁（涉及以下任一条件时触发）
 
 **触发条件（任一满足即触发硬门禁）：**
+
 - 新增表
 - 删除字段
 - 物理删除旧字段

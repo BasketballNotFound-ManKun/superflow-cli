@@ -120,6 +120,13 @@ For complex requirements, verify these before writing docs:
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
   any gate is missing from `design.md`, `tests.md`, or quality gate, stop and
   complete the docs first.
+- Low-freedom means the Executor has no unresolved implementation or test-design
+  choice. `design.md` names reusable modules, exact change points, call/data flow,
+  transaction and concurrency boundaries, error behavior, and implementation
+  order. `tests.md` names environment, fixtures, startup command, steps,
+  automation command, response/DB/log assertions, cleanup, and evidence paths.
+  If two materially different implementations or acceptance paths remain valid,
+  return to clarification/design instead of delegating the choice to development.
 - For full workflow changes, `design.md` must include a `Minimal Design Review`
   before docs freeze. Inventory every proposed table, field, API,
   service/component, cache, async/MQ/event flow, scheduled job, compatibility
@@ -219,6 +226,10 @@ applicable:
 - `specs/<capability>/spec.md`
 - `design.md`
 - `tasks.md`
+- Every `tasks.md` checkbox must carry exactly one machine category:
+  `[local_required]`, `[environment_required]`, or `[release_required]`.
+  Locally executable code, tests, startup, and browser checks are local_required;
+  free-form Blocker/owner prose cannot replace the category.
 - `tests.md`
 - `test-report.md` skeleton
 - `sdd-quality-gate.md`
@@ -347,6 +358,25 @@ Use references only as needed:
   `Case ID | Requirement/scenario | Level L1/L2/L3/L4 | Precondition data | Steps |
   Automation command | Response assertion | DB assertion | Log assertion | RED expected failure | GREEN expected pass |
   test-report evidence location`.
+- For L3/L4 input validation, protocol rejection, and exceptional branches,
+  `tests.md` also freezes the real injected payload and evidence that it reaches
+  the intended parser or validation branch; matching the same HTTP status alone
+  is not coverage. Raw malformed JSON, wrong Content-Type, unauthorized identity,
+  and invalid fields must be sent on the real wire protocol and assert no side effect.
+- When a task adds or copies an owner/cleanup primitive for local processes,
+  containers, or temporary resources, `design.md`, `tests.md`, and
+  `test-report.md` freeze resource identity fields, producer/consumer equality
+  relations, and refusal-to-clean tests for every mismatch (for example nonce,
+  PID, port, and process signature). When reusing an unchanged certified owner
+  helper, record only its integrity, task parameters, one failure cleanup, and
+  final zero residue; do not repeat framework certification.
+- When a design uses a version field for optimistic locking, `design.md` freezes
+  the database-level atomic compare-and-set boundary, conflict response, and
+  zero-row distinction between missing data and stale version. A read-then-write
+  check alone is blocked. `tests.md` includes two concurrent requests holding
+  the same old version and asserts exactly one success, one conflict, and one
+  version increment. The implementation prompt only inherits these frozen case
+  IDs and commands; managed orchestration never invents the business design.
 - Each visible UI field, button action, list column, dropdown, and enum must map to API/DTO/DB/tests or be explicitly out of scope.
 - Every spec scenario must have at least one test case.
 - Every implementation batch must have at least one test that can fail before
@@ -380,6 +410,26 @@ Use references only as needed:
   `RED failure evidence`, `GREEN pass evidence`, `interface automation evidence`, `DB evidence`,
   `log evidence`, `manual/blocking cases`, and `Partially verified boundary`.
   Each section must reference concrete `tests.md` case IDs.
+- `tests.md` freezes runtime-specific acceptance instead of leaving it to
+  managed orchestration:
+  - Spring Boot/backend services: verified startup command, dynamic or planned
+    isolated port, readiness condition, at least one real HTTP invocation, and
+    failure evidence when the environment blocks startup.
+  - `.vue/.tsx/.jsx`, frontend API registration, page permission, or visible UI
+    behavior: frontend startup plus real-browser Playwright/Cypress cases and
+    page assertions; build, static inspection, and mocks are supplementary only.
+  - Controller/API DTO plus frontend request changes: backend Controller contract,
+    frontend request contract, and dynamic API export/call-resolution snapshot
+    when applicable.
+  - Named runtime backends such as MySQL, Testcontainers, a real browser, or a
+    real service: exact backend and command; H2, mocks, stubs, in-memory stores,
+    and compatibility modes never close the named gate.
+  - Multi-repository/service changes: build/runtime checks for every affected
+    repository plus the real cross-repository path; one repository's evidence
+    never substitutes for another.
+  `design.md` records why each runtime and repository is in scope; `tasks.md`
+  classifies local, environment, and release work; the implementation prompt
+  inherits the exact case IDs, commands, assertions, and evidence paths.
 - For money-related changes, `test-report.md` must also include `Money Precision
   Boundary` evidence: original calculation inputs and precision, actual rounding
   boundary and mode, half-cent/residual/multi-detail cases, and reconciliation

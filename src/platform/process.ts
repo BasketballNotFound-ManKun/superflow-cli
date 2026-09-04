@@ -16,7 +16,7 @@ export function runCommand(
       cwd: options.cwd,
       env: { ...process.env, ...(options.env ?? {}) },
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: process.platform === 'win32',
+      shell: false,
     });
 
     let stdout = '';

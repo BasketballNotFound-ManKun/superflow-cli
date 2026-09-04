@@ -40,23 +40,7 @@ export function getPlatformPaths(
         promptsDir: path.join(base, '.codex', 'prompts'),
         settingsFile: path.join(base, '.codex', 'hooks.json'),
       };
-    case 'opencode': {
-      const root = scope === 'global'
-        ? path.join(homedir(), '.config', 'opencode')
-        : path.join(projectPath, '.opencode');
-      return {
-        id: 'opencode',
-        name: 'OpenCode',
-        skillsDir: path.join(root, 'skills'),
-        rulesDir: path.join(root, 'rules'),
-        scriptsDir: path.join(root, 'scripts'),
-        promptsDir: path.join(root, 'commands'),
-        settingsFile: scope === 'global'
-          ? path.join(root, 'opencode.json')
-          : path.join(projectPath, 'opencode.json'),
-      };
-    }
     default:
-      throw new Error(`Unknown agent: ${agent}. Expected 'claude', 'codex', or 'opencode'.`);
+      throw new Error(`Unknown agent: ${agent}. Expected 'claude' or 'codex'.`);
   }
 }

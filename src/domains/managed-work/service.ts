@@ -1,5 +1,13 @@
-import { appendFileSync, existsSync, mkdirSync } from "fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "fs";
 import path from "path";
+import { createHash } from "crypto";
 import spawn from "cross-spawn";
 import { LocalAgentInvoker } from "../../platform/agent-process.js";
 import { managedHome, managedServicePath } from "./paths.js";
@@ -16,11 +24,15 @@ import { acquireManagedLock } from "./lock.js";
 import { randomUUID } from "crypto";
 import { isProcessAlive } from "../../platform/process-liveness.js";
 import { managedText } from "./i18n.js";
+import type { Language } from "../../types.js";
+import { stopProcessTree } from "../../platform/process-tree.js";
+import { classifyManagedFailure } from "./failure.js";
 
 export interface ManagedServiceState {
   pid: number;
   startedAt: string;
   cliPath: string;
+  runtimeFingerprint?: string;
 }
 
 export async function runManagedService(
@@ -36,6 +48,7 @@ export async function runManagedService(
     pid: process.pid,
     startedAt: new Date().toISOString(),
     cliPath: process.argv[1],
+    runtimeFingerprint: runtimeFingerprintForCli(process.argv[1]),
   } satisfies ManagedServiceState);
 
   const invoker = new LocalAgentInvoker();
@@ -43,9 +56,7 @@ export async function runManagedService(
   try {
     do {
       const registry = loadRegistry(env);
-      const runnable = registry.tasks.find((entry) =>
-        isRunnable(entry.status, entry.updatedAt),
-      );
+      const runnable = registry.tasks.find((entry) => isRunnable(entry));
       if (runnable) {
         try {
           await runManagedTask(
@@ -91,10 +102,13 @@ function recordServiceFailure(
   const registry = loadRegistry(env);
   const entry = registry.tasks.find((item) => item.taskId === taskId);
   let language;
+  let failure = null;
   try {
-    language = entry
-      ? loadManagedTask(entry.projectRoot, taskId).language
+    const contract = entry
+      ? loadManagedTask(entry.projectRoot, taskId)
       : undefined;
+    language = contract?.language;
+    failure = contract ? classifyManagedFailure(contract, error) : null;
   } catch {
     language = undefined;
   }
@@ -102,7 +116,7 @@ function recordServiceFailure(
   mkdirSync(path.dirname(file), { recursive: true });
   appendFileSync(
     file,
-    `${JSON.stringify({ taskId, timestamp: new Date().toISOString(), message })}\n`,
+      `${JSON.stringify({ taskId, timestamp: new Date().toISOString(), message, failure })}\n`,
     "utf-8",
   );
   notifyManagedTask(
@@ -123,28 +137,113 @@ function recordServiceFailure(
 export function ensureManagedService(
   cliPath = process.argv[1],
   env: NodeJS.ProcessEnv = process.env,
+  language?: Language,
 ): ManagedServiceState {
   const current = readServiceState(env);
-  if (current && isProcessAlive(current.pid)) return current;
+  const resolvedCliPath = path.resolve(cliPath);
+  const runtimeFingerprint = runtimeFingerprintForCli(resolvedCliPath);
+  if (current && isProcessAlive(current.pid)) {
+    if (
+      current.cliPath === resolvedCliPath &&
+      current.runtimeFingerprint === runtimeFingerprint
+    ) {
+      return current;
+    }
+    stopOutdatedManagedService(current, env, language);
+  }
 
-  const child = spawn(
-    process.execPath,
-    [path.resolve(cliPath), "managed-service"],
-    {
-      detached: process.platform !== "win32",
-      stdio: "ignore",
-      env,
-      shell: false,
-    },
-  );
-  if (!child.pid) throw new Error("无法启动 Superflow 后台托管服务");
+  const child = spawn(process.execPath, [resolvedCliPath, "managed-service"], {
+    detached: process.platform !== "win32",
+    stdio: "ignore",
+    env,
+    shell: false,
+  });
+  if (!child.pid) {
+    throw new Error(
+      managedText(
+        language,
+        "无法启动 Superflow 后台托管服务",
+        "Unable to start the Superflow managed background service",
+      ),
+    );
+  }
   child.unref();
   const state: ManagedServiceState = {
     pid: child.pid,
     startedAt: new Date().toISOString(),
-    cliPath: path.resolve(cliPath),
+    cliPath: resolvedCliPath,
+    runtimeFingerprint,
   };
   return state;
+}
+
+export function runtimeFingerprintForCli(cliPath: string): string {
+  const resolved = realpathSync(path.resolve(cliPath));
+  const files = runtimeJavaScriptDependencies(resolved);
+  return createHash("sha256")
+    .update(
+      files
+        .map(
+          (file) =>
+            `${file}\n${readFileSync(file).toString("base64")}`,
+        )
+        .join("\n"),
+    )
+    .digest("hex");
+}
+
+function runtimeJavaScriptDependencies(entryFile: string): string[] {
+  const visited = new Set<string>();
+  const visit = (file: string): void => {
+    const resolved = realpathSync(file);
+    if (visited.has(resolved)) return;
+    visited.add(resolved);
+    const source = readFileSync(resolved, "utf-8");
+    const imports = source.matchAll(
+      /(?:from\s*|import\s*(?:\(\s*)?)["'](\.{1,2}\/[^"']+)["']/g,
+    );
+    for (const match of imports) {
+      const dependency = path.resolve(path.dirname(resolved), match[1]);
+      if (existsSync(dependency) && statSync(dependency).isFile()) {
+        visit(dependency);
+      }
+    }
+  };
+  visit(entryFile);
+  return [...visited].sort();
+}
+
+function stopOutdatedManagedService(
+  current: ManagedServiceState,
+  env: NodeJS.ProcessEnv,
+  language?: Language,
+): void {
+  const running = loadRegistry(env).tasks.some(
+    (entry) => entry.status === "running",
+  );
+  if (running) {
+    throw new Error(
+      managedText(
+        language,
+        "Superflow 后台服务版本已变化，但仍有任务运行；请等待当前 Agent 调用结束后再恢复",
+        "The Superflow background service changed while a task is still running; wait for the current Agent invocation to finish before resuming",
+      ),
+    );
+  }
+  stopProcessTree(current.pid);
+  const deadline = Date.now() + 2_000;
+  while (isProcessAlive(current.pid) && Date.now() < deadline) {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+  }
+  if (isProcessAlive(current.pid)) {
+    throw new Error(
+      managedText(
+        language,
+        "旧 Superflow 后台服务未在 2 秒内退出，拒绝并行启动新版本",
+        "The previous Superflow background service did not exit within 2 seconds; refusing to start another version in parallel",
+      ),
+    );
+  }
 }
 
 export function readServiceState(
@@ -159,10 +258,23 @@ export function readServiceState(
   }
 }
 
-function isRunnable(status: string, updatedAt: string): boolean {
+function isRunnable(entry: { taskId: string; projectRoot: string; status: string; updatedAt: string }): boolean {
+  if (isHumanDirectedTask(entry)) return false;
+  const { status, updatedAt } = entry;
   if (status === "queued" || status === "running") return true;
   if (status !== "waiting_for_connectivity") return false;
   return Date.now() - Date.parse(updatedAt) >= 60_000;
+}
+
+function isHumanDirectedTask(entry: {
+  taskId: string;
+  projectRoot: string;
+}): boolean {
+  try {
+    return loadManagedTask(entry.projectRoot, entry.taskId).executionMode === "human_directed";
+  } catch {
+    return false;
+  }
 }
 
 function delay(milliseconds: number): Promise<void> {

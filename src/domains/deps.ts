@@ -1,4 +1,10 @@
-import { promises as fs } from 'fs';
+import {
+  existsSync,
+  promises as fs,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from 'fs';
 import { homedir } from 'os';
 import path from 'path';
 import { runCommand } from '../platform/process.js';
@@ -12,6 +18,70 @@ export interface InstallResult {
 
 export const CODEX_SUPERPOWERS_PLUGIN =
   'superpowers@openai-api-curated';
+
+export const REQUIRED_CODEX_SUPERPOWER_SKILLS = [
+  'verification-before-completion',
+  'requesting-code-review',
+  'finishing-a-development-branch',
+] as const;
+
+export function hasCodexSuperpowerSkill(
+  skill: string,
+  root = path.join(
+    homedir(),
+    '.codex',
+    'plugins',
+    'cache',
+    'openai-api-curated',
+    'superpowers',
+  ),
+): boolean {
+  if (!existsSync(root)) return false;
+  const expected = path.join('skills', skill, 'SKILL.md');
+  const stack = [root];
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    let entries: string[];
+    try {
+      entries = readdirSync(current);
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const full = path.join(current, entry);
+      if (full.endsWith(expected) && existsSync(full)) return true;
+      if (stack.length < 200) {
+        try {
+          if (statSync(full).isDirectory()) stack.push(full);
+        } catch {
+          continue;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+export function isCodexSuperpowersEnabled(
+  configPath = path.join(homedir(), '.codex', 'config.toml'),
+): boolean {
+  if (!existsSync(configPath)) return false;
+  try {
+    const config = readFileSync(configPath, 'utf8');
+    return /\[plugins\."superpowers@openai-api-curated"\]\s*enabled\s*=\s*true\b/.test(config);
+  } catch {
+    return false;
+  }
+}
+
+export function missingCodexSuperpowerSkills(): string[] {
+  if (!isCodexSuperpowersEnabled()) {
+    return [...REQUIRED_CODEX_SUPERPOWER_SKILLS];
+  }
+  return REQUIRED_CODEX_SUPERPOWER_SKILLS.filter(
+    (skill) => !hasCodexSuperpowerSkill(skill),
+  );
+}
 
 function alreadyInstalled(output: string): boolean {
   return /already\s+(installed|exists)|is\s+already\s+installed|already\s+added/i.test(output);
@@ -70,7 +140,7 @@ export async function initializeOpenspec(
 
 /**
  * 安装 superpowers（claude 插件）
- * 失败阻塞 init（核心 HOW/TDD 依赖；已装视为成功）
+ * 它是 Superflow verify 阶段的硬依赖；安装失败必须阻止初始化或带包更新。
  */
 export async function installSuperpowers(): Promise<InstallResult> {
   const result = await runCommand('claude', [
@@ -87,10 +157,12 @@ export async function installSuperpowers(): Promise<InstallResult> {
 }
 
 /**
- * 安装 superpowers（Codex 插件）
- * 失败阻塞 init（核心 HOW/TDD 依赖；已装视为成功）
+ * 安装 Superpowers（Codex 插件）。
+ * 它是 verify 阶段的硬依赖；已装视为成功，安装失败必须阻止初始化或更新。
  */
-export async function installCodexSuperpowers(): Promise<InstallResult> {
+export async function installCodexSuperpowers(
+  verifySkills = false,
+): Promise<InstallResult> {
   const result = await runCommand('codex', [
     'plugin',
     'add',
@@ -98,10 +170,17 @@ export async function installCodexSuperpowers(): Promise<InstallResult> {
   ]);
   if (result.code !== 0) {
     const output = `${result.stderr}\n${result.stdout}`;
-    if (alreadyInstalled(output)) return { ok: true };
+    if (alreadyInstalled(output)) return verifiedCodexSuperpowers(verifySkills);
     return { ok: false, error: result.stderr || result.stdout };
   }
-  return { ok: true };
+  return verifiedCodexSuperpowers(verifySkills);
+}
+
+function verifiedCodexSuperpowers(verifySkills: boolean): InstallResult {
+  if (!verifySkills) return { ok: true };
+  const missing = missingCodexSuperpowerSkills();
+  if (missing.length === 0) return { ok: true };
+  return { ok: false, error: `required skills missing: ${missing.join(', ')}` };
 }
 
 /**

@@ -103,6 +103,13 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    optional fallback with proven natural uniqueness, historical cleanup,
    NULL/soft-delete semantics, and a conflict contract. Check-then-insert,
    process-local locks, and random IDs alone are blocked.
+   When the selected design is version-based optimistic locking, record the
+   exact database atomic compare-and-set statement and affected-row decision:
+   the update predicate contains both the stable row identity and expected
+   version; a zero-row result distinguishes missing data from version conflict.
+   The TDD plan references the `tests.md` concurrent stale-version case proving
+   one winner, one conflict, and one increment. Do not defer this decision to
+   the managed Executor prompt.
 10. For field/status/enum/sync changes, include `Field And Status Reverse
 Impact` and prove writers, readers, filters, derived sync paths, consumers,
    and tests. Direct setter-only design is blocked.

@@ -155,7 +155,6 @@ export function parseInitAgentInput(value: string): AgentSelection | null {
   if (!normalized || normalized === 'a' || normalized === 'both') {
     return 'both';
   }
-  if (normalized === 'all') return 'all';
   const parts = normalized
     .split(/[,\s]+/)
     .map((part) => part.trim())
@@ -166,18 +165,14 @@ export function parseInitAgentInput(value: string): AgentSelection | null {
       selected.add('claude');
     } else if (part === '2' || part === 'codex' || part === 'x') {
       selected.add('codex');
-    } else if (part === '3' || part === 'opencode' || part === 'o') {
-      selected.add('opencode');
     } else {
       return null;
     }
   }
-  if (selected.size === 3) return 'all';
   if (selected.size === 2 && selected.has('claude') && selected.has('codex')) return 'both';
   if (selected.size > 1) return [...selected];
   if (selected.has('claude')) return 'claude';
   if (selected.has('codex')) return 'codex';
-  if (selected.has('opencode')) return 'opencode';
   return null;
 }
 
@@ -223,7 +218,6 @@ async function promptAgentSelection(language: Language): Promise<AgentSelection>
       console.log(`\n${t(language, 'agentPrompt')}`);
       console.log(`  1) ${t(language, 'agentClaude')}`);
       console.log(`  2) ${t(language, 'agentCodex')}`);
-      console.log(`  3) ${t(language, 'agentOpenCode')}`);
       console.log(`  a) ${t(language, 'agentBoth')}`);
       const answer = await rl.question(t(language, 'agentAnswer'));
       const selection = parseInitAgentInput(answer);
@@ -325,9 +319,6 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
           log(`[dry-run] codex plugin add ${CODEX_SUPERPOWERS_PLUGIN}`);
           log('[dry-run] Codex skills: understand-anything / api-doc');
         }
-        if (agents.includes('opencode')) {
-          log('[dry-run] OpenCode: deploy skills/commands/scripts/rules; native hooks are not registered');
-        }
         return;
       }
       const openspec = await installOpenspec();
@@ -346,7 +337,9 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
       }
       if (agents.includes('claude')) {
         const sup = await installSuperpowers();
-        if (!sup.ok) throw new Error(`superpowers install failed: ${sup.error}`);
+        if (!sup.ok) {
+          throw new Error(`claude superpowers install failed: ${sup.error}`);
+        }
         const und = await installUnderstand();
         if (!und.ok) warn(`[WARN] understand-anything: ${und.error}`);
         const api = await installApiDocChangelog(
@@ -355,18 +348,14 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
         if (!api.ok) warn(`[WARN] api-doc-changelog: ${api.error}`);
       }
       if (agents.includes('codex')) {
-        const sup = await installCodexSuperpowers();
+        const sup = await installCodexSuperpowers(true);
         if (!sup.ok) {
-          warn(zh
-            ? `[WARN] Codex Superpowers 当前不可安装，继续部署 Superflow 核心能力：${sup.error}`
-            : `[WARN] Codex Superpowers is currently unavailable; continuing with core Superflow deployment: ${sup.error}`
-          );
-        } else {
-          log(zh
-            ? '  ✓ Codex Superpowers 已安装，包含验证、代码评审和分支收尾技能'
-            : '  ✓ Codex Superpowers installed for verification, code review, and branch closeout'
-          );
+          throw new Error(`codex superpowers install failed: ${sup.error}`);
         }
+        log(zh
+          ? '  ✓ Codex Superpowers 已安装；重启当前 Host 后加载验证、代码评审和分支收尾技能'
+          : '  ✓ Codex Superpowers installed; restart the current host to load verification, code review, and branch-closeout skills'
+        );
         const und = await installCodexUnderstand();
         if (!und.ok) warn(`[WARN] codex understand-anything: ${und.error}`);
         const api = await installApiDocChangelog(
@@ -466,11 +455,11 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
       }
     }},
     { id: 5, name: t(options.language, 'stepPrompts'), run: async () => {
-      const promptAgents = agents.filter((agent) => agent === 'codex' || agent === 'opencode');
+      const promptAgents = agents.filter((agent) => agent === 'codex');
       if (promptAgents.length === 0) {
         log(zh
-          ? '  - 未选择 Codex/OpenCode，跳过 prompt/command alias'
-          : '  - Codex/OpenCode was not selected; skipping prompt/command aliases'
+          ? '  - 未选择 Codex，跳过 prompt alias'
+          : '  - Codex was not selected; skipping prompt alias'
         );
         return;
       }
@@ -489,8 +478,7 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
           platform.promptsDir,
           { skipExisting: options.skipExisting }
         );
-        const label = agent === 'opencode' ? 'command alias' : 'prompt alias';
-        log(`  ✓ ${platform.name}: ${CODEX_PROMPTS.length} ${label} deployed`);
+        log(`  ✓ ${platform.name}: ${CODEX_PROMPTS.length} prompt alias deployed`);
       }
     }},
     { id: 6, name: `${t(options.language, 'stepRules')} (${ALL_RULES.length})`, run: async () => {

@@ -4,7 +4,6 @@ export type TranslationKey =
   | 'agentPrompt'
   | 'agentClaude'
   | 'agentCodex'
-  | 'agentOpenCode'
   | 'agentBoth'
   | 'agentAnswer'
   | 'agentInvalid'
@@ -49,10 +48,9 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     agentPrompt: 'Select agent tools to initialize (multi-select):',
     agentClaude: 'Claude Code',
     agentCodex: 'Codex',
-    agentOpenCode: 'OpenCode',
-    agentBoth: 'Install Claude Code and Codex (default); use all for OpenCode too',
-    agentAnswer: 'Enter 1,2 / 2,3 / all / a:',
-    agentInvalid: 'Invalid input. Enter 1, 2, 3, 1,2, 2,3, claude, codex, opencode, all, or a.',
+    agentBoth: 'Install Claude Code and Codex (default)',
+    agentAnswer: 'Enter 1,2 / claude / codex / a:',
+    agentInvalid: 'Invalid input. Enter 1, 2, 1,2, claude, codex, or both.',
     languagePrompt: 'Select SuperBridge Flow language:',
     languageEnglish: 'English',
     languageChinese: 'Chinese',
@@ -93,10 +91,9 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     agentPrompt: '请选择要初始化的 agent 工具（可多选）：',
     agentClaude: 'Claude Code',
     agentCodex: 'Codex',
-    agentOpenCode: 'OpenCode',
-    agentBoth: '安装 Claude Code + Codex（默认）；输入 all 会包含 OpenCode',
-    agentAnswer: '输入序号，例如 1,2 / 2,3 / all / a：',
-    agentInvalid: '输入无效，请输入 1、2、3、1,2、2,3、claude、codex、opencode、all 或 a。',
+    agentBoth: '安装 Claude Code + Codex（默认）',
+    agentAnswer: '输入序号，例如 1,2 / claude / codex / a：',
+    agentInvalid: '输入无效，请输入 1、2、1,2、claude、codex 或 both。',
     languagePrompt: '请选择 SuperBridge Flow 语言：',
     languageEnglish: '英文',
     languageChinese: '中文',

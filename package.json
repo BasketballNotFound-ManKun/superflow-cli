@@ -1,7 +1,7 @@
 {
   "name": "@chenmk/superflow",
   "version": "0.4.0",
-  "description": "SuperBridge Flow workflow CLI for Claude Code, Codex, and OpenCode",
+  "description": "SuperBridge Flow workflow CLI for Claude Code and Codex",
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -12,8 +12,7 @@
     "sdd",
     "tdd",
     "codex",
-    "claude-code",
-    "opencode"
+    "claude-code"
   ],
   "publishConfig": {
     "access": "public",
@@ -23,7 +22,8 @@
     "node": ">=20"
   },
   "bin": {
-    "superflow": "dist/app/cli.js"
+    "superflow": "dist/app/cli.js",
+    "superflow-mcp": "dist/mcp/server.js"
   },
   "files": [
     "dist",
@@ -36,22 +36,25 @@
   ],
   "scripts": {
     "check:design-principles": "node scripts/check-design-principles.mjs",
-    "prebuild": "npm run check:design-principles",
-    "build": "tsc",
+    "check:managed-design": "node scripts/check-managed-work-design.mjs",
+    "prebuild": "npm run check:design-principles && npm run check:managed-design",
+    "build": "node scripts/clean-dist.js && tsc && node scripts/ensure-bin-modes.js",
     "dev": "tsx watch src/cli/index.ts",
     "postinstall": "node scripts/postinstall.js",
     "prepack": "npm run build",
     "prepublishOnly": "npm run release:check && npm test && npm run build",
     "release:check": "node scripts/release-notes-check.js",
-    "pretest": "npm run check:design-principles",
+    "pretest": "npm run check:design-principles && npm run check:managed-design",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/ test/",
     "format": "prettier --write src/ test/"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^14.0.0",
-    "cross-spawn": "^7.0.3"
+    "cross-spawn": "^7.0.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
@@ -63,5 +66,8 @@
     "tsx": "^4.19.0",
     "typescript": "^5.5.0",
     "vitest": "^2.1.0"
+  },
+  "overrides": {
+    "@hono/node-server": "2.0.12"
   }
 }

@@ -1,83 +1,203 @@
-import { spawnSync } from "child_process";
-import path from "path";
-import { describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 
-const guard = path.join(
-  process.cwd(),
-  "assets",
-  "scripts",
-  "superflow-managed-work-guard.sh",
-);
+const GUARD = path.resolve("assets/scripts/superflow-managed-work-guard.sh");
+const roots: string[] = [];
 
-describe("managed work hook guard", () => {
-  it("blocks supervisor writes", async () => {
-    const result = await runGuard("supervisor", {
-      tool_name: "Write",
-      tool_input: { file_path: "/tmp/demo.txt" },
-    });
-    expect(result.code).toBe(2);
-    expect(result.stderr).toContain("监督角色只允许检查");
+afterEach(() => {
+  roots.splice(0).forEach((root) => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+});
+
+describe("managed work pre-tool guard", () => {
+  it("blocks supervisor writes", () => {
+    const fixture = createFixture();
+    expect(() =>
+      invokeGuard(
+        fixture,
+        { tool_name: "Write", tool_input: { file_path: fixture.design } },
+        { SUPERFLOW_MANAGED_ROLE: "supervisor" },
+      ),
+    ).toThrow("监督角色只允许检查");
   });
 
-  it("blocks executor state edits and git commit", async () => {
-    const stateEdit = await runGuard("executor", {
-      tool_name: "Write",
-      tool_input: { file_path: "/repo/.superflow/tasks/x/task.json" },
-    });
-    expect(stateEdit.code).toBe(2);
-
-    const git = await runGuard("executor", {
-      tool_name: "Bash",
-      tool_input: { command: "git commit -m test" },
-    });
-    expect(git.code).toBe(2);
-    expect(git.stderr).toContain("禁止自动 Git");
-
-    const stateCommand = await runGuard("executor", {
-      tool_name: "Bash",
-      tool_input: {
-        command: "printf changed > .superflow/tasks/x/task.json",
-      },
-    });
-    expect(stateCommand.code).toBe(2);
-    expect(stateCommand.stderr).toContain("禁止直接访问托管运行目录");
+  it("blocks executor state edits and git commits", () => {
+    const fixture = createFixture();
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "Write",
+        tool_input: {
+          file_path: path.join(
+            fixture.root,
+            ".superflow",
+            "tasks",
+            fixture.taskId,
+            "task.json",
+          ),
+        },
+      }),
+    ).toThrow("禁止修改托管状态");
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "Bash",
+        tool_input: { command: "git commit -m test" },
+      }),
+    ).toThrow("禁止自动 Git");
   });
 
-  it("fails closed when a managed hook receives malformed input", () => {
-    const result = spawnSync("bash", [guard], {
-      env: { ...process.env, SUPERFLOW_MANAGED_ROLE: "executor" },
+  it("fails closed on malformed managed hook input", () => {
+    const fixture = createFixture();
+    const result = spawnSync("bash", [GUARD], {
       input: "not-json",
       encoding: "utf-8",
+      env: {
+        ...process.env,
+        SUPERFLOW_MANAGED_ROLE: "executor",
+        SUPERFLOW_MANAGED_PROJECT_ROOT: fixture.root,
+        SUPERFLOW_MANAGED_CONTEXT_MANIFEST: fixture.manifest,
+      },
     });
-
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("按失败关闭");
   });
 
-  it("allows normal executor edits and tests", async () => {
-    const edit = await runGuard("executor", {
+  it("allows normal executor edits and tests", () => {
+    const fixture = createFixture();
+    const edit = invokeGuard(fixture, {
       tool_name: "Write",
-      tool_input: { file_path: "/repo/src/demo.ts" },
+      tool_input: { file_path: path.join(fixture.root, "src", "demo.ts") },
     });
-    expect(edit.code).toBe(0);
-
-    const test = await runGuard("executor", {
+    const test = invokeGuard(fixture, {
       tool_name: "Bash",
       tool_input: { command: "npm test" },
     });
-    expect(test.code).toBe(0);
+    expect(edit.status).toBe(0);
+    expect(test.status).toBe(0);
+  });
+
+  it("does not affect a docs-only process without a managed role", async () => {
+    const fixture = createFixture();
+    const result = invokeGuard(
+      fixture,
+      { tool_name: "Write", tool_input: { file_path: fixture.design } },
+      { SUPERFLOW_MANAGED_ROLE: "" },
+    );
+
+    expect(result.stderr).toBe("");
+  });
+
+  it("blocks editing an immutable design before the tool runs", async () => {
+    const fixture = createFixture();
+
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "Edit",
+        tool_input: { file_path: fixture.design },
+      }),
+    ).toThrow("冻结输入只读");
+  });
+
+  it("uses the frozen English language for guard failures", () => {
+    const fixture = createFixture("en");
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "Edit",
+        tool_input: { file_path: fixture.design },
+      }),
+    ).toThrow("Frozen input is read-only");
+  });
+
+  it("allows updating a retained test report but blocks deleting it", async () => {
+    const fixture = createFixture();
+    const write = invokeGuard(fixture, {
+      tool_name: "Write",
+      tool_input: { file_path: fixture.report },
+    });
+    expect(write.stderr).toBe("");
+
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "Bash",
+        tool_input: { command: `rm ${fixture.report}` },
+      }),
+    ).toThrow("受保护合同/交付文档");
+  });
+
+  it("blocks broad process cleanup and allows repository build caches", async () => {
+    const fixture = createFixture();
+
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "Bash",
+        tool_input: { command: "pkill -9 java" },
+      }),
+    ).toThrow("按进程名清理");
+
+    const cleanup = invokeGuard(fixture, {
+      tool_name: "Bash",
+      tool_input: { command: "rm -rf target" },
+    });
+    expect(cleanup.stderr).toBe("");
   });
 });
 
-async function runGuard(role: string, input: unknown) {
-  const result = spawnSync("bash", [guard], {
-    env: { ...process.env, SUPERFLOW_MANAGED_ROLE: role },
-    input: JSON.stringify(input),
+function createFixture(language: "zh" | "en" = "zh") {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-guard-"));
+  roots.push(root);
+  const taskId = "task-test";
+  const taskDir = path.join(root, ".superflow", "tasks", taskId);
+  const design = path.join(root, "openspec", "changes", "demo", "design.md");
+  const report = path.join(
+    root,
+    "openspec",
+    "changes",
+    "demo",
+    "test-report.md",
+  );
+  fs.mkdirSync(taskDir, { recursive: true });
+  fs.mkdirSync(path.dirname(design), { recursive: true });
+  fs.writeFileSync(design, "# design\n");
+  fs.writeFileSync(report, "# report\n");
+  fs.writeFileSync(
+    path.join(taskDir, "task.json"),
+    JSON.stringify({ language }),
+  );
+  const manifest = path.join(taskDir, "context-manifest.json");
+  fs.writeFileSync(
+    manifest,
+    JSON.stringify({
+      entries: [
+        { path: design, protection: "immutable" },
+        { path: report, protection: "retain" },
+      ],
+    }),
+  );
+  return { root, taskId, manifest, design, report };
+}
+
+function invokeGuard(
+  fixture: ReturnType<typeof createFixture>,
+  payload: object,
+  overrides: NodeJS.ProcessEnv = {},
+) {
+  const result = spawnSync("bash", [GUARD], {
+    input: JSON.stringify(payload),
     encoding: "utf-8",
+    env: {
+      ...process.env,
+      SUPERFLOW_MANAGED_ROLE: "executor",
+      SUPERFLOW_MANAGED_TASK_ID: fixture.taskId,
+      SUPERFLOW_MANAGED_PROJECT_ROOT: fixture.root,
+      SUPERFLOW_MANAGED_CONTEXT_MANIFEST: fixture.manifest,
+      ...overrides,
+    },
   });
-  return {
-    code: result.status ?? 1,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  };
+  if (result.status !== 0) {
+    throw new Error(result.stderr || `guard exited ${result.status}`);
+  }
+  return result;
 }

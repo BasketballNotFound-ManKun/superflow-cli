@@ -19,7 +19,6 @@ describe("managed notifications", () => {
     const env = {
       ...process.env,
       SUPERFLOW_HOME: root,
-      SUPERFLOW_DISABLE_OS_NOTIFICATIONS: "1",
     };
     const input = {
       taskId: "task-1",
@@ -38,5 +37,21 @@ describe("managed notifications", () => {
       .trim()
       .split("\n");
     expect(lines).toHaveLength(2);
+  });
+
+  it("keeps progress in the session and never invokes macOS notifications", () => {
+    const source = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "src",
+        "domains",
+        "managed-work",
+        "notifications.ts",
+      ),
+      "utf-8",
+    );
+
+    expect(source).not.toContain("osascript");
+    expect(source).not.toContain("display notification");
   });
 });

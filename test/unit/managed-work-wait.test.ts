@@ -8,7 +8,10 @@ import {
   createManagedTaskFiles,
   saveManagedRun,
 } from "../../src/domains/managed-work/storage.js";
-import { waitForManagedTask } from "../../src/domains/managed-work/wait.js";
+import {
+  managedProgressKey,
+  waitForManagedTask,
+} from "../../src/domains/managed-work/wait.js";
 
 const roots: string[] = [];
 
@@ -19,6 +22,24 @@ afterEach(() => {
 });
 
 describe("managed work wait", () => {
+  it("does not treat timestamp-only updates as reportable progress", () => {
+    const first = {
+      status: "running",
+      currentStep: "executor_implementing",
+      reviewRound: 0,
+      executorInvocations: 1,
+      lastExecutorResult: null,
+      lastReviewResult: null,
+      updatedAt: "2026-07-23T00:00:00.000Z",
+    } as never;
+    const second = {
+      ...first,
+      updatedAt: "2026-07-23T00:10:00.000Z",
+    };
+
+    expect(managedProgressKey(first)).toBe(managedProgressKey(second));
+  });
+
   it("waits on local state and returns the terminal result", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-wait-"));
     roots.push(root);
@@ -38,11 +59,16 @@ describe("managed work wait", () => {
       saveManagedRun(state);
     }, 20);
 
-    const result = await waitForManagedTask(root, contract.taskId, state.runId, {
-      pollMilliseconds: 5,
-      serviceCheckMilliseconds: 5,
-      ensureService: () => undefined,
-    });
+    const result = await waitForManagedTask(
+      root,
+      contract.taskId,
+      state.runId,
+      {
+        pollMilliseconds: 5,
+        serviceCheckMilliseconds: 5,
+        ensureService: () => undefined,
+      },
+    );
 
     expect(result.status).toBe("awaiting_git_approval");
   });

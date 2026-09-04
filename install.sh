@@ -6,7 +6,7 @@
 #
 # 前置要求：
 #   - Node.js 20+
-#   - Claude Code 或 Codex 已装
+#   - Claude Code 或 Codex 至少一个已安装
 #   - 网络可访问 npm registry（推荐 npmmirror.com 国内加速）
 #
 # 步骤：
@@ -15,7 +15,7 @@
 #   3. npm run build（生成 dist/）
 #   4. link superflow 命令到全局 PATH
 #   5. 跑 superflow init 部署 SDD 技能、hook 脚本和第三方依赖
-#   6. 跑 superflow doctor 验证
+#   6. 注册托管 MCP，并输出状态供重启后核对
 
 set -e
 
@@ -32,7 +32,7 @@ log_warn()  { printf "${YELLOW}⚠ %s${NC}\n" "$*"; }
 log_err()   { printf "${RED}✗ %s${NC}\n" "$*" >&2; }
 
 # ----- Step 1: 校验 Node 版本 -----
-log_info "Step 1 / 5: 校验 Node 版本"
+log_info "Step 1 / 6: 校验 Node 版本"
 
 NODE_MIN=20
 if ! command -v node >/dev/null 2>&1; then
@@ -49,7 +49,7 @@ fi
 log_ok "Node ${NODE_VERSION} (≥ ${NODE_MIN})"
 
 # ----- Step 2: npm install（依赖）-----
-log_info "Step 2 / 5: 安装 npm 依赖"
+log_info "Step 2 / 6: 安装 npm 依赖"
 
 # 默认用 npmmirror 国内镜像加速
 NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}"
@@ -67,12 +67,12 @@ npm install --registry="$NPM_REGISTRY" --no-audit --no-fund
 log_ok "npm install 完成"
 
 # ----- Step 3: npm run build -----
-log_info "Step 3 / 5: build 编译 TypeScript"
+log_info "Step 3 / 6: build 编译 TypeScript"
 npm run build
 log_ok "build 完成"
 
 # ----- Step 4: link superflow 到全局 PATH -----
-log_info "Step 4 / 5: link superflow 命令到全局"
+log_info "Step 4 / 6: link superflow 命令到全局"
 
 # 选择 link 策略：macOS / Linux / Git Bash 都优先 ~/.local/bin
 PREFERRED_BIN="$HOME/.local/bin"
@@ -81,15 +81,23 @@ if [ ! -d "$PREFERRED_BIN" ]; then
 fi
 
 BIN_TARGET="$PREFERRED_BIN/superflow"
-DIST_BIN="$SCRIPT_DIR/dist/cli/index.js"
+MCP_BIN_TARGET="$PREFERRED_BIN/superflow-mcp"
+DIST_BIN="$SCRIPT_DIR/dist/app/cli.js"
+DIST_MCP_BIN="$SCRIPT_DIR/dist/mcp/server.js"
 
 if [ -L "$BIN_TARGET" ] || [ -f "$BIN_TARGET" ]; then
   log_warn "$BIN_TARGET 已存在，覆盖"
   rm -f "$BIN_TARGET"
 fi
 ln -sf "$DIST_BIN" "$BIN_TARGET"
-chmod +x "$DIST_BIN"
+if [ -L "$MCP_BIN_TARGET" ] || [ -f "$MCP_BIN_TARGET" ]; then
+  log_warn "$MCP_BIN_TARGET 已存在，覆盖"
+  rm -f "$MCP_BIN_TARGET"
+fi
+ln -sf "$DIST_MCP_BIN" "$MCP_BIN_TARGET"
+chmod +x "$DIST_BIN" "$DIST_MCP_BIN"
 log_ok "superflow 命令 → $BIN_TARGET"
+log_ok "superflow-mcp 命令 → $MCP_BIN_TARGET"
 
 # 检查 PATH
 if [[ ":$PATH:" != *":$PREFERRED_BIN:"* ]]; then
@@ -104,21 +112,26 @@ fi
 #   - skills 写入 ~/.claude/skills/（任何项目 agent 都能用 superflow-* 命令）
 #   - 项目级产物（openspec / .sdd/ 等）写到 /tmp 临时目录，跑完 rm -rf
 #   - 不污染任何真实项目仓库（避免之前"在源码目录跑 init 留临时上下文"的问题）
-log_info "Step 5 / 5: 全局部署 superflow（不污染任何项目）"
+log_info "Step 5 / 6: 全局部署 superflow（不污染任何项目）"
 
 SDD_INIT_FLAGS=""
 if [ "${1:-}" = "--dry-run" ]; then
-  log_info "用户指定 --dry-run，仅打印计划不执行"
+  log_info "用户指定 --dry-run：init 与 MCP 只打印计划；依赖、构建和本地链接仍执行"
   SDD_INIT_FLAGS="--dry-run"
 fi
 
-# 自动检测 agent：装了 codex 就 both，否则只 claude（避免 spawn codex ENOENT）
-AGENT_FLAG="--agent claude"
-if command -v codex >/dev/null 2>&1; then
-  AGENT_FLAG="--agent both"
+# 只向本机真实存在的 Host 部署，支持任意单侧或组合。
+DETECTED_AGENTS=()
+command -v codex >/dev/null 2>&1 && DETECTED_AGENTS+=("codex")
+command -v claude >/dev/null 2>&1 && DETECTED_AGENTS+=("claude")
+if [ "${#DETECTED_AGENTS[@]}" -eq 0 ]; then
+  log_err "未检测到 Codex 或 Claude CLI，无法部署 Agent Skills 与托管 MCP"
+  exit 1
 fi
+AGENT_VALUE=$(IFS=,; echo "${DETECTED_AGENTS[*]}")
+AGENT_FLAG="--agent $AGENT_VALUE"
 
-INIT_BASE="--yes --no-openspec-init --no-scan --scope global $AGENT_FLAG"
+INIT_BASE="--yes --overwrite --no-openspec-init --no-scan --scope global $AGENT_FLAG"
 
 if [ "$SDD_INIT_FLAGS" = "--dry-run" ]; then
   "$BIN_TARGET" init $INIT_BASE $SDD_INIT_FLAGS
@@ -134,7 +147,17 @@ else
   trap - EXIT
 fi
 
-log_ok "superflow 全局部署完成：hooks/skills 已写入 ~/.claude/，所有项目均受 superflow 守门（懒激活）"
+log_ok "superflow 全局部署完成：hooks/skills 已写入已检测到的 Agent 用户目录"
+
+# ----- Step 6: 注册托管 MCP -----
+log_info "Step 6 / 6: 注册托管 MCP"
+if [ "$SDD_INIT_FLAGS" = "--dry-run" ]; then
+  "$BIN_TARGET" mcp install $AGENT_FLAG --dry-run
+else
+  "$BIN_TARGET" mcp install $AGENT_FLAG
+  "$BIN_TARGET" mcp status $AGENT_FLAG
+fi
+log_ok "托管 MCP 已按本机 Agent 安装情况完成注册"
 
 # ----- 完成 -----
 echo ""
@@ -142,9 +165,8 @@ log_ok "@chenmk/superflow 安装完成"
 echo ""
 log_info "下一步建议："
 echo "  1. superflow doctor            # 验证依赖、hook 和技能"
-echo "  2. superflow clarify [feature]  # 校验 superflow-clarify 部署"
-echo "  3. 重启对应 agent          # 让 agent 加载新部署的 SuperBridge Flow 技能"
+echo "  2. superflow mcp status $AGENT_FLAG # 核对托管 MCP"
+echo "  3. 重启对应 agent          # 让 agent 加载技能和 MCP"
+echo "  4. superflow clarify [feature]  # 校验 superflow-clarify 部署"
 echo ""
-log_warn "注意：重启前请清理 backup 残留（如果之前 init 过）："
-echo "  rm -rf ~/.claude/skills/superflow-*.backup-* ~/.codex/skills/superflow-*.backup-*"
-echo ""
+log_ok "重复安装使用 --overwrite，不再生成新的 Superflow Skill 备份"

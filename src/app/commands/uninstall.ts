@@ -131,7 +131,7 @@ export async function runUninstall(options: {
     for (const script of scriptsForAgent(target.agent)) {
       removePath(path.join(platform.scriptsDir, script), options.dryRun, removed, !!options.quiet);
     }
-    if (target.agent === 'codex' || target.agent === 'opencode') {
+    if (target.agent === 'codex') {
       for (const prompt of [...CODEX_PROMPTS, ...LEGACY_CODEX_PROMPTS]) {
         removePath(path.join(platform.promptsDir, prompt), options.dryRun, removed, !!options.quiet);
       }
@@ -196,7 +196,7 @@ export function createUninstallPlan(
     for (const script of scriptsForAgent(target.agent)) {
       targets.push(path.join(platform.scriptsDir, script));
     }
-    if (target.agent === 'codex' || target.agent === 'opencode') {
+    if (target.agent === 'codex') {
       for (const prompt of [...CODEX_PROMPTS, ...LEGACY_CODEX_PROMPTS]) {
         targets.push(path.join(platform.promptsDir, prompt));
       }
@@ -221,7 +221,7 @@ export function detectInstalledUninstallTargets(
       const hasScript = scriptsForAgent(agent).some((script) =>
         existsSync(path.join(platform.scriptsDir, script))
       );
-      const hasPrompt = (agent === 'codex' || agent === 'opencode') &&
+      const hasPrompt = agent === 'codex' &&
         [...CODEX_PROMPTS, ...LEGACY_CODEX_PROMPTS].some((prompt) =>
           existsSync(path.join(platform.promptsDir, prompt))
         );

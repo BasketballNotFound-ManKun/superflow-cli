@@ -30,6 +30,7 @@ import { stateFile } from '../../platform/paths.js';
 import { initState, loadState, saveState } from '../../domains/state.js';
 import { resolveRuntimeLanguage } from '../../domains/config/cli-help.js';
 import { managedText } from '../../domains/managed-work/i18n.js';
+import { manageMcpIntegration } from './mcp.js';
 
 const PACKAGE_NAME = '@chenmk/superflow';
 const OPENSPEC_PACKAGE_NAME = '@fission-ai/openspec';
@@ -45,6 +46,7 @@ export interface UpdatePlan {
   rules: { total: number; names: string[] };
   scripts: { total: number; names: string[] };
   hooks: { total: number; names: string[] };
+  mcp: { enabled: boolean; agents: Agent[] };
   language: Language;
 }
 
@@ -89,9 +91,32 @@ export async function updateCommand(options: {
   }
 
   if (options.withPackage) {
-    await updateNpmPackage(PACKAGE_NAME, packageScope, 'superflow package');
-    await updateNpmPackage(OPENSPEC_PACKAGE_NAME, 'global', 'openspec package');
-    await updateSuperpowers(planAgents);
+    const failures: string[] = [];
+    await collectUpdateFailure(failures, () =>
+      updateNpmPackage(PACKAGE_NAME, packageScope, 'superflow package'));
+    await collectUpdateFailure(failures, () =>
+      updateNpmPackage(OPENSPEC_PACKAGE_NAME, 'global', 'openspec package'));
+    await collectUpdateFailure(failures, () => updateSuperpowers(planAgents));
+    await collectUpdateFailure(failures, () =>
+      refreshWithInstalledCli({
+        agents: planAgents,
+        packageScope,
+        projectPath,
+        requestedScope: options.scope ?? 'auto',
+        language,
+        noHooks: options.noHooks,
+        json: options.json,
+      }));
+    if (failures.length > 0) {
+      throw new Error(
+        managedText(
+          language,
+          `更新未完整完成；已尝试刷新全部组件：${failures.join('；')}`,
+          `Update did not complete; every component was attempted: ${failures.join('; ')}`,
+        ),
+      );
+    }
+    return;
   }
 
   for (const target of targets) {
@@ -104,7 +129,7 @@ export async function updateCommand(options: {
     await deployRules(ALL_RULES, path.join(ASSETS_DIR, 'rules'), platform.rulesDir);
     const scripts = scriptsForAgent(agent);
     await deployScripts(scripts, path.join(ASSETS_DIR, 'scripts'), platform.scriptsDir, { agent });
-    if (agent === 'codex' || agent === 'opencode') {
+    if (agent === 'codex') {
       await deployPrompts(CODEX_PROMPTS, path.join(ASSETS_DIR, 'prompts'), platform.promptsDir);
     }
     const hooks = hookScriptsForAgent(agent);
@@ -120,6 +145,12 @@ export async function updateCommand(options: {
       }
     }
   }
+
+  manageMcpIntegration(
+    'install',
+    { agent: planAgents.join(',') },
+    language,
+  );
 
   persistUpdateLanguage(language, planAgents);
 
@@ -185,6 +216,7 @@ export function createUpdatePlan(
     rules: { total: ALL_RULES.length, names: [...ALL_RULES] },
     scripts: { total: scriptNames.length, names: scriptNames },
     hooks: { total: hookNames.length, names: hookNames },
+    mcp: { enabled: true, agents: [...agents] },
     language,
   };
 }
@@ -231,6 +263,31 @@ export function formatDependencyUpdateCommands(agents: Agent[], packageScope: In
     commands.push(`codex plugin add ${CODEX_SUPERPOWERS_PLUGIN}`);
   }
   return commands;
+}
+
+export function buildPostPackageRefreshArgs(input: {
+  cliPath: string;
+  agents: Agent[];
+  projectPath: string;
+  requestedScope: string;
+  language: Language;
+  noHooks?: boolean;
+  json?: boolean;
+}): string[] {
+  const args = [
+    input.cliPath,
+    'update',
+    input.projectPath,
+    '--agent',
+    input.agents.join(','),
+    '--scope',
+    input.requestedScope,
+    '--language',
+    input.language,
+  ];
+  if (input.noHooks) args.push('--no-hooks');
+  if (input.json) args.push('--json');
+  return args;
 }
 
 export function detectPackageScope(
@@ -287,6 +344,7 @@ function printPlan(plan: UpdatePlan, json: boolean, status = 'planned'): void {
   console.log(`rules: ${plan.rules.total}`);
   console.log(`scripts: ${plan.scripts.total}`);
   console.log(`hooks: ${plan.hooks.total}`);
+  console.log(`mcp: ${plan.mcp.agents.join(', ')}`);
 }
 
 function persistUpdateLanguage(language: Language, agents: Agent[]): void {
@@ -313,13 +371,79 @@ async function updateNpmPackage(
   }
 }
 
+async function collectUpdateFailure(
+  failures: string[],
+  operation: () => Promise<void>,
+): Promise<void> {
+  try {
+    await operation();
+  } catch (error) {
+    failures.push((error as Error).message);
+  }
+}
+
+async function refreshWithInstalledCli(input: {
+  agents: Agent[];
+  packageScope: InstallScope;
+  projectPath: string;
+  requestedScope: string;
+  language: Language;
+  noHooks?: boolean;
+  json?: boolean;
+}): Promise<void> {
+  const packageBase = input.packageScope === 'project'
+    ? path.join(input.projectPath, 'node_modules')
+    : await globalNpmRoot();
+  const cliPath = path.join(
+    packageBase,
+    '@chenmk',
+    'superflow',
+    'dist',
+    'app',
+    'cli.js',
+  );
+  if (!existsSync(cliPath)) {
+    throw new Error(`updated superflow CLI not found: ${cliPath}`);
+  }
+  const result = await runCommand(
+    process.execPath,
+    buildPostPackageRefreshArgs({ ...input, cliPath }),
+  );
+  if (result.code !== 0) {
+    throw new Error(
+      `post-package refresh failed: ${result.stderr || result.stdout}`,
+    );
+  }
+  const output = result.stdout.trim();
+  if (output) console.log(output);
+}
+
+async function globalNpmRoot(): Promise<string> {
+  const result = await runCommand('npm', ['root', '-g']);
+  const root = result.stdout.trim();
+  if (result.code !== 0 || !root) {
+    throw new Error(
+      `cannot resolve global npm root: ${result.stderr || result.stdout}`,
+    );
+  }
+  return root;
+}
+
 async function updateSuperpowers(agents: Agent[]): Promise<void> {
+  const failures: string[] = [];
   if (agents.includes('claude')) {
     const result = await installSuperpowers();
-    if (!result.ok) throw new Error(`superpowers update failed: ${result.error}`);
+    if (!result.ok) {
+      failures.push(`claude superpowers update failed: ${result.error}`);
+    }
   }
   if (agents.includes('codex')) {
-    const result = await installCodexSuperpowers();
-    if (!result.ok) throw new Error(`codex superpowers update failed: ${result.error}`);
+    const result = await installCodexSuperpowers(true);
+    if (!result.ok) {
+      failures.push(`codex superpowers update failed: ${result.error}`);
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(failures.join('; '));
   }
 }

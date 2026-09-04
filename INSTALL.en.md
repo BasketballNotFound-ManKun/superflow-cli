@@ -3,14 +3,18 @@
 [中文教程](./INSTALL.md)
 
 SuperBridge Flow installs OpenSpec, Superpowers, skills, hooks or command
-aliases, scripts, rules, and handoff state for Claude Code, Codex, and
-OpenCode.
+aliases, scripts, rules, and handoff state for Claude Code and Codex.
 
 ## 1. Install
 
 ```bash
 npm install -g @chenmk/superflow
 ```
+
+The repository `install.sh` and `install.ps1` scripts detect the Codex/Claude
+Hosts actually installed and register their managed MCP entries together with
+CLI, Skills, and Hooks. Single and non-default Host combinations are not forced
+through `both`; only restart the detected Hosts after installation.
 
 ## 2. Initialize A Project
 
@@ -43,9 +47,50 @@ SUPERFLOW_LANG=en superflow init
 7. Register hooks and rules.
 8. Scaffold `docs/sdd-context/`.
 
-OpenSpec and Superpowers are required for the full workflow. OpenCode receives
-skills and command aliases; native hook registration is not enabled for
-OpenCode yet. understand-anything is best-effort.
+### 2.1 Register The Managed MCP (Recommended)
+
+To start managed delivery directly from the current Codex or Claude host while
+Superflow launches only the peer executor in the background, register the stdio
+MCP server:
+
+```bash
+superflow mcp install --agent both
+superflow mcp status --agent both
+```
+
+Restart Codex and Claude after registration. The current host remains responsible
+for user interaction and independent review. MCP-created tasks always use
+`external_host`, so Superflow does not launch another supervisor CLI of the same
+type. This avoids duplicated context, nested-session authentication retries, and
+duplicate supervisor token usage.
+
+Use `superflow_managed_wait` for a local wait of up to twelve hours by default.
+An active request exposes healthy progress through standard MCP progress
+notifications. One checkpoint does not wake Host; two consecutive checkpoints
+without an effective milestone return for attention, without repeating large
+evidence payloads. When a task reaches `waiting_for_host_review`, the current host performs
+one complete review and submits the structured result. Superflow then enters a
+three-stage delivery state and never commits, pushes, deploys, or writes to production automatically.
+
+To remove the registration:
+
+```bash
+superflow mcp remove --agent both
+```
+
+Superflow no longer provides a background supervisor CLI mode. Historical tasks
+are migrated to direct host review on resume, and no entry point starts a second
+supervisor Agent process.
+
+Verify the registrations with:
+
+```bash
+codex mcp get superflow
+claude mcp get superflow
+```
+
+OpenSpec and Superpowers are required for the full workflow. understand-anything
+is best-effort.
 
 ## 3. Daily Workflow
 
@@ -56,12 +101,6 @@ Use $superflow-pipeline to analyze this requirement and drive the full workflow.
 ```
 
 In Claude Code:
-
-```text
-/superflow-pipeline
-```
-
-In OpenCode:
 
 ```text
 /superflow-pipeline
@@ -120,13 +159,16 @@ export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 ```
 
 Team environments should keep `check`. Personal machines may choose `apply`.
+In `apply` mode, package upgrades are followed by the newly installed CLI, which
+redeploys Skills, Hooks, rules, scripts, and managed MCP registrations. Partial
+failure removes the throttle stamp and remains eligible for the next-session retry.
+Restart the Agent after success to load the new MCP process.
 
 ## 6. Uninstall
 
 ```bash
 superflow uninstall --agent codex --force
 superflow uninstall --agent claude --force
-superflow uninstall --agent opencode --force
 ```
 
 This removes SuperBridge Flow managed assets only. It does not remove unrelated

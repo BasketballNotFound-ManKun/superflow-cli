@@ -1,6 +1,6 @@
 {
   "version": "0.1.2",
-  "agents": ["claude", "codex", "opencode"],
+  "agents": ["claude", "codex"],
   "skills": [
     "openspec-apply-change",
     "openspec-archive-change",
@@ -34,14 +34,16 @@
     "superflow-document-audit.mjs",
     "superflow-environment-preflight.mjs",
     "superflow-coding-ready.mjs",
+    "superflow-managed-executor-preflight.mjs",
+    "superflow-managed-owner-verification.sh",
+    "superflow-managed-command-guard.py",
     "superflow-managed-work-guard.sh",
     "install-sql-pre-commit.sh",
     "sync-settings-json.py"
   ],
   "agentScripts": {
     "claude": ["claude-auto-backup-hook.sh"],
-    "codex": ["codex-auto-backup-hook.sh"],
-    "opencode": []
+    "codex": ["codex-auto-backup-hook.sh"]
   },
   "hooks": [
     "superflow-enforce-hook.sh",
@@ -56,7 +58,6 @@
   ],
   "agentHooks": {
     "claude": ["claude-auto-backup-hook.sh"],
-    "codex": ["codex-auto-backup-hook.sh"],
-    "opencode": []
+    "codex": ["codex-auto-backup-hook.sh"]
   }
 }
