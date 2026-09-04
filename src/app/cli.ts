@@ -152,7 +152,7 @@ program
   .description(helpText.pipelineDescription)
   .option("--agent <agent>", helpText.agentOption, "both")
   .option("--managed", helpText.managedOption)
-  .option("--manual", "创建受控人工执行任务，不自动启动实现者")
+  .option("--manual", helpText.manualOption)
   .option("--project <path>", helpText.managedProjectOption)
   .option("--profile <profile>", helpText.managedProfileOption, "auto")
   .option("--supervisor <agent>", helpText.managedSupervisorOption, "current")
@@ -160,7 +160,10 @@ program
   .option("--add-dir <paths...>", helpText.managedAddDirOption)
   .option("--resume-task <taskId>", helpText.managedResumeOption)
   .option("--submit-host-review <path>", helpText.managedSubmitHostReviewOption)
-  .option("--submit-manual-delivery <path>", "提交人工执行者的结构化交付 JSON")
+  .option(
+    "--submit-manual-delivery <path>",
+    helpText.managedSubmitManualDeliveryOption,
+  )
   .option("--reopen-delivery <reason>", helpText.managedReopenDeliveryOption)
   .option(
     "--replace-executor-session <sessionId>",
@@ -322,9 +325,9 @@ program
 
 program
   .command("check <change>")
-  .description("按文件、文档交付或可编码等级检查 SDD change")
-  .option("--level <level>", "检查等级：files | docs | coding-ready", "files")
-  .option("--json", "输出 JSON")
+  .description(helpText.checkDescription)
+  .option("--level <level>", helpText.checkLevelOption, "files")
+  .option("--json", helpText.jsonOption)
   .action(async (change, options) => {
     const { checkCommand } = await import("./commands/check.js");
     await checkCommand(change, {

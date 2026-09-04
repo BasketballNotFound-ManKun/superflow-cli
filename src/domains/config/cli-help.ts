@@ -42,10 +42,12 @@ export interface CliHelpText {
   uninstallForceOption: string;
   withDepsOption: string;
   managedOption: string;
+  manualOption: string;
   managedProjectOption: string;
   managedProfileOption: string;
   managedSupervisorOption: string;
   managedSubmitHostReviewOption: string;
+  managedSubmitManualDeliveryOption: string;
   managedExecutorOption: string;
   managedAddDirOption: string;
   managedResumeOption: string;
@@ -61,6 +63,8 @@ export interface CliHelpText {
   managedBudgetOverrideReasonOption: string;
   managedUnlimitedAgentBudgetOption: string;
   managedAdditionalExecutorInvocationsOption: string;
+  checkDescription: string;
+  checkLevelOption: string;
 }
 
 const CLI_TEXT: Record<Language, CliHelpText> = {
@@ -116,12 +120,16 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "Also uninstall OpenSpec, Superpowers, and Understand dependencies",
     managedOption:
       "Manage an implementation prompt, change directory, or direct task and wait for terminal delivery",
+    manualOption:
+      "Create a controlled manual-execution task without starting an executor",
     managedProjectOption: "Managed task project directory",
     managedProfileOption:
       "Task profile: auto | quick | engineering | sdd | monitor",
     managedSupervisorOption: "Supervisor: current | peer | codex | claude",
     managedSubmitHostReviewOption:
       "Submit the current Codex host review JSON and resume the task",
+    managedSubmitManualDeliveryOption:
+      "Submit a structured delivery JSON from a manual executor",
     managedExecutorOption: "Executor: peer | current | codex | claude",
     managedAddDirOption:
       "Additional writable repositories in the same platform",
@@ -150,6 +158,9 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "Temporarily remove Agent invocation limits for this task",
     managedAdditionalExecutorInvocationsOption:
       "Set a temporary window of additional executor invocations",
+    checkDescription:
+      "Check an SDD change at file, document-delivery, or coding-ready level",
+    checkLevelOption: "Check level: files | docs | coding-ready",
   },
   zh: {
     programDescription: "SuperBridge Flow - SDD/TDD 与双 Agent 托管工作流 CLI",
@@ -195,12 +206,14 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     withDepsOption: "同时卸载 OpenSpec、Superpowers、Understand 依赖",
     managedOption:
       "托管 implementation prompt、change 目录或自然语言任务，并等待终态回传",
+    manualOption: "创建受控人工执行任务，不自动启动实现者",
     managedProjectOption: "托管任务项目目录",
     managedProfileOption:
       "任务档位：auto | quick | engineering | sdd | monitor",
     managedSupervisorOption: "监督 Agent：current | peer | codex | claude",
     managedSubmitHostReviewOption:
       "提交当前 Host Codex 的结构化评审 JSON 并恢复任务",
+    managedSubmitManualDeliveryOption: "提交人工执行者的结构化交付 JSON",
     managedExecutorOption: "执行 Agent：peer | current | codex | claude",
     managedAddDirOption: "同一业务平台需要联动修改的其他仓库",
     managedResumeOption: "安全接入运行中任务，或从已登记检查点恢复托管任务",
@@ -222,6 +235,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     managedUnlimitedAgentBudgetOption: "临时取消当前任务的 Agent 调用次数限制",
     managedAdditionalExecutorInvocationsOption:
       "设置当前任务临时新增的执行 Agent 调用窗口",
+    checkDescription: "按文件、文档交付或可编码等级检查 SDD change",
+    checkLevelOption: "检查等级：files | docs | coding-ready",
   },
 };
 

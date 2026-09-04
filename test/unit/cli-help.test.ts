@@ -44,6 +44,8 @@ describe('core/cli-help', () => {
     expect(text.initDescription).toContain('Install');
     expect(text.dryRun).toContain('Print');
     expect(text.agentOption).toContain('target');
+    expect(text.manualOption).toContain('manual-execution');
+    expect(text.checkLevelOption).toContain('Check level');
   });
 
   it('keeps English CLI help text free of Chinese characters', () => {
