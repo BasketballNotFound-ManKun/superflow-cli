@@ -28,6 +28,9 @@ docs -> design -> implement -> verify -> archive
 | Shell | macOS/Linux 原生 shell；Windows 使用 Git Bash 或兼容 shell | `bash --version` |
 | Python | hook 中的 Python 脚本需要 | `python3 --version` |
 
+> **Node 版本不足：** 安装会在创建命令前停止。若已安装 nvm，运行
+> `nvm install 20 && nvm use 20 && nvm alias default 20`，重新打开终端后再安装。
+
 支持系统：
 
 - macOS 10.15+
@@ -40,7 +43,7 @@ docs -> design -> implement -> verify -> archive
 ### 2.1 npm 全局安装（推荐给普通用户）
 
 ```bash
-npm install -g @chenmk/superflow
+npx --yes --package=@chenmk/superflow@0.5.6 superflow-install
 superflow --version
 ```
 
@@ -48,7 +51,7 @@ superflow --version
 
 ```bash
 npm config set registry https://registry.npmmirror.com
-npm install -g @chenmk/superflow
+npx --yes --package=@chenmk/superflow@0.5.6 superflow-install
 ```
 
 ### 2.2 从源码安装（贡献者或本地调试）
@@ -666,7 +669,7 @@ superflow pipeline --agent codex
 
 | 场景 | 命令 |
 |------|------|
-| 安装 CLI | `npm install -g @chenmk/superflow` |
+| 安装 CLI | `npx --yes --package=@chenmk/superflow@0.5.6 superflow-install` |
 | 初始化并选择工具 | `superflow init` |
 | 非交互初始化两侧 | `superflow init --yes` |
 | 检查健康 | `superflow doctor` |

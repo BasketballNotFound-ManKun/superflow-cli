@@ -8,8 +8,12 @@ aliases, scripts, rules, and handoff state for Claude Code and Codex.
 ## 1. Install
 
 ```bash
-npm install -g @chenmk/superflow
+npx --yes --package=@chenmk/superflow@0.5.6 superflow-install
 ```
+
+> **Node.js requirement:** Node.js 20 or later is required. If `node -v` is older,
+> installation stops before command aliases are created. With nvm, run
+> `nvm install 20 && nvm use 20 && nvm alias default 20`, open a new terminal, and reinstall.
 
 The repository `install.sh` and `install.ps1` scripts detect the Codex/Claude
 Hosts actually installed and register their managed MCP entries together with

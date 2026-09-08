@@ -151,8 +151,11 @@ Each phase has a clear owner and an exit gate:
 ## Install
 
 ```bash
-npm install -g @chenmk/superflow
+npx --yes --package=@chenmk/superflow@0.5.6 superflow-install
 ```
+
+> **Node.js requirement:** Node.js 20 or later is required. On an older runtime,
+> installation stops before command aliases are created and prints Node 20 upgrade instructions.
 
 For a source checkout, `bash install.sh` detects installed Codex, Claude, and
 Codex and Claude Hosts and installs CLI, Skills/Hooks, and their managed MCP registrations
