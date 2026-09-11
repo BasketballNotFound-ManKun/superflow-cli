@@ -4,6 +4,7 @@ import type { Language } from "../../types.js";
 import { managedText } from "./i18n.js";
 import { managedRunDir } from "./paths.js";
 import { validateReviewResult } from "./runner.js";
+import { validateManagedAcceptanceReviewCoverage } from "./acceptance-contract.js";
 import {
   computeScopedWorkspaceFingerprint,
   computeWorkspaceFingerprintForRoots,
@@ -59,6 +60,9 @@ export function submitExternalHostReviewResult(
     );
   }
   validateReviewResult(result, language);
+  if (state.pendingExternalReview.round === 1) {
+    validateManagedAcceptanceReviewCoverage(contract, result);
+  }
   if (
     contract.source === "sdd" &&
     !result.verificationCommands?.some(

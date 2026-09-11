@@ -38,6 +38,8 @@ import type {
   ManagedFailure,
   ManagedSupervisorExecution,
   ReviewResult,
+  ManagedExecutorConfig,
+  ManagedReasoningEffort,
 } from "./types.js";
 import type { Language } from "../../types.js";
 import { managedText } from "./i18n.js";
@@ -53,6 +55,11 @@ import type { ExecutorResult } from "./types.js";
 import { stopProcessTree } from "../../platform/process-tree.js";
 import { assertManagedAgentPair } from "./pair-admission.js";
 import { runManagedTask } from "./runner.js";
+import { assertManagedAcceptanceContractForStart } from "./acceptance-contract.js";
+import {
+  resolveClaudeExecutorConfig,
+  resolveCodexExecutorConfig,
+} from "../../platform/codex-config.js";
 
 export interface ManagedControlRuntime {
   env?: NodeJS.ProcessEnv;
@@ -72,6 +79,9 @@ export interface StartManagedTaskInput {
   mandatoryEngineeringRules?: string[];
   externalModelDataDisclosureApproved?: boolean;
   externalModelDataDisclosureApprovedBy?: string;
+  acceptanceContract?: ManagedTaskContract["acceptanceContract"];
+  executorModel?: string;
+  executorReasoningEffort?: ManagedReasoningEffort;
 }
 
 export function submitHumanDirectedDelivery(
@@ -108,7 +118,9 @@ export function submitHumanDirectedDelivery(
 class ManualDeliveryInvoker implements AgentInvoker {
   constructor(private readonly delivery: ExecutorResult) {}
 
-  async invoke<T>(_invocation: AgentInvocation): Promise<AgentInvocationResult<T>> {
+  async invoke<T>(
+    _invocation: AgentInvocation,
+  ): Promise<AgentInvocationResult<T>> {
     return {
       sessionId: "manual-delivery",
       output: this.delivery as T,
@@ -128,6 +140,7 @@ export interface ManagedTaskSnapshot {
   language: Language;
   supervisorAgent: ManagedAgent;
   executorAgent: ManagedAgent;
+  executorConfig: ManagedTaskContract["executorConfig"];
   supervisorExecution: ManagedSupervisorExecution;
   pauseRequested: boolean;
   status: ManagedTaskStatus;
@@ -263,10 +276,8 @@ export function startManagedTaskFromHost(
     executorAgent,
   );
 
-  // The service handshake happens before task persistence. A failed runtime
-  // upgrade must never leave a usable task behind while reporting start failure
-  // to the caller, otherwise a safe retry can create a duplicate task.
-  startService(runtime, language);
+  const executorConfig = resolveExecutorConfig(input, executorAgent, env);
+
   const contract = createManagedTaskContract({
     request: resolved.request,
     projectRoot: resolved.projectRoot,
@@ -282,8 +293,26 @@ export function startManagedTaskFromHost(
       approved: input.externalModelDataDisclosureApproved === true,
       approvedBy: input.externalModelDataDisclosureApprovedBy,
     },
+    acceptanceContract: input.acceptanceContract,
+    executorConfig,
   });
+  if (executorConfig && !executorConfig.confirmed) {
+    contract.status = "waiting_for_human";
+  }
+  assertManagedAcceptanceContractForStart(contract);
+  // Validate the frozen first-run contract before touching the runtime. The
+  // service handshake still happens before task persistence, so a failed
+  // runtime upgrade cannot leave a duplicate task behind.
+  startService(runtime, language);
   const state = initManagedRunState(contract);
+  if (executorConfig && !executorConfig.confirmed) {
+    state.currentStep = "awaiting_executor_config_confirmation";
+    state.blocker = managedText(
+      language,
+      `请确认 ${executorAgent} 启动配置：模型 ${executorConfig.model ?? "未知"}，推理深度 ${executorConfig.reasoningEffort ?? "未知"}。确认前不会启动 Executor。`,
+      `Confirm the ${executorAgent} launch configuration: model ${executorConfig.model ?? "unknown"}, reasoning effort ${executorConfig.reasoningEffort ?? "unknown"}. The executor will not start until confirmed.`,
+    );
+  }
   createManagedTaskFiles(contract, state, env);
   appendManagedEvent(state, {
     eventType: "run.created",
@@ -296,6 +325,36 @@ export function startManagedTaskFromHost(
     ),
   });
   return getManagedTaskSnapshot(contract.taskId, env);
+}
+
+function resolveExecutorConfig(
+  input: StartManagedTaskInput,
+  executorAgent: ManagedAgent,
+  env: NodeJS.ProcessEnv,
+): ManagedExecutorConfig | undefined {
+  if (
+    executorAgent === "claude" &&
+    input.executorReasoningEffort &&
+    !["low", "medium", "high", "xhigh", "max"].includes(
+      input.executorReasoningEffort,
+    )
+  ) {
+    throw new Error("Claude 推理深度只支持 low、medium、high、xhigh 或 max");
+  }
+  const defaults =
+    executorAgent === "codex"
+      ? resolveCodexExecutorConfig(env)
+      : resolveClaudeExecutorConfig(env);
+  const model = input.executorModel?.trim() || defaults.model;
+  const reasoningEffort = input.executorReasoningEffort ?? defaults.reasoningEffort;
+  const explicit = Boolean(input.executorModel && input.executorReasoningEffort);
+  return {
+    model,
+    reasoningEffort,
+    provider: defaults.provider,
+    source: explicit ? "explicit" : defaults.source,
+    confirmed: explicit,
+  };
 }
 
 export function listManagedTaskSnapshots(
@@ -340,6 +399,7 @@ function findRetryReusableTask(
         contract.source === resolved.source &&
         sameStrings(contract.relatedProjectRoots, relatedRoots) &&
         sameStrings(contract.mandatoryEngineeringRules ?? [], mandatoryRules) &&
+        executorConfigMatches(contract.executorConfig, input) &&
         (contract.taskPrompt?.originalPath ?? null) ===
           (resolved.taskPromptPath ?? null)
       ) {
@@ -350,6 +410,19 @@ function findRetryReusableTask(
     }
   }
   return null;
+}
+
+function executorConfigMatches(
+  config: ManagedTaskContract["executorConfig"],
+  input: StartManagedTaskInput,
+): boolean {
+  if (!input.executorModel && !input.executorReasoningEffort) return true;
+  if (!config) return false;
+  return (
+    config.model === (input.executorModel ?? config.model) &&
+    config.reasoningEffort ===
+      (input.executorReasoningEffort ?? config.reasoningEffort)
+  );
 }
 
 function sameStrings(left: string[], right: string[]): boolean {
@@ -376,6 +449,7 @@ export function getManagedTaskSnapshot(
     language: contract.language ?? "zh",
     supervisorAgent: contract.supervisorAgent,
     executorAgent: contract.executorAgent,
+    executorConfig: contract.executorConfig,
     supervisorExecution: contract.supervisorExecution ?? "external_host",
     pauseRequested: readManagedControlSignal(contract)?.pauseRequested === true,
     status: state.status,
@@ -472,11 +546,14 @@ export async function waitForManagedTaskChange(
       });
       lastReportedSequence = event.sequence;
     }
-    const supervisionAttention = snapshot.latestEvents.slice().reverse().find(
-      (event) =>
-        event.sequence > afterSequence &&
-        event.eventType === "executor.supervision_attention_required",
-    );
+    const supervisionAttention = snapshot.latestEvents
+      .slice()
+      .reverse()
+      .find(
+        (event) =>
+          event.sequence > afterSequence &&
+          event.eventType === "executor.supervision_attention_required",
+      );
     if (
       snapshot.attentionRequired ||
       supervisionAttention ||
@@ -484,10 +561,7 @@ export async function waitForManagedTaskChange(
     ) {
       return {
         timedOut: false,
-        snapshot: compactWaitSnapshot(
-          snapshot,
-          supervisionAttention?.summary,
-        ),
+        snapshot: compactWaitSnapshot(snapshot, supervisionAttention?.summary),
       };
     }
     if (Date.now() >= deadline) {
@@ -758,6 +832,45 @@ export function authorizeManagedExecutor(
       contract.language,
       `已授权 ${contract.executorAgent} 在冻结仓库作用域内处理源码；宿主 DLP 仍独立生效`,
       `${contract.executorAgent} was authorized to process source within the frozen repository scope; host DLP remains independently enforced`,
+    ),
+  });
+  startService(runtime, contract.language);
+  return getManagedTaskSnapshot(taskId, env);
+}
+
+export function confirmManagedExecutor(
+  taskId: string,
+  approvedBy: string,
+  runtime: ManagedControlRuntime,
+): ManagedTaskSnapshot {
+  const env = runtime.env ?? process.env;
+  const { contract, state, entry } = loadManagedContext(taskId, env);
+  if (!contract.executorConfig || contract.executorConfig.confirmed) {
+    throw new Error("该任务没有待确认的执行 Agent 模型配置");
+  }
+  contract.executorConfig = {
+    ...contract.executorConfig,
+    confirmed: true,
+  };
+  contract.contractHash = calculateManagedContractHash(contract);
+  state.contractHash = contract.contractHash;
+  if (state.status === "waiting_for_human") {
+    state.status = "queued";
+    state.currentStep = "executor_config_confirmed";
+    state.blocker = null;
+    contract.status = "queued";
+  }
+  saveManagedTask(contract);
+  saveManagedRun(state);
+  upsertRegistryEntry({ ...entry, status: state.status, updatedAt: new Date().toISOString() }, env);
+  appendManagedEvent(state, {
+    eventType: "executor.config_confirmed",
+    actor: approvedBy,
+    role: "system",
+    summary: managedText(
+      contract.language,
+      `已确认 ${contract.executorAgent} 配置：模型 ${contract.executorConfig.model ?? "未知"}，推理深度 ${contract.executorConfig.reasoningEffort ?? "未知"}`,
+      `${contract.executorAgent} configuration confirmed: model ${contract.executorConfig.model ?? "unknown"}, reasoning effort ${contract.executorConfig.reasoningEffort ?? "unknown"}`,
     ),
   });
   startService(runtime, contract.language);

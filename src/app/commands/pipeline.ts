@@ -50,6 +50,10 @@ import { assertCodingReadyForPrompt } from "../../domains/sdd-readiness.js";
 import { assertManagedAgentPair } from "../../domains/managed-work/pair-admission.js";
 import { submitHumanDirectedDelivery } from "../../domains/managed-work/control.js";
 import { writeManagedExecutorHandoff } from "../../domains/managed-work/runner.js";
+import {
+  assertManagedAcceptanceContractForStart,
+  parseManagedAcceptanceContractFile,
+} from "../../domains/managed-work/acceptance-contract.js";
 
 const SKILL_NAME = "superflow-pipeline";
 type ManagedAgentSelector = ManagedAgent | "current" | "peer";
@@ -79,6 +83,7 @@ export interface PipelineCommandOptions extends SkillCheckOptions {
   additionalExecutorInvocations?: string;
   submitHostReview?: string;
   language?: string;
+  acceptanceContract?: string;
 }
 
 export async function pipelineCommand(
@@ -87,7 +92,9 @@ export async function pipelineCommand(
 ): Promise<void> {
   const language = resolveRuntimeLanguage(options.language);
   if (options.submitManualDelivery) {
-    const delivery = JSON.parse(readFileSync(options.submitManualDelivery, "utf8")) as ExecutorResult;
+    const delivery = JSON.parse(
+      readFileSync(options.submitManualDelivery, "utf8"),
+    ) as ExecutorResult;
     const state = await submitHumanDirectedDelivery(
       options.resumeTask ?? "",
       delivery,
@@ -130,6 +137,9 @@ async function submitManagedTask(
     assertCodingReadyForPrompt(input.taskPromptPath);
   }
   const agents = resolveManagedAgents(options);
+  const acceptanceContract = options.acceptanceContract
+    ? parseManagedAcceptanceContractFile(options.acceptanceContract)
+    : undefined;
   const contract = createManagedTaskContract({
     request: input.request,
     projectRoot: input.projectRoot,
@@ -141,7 +151,9 @@ async function submitManagedTask(
     taskPromptPath: input.taskPromptPath,
     language,
     executionMode: options.manual ? "human_directed" : "delegated",
+    acceptanceContract,
   });
+  assertManagedAcceptanceContractForStart(contract);
   const state = initManagedRunState(contract);
   if (options.dryRun) {
     console.log(JSON.stringify({ contract, run: state }, null, 2));
@@ -162,15 +174,25 @@ async function submitManagedTask(
     role: "runner",
     summary: managedText(
       language,
-      options.manual ? "已创建人工执行任务并冻结统一执行合同" : "已创建托管任务并冻结最小任务合同",
-      options.manual ? "Created human-directed task and froze the shared execution contract" : "Created managed task and froze the minimal task contract",
+      options.manual
+        ? "已创建人工执行任务并冻结统一执行合同"
+        : "已创建托管任务并冻结最小任务合同",
+      options.manual
+        ? "Created human-directed task and froze the shared execution contract"
+        : "Created managed task and froze the minimal task contract",
     ),
   });
   if (options.manual) {
     const handoff = writeManagedExecutorHandoff(contract, state, []);
-    console.log(`请把冻结交接包交给 ${contract.executorAgent} 执行：${handoff}`);
-    console.log(`交付 JSON 格式参见：${path.join(contract.projectRoot, ".superflow", "tasks", contract.taskId, "execution-contract.md")}`);
-    console.log(`执行完成后，用 --resume-task ${contract.taskId} --submit-manual-delivery <交付JSON> 提交；系统会复用托管门禁与独立评审。`);
+    console.log(
+      `请把冻结交接包交给 ${contract.executorAgent} 执行：${handoff}`,
+    );
+    console.log(
+      `交付 JSON 格式参见：${path.join(contract.projectRoot, ".superflow", "tasks", contract.taskId, "execution-contract.md")}`,
+    );
+    console.log(
+      `执行完成后，用 --resume-task ${contract.taskId} --submit-manual-delivery <交付JSON> 提交；系统会复用托管门禁与独立评审。`,
+    );
     return;
   }
   console.log(
@@ -617,16 +639,16 @@ async function resumeManagedTask(
         ? "已确认人工处理，从当前工作区和全新短会话继续未完成工作"
         : providerSwitch
           ? "已确认供应商切换，从任务记录、当前工作区和全新执行会话继续"
-        : resetExecutorSession
-          ? "已确认人工处理，将从任务记录、当前工作区和全新执行会话继续"
-          : "已请求从任务记录、当前工作区和全新短会话恢复",
+          : resetExecutorSession
+            ? "已确认人工处理，将从任务记录、当前工作区和全新执行会话继续"
+            : "已请求从任务记录、当前工作区和全新短会话恢复",
       resumeBlockedExecutor
         ? "Human action confirmed; continuing unfinished work from the current workspace in a fresh short session"
         : providerSwitch
           ? "Provider switch confirmed; continuing from task records, the current workspace, and a fresh executor session"
-        : resetExecutorSession
-          ? "Human action confirmed; continuing from task records, the current workspace, and a fresh executor session"
-          : "Requested recovery from task records, the current workspace, and a fresh short session",
+          : resetExecutorSession
+            ? "Human action confirmed; continuing from task records, the current workspace, and a fresh executor session"
+            : "Requested recovery from task records, the current workspace, and a fresh short session",
     ),
   });
   if (reopenBlockedReview) {
@@ -923,7 +945,8 @@ export function canResumeManagedTask(
     "running",
   ];
   if (normallyResumable.includes(state.status)) return true;
-  const budgetAvailable = Boolean(options.creditInfrastructureInvocations) ||
+  const budgetAvailable =
+    Boolean(options.creditInfrastructureInvocations) ||
     hasAvailableInvocationBudget(state, contract) ||
     hasAvailableReviewBudget(state, contract) ||
     options.unlimitedAgentBudget === true;
@@ -1039,19 +1062,22 @@ export function shouldAttachRunningTask(
 }
 
 function hasRunningResumeMutations(options: PipelineCommandOptions): boolean {
-  return [
-    options.reopenDelivery,
-    options.replaceExecutorSession,
-    options.resetExecutorSession,
-    options.retryBlockedExecutor,
-    options.providerSwitched,
-    options.creditInfrastructureInvocations,
-    options.maxExecutorInvocations,
-    options.maxReviewRounds,
-    options.maxTotalAgentInvocations,
-    options.budgetOverrideReason,
-    options.additionalExecutorInvocations,
-  ].some((value) => value !== undefined) || options.unlimitedAgentBudget === true;
+  return (
+    [
+      options.reopenDelivery,
+      options.replaceExecutorSession,
+      options.resetExecutorSession,
+      options.retryBlockedExecutor,
+      options.providerSwitched,
+      options.creditInfrastructureInvocations,
+      options.maxExecutorInvocations,
+      options.maxReviewRounds,
+      options.maxTotalAgentInvocations,
+      options.budgetOverrideReason,
+      options.additionalExecutorInvocations,
+    ].some((value) => value !== undefined) ||
+    options.unlimitedAgentBudget === true
+  );
 }
 
 export function confirmProviderSwitchForRecovery(
@@ -1061,8 +1087,8 @@ export function confirmProviderSwitchForRecovery(
 ): { previousSessionId: string; reason: string } | null {
   if (auditReason === undefined) return null;
   if (
-    state.status !== "waiting_for_human"
-    || state.currentStep !== "provider_change_required"
+    state.status !== "waiting_for_human" ||
+    state.currentStep !== "provider_change_required"
   ) {
     throw new Error(
       managedText(
@@ -1232,7 +1258,9 @@ function recoverAcceptedExecutorResult(
   );
   if (!existsSync(resultPath)) return null;
   try {
-    const result = JSON.parse(readFileSync(resultPath, "utf-8")) as ExecutorResult;
+    const result = JSON.parse(
+      readFileSync(resultPath, "utf-8"),
+    ) as ExecutorResult;
     if (result.status !== "ready_for_review") return null;
     const decision = evaluateCompletion(contract, result);
     if (!decision.localReady) return null;

@@ -26,7 +26,7 @@ import {
   verifyManagedJournal,
 } from "./journal.js";
 import { acquireManagedLock, acquireManagedProjectClaim } from "./lock.js";
-import { managedRunDir } from "./paths.js";
+import { managedRunDir, managedTaskDir } from "./paths.js";
 import { buildExecutorPrompt, buildReviewPrompt } from "./prompts.js";
 import { isAcceptedEvidenceCommand } from "./execution-contract.js";
 import { writeManagedSchemas } from "./schemas.js";
@@ -63,6 +63,7 @@ import {
   validateManagedTaskContract,
   validateManagedTaskPromptSnapshot,
 } from "./contract.js";
+import { managedAcceptanceContractHash } from "./acceptance-contract.js";
 import { managedList, managedText } from "./i18n.js";
 import { readManagedHumanMessages } from "./human-messages.js";
 import {
@@ -872,8 +873,8 @@ async function executeWorker(
     role: "executor",
     summary: mt(
       contract,
-      `开始第 ${state.executorInvocations} 次执行调用`,
-      `Started executor invocation ${state.executorInvocations}`,
+      `开始第 ${state.executorInvocations} 次执行调用；${contract.executorAgent} 模型 ${contract.executorConfig?.model ?? "未知"}，推理深度 ${contract.executorConfig?.reasoningEffort ?? "未知"}`,
+      `Started executor invocation ${state.executorInvocations}; ${contract.executorAgent} model ${contract.executorConfig?.model ?? "unknown"}, reasoning effort ${contract.executorConfig?.reasoningEffort ?? "unknown"}`,
     ),
   });
   appendExecutorStageEvent(contract, state, state.executorStage);
@@ -1686,23 +1687,25 @@ function prepareExternalHostReview(
     summary: reviewMessage,
     evidencePaths: [promptPath, reviewFacts.jsonPath, reviewFacts.markdownPath],
   });
-  if (notifyManagedTask(
-    {
-      taskId: state.taskId,
-      type: "review_required",
-      title: mt(
-        contract,
-        "Superflow 等待主 Agent 评审",
-        "Superflow is waiting for host review",
-      ),
-      message: mt(
-        contract,
-        `${state.taskId} 已完成研发执行，等待第 ${state.reviewRound} 轮全量评审`,
-        `${state.taskId} completed executor work and awaits full review round ${state.reviewRound}`,
-      ),
-    },
-    env,
-  )) {
+  if (
+    notifyManagedTask(
+      {
+        taskId: state.taskId,
+        type: "review_required",
+        title: mt(
+          contract,
+          "Superflow 等待主 Agent 评审",
+          "Superflow is waiting for host review",
+        ),
+        message: mt(
+          contract,
+          `${state.taskId} 已完成研发执行，等待第 ${state.reviewRound} 轮全量评审`,
+          `${state.taskId} completed executor work and awaits full review round ${state.reviewRound}`,
+        ),
+      },
+      env,
+    )
+  ) {
     appendManagedEvent(state, {
       eventType: "host.review_required_notified",
       actor: "managed-runner",
@@ -1846,6 +1849,15 @@ export function writeManagedExecutorHandoff(
       path: contract.taskPrompt?.snapshotPath ?? null,
       sha256: contract.taskPrompt?.sha256 ?? null,
     },
+    acceptanceContract: contract.acceptanceContract
+      ? {
+          path: path.join(
+            managedTaskDir(contract.projectRoot, contract.taskId),
+            "acceptance-contract.md",
+          ),
+          sha256: managedAcceptanceContractHash(contract.acceptanceContract),
+        }
+      : null,
     workspace: { changedFiles, diffStat: diffStat || null },
     executionHints: {
       stablePolicySha256: stableExecutorPolicyHash(),
@@ -1877,8 +1889,7 @@ export function writeManagedExecutorHandoff(
       tokenUnitsUsed: executorOutputTokenUnits(state),
       maxExecutorTokenUnits: contract.budgets.maxExecutorTokenUnits ?? null,
       outputTokensUsed: executorOutputTokenUnits(state),
-      maxExecutorOutputTokens:
-        contract.budgets.maxExecutorTokenUnits ?? null,
+      maxExecutorOutputTokens: contract.budgets.maxExecutorTokenUnits ?? null,
       costUsdUsed: state.executorUsage?.costUsd ?? null,
       maxExecutorCostUsd: contract.budgets.maxExecutorCostUsd ?? null,
     },
@@ -1891,6 +1902,7 @@ export function writeManagedExecutorHandoff(
           `Task: ${state.taskId}`,
           `Frozen prompt: ${contract.taskPrompt?.snapshotPath ?? "none"}`,
           `Prompt SHA-256: ${contract.taskPrompt?.sha256 ?? "none"}`,
+          `Frozen acceptance contract: ${contract.acceptanceContract ? path.join(managedTaskDir(contract.projectRoot, contract.taskId), "acceptance-contract.md") : "none"}`,
           `Machine handoff: ${machineFile}`,
           `Applicable rule files: ${ruleFiles.join(", ") || "none"}`,
           `Mandatory host rules: ${contract.mandatoryEngineeringRules?.join("; ") || "none"}`,
@@ -1940,6 +1952,7 @@ export function writeManagedExecutorHandoff(
           `任务：${state.taskId}`,
           `冻结 Prompt：${contract.taskPrompt?.snapshotPath ?? "无"}`,
           `Prompt SHA-256：${contract.taskPrompt?.sha256 ?? "无"}`,
+          `冻结验收合同：${contract.acceptanceContract ? path.join(managedTaskDir(contract.projectRoot, contract.taskId), "acceptance-contract.md") : "无"}`,
           `机器交接协议：${machineFile}`,
           `适用规则文件：${ruleFiles.join("、") || "无"}`,
           `Host 强制规则：${contract.mandatoryEngineeringRules?.join("；") || "无"}`,
@@ -2010,8 +2023,9 @@ function undeliveredHumanGuidance(
   state: ManagedRunState,
 ) {
   const delivered = deliveredHumanGuidanceIds(state);
-  return readManagedHumanMessages(contract)
-    .filter((message) => !delivered.has(message.messageId));
+  return readManagedHumanMessages(contract).filter(
+    (message) => !delivered.has(message.messageId),
+  );
 }
 
 function deliveredHumanGuidanceIds(state: ManagedRunState): Set<string> {
@@ -2229,6 +2243,8 @@ function invocation(
     role: "executor",
     language: contract.language,
     agent: contract.executorAgent,
+    model: contract.executorConfig?.model,
+    reasoningEffort: contract.executorConfig?.reasoningEffort,
     projectRoot: state.projectRoot,
     writableRoots: contract.relatedProjectRoots,
     prompt,
@@ -2349,9 +2365,10 @@ async function invokeWithFailureEvidence<T>(
     const raw = error as Error & { stdout?: unknown; stderr?: unknown };
     const stdout = typeof raw.stdout === "string" ? raw.stdout : "";
     const stderr = typeof raw.stderr === "string" ? raw.stderr : "";
-    const logs = stdout || stderr
-      ? writeInvocationLogs(state, prefix, stdout, stderr)
-      : [];
+    const logs =
+      stdout || stderr
+        ? writeInvocationLogs(state, prefix, stdout, stderr)
+        : [];
     appendManagedEvent(state, {
       eventType: "executor.invocation_failed",
       actor: agentInvocation.agent,
@@ -2375,7 +2392,7 @@ function transition(
     status,
     currentStep,
     blocker: status === "running" ? null : state.blocker,
-    failure: status === "running" ? null : state.failure ?? null,
+    failure: status === "running" ? null : (state.failure ?? null),
     servicePid: process.pid,
     updatedAt: new Date().toISOString(),
   };
@@ -2462,24 +2479,30 @@ function finishDeliveryReady(
       `Task passed local review and entered ${status}`,
     ),
   });
-  if (notifyManagedTask(
-    {
-      taskId: state.taskId,
-      type: "delivery_ready",
-      title: mt(contract, "Superflow 任务已完成", "Superflow task completed"),
-      message: mt(
-        contract,
-        `${state.taskId} 已通过本地检查并进入 ${status}；Git、环境和发布动作仍需用户批准`,
-        `${state.taskId} passed local review and entered ${status}; Git, environment, and release actions still require user approval`,
-      ),
-    },
-    env,
-  )) {
+  if (
+    notifyManagedTask(
+      {
+        taskId: state.taskId,
+        type: "delivery_ready",
+        title: mt(contract, "Superflow 任务已完成", "Superflow task completed"),
+        message: mt(
+          contract,
+          `${state.taskId} 已通过本地检查并进入 ${status}；Git、环境和发布动作仍需用户批准`,
+          `${state.taskId} passed local review and entered ${status}; Git, environment, and release actions still require user approval`,
+        ),
+      },
+      env,
+    )
+  ) {
     appendManagedEvent(state, {
       eventType: "host.delivery_ready_notified",
       actor: "managed-runner",
       role: "runner",
-      summary: mt(contract, "已发送可交付通知", "Recorded delivery-ready notification"),
+      summary: mt(
+        contract,
+        "已发送可交付通知",
+        "Recorded delivery-ready notification",
+      ),
     });
   }
   return state;
@@ -2519,24 +2542,30 @@ function finishBlocked(
     role: "runner",
     summary: blocker,
   });
-  if (notifyManagedTask(
-    {
-      taskId: state.taskId,
-      type: "human_required",
-      title: mt(
-        contract,
-        "Superflow 任务需要处理",
-        "Superflow task needs attention",
-      ),
-      message: `${state.taskId}: ${blocker}`,
-    },
-    env,
-  )) {
+  if (
+    notifyManagedTask(
+      {
+        taskId: state.taskId,
+        type: "human_required",
+        title: mt(
+          contract,
+          "Superflow 任务需要处理",
+          "Superflow task needs attention",
+        ),
+        message: `${state.taskId}: ${blocker}`,
+      },
+      env,
+    )
+  ) {
     appendManagedEvent(state, {
       eventType: "host.attention_notified",
       actor: "managed-runner",
       role: "runner",
-      summary: mt(contract, "已发送人工处理通知", "Recorded attention notification"),
+      summary: mt(
+        contract,
+        "已发送人工处理通知",
+        "Recorded attention notification",
+      ),
     });
   }
   return state;
@@ -3618,9 +3647,7 @@ async function acquireProjectLocks(
   }
 }
 
-async function prepareManagedExecution(
-  contract: ManagedTaskContract,
-): Promise<{
+async function prepareManagedExecution(contract: ManagedTaskContract): Promise<{
   workspaceBinding: ReturnType<typeof ensureManagedWorkspaceBinding>;
   projectLocks: Awaited<ReturnType<typeof acquireProjectLocks>>;
 }> {

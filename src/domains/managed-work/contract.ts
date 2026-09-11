@@ -4,12 +4,17 @@ import path from "path";
 import type { Language } from "../../types.js";
 import type {
   ManagedAgent,
+  ManagedAcceptanceContract,
   ManagedBudgets,
   ManagedExecutionMode,
   ManagedProfile,
   ManagedTaskContract,
+  ManagedRetention,
+  ManagedTaskKind,
+  ManagedExecutorConfig,
 } from "./types.js";
 import { managedText } from "./i18n.js";
+import { validateManagedAcceptanceContract } from "./acceptance-contract.js";
 import {
   DEFAULT_MANAGED_BUDGETS,
   HARD_MAX_ACTIVE_RUN_HOURS,
@@ -39,6 +44,10 @@ export interface CreateManagedTaskInput {
     approvedAt?: string;
   };
   executionMode?: ManagedExecutionMode;
+  retention?: ManagedRetention;
+  taskKind?: ManagedTaskKind;
+  acceptanceContract?: ManagedAcceptanceContract;
+  executorConfig?: ManagedExecutorConfig;
 }
 
 export function createManagedTaskContract(
@@ -117,8 +126,13 @@ export function createManagedTaskContract(
     taskPrompt,
     supervisorAgent,
     executorAgent,
+    executorConfig: input.executorConfig,
     supervisorExecution: "external_host",
     executionMode: input.executionMode ?? "delegated",
+    retention: input.retention ?? "compact",
+    taskKind:
+      input.taskKind ?? classifyManagedTaskKind(source, profile, request),
+    acceptanceContract: input.acceptanceContract,
     contractHash: "",
     permissions: {
       autonomy: "maximum_within_safe_scope",
@@ -144,9 +158,7 @@ export function createManagedTaskContract(
     createdAt: now,
     updatedAt: now,
     status:
-      input.executionMode === "human_directed"
-        ? "waiting_for_human"
-        : "queued",
+      input.executionMode === "human_directed" ? "waiting_for_human" : "queued",
   } satisfies ManagedTaskContract;
   contract.contractHash = calculateManagedContractHash(contract);
   return contract;
@@ -186,6 +198,12 @@ export function validateManagedTaskContract(
       ),
     );
   }
+  if (contract.acceptanceContract) {
+    validateManagedAcceptanceContract(
+      contract.acceptanceContract,
+      contract.language,
+    );
+  }
   const disclosure = contract.permissions.externalModelDataDisclosure;
   if (
     !disclosure ||
@@ -203,6 +221,22 @@ export function validateManagedTaskContract(
     );
   }
   validateManagedBudgets(contract.budgets, contract.language);
+  if (
+    contract.retention &&
+    !["full", "compact", "none"].includes(contract.retention)
+  ) {
+    throw new Error(
+      message("托管产物留存策略非法", "Managed retention policy is invalid"),
+    );
+  }
+  if (
+    contract.taskKind &&
+    !["code", "docs-only", "review-only"].includes(contract.taskKind)
+  ) {
+    throw new Error(
+      message("托管任务类型非法", "Managed task kind is invalid"),
+    );
+  }
   validateTaskPromptMetadata(contract);
   if (
     contract.permissions.gitCommit ||
@@ -249,10 +283,20 @@ export function calculateManagedContractHash(
     taskPrompt: contract.taskPrompt,
     supervisorAgent: contract.supervisorAgent,
     executorAgent: contract.executorAgent,
+    ...(contract.executorConfig
+      ? { executorConfig: contract.executorConfig }
+      : {}),
     ...(contract.supervisorExecution
       ? { supervisorExecution: contract.supervisorExecution }
       : {}),
-    ...(contract.executionMode ? { executionMode: contract.executionMode } : {}),
+    ...(contract.executionMode
+      ? { executionMode: contract.executionMode }
+      : {}),
+    ...(contract.retention ? { retention: contract.retention } : {}),
+    ...(contract.taskKind ? { taskKind: contract.taskKind } : {}),
+    ...(contract.acceptanceContract
+      ? { acceptanceContract: contract.acceptanceContract }
+      : {}),
     permissions: contract.permissions,
     budgets: contract.budgets,
   };
@@ -498,6 +542,25 @@ export function classifyManagedProfile(request: string): ManagedProfile {
     return "engineering";
   }
   return "quick";
+}
+
+function classifyManagedTaskKind(
+  source: ManagedTaskContract["source"],
+  profile: ManagedProfile,
+  request: string,
+): ManagedTaskKind {
+  if (source === "sdd" || profile === "engineering" || profile === "sdd") {
+    return "code";
+  }
+  if (
+    /\b(?:docs?|document|documentation)\b|文档|说明书|README/i.test(request)
+  ) {
+    return "docs-only";
+  }
+  if (/\b(?:review|audit|inspect|评审|审查|检查|复盘)\b/i.test(request)) {
+    return "review-only";
+  }
+  return "code";
 }
 
 function resolveBudgets(

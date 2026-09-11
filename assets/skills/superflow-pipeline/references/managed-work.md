@@ -93,6 +93,11 @@ superflow pipeline --resume-task <task-id> --submit-host-review <review.json>
   kill、按端口/名称清理和未经 owner helper 校验的 rm -rf。
 - change 目录必须通过 `.sdd/state.yaml` 的 `implementation_prompt` 定位执行入口；
   `tasks.md` 仅作清单。Prompt 原文复制为托管快照并冻结 SHA-256，执行和评审使用同一份。
+- 新建 task_file/SDD 托管必须随启动提供冻结 `acceptanceContract` JSON：非空业务不变量、
+  精确源码覆盖（scope 及启动时存在的仓库内相对 targets）、交付物、验证与排除范围。缺失、
+  重复、越界或不存在时不创建任务；合同快照和 Markdown 投影都进入 immutable context manifest。
+  Host 首轮评审 JSON 必须完整填 `acceptanceCoverage.reviewed`，每个 finding 填相关
+  `acceptanceContractRefs`；提交和最终脚本都会失败关闭。
 - 第一轮自动把冻结 Prompt 作为研发任务入口，不依赖主 Agent 临时重写任务描述。
 - 真实运行环境任务的首轮 Prompt 必须要求仓库内、单命令、可重复、失败安全且可移植的
   验收入口；该入口覆盖 preflight、setup、构建、启动、真实调用、断言和 cleanup，并在

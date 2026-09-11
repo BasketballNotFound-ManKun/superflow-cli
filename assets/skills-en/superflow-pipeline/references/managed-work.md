@@ -92,6 +92,13 @@ Hard gates:
   SQL, tests, reports, and frozen contracts for Host review. Never use pkill,
   killall, a bare kill, port/name-only cleanup, or rm -rf without owner-helper verification.
 - Resolve change directories through `.sdd/state.yaml` `implementation_prompt`; treat `tasks.md` as a checklist only. Copy the prompt into a managed snapshot and freeze its SHA-256 for both agents.
+- Every new task_file/SDD start carries a frozen `acceptanceContract` JSON: non-empty
+  business invariants, precise source coverage (scope plus repository-relative targets
+  that exist at start), deliverables, verification, and exclusions. Missing, duplicate,
+  escaping, or absent targets create no task; JSON and Markdown snapshots are immutable
+  context-manifest entries. First Host review JSON fully fills `acceptanceCoverage.reviewed`
+  and each finding supplies relevant `acceptanceContractRefs`; submission and final scripts
+  fail closed otherwise.
 - The first executor invocation automatically uses the frozen prompt as its task entry.
 - For real-runtime work, the first prompt requires a repository-owned,
   one-command, repeatable, failure-safe, portable acceptance entry covering

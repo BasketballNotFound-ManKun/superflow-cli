@@ -35,7 +35,8 @@ export function artifactLevelFor(
   contract: ManagedTaskContract,
 ): ManagedArtifactLevel {
   if (
-    (contract.taskPrompt && contract.taskPrompt.origin !== "generated_standard") ||
+    (contract.taskPrompt &&
+      contract.taskPrompt.origin !== "generated_standard") ||
     contract.source !== "direct_prompt"
   ) {
     return "full";
@@ -85,9 +86,7 @@ export function deriveExecutionTaskCompletion(
   if (task.requiresChangedFiles && result.changedFiles.length === 0)
     return false;
   const successful = result.commands.filter(isAcceptedEvidenceCommand);
-  const categories = new Set(
-    successful.flatMap(categoriesForCommand),
-  );
+  const categories = new Set(successful.flatMap(categoriesForCommand));
   return task.requiredCategories.every((category) => categories.has(category));
 }
 
@@ -113,6 +112,31 @@ function defaultTasks(
   contract: ManagedTaskContract,
   level: ManagedArtifactLevel,
 ): ManagedExecutionTask[] {
+  if (
+    contract.taskKind === "docs-only" ||
+    contract.taskKind === "review-only"
+  ) {
+    return [
+      {
+        taskId: "E01",
+        text:
+          contract.language === "en"
+            ? "Complete the frozen documentation or source-review scope"
+            : "完成冻结的文档或源码评审范围",
+        requiredCategories: [],
+        requiresChangedFiles: contract.taskKind === "docs-only",
+      },
+      {
+        taskId: "E02",
+        text:
+          contract.language === "en"
+            ? "Run only affected document or static checks and retain evidence"
+            : "只执行受影响的文档或静态检查并保留证据",
+        requiredCategories: [],
+        requiresChangedFiles: false,
+      },
+    ];
+  }
   const tasks: ManagedExecutionTask[] = [
     {
       taskId: "E01",
@@ -138,15 +162,16 @@ function defaultTasks(
     tasks.push(
       {
         taskId: "E03",
-        text:
-          databaseOnly
-            ? contract.language === "en"
-              ? "Complete task-level real database acceptance"
-              : "完成任务级真实数据库验收"
-            : contract.language === "en"
-              ? "Complete task-level real startup and invocation acceptance"
-              : "完成任务级真实启动与调用验收",
-        requiredCategories: databaseOnly ? ["runtime"] : ["startup", "invocation"],
+        text: databaseOnly
+          ? contract.language === "en"
+            ? "Complete task-level real database acceptance"
+            : "完成任务级真实数据库验收"
+          : contract.language === "en"
+            ? "Complete task-level real startup and invocation acceptance"
+            : "完成任务级真实启动与调用验收",
+        requiredCategories: databaseOnly
+          ? ["runtime"]
+          : ["startup", "invocation"],
         requiresChangedFiles: false,
       },
       {
@@ -166,6 +191,12 @@ function defaultTasks(
 export function requiresRuntimeAcceptance(
   contract: ManagedTaskContract,
 ): boolean {
+  if (
+    contract.taskKind === "docs-only" ||
+    contract.taskKind === "review-only"
+  ) {
+    return false;
+  }
   const taskText = [contract.request, contract.objective]
     .join("\n")
     .toLowerCase();
@@ -180,9 +211,7 @@ function requiresDatabaseRuntimeAcceptance(
   const taskText = [contract.request, contract.objective]
     .join("\n")
     .toLowerCase();
-  const database = /(?:\bsql\b|\bmysql\b|\bdatabase\b|数据库)/i.test(
-    taskText,
-  );
+  const database = /(?:\bsql\b|\bmysql\b|\bdatabase\b|数据库)/i.test(taskText);
   const application =
     /(?:\bapi\b|\bhttp\b|\be2e\b|\bbrowser\b|\bfrontend\b|\bbackend\b|\bserver\b|\bservice\b|\bstartup\b|接口|启动|浏览器|前端|后端|服务|端到端)/i.test(
       taskText,
@@ -191,7 +220,8 @@ function requiresDatabaseRuntimeAcceptance(
 }
 
 function requiresSourceChanges(contract: ManagedTaskContract): boolean {
-  if (contract.profile === "monitor") return false;
+  if (contract.profile === "monitor" || contract.taskKind === "review-only")
+    return false;
   const taskText = `${contract.request}\n${contract.objective}`.toLowerCase();
   return /(?:\bimplement\b|\badd\b|\bchange\b|\bmodify\b|\bupdate\b|\bfix\b|\brefactor\b|\bcreate\b|\bdelete\b|\bcrud\b|\bcode\b|新增|实现|修改|调整|更新|修复|重构|创建|删除|开发|代码)/i.test(
     taskText,
@@ -226,7 +256,10 @@ function renderExecutionContract(
 }
 
 function findCanonicalTasks(contract: ManagedTaskContract): string | null {
-  if (!contract.taskPrompt || contract.taskPrompt.origin === "generated_standard") {
+  if (
+    !contract.taskPrompt ||
+    contract.taskPrompt.origin === "generated_standard"
+  ) {
     return null;
   }
   let current = path.dirname(contract.taskPrompt.originalPath);

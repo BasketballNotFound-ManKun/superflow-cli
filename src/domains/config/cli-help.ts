@@ -18,6 +18,9 @@ export interface CliHelpText {
   statusDescription: string;
   mcpDescription: string;
   evalDescription: string;
+  cleanupDescription: string;
+  cleanupProjectOption: string;
+  cleanupRetentionOption: string;
   updateDescription: string;
   doctorDescription: string;
   uninstallDescription: string;
@@ -50,6 +53,7 @@ export interface CliHelpText {
   managedSubmitManualDeliveryOption: string;
   managedExecutorOption: string;
   managedAddDirOption: string;
+  managedAcceptanceContractOption: string;
   managedResumeOption: string;
   managedReopenDeliveryOption: string;
   managedReplaceExecutorSessionOption: string;
@@ -90,6 +94,10 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     mcpDescription:
       "Install, remove, or inspect the Superflow managed MCP integration",
     evalDescription: "Evaluate a managed task offline from persisted evidence",
+    cleanupDescription:
+      "Apply deterministic retention to stopped managed-task process artifacts",
+    cleanupProjectOption: "Project directory that owns the managed task",
+    cleanupRetentionOption: "Retention policy: full | compact | none",
     updateDescription:
       "Update installed SuperBridge Flow skills, scripts, and hooks",
     doctorDescription: "Diagnose SuperBridge Flow installation health",
@@ -133,6 +141,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     managedExecutorOption: "Executor: peer | current | codex | claude",
     managedAddDirOption:
       "Additional writable repositories in the same platform",
+    managedAcceptanceContractOption:
+      "Frozen acceptance-contract JSON required for task-file and SDD starts",
     managedResumeOption:
       "Attach safely to a running task or recover from recorded checkpoints",
     managedReopenDeliveryOption:
@@ -181,6 +191,9 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     statusDescription: "查看当前项目的托管任务、SDD changes 和下一步命令",
     mcpDescription: "安装、移除或检查 Superflow 托管 MCP 集成",
     evalDescription: "根据落盘证据离线评估托管任务的质量、效率与成本",
+    cleanupDescription: "按确定性留存规则精简已停止托管任务的过程产物",
+    cleanupProjectOption: "托管任务所属项目目录",
+    cleanupRetentionOption: "留存策略：full | compact | none",
     updateDescription: "更新已安装的 SuperBridge Flow skills、scripts 和 hooks",
     doctorDescription: "诊断 SuperBridge Flow 安装健康",
     uninstallDescription: "卸载 SuperBridge Flow 管理的技能、脚本和 hook 注册",
@@ -216,6 +229,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     managedSubmitManualDeliveryOption: "提交人工执行者的结构化交付 JSON",
     managedExecutorOption: "执行 Agent：peer | current | codex | claude",
     managedAddDirOption: "同一业务平台需要联动修改的其他仓库",
+    managedAcceptanceContractOption:
+      "任务 Prompt/SDD 启动必填的冻结验收合同 JSON",
     managedResumeOption: "安全接入运行中任务，或从已登记检查点恢复托管任务",
     managedReopenDeliveryOption: "用可审计的整改原因重新打开被用户驳回的交付",
     managedReplaceExecutorSessionOption:

@@ -60,6 +60,18 @@ Entry and asset protection follow these additional long-term principles:
   `protected-contracts`. Executor cleans the first two and retains the latter
   two for Host review. Post-terminal exercise cleanup is a separate, audited
   action rather than part of a development delivery round.
+- Every new `task_file`/`sdd` managed task requires a Host-frozen structured
+  acceptance contract at start: business invariants, precise source coverage
+  (repository-relative paths that exist at start), deliverables, verification,
+  and exclusions. Runner includes it in the task-contract hash, persists immutable
+  `acceptance-contract.json/md`, and adds it to the context manifest. Missing
+  fields, absent targets, snapshot/hash drift, or incomplete first-review coverage
+  fail closed. Persisted legacy tasks may resume, but must not claim this start rule.
+- The first Host review covers every frozen contract item and every source scope.
+  `acceptanceCoverage.reviewed` records complete coverage, and every finding's
+  `acceptanceContractRefs` points to relevant items. Runner/final scripts validate
+  structure, hashes, paths, and coverage records without replacing Host source
+  semantics.
 
 When a direct `engineering` or `sdd` entry has no user implementation prompt,
 Runner first persists and freezes a standard execution contract: source/reuse

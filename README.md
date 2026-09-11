@@ -195,6 +195,17 @@ superflow pipeline "<prompt path, change directory, or task>" --managed \
   --project "<project root>" --supervisor current --executor peer
 ```
 
+For a prompt path or SDD change, also pass a Host-authored frozen acceptance
+contract. Its JSON declares business invariants, existing repository-relative
+source coverage, deliverables, verification, and exclusions; start fails closed
+without it.
+
+```bash
+superflow pipeline "<prompt path or change directory>" --managed \
+  --project "<project root>" --acceptance-contract ./acceptance-contract.json \
+  --supervisor current --executor peer
+```
+
 The selected language is frozen into the task contract and reused by Agent
 prompts, reviews, journals, reports, notifications, and resumed rounds.
 The first executor invocation runs continuously without a Superflow tool-turn
@@ -315,6 +326,7 @@ best-effort and does not block initialization.
 | `superflow scan --language en`                               | Regenerate project context templates in English                          |
 | `superflow pipeline`                                         | Check pipeline skill deployment                                          |
 | `superflow pipeline "<task>" --managed --project <path>`     | Run short-session execution with direct review by the current host agent |
+| `--acceptance-contract <file>`                                | Required frozen acceptance JSON for prompt/SDD starts                    |
 | `superflow docs [change]`                                    | Run the docs gate and check the phase skill                              |
 | `superflow design`                                           | Check design-phase skill deployment                                      |
 | `superflow implement [change]`                               | Create a current Coding Ready receipt before implementation              |

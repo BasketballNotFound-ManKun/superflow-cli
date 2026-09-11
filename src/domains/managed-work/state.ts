@@ -14,6 +14,7 @@ export function initManagedRunState(
     taskId: contract.taskId,
     projectRoot: contract.projectRoot,
     profile: contract.profile,
+    retention: contract.retention ?? "compact",
     language: contract.language,
     status: contract.status,
     currentStep:

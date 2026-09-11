@@ -111,6 +111,10 @@ export const REVIEW_RESULT_SCHEMA = {
           risk: { type: "string" },
           requiredFix: { type: "string" },
           acceptanceChecks: { type: "array", items: { type: "string" } },
+          acceptanceContractRefs: {
+            type: "array",
+            items: { type: "string" },
+          },
         },
         required: [
           "id",
@@ -138,14 +142,16 @@ export const REVIEW_RESULT_SCHEMA = {
         required: ["command", "exitCode", "result"],
       },
     },
+    acceptanceCoverage: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        reviewed: { type: "array", items: { type: "string" } },
+      },
+      required: ["reviewed"],
+    },
   },
-  required: [
-    "protocolVersion",
-    "messageType",
-    "result",
-    "summary",
-    "findings",
-  ],
+  required: ["protocolVersion", "messageType", "result", "summary", "findings"],
 } as const;
 
 export function writeManagedSchemas(state: ManagedRunState): {

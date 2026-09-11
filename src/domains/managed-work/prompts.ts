@@ -6,6 +6,10 @@ import type {
   ReviewFinding,
 } from "./types.js";
 import { managedRunDir, managedTaskDir } from "./paths.js";
+import {
+  managedAcceptanceContractHash,
+  managedAcceptanceContractReferences,
+} from "./acceptance-contract.js";
 
 export function buildExecutorPrompt(
   contract: ManagedTaskContract,
@@ -78,6 +82,7 @@ export function buildExecutorPrompt(
     `任务合同：${path.join(taskDir, "task-brief.md")}`,
     ...(handoffPath ? [`本轮压缩交接包：${handoffPath}`] : []),
     ...frozenPrompt,
+    ...acceptanceContractGuidance(contract, "executor", "zh"),
     `运行证据目录（只读，不要修改）：${runDir}`,
     ...deliveryChecklist,
     "",
@@ -181,6 +186,12 @@ export function buildReviewPrompt(
     `合同哈希：${contract.contractHash}`,
     `任务合同：${path.join(taskDir, "task-brief.md")}`,
     ...frozenPrompt,
+    ...acceptanceContractGuidance(
+      contract,
+      "reviewer",
+      "zh",
+      state.reviewRound === 1,
+    ),
     `执行结果：${state.lastExecutorResult}`,
     `任务报告：${path.join(runDir, "task-report.md")}`,
     ...(factsPath ? [`Runner 事实包：${factsPath}`] : []),
@@ -291,6 +302,7 @@ function buildExecutorPromptEnglish(
       ? [`Condensed handoff for this invocation: ${handoffPath}`]
       : []),
     ...frozenPrompt,
+    ...acceptanceContractGuidance(contract, "executor", "en"),
     `Run evidence directory (read-only; do not modify): ${runDir}`,
     ...deliveryChecklist,
     "",
@@ -429,6 +441,63 @@ function buildDeliveryChecklist(
   ];
 }
 
+function acceptanceContractGuidance(
+  contract: ManagedTaskContract,
+  role: "executor" | "reviewer",
+  language: "zh" | "en",
+  firstReview = false,
+): string[] {
+  if (!contract.acceptanceContract) return [];
+  const file = path.join(
+    managedTaskDir(contract.projectRoot, contract.taskId),
+    "acceptance-contract.md",
+  );
+  const hash = managedAcceptanceContractHash(contract.acceptanceContract);
+  const references = managedAcceptanceContractReferences(
+    contract.acceptanceContract,
+  );
+  if (language === "en") {
+    if (role === "executor") {
+      return [
+        `Frozen acceptance contract: ${file}`,
+        `Acceptance SHA-256: ${hash}`,
+        "Before changing code, read that file and map every invariant, source-coverage scope, deliverable, verification item, and exclusion to the current source and delivery evidence. Do not waive a target, replace it with a summary, or invent a second business contract.",
+      ];
+    }
+    if (!firstReview) {
+      return [
+        `Frozen acceptance contract: ${file}`,
+        `Acceptance SHA-256: ${hash}`,
+        "The first review already recorded complete contract coverage. Review the current diff and unresolved findings against this frozen boundary; do not recreate a coverage record merely for formatting.",
+      ];
+    }
+    return [
+      `Frozen acceptance contract: ${file}`,
+      `Acceptance SHA-256: ${hash}`,
+      `This is a first-review gate. Independently inspect every frozen source-coverage target and all other acceptance items before concluding. Your JSON must include acceptanceCoverage.reviewed with exactly these references: ${references.join(", ")}. Every finding must include acceptanceContractRefs from that list; do not defer a discovered coverage gap to a later review round.`,
+    ];
+  }
+  if (role === "executor") {
+    return [
+      `冻结验收合同：${file}`,
+      `验收合同 SHA-256：${hash}`,
+      "编码前必须读取该文件，将每一项业务不变量、源码覆盖范围、交付物、验证项和排除范围映射到当前源码及交付证据；不得跳过目标、用概述替代，或另行发明业务合同。",
+    ];
+  }
+  if (!firstReview) {
+    return [
+      `冻结验收合同：${file}`,
+      `验收合同 SHA-256：${hash}`,
+      "首轮已记录完整合同覆盖。本轮只需按冻结边界审查当前差异与未关闭 finding；不得为了格式重复创建覆盖记录。",
+    ];
+  }
+  return [
+    `冻结验收合同：${file}`,
+    `验收合同 SHA-256：${hash}`,
+    `这是首轮评审门禁。结论前必须独立检查全部冻结源码覆盖目标及其他验收条目。评审 JSON 的 acceptanceCoverage.reviewed 必须恰好包含：${references.join("、")}。每个 finding 必须在 acceptanceContractRefs 中引用其中条目；不得把本轮发现的覆盖缺口留到下一轮。`,
+  ];
+}
+
 function findSddChangeDir(promptFile: string): string | null {
   let current = path.dirname(promptFile);
   for (let depth = 0; depth < 4; depth++) {
@@ -472,6 +541,12 @@ function buildReviewPromptEnglish(
     `Contract hash: ${contract.contractHash}`,
     `Task contract: ${path.join(taskDir, "task-brief.md")}`,
     ...frozenPrompt,
+    ...acceptanceContractGuidance(
+      contract,
+      "reviewer",
+      "en",
+      state.reviewRound === 1,
+    ),
     `Executor result: ${state.lastExecutorResult}`,
     `Task report: ${path.join(runDir, "task-report.md")}`,
     ...(factsPath ? [`Runner facts: ${factsPath}`] : []),
