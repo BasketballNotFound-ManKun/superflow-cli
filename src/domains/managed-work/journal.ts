@@ -9,6 +9,7 @@ import {
 import path from "path";
 import { managedRunDir } from "./paths.js";
 import { redactManagedLog, redactManagedValue } from "./redaction.js";
+import { formatManagedTimestamp } from "./time-format.js";
 import type { ManagedEvent, ManagedRunState } from "./types.js";
 
 export interface AppendManagedEventInput {
@@ -203,7 +204,10 @@ function regenerateProgress(state: ManagedRunState, file: string): void {
       "",
       ...events
         .slice(-50)
-        .map((event) => `- ${event.timestamp} [${event.eventType}] ${event.summary}`),
+        .map(
+          (event) =>
+            `- ${formatManagedTimestamp(event.timestamp)} [${event.eventType}] ${event.summary}`,
+        ),
       "",
     ].join("\n");
     writeFileSync(path.join(path.dirname(file), "progress.md"), markdown, "utf-8");
@@ -228,7 +232,8 @@ function regenerateProgress(state: ManagedRunState, file: string): void {
     ...events
       .slice(-50)
       .map(
-        (event) => `- ${event.timestamp} [${event.eventType}] ${event.summary}`,
+        (event) =>
+          `- ${formatManagedTimestamp(event.timestamp)} [${event.eventType}] ${event.summary}`,
       ),
     "",
   ].join("\n");

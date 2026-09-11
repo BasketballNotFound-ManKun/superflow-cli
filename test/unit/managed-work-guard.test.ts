@@ -143,6 +143,75 @@ describe("managed work pre-tool guard", () => {
     });
     expect(cleanup.stderr).toBe("");
   });
+
+  it("allows executor apply_patch calls that declare paths in patch markup", () => {
+    const fixture = createFixture();
+    const result = invokeGuard(fixture, {
+      tool_name: "apply_patch",
+      tool_input: {
+        command: [
+          "*** Begin Patch",
+          "*** Update File: src/demo.ts",
+          "@@",
+          "-const a = 1;",
+          "+const a = 2;",
+          "*** End Patch",
+        ].join("\n"),
+      },
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+  });
+
+  it("still fails closed when patch markup declares no target path", () => {
+    const fixture = createFixture();
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "apply_patch",
+        tool_input: {
+          command: [
+            "*** Begin Patch",
+            "*** Delete File: src/demo.ts",
+            "*** End Patch",
+          ].join("\n"),
+        },
+      }),
+    ).toThrow("写入工具缺少目标路径");
+  });
+
+  it("blocks patch markup targeting managed task state", () => {
+    const fixture = createFixture();
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "apply_patch",
+        tool_input: {
+          command: [
+            "*** Begin Patch",
+            `*** Update File: ${path.join(fixture.root, ".superflow", "tasks", fixture.taskId, "task.json")}`,
+            "@@",
+            "*** End Patch",
+          ].join("\n"),
+        },
+      }),
+    ).toThrow("禁止修改托管状态");
+  });
+
+  it("blocks patch markup targeting frozen immutable inputs", () => {
+    const fixture = createFixture();
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "apply_patch",
+        tool_input: {
+          command: [
+            "*** Begin Patch",
+            `*** Update File: ${fixture.design}`,
+            "@@",
+            "*** End Patch",
+          ].join("\n"),
+        },
+      }),
+    ).toThrow("冻结输入只读");
+  });
 });
 
 function createFixture(language: "zh" | "en" = "zh") {

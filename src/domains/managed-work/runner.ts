@@ -445,8 +445,8 @@ export async function runManagedTask(
         role: "system",
         summary: mt(
           contract,
-          `供应商额度或套餐不可用，禁止自动重试：${message}`,
-          `Provider quota or plan is unavailable; automatic retry is forbidden: ${message}`,
+          `供应商额度、套餐或账号池不可用，已禁止自动重试：${message}（请检查本地模型网关与账号配置后重试）`,
+          `Provider quota, plan, or account pool is unavailable; automatic retry is forbidden: ${message} (check the local model gateway and account configuration before retrying)`,
         ),
       });
       notifyManagedTask(
@@ -3529,7 +3529,7 @@ function isConnectivityFailure(message: string): boolean {
 }
 
 export function isPermanentProviderFailure(message: string): boolean {
-  return /(token plan|用量上限|套餐|quota.?exhaust|insufficient.?quota|error.?code\s*2056|\b2056\b|billing|payment required)/i.test(
+  return /(token plan|用量上限|套餐|quota.?exhaust|insufficient.?quota|error.?code\s*2056|\b2056\b|billing|payment required|auth[_ ]?unavailable\s*:|账号池没有可用账号)/i.test(
     message,
   );
 }

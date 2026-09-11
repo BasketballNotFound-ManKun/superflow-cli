@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { existsSync, readFileSync, statSync, writeFileSync } from "fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
 import path from "path";
 import { readCompletionTasks } from "./completion-policy.js";
 import {
@@ -7,6 +7,7 @@ import {
   managedContextManifestPath,
 } from "./context-manifest.js";
 import { managedRunDir } from "./paths.js";
+import { redactManagedLog } from "./redaction.js";
 import { snapshotChangedWorkspaceFiles } from "./state.js";
 import { writeJsonAtomic } from "./storage.js";
 import { categoriesForCommand } from "./verification-categories.js";
@@ -56,6 +57,11 @@ export interface ManagedReviewFacts {
     bytes: number | null;
     sha256: string | null;
   }>;
+  executorObstacles: {
+    guardedRejectionCount: number;
+    recentRejections: string[];
+    lastInvocationFailure: string | null;
+  };
 }
 
 export function writeManagedReviewFacts(
@@ -125,6 +131,7 @@ export function writeManagedReviewFacts(
     evidence: evidencePaths(result)
       .sort()
       .map((entry) => evidenceFact(entry, contract, runDir)),
+    executorObstacles: collectExecutorObstacles(runDir, state.blocker ?? null),
   };
   const jsonPath = path.join(runDir, `review-facts-${state.reviewRound}.json`);
   const markdownPath = path.join(
@@ -146,6 +153,47 @@ function evidencePaths(result: ExecutorResult): string[] {
   );
   const paths = structured.length > 0 ? structured : (result.evidence ?? []);
   return [...new Set(paths.map(canonicalEvidencePath))];
+}
+
+const GUARDED_REJECTION_PATTERN =
+  /Command blocked by PreToolUse hook[^\r\n]*/g;
+
+/**
+ * Surfaces deterministic executor-side obstacles (hook rejections, invocation
+ * failures) so the Host can diagnose tooling problems in one review round
+ * instead of reconstructing them from raw session logs.
+ */
+export function collectExecutorObstacles(
+  runDir: string,
+  lastInvocationFailure: string | null,
+): ManagedReviewFacts["executorObstacles"] {
+  const recentRejections: string[] = [];
+  let guardedRejectionCount = 0;
+  if (existsSync(runDir)) {
+    const stderrLogs = readdirSync(runDir)
+      .filter((name) =>
+        /^executor-\d+(?:-invalid|-failed)?-stderr(?:-part-\d+)?\.log$/.test(
+          name,
+        ),
+      )
+      .sort();
+    for (const name of stderrLogs) {
+      const content = readFileSync(path.join(runDir, name), "utf-8");
+      for (const match of content.matchAll(GUARDED_REJECTION_PATTERN)) {
+        guardedRejectionCount += 1;
+        if (recentRejections.length < 5) {
+          recentRejections.push(redactManagedLog(match[0].slice(0, 240)));
+        }
+      }
+    }
+  }
+  return {
+    guardedRejectionCount,
+    recentRejections,
+    lastInvocationFailure: lastInvocationFailure
+      ? redactManagedLog(lastInvocationFailure.slice(0, 240))
+      : null,
+  };
 }
 
 function changedFilesBetween(
@@ -223,6 +271,7 @@ function renderReviewFacts(
           tasks: "Tasks",
           commands: "Commands",
           evidence: "Evidence",
+          obstacles: "Executor obstacles (guard rejections / invocation failures)",
         }
       : {
           warning: "Runner 事实仅作为确定性输入，不代表语义结论。",
@@ -231,6 +280,7 @@ function renderReviewFacts(
           tasks: "任务",
           commands: "命令",
           evidence: "证据",
+          obstacles: "执行障碍（守卫拦截 / 调用失败）",
         };
   return [
     title,
@@ -256,6 +306,14 @@ function renderReviewFacts(
     ...facts.evidence.map(
       (item) => `- ${item.exists ? "PASS" : "MISSING"} ${item.path}`,
     ),
+    "",
+    `## ${labels.obstacles} (${facts.executorObstacles.guardedRejectionCount})`,
+    ...facts.executorObstacles.recentRejections.map((line) => `- ${line}`),
+    ...(facts.executorObstacles.lastInvocationFailure
+      ? [`- ${facts.executorObstacles.lastInvocationFailure}`]
+      : facts.executorObstacles.guardedRejectionCount === 0
+        ? [language === "en" ? "- none" : "- 无"]
+        : []),
     "",
   ].join("\n");
 }
