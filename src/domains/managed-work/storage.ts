@@ -24,6 +24,7 @@ import {
 } from "./execution-contract.js";
 import { generatedStandardPromptContent } from "./contract.js";
 import { writeManagedWorkspaceBinding } from "./workspace-binding.js";
+import { managedAcceptanceContractHash } from "./acceptance-contract.js";
 
 export function writeJsonAtomic(file: string, value: unknown): void {
   mkdirSync(path.dirname(file), { recursive: true });
@@ -50,6 +51,7 @@ export function createManagedTaskFiles(
   try {
     mkdirSync(runDir, { recursive: true });
     writeTaskPromptSnapshot(contract);
+    writeAcceptanceContractSnapshot(contract);
     writeFileSync(
       path.join(taskDir, "request.md"),
       buildRequestMarkdown(contract),
@@ -260,6 +262,12 @@ function buildTaskBrief(contract: ManagedTaskContract): string {
             `Prompt SHA-256: ${contract.taskPrompt.sha256}`,
           ]
         : []),
+      ...(contract.acceptanceContract
+        ? [
+            `Frozen acceptance contract: ${path.join(managedTaskDir(contract.projectRoot, contract.taskId), "acceptance-contract.md")}`,
+            `Acceptance contract SHA-256: ${managedAcceptanceContractHash(contract.acceptanceContract)}`,
+          ]
+        : []),
       "",
       "## Goal",
       "",
@@ -300,6 +308,12 @@ function buildTaskBrief(contract: ManagedTaskContract): string {
           `${contract.taskPrompt.origin === "generated_standard" ? "自动生成的标准执行合同" : "原始任务 Prompt"}：${contract.taskPrompt.originalPath}`,
           `冻结 Prompt 快照：${contract.taskPrompt.snapshotPath}`,
           `Prompt SHA-256：${contract.taskPrompt.sha256}`,
+        ]
+      : []),
+    ...(contract.acceptanceContract
+      ? [
+          `冻结验收合同：${path.join(managedTaskDir(contract.projectRoot, contract.taskId), "acceptance-contract.md")}`,
+          `验收合同 SHA-256：${managedAcceptanceContractHash(contract.acceptanceContract)}`,
         ]
       : []),
     "",
@@ -349,4 +363,69 @@ function writeTaskPromptSnapshot(contract: ManagedTaskContract): void {
     );
   }
   writeFileSync(contract.taskPrompt.snapshotPath, content, "utf-8");
+}
+
+function writeAcceptanceContractSnapshot(contract: ManagedTaskContract): void {
+  if (!contract.acceptanceContract) return;
+  const taskDir = managedTaskDir(contract.projectRoot, contract.taskId);
+  const acceptanceHash = managedAcceptanceContractHash(
+    contract.acceptanceContract,
+  );
+  writeJsonAtomic(path.join(taskDir, "acceptance-contract.json"), {
+    schemaVersion: 1,
+    taskId: contract.taskId,
+    contractHash: contract.contractHash,
+    acceptanceContractHash: acceptanceHash,
+    acceptanceContract: contract.acceptanceContract,
+  });
+  const sections: Array<[string, string[]]> =
+    contract.language === "en"
+      ? [
+          [
+            "Business invariants",
+            contract.acceptanceContract.businessInvariants,
+          ],
+          [
+            "Source coverage",
+            contract.acceptanceContract.sourceCoverage.map(
+              (item) => `${item.scope}: ${item.targets.join(", ")}`,
+            ),
+          ],
+          ["Deliverables", contract.acceptanceContract.deliverables],
+          ["Verification", contract.acceptanceContract.verification],
+          ["Exclusions", contract.acceptanceContract.exclusions],
+        ]
+      : [
+          ["业务不变量", contract.acceptanceContract.businessInvariants],
+          [
+            "源码覆盖",
+            contract.acceptanceContract.sourceCoverage.map(
+              (item) => `${item.scope}：${item.targets.join("、")}`,
+            ),
+          ],
+          ["交付物", contract.acceptanceContract.deliverables],
+          ["验证", contract.acceptanceContract.verification],
+          ["排除范围", contract.acceptanceContract.exclusions],
+        ];
+  writeFileSync(
+    path.join(taskDir, "acceptance-contract.md"),
+    [
+      contract.language === "en"
+        ? "# Frozen Acceptance Contract"
+        : "# 冻结验收合同",
+      "",
+      `${contract.language === "en" ? "Task contract SHA-256" : "任务合同 SHA-256"}: ${contract.contractHash}`,
+      `${contract.language === "en" ? "Acceptance SHA-256" : "验收合同 SHA-256"}: ${acceptanceHash}`,
+      "",
+      ...sections.flatMap(([title, values]) => [
+        `## ${title}`,
+        "",
+        ...(values.length > 0
+          ? values.map((value) => `- ${value}`)
+          : [contract.language === "en" ? "- None" : "- 无"]),
+        "",
+      ]),
+    ].join("\n"),
+    "utf-8",
+  );
 }

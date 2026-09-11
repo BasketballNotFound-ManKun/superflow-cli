@@ -54,6 +54,11 @@ JSON 或重跑无关环境链路而启动。第二次同类失败进入 `waiting
 
 - 纯文档入口只运行 Superflow/OpenSpec 文档与 Coding Ready 评审，不创建托管 Task/Run。
 - 用户评审通过后，change/Prompt 入口冻结原始路径、引用文档和哈希，再进入同一托管状态机。
+- 新建 `task_file`/`sdd` 入口还必须提供 Host 冻结的 `acceptanceContract`：
+  `businessInvariants`、`sourceCoverage[{scope,targets}]`、`deliverables`、
+  `verification`、`exclusions`。每个 `targets` 是启动时存在的仓库内相对源码路径；缺失、
+  重复、越界或不存在时不创建任务。Runner 只为新任务强制此门槛，旧落盘任务可恢复但不具备
+  该合同保证。
 - 口头入口先由 Host 做语义分流：边界清晰的小需求进入 minimal/standard；存在方向性
   API、数据、并发、跨仓或 owner 决策时回到澄清/文档，Runner 不用正则代替该判断。
 - 有 Superflow/OpenSpec 文档时，Executor 读取冻结 implementation prompt，并由其引用
@@ -76,6 +81,10 @@ JSON 或重跑无关环境链路而启动。第二次同类失败进入 `waiting
 JSON 包含冻结 Prompt、工作区 changedFiles、任务进度、全部 finding、用户补充和剩余预算。
 同时包含精确适用规则文件和确定性交付 preflight 命令，避免新会话重复搜索规则。
 新旧会话都必须先读 JSON，再按路径读取必要文档和源码。
+
+存在验收合同时，Handoff 仅携带 `acceptance-contract.md` 的路径和 SHA-256，不复制业务正文。
+Executor 逐项映射合同到当前源码与证据；Host 在首轮全量检查所有 `sourceCoverage.targets`，不得
+把跨模块遗漏留给下一轮。
 
 Handoff 必须携带 `contextManifest.path` 和 `contextManifest.sha256`。清单按作用列出需求、
 设计、任务、测试和规则的权威路径及内容哈希，不复制正文。Runner 在调用前校验清单；任一
@@ -104,6 +113,16 @@ Runner 每次恢复先校验绑定，再校验执行上下文；分支或 worktr
 出现 `.git` 会被视为仓库身份漂移并失败关闭。
 其中 `taskLocator` 使用相对路径，允许从项目内任务目录恢复注册表定位，注册表本身不是权威
 任务状态。
+
+### 过程产物留存协议
+
+`retention` 为 `full`、`compact` 或 `none`，默认 `compact`。该字段只约束 Runner 的
+确定性存储生命周期，不改变 Executor/Host 的职责或交付合同。清理前必须输出逐文件清单及
+保留原因；只允许已验证的任务自有目录，拒绝路径穿越、符号链接、active/未知/损坏状态和
+工作区绑定不一致。每次实际清理追加结构化摘要，记录时间、策略、删除数、释放空间和保留
+依据；任务总用量、调用、评审、监督和最终有效验证统计继续从 run-state、账本和保留摘要读取。
+当前写入文件、唯一恢复点、未关闭 finding 的唯一证据、最终有效测试/构建/运行证据、当前
+handoff、Executor delivery、Host review、run-state、最终报告和安全审计证据不得列入候选。
 
 Runner 在 Windows 通过 PATH/PATHEXT 解析 Codex、Claude 的可执行 shim，不使用
 通用 shell 拼接命令。暂停、超时和运行时更换调用统一进程树停止原语，Windows 终止整个
@@ -224,15 +243,22 @@ URL 凭据和命令行密码。不得因为结构化交付已经脱敏，就让 
       "evidence": "事实证据",
       "risk": "实际风险",
       "requiredFix": "明确修复要求",
-      "acceptanceChecks": ["可执行验收命令"]
+      "acceptanceChecks": ["可执行验收命令"],
+      "acceptanceContractRefs": ["source:1", "verification:1"]
     }
   ],
-  "verificationCommands": []
+  "verificationCommands": [],
+  "acceptanceCoverage": {
+    "reviewed": ["invariant:1", "source:1", "deliverable:1", "verification:1"]
+  }
 }
 ```
 
 Host 一轮必须汇总全部实质 finding。格式、changedFiles 或可推导证据问题不得伪装成业务
 代码 finding；Runner 自动整改达到熔断条件后，Host 直接判断当前产物。
+有冻结验收合同时，首轮 `acceptanceCoverage.reviewed` 必须恰好覆盖全部引用（`invariant:N`、
+`source:N`、`deliverable:N`、`verification:N`、`exclusion:N`）；每个 finding 必须给出至少一个
+有效 `acceptanceContractRefs`。提交接口与最终门禁共同校验该记录，防止“通过”绕开首轮全量覆盖。
 Host 首先读取 Runner 生成的 `review-facts-N.json`，复用其中的路径、哈希、退出码、任务计数
 和验证类别；随后仍须独立读取真实 diff 与必要原始证据。事实包没有代码正确性或测试充分性
 结论，Host 不得把它当作语义评审结果。

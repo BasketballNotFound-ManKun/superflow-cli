@@ -43,6 +43,7 @@ const reviewFindingSchema = z.object({
   risk: z.string().min(1),
   requiredFix: z.string().min(1),
   acceptanceChecks: z.array(z.string().min(1)),
+  acceptanceContractRefs: z.array(z.string().min(1)).optional(),
 });
 
 const reviewResultSchema = z.object({
@@ -59,6 +60,9 @@ const reviewResultSchema = z.object({
     )
     .optional()
     .default([]),
+  acceptanceCoverage: z
+    .object({ reviewed: z.array(z.string().min(1)) })
+    .optional(),
 });
 
 const usageSchema = z.object({
@@ -67,6 +71,21 @@ const usageSchema = z.object({
   cacheReadTokens: z.number().int().nonnegative().nullable(),
   cacheWriteTokens: z.number().int().nonnegative().nullable(),
   costUsd: z.number().nonnegative().nullable(),
+});
+
+const acceptanceContractSchema = z.object({
+  businessInvariants: z.array(z.string().min(1)).min(1),
+  sourceCoverage: z
+    .array(
+      z.object({
+        scope: z.string().min(1),
+        targets: z.array(z.string().min(1)).min(1),
+      }),
+    )
+    .min(1),
+  deliverables: z.array(z.string().min(1)).min(1),
+  verification: z.array(z.string().min(1)).min(1),
+  exclusions: z.array(z.string().min(1)).default([]),
 });
 
 export function createSuperflowMcpServer(
@@ -126,6 +145,11 @@ export function createSuperflowMcpServer(
           .describe(
             "Host 会话中存在但未落盘到项目规则文件的强制工程规则；启动时冻结进任务合同",
           ),
+        acceptanceContract: acceptanceContractSchema
+          .optional()
+          .describe(
+            "task_file/SDD 必填：Host 冻结的业务不变量、精确源码覆盖、交付、验证与排除范围",
+          ),
         externalModelDataDisclosureApproved: z
           .boolean()
           .optional()
@@ -159,6 +183,7 @@ export function createSuperflowMcpServer(
             executorAgent: input.executorAgent,
             language: input.language,
             mandatoryEngineeringRules: input.mandatoryEngineeringRules,
+            acceptanceContract: input.acceptanceContract,
             externalModelDataDisclosureApproved:
               input.externalModelDataDisclosureApproved,
             externalModelDataDisclosureApprovedBy:

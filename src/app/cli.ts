@@ -158,6 +158,10 @@ program
   .option("--supervisor <agent>", helpText.managedSupervisorOption, "current")
   .option("--executor <agent>", helpText.managedExecutorOption, "peer")
   .option("--add-dir <paths...>", helpText.managedAddDirOption)
+  .option(
+    "--acceptance-contract <path>",
+    helpText.managedAcceptanceContractOption,
+  )
   .option("--resume-task <taskId>", helpText.managedResumeOption)
   .option("--submit-host-review <path>", helpText.managedSubmitHostReviewOption)
   .option(
@@ -271,6 +275,26 @@ program
   .action(async (taskPaths, options) => {
     const { evalCommand } = await import("./commands/eval.js");
     await evalCommand(taskPaths, commandOptions(options));
+  });
+
+program
+  .command("cleanup <taskId>")
+  .description(helpText.cleanupDescription)
+  .option("--project <path>", helpText.cleanupProjectOption, ".")
+  .option("--retention <policy>", helpText.cleanupRetentionOption)
+  .option("--dry-run", helpText.dryRun)
+  .option("--json", helpText.jsonOption)
+  .action(async (taskId, options) => {
+    const { cleanupCommand } = await import("./commands/cleanup.js");
+    cleanupCommand(
+      taskId,
+      commandOptions(options) as {
+        project?: string;
+        retention?: "full" | "compact" | "none";
+        dryRun?: boolean;
+        json?: boolean;
+      },
+    );
   });
 
 program

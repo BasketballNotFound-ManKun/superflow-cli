@@ -4,6 +4,29 @@ export type ManagedAgent = "codex" | "claude";
 export type ManagedProfile = "quick" | "engineering" | "sdd" | "monitor";
 export type ManagedSupervisorExecution = "external_host";
 export type ManagedExecutionMode = "delegated" | "human_directed";
+export type ManagedRetention = "full" | "compact" | "none";
+export type ManagedTaskKind = "code" | "docs-only" | "review-only";
+
+/**
+ * A Host-frozen statement of what the first execution and review must cover.
+ * `targets` are exact, repository-relative existing source paths at start.
+ */
+export interface ManagedAcceptanceSourceCoverage {
+  scope: string;
+  targets: string[];
+}
+
+export interface ManagedAcceptanceContract {
+  businessInvariants: string[];
+  sourceCoverage: ManagedAcceptanceSourceCoverage[];
+  deliverables: string[];
+  verification: string[];
+  exclusions: string[];
+}
+
+export interface ManagedAcceptanceReviewCoverage {
+  reviewed: string[];
+}
 
 export type ManagedFailureReason =
   | "environment_prepare_failed"
@@ -140,6 +163,15 @@ export interface ManagedTaskContract {
   executorAgent: ManagedAgent;
   supervisorExecution: ManagedSupervisorExecution;
   executionMode?: ManagedExecutionMode;
+  /** Deterministic process/artifact retention policy for this task. */
+  retention?: ManagedRetention;
+  /** Capability class; docs/review tasks must not receive runtime acceptance. */
+  taskKind?: ManagedTaskKind;
+  /**
+   * Required for newly started task-file and SDD work. Older persisted tasks
+   * may omit it so they can be inspected and recovered without a rewrite.
+   */
+  acceptanceContract?: ManagedAcceptanceContract;
   contractHash: string;
   permissions: ManagedPermissions;
   budgets: ManagedBudgets;
@@ -233,6 +265,7 @@ export interface ManagedRunState {
   runningAgentPid?: number | null;
   executorSelfRepairCount?: number;
   executorRejectionCounts?: Record<string, number>;
+  retention?: ManagedRetention;
 }
 
 export type ManagedExecutorStage =
@@ -283,6 +316,8 @@ export interface ReviewFinding {
   risk: string;
   requiredFix: string;
   acceptanceChecks: string[];
+  /** Frozen acceptance-contract references that this finding covers. */
+  acceptanceContractRefs?: string[];
 }
 
 export interface ReviewResult {
@@ -292,6 +327,8 @@ export interface ReviewResult {
   summary: string;
   findings: ReviewFinding[];
   verificationCommands?: ManagedCommandEvidence[];
+  /** Full first-review coverage of the frozen acceptance contract. */
+  acceptanceCoverage?: ManagedAcceptanceReviewCoverage;
 }
 
 export interface ManagedEvent {

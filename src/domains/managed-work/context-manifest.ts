@@ -56,6 +56,16 @@ export function ensureManagedContextManifest(
   if (!includesWorkspaceBinding(manifest, contract)) {
     manifest = writeManagedContextManifest(contract);
   }
+  if (
+    contract.acceptanceContract &&
+    !includesAcceptanceContract(manifest, contract)
+  ) {
+    throw new Error(
+      contract.language === "en"
+        ? "Managed context manifest is missing the frozen acceptance contract"
+        : "托管执行上下文清单缺少冻结验收合同",
+    );
+  }
   validateManagedContextManifest(manifest, contract);
   return manifest;
 }
@@ -100,6 +110,20 @@ export function writeManagedContextManifest(
       protection: "immutable",
     },
   ];
+  if (contract.acceptanceContract) {
+    candidates.push(
+      {
+        file: path.join(taskDir, "acceptance-contract.json"),
+        role: "task_contract",
+        protection: "immutable",
+      },
+      {
+        file: path.join(taskDir, "acceptance-contract.md"),
+        role: "task_contract",
+        protection: "immutable",
+      },
+    );
+  }
   const canonicalTasksPath =
     readManagedExecutionContract(contract).canonicalTasksPath;
   if (canonicalTasksPath) {
@@ -296,6 +320,19 @@ function includesWorkspaceBinding(
   const expected = [
     path.join(taskDir, "workspace-binding.json"),
     path.join(taskDir, "workspace-binding.md"),
+  ].map((file) => path.resolve(file));
+  const actual = new Set(manifest.entries.map((entry) => entry.path));
+  return expected.every((file) => actual.has(file));
+}
+
+function includesAcceptanceContract(
+  manifest: ManagedContextManifest,
+  contract: ManagedTaskContract,
+): boolean {
+  const taskDir = managedTaskDir(contract.projectRoot, contract.taskId);
+  const expected = [
+    path.join(taskDir, "acceptance-contract.json"),
+    path.join(taskDir, "acceptance-contract.md"),
   ].map((file) => path.resolve(file));
   const actual = new Set(manifest.entries.map((entry) => entry.path));
   return expected.every((file) => actual.has(file));

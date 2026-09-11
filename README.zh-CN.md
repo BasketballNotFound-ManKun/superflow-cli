@@ -158,6 +158,15 @@ superflow pipeline "<prompt 路径、change 目录或任务>" --managed \
   --project "<项目根目录>" --supervisor current --executor peer
 ```
 
+Prompt 路径或 SDD change 启动还必须传入由 Host 编写的冻结验收合同：JSON 内声明业务不变量、
+启动时已存在的仓库内源码覆盖路径、交付物、验证和排除范围；缺失即失败关闭。
+
+```bash
+superflow pipeline "<prompt 路径或 change 目录>" --managed \
+  --project "<项目根目录>" --acceptance-contract ./acceptance-contract.json \
+  --supervisor current --executor peer
+```
+
 语言会冻结进任务合同；执行 Prompt、评审、账本、报告、通知和恢复轮次保持一致。
 执行 Agent 每轮使用全新短会话；当前 Host Agent 直接评审，不再由后台启动第二个同名
 CLI。首轮自动使用冻结任务 Prompt，后续每轮生成压缩交接包，因此旧会话或新会话均能从
@@ -258,6 +267,7 @@ MCP 是主 Agent 与本地托管状态机的通信通道，不会把 Superflow �
 | `superflow implement [change]`                               | 生成当前 Coding Ready 凭证后进入实现阶段                    |
 | `superflow pipeline`                                         | 校验 SuperBridge Flow pipeline 阶段技能部署                 |
 | `superflow pipeline "<任务>" --managed --project <目录>`     | 执行 Agent 短会话开发，当前 Host Agent 直接评审             |
+| `--acceptance-contract <文件>`                                | Prompt/SDD 启动必填的冻结验收合同 JSON                      |
 | `superflow check <change> --level files\|docs\|coding-ready` | 分级检查文件、文档交付或可直接编码就绪度                    |
 | `superflow config <change> --review-mode <mode>`             | 设置代码审查强度（off/standard/thorough）                   |
 | `superflow config <change> --auto-transition <bool>`         | 控制阶段自动流转（true/false）                              |

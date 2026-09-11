@@ -76,6 +76,12 @@ second same-class failure enters `waiting_for_human` with audit evidence.
   without creating a managed Task/Run.
 - After user approval, the change/prompt entry freezes the original path,
   referenced documents, and hashes before entering the shared managed state machine.
+- A new `task_file`/`sdd` entry also supplies the Host-frozen `acceptanceContract`:
+  `businessInvariants`, `sourceCoverage[{scope,targets}]`, `deliverables`,
+  `verification`, and `exclusions`. Every target is a repository-relative source
+  path that exists at start; missing, duplicate, escaping, or absent targets create
+  no task. Runner enforces this only for new starts; persisted legacy tasks may
+  resume but carry no such guarantee.
 - The Host semantically routes a verbal request: bounded work uses minimal or
   standard contracts; unresolved directional API, data, concurrency,
   cross-repository, or owner choices return to clarification/documents. Runner
@@ -108,6 +114,11 @@ The JSON carries the frozen prompt, authoritative changedFiles, task progress, a
 findings, user guidance, remaining budget, exact applicable rule files, and the
 deterministic delivery-preflight command. Fresh or resumed sessions read the
 JSON first, then open only the referenced documents and source files they need.
+
+When present, handoff carries only the path and SHA-256 of
+`acceptance-contract.md`, never copied business text. The Executor maps every item
+to current source and evidence; the Host's first review inspects every
+`sourceCoverage.targets` and never defers a cross-module omission to another round.
 
 Handoff carries `contextManifest.path` and `contextManifest.sha256`. The manifest
 lists authoritative requirement, design, task, test, and rule paths with content
@@ -308,10 +319,14 @@ Protocol `superflow.review.v2`, message type `host_review`:
       "evidence": "Observed fact",
       "risk": "Concrete risk",
       "requiredFix": "Specific fix",
-      "acceptanceChecks": ["Executable acceptance command"]
+      "acceptanceChecks": ["Executable acceptance command"],
+      "acceptanceContractRefs": ["source:1", "verification:1"]
     }
   ],
-  "verificationCommands": []
+  "verificationCommands": [],
+  "acceptanceCoverage": {
+    "reviewed": ["invariant:1", "source:1", "deliverable:1", "verification:1"]
+  }
 }
 ```
 
@@ -329,6 +344,11 @@ When raw historical evidence already proves delivery and only JSON metadata or
 evidence duplication is invalid, the Host returns `pass`. The Runner filters
 invalid commands, merges historical evidence, and records promotion instead of
 calling the Executor to rewrite JSON or rerun the environment.
+When a frozen acceptance contract exists, first-review `acceptanceCoverage.reviewed`
+must exactly cover all references (`invariant:N`, `source:N`, `deliverable:N`,
+`verification:N`, `exclusion:N`), and every finding supplies at least one valid
+`acceptanceContractRefs`. Both submission and the final gate validate this record,
+so a `pass` cannot bypass complete first-review coverage.
 When a successful Spring Boot command already proves startup, real HTTP/runtime,
 and evidence paths, and the only omission is the `invocation` category, Runner
 records `executor.verification_metadata_escalated_to_host` and enters Host review.

@@ -53,6 +53,7 @@ import type { ExecutorResult } from "./types.js";
 import { stopProcessTree } from "../../platform/process-tree.js";
 import { assertManagedAgentPair } from "./pair-admission.js";
 import { runManagedTask } from "./runner.js";
+import { assertManagedAcceptanceContractForStart } from "./acceptance-contract.js";
 
 export interface ManagedControlRuntime {
   env?: NodeJS.ProcessEnv;
@@ -72,6 +73,7 @@ export interface StartManagedTaskInput {
   mandatoryEngineeringRules?: string[];
   externalModelDataDisclosureApproved?: boolean;
   externalModelDataDisclosureApprovedBy?: string;
+  acceptanceContract?: ManagedTaskContract["acceptanceContract"];
 }
 
 export function submitHumanDirectedDelivery(
@@ -108,7 +110,9 @@ export function submitHumanDirectedDelivery(
 class ManualDeliveryInvoker implements AgentInvoker {
   constructor(private readonly delivery: ExecutorResult) {}
 
-  async invoke<T>(_invocation: AgentInvocation): Promise<AgentInvocationResult<T>> {
+  async invoke<T>(
+    _invocation: AgentInvocation,
+  ): Promise<AgentInvocationResult<T>> {
     return {
       sessionId: "manual-delivery",
       output: this.delivery as T,
@@ -263,10 +267,6 @@ export function startManagedTaskFromHost(
     executorAgent,
   );
 
-  // The service handshake happens before task persistence. A failed runtime
-  // upgrade must never leave a usable task behind while reporting start failure
-  // to the caller, otherwise a safe retry can create a duplicate task.
-  startService(runtime, language);
   const contract = createManagedTaskContract({
     request: resolved.request,
     projectRoot: resolved.projectRoot,
@@ -282,7 +282,13 @@ export function startManagedTaskFromHost(
       approved: input.externalModelDataDisclosureApproved === true,
       approvedBy: input.externalModelDataDisclosureApprovedBy,
     },
+    acceptanceContract: input.acceptanceContract,
   });
+  assertManagedAcceptanceContractForStart(contract);
+  // Validate the frozen first-run contract before touching the runtime. The
+  // service handshake still happens before task persistence, so a failed
+  // runtime upgrade cannot leave a duplicate task behind.
+  startService(runtime, language);
   const state = initManagedRunState(contract);
   createManagedTaskFiles(contract, state, env);
   appendManagedEvent(state, {
@@ -472,11 +478,14 @@ export async function waitForManagedTaskChange(
       });
       lastReportedSequence = event.sequence;
     }
-    const supervisionAttention = snapshot.latestEvents.slice().reverse().find(
-      (event) =>
-        event.sequence > afterSequence &&
-        event.eventType === "executor.supervision_attention_required",
-    );
+    const supervisionAttention = snapshot.latestEvents
+      .slice()
+      .reverse()
+      .find(
+        (event) =>
+          event.sequence > afterSequence &&
+          event.eventType === "executor.supervision_attention_required",
+      );
     if (
       snapshot.attentionRequired ||
       supervisionAttention ||
@@ -484,10 +493,7 @@ export async function waitForManagedTaskChange(
     ) {
       return {
         timedOut: false,
-        snapshot: compactWaitSnapshot(
-          snapshot,
-          supervisionAttention?.summary,
-        ),
+        snapshot: compactWaitSnapshot(snapshot, supervisionAttention?.summary),
       };
     }
     if (Date.now() >= deadline) {
