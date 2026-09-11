@@ -17,6 +17,10 @@ import {
   wrapWithSleepPrevention,
 } from "../../src/platform/agent-process.js";
 import type { AgentInvocation } from "../../src/domains/managed-work/types.js";
+import {
+  resolveClaudeExecutorConfig,
+  resolveCodexExecutorConfig,
+} from "../../src/platform/codex-config.js";
 
 const roots: string[] = [];
 
@@ -26,6 +30,38 @@ afterEach(() => {
 });
 
 describe("agent process command", () => {
+  it("reads the current Codex model and reasoning effort without changing config", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-codex-config-"));
+    roots.push(root);
+    fs.writeFileSync(
+      path.join(root, "config.toml"),
+      'model = "gpt-test"\nmodel_reasoning_effort = "high"\nmodel_provider = "local"\n',
+    );
+    expect(resolveCodexExecutorConfig({ CODEX_HOME: root })).toMatchObject({
+      model: "gpt-test",
+      reasoningEffort: "high",
+      provider: "local",
+      confirmed: false,
+    });
+  });
+
+  it("reads Claude model and effort from its settings without changing them", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-claude-config-"));
+    roots.push(root);
+    fs.writeFileSync(
+      path.join(root, "settings.json"),
+      JSON.stringify({
+        model: "opus",
+        env: { ANTHROPIC_MODEL: "provider-opus", CLAUDE_CODE_EFFORT_LEVEL: "max" },
+      }),
+    );
+    expect(resolveClaudeExecutorConfig({ CLAUDE_CONFIG_DIR: root })).toMatchObject({
+      model: "provider-opus",
+      reasoningEffort: "max",
+      source: "claude_config",
+      confirmed: false,
+    });
+  });
   it("classifies only deterministic unresumable session failures", () => {
     const classify = (agentProcess as Record<string, unknown>)[
       "classifyUnresumableSessionFailure"
@@ -88,6 +124,31 @@ describe("agent process command", () => {
     expect(command.args).toContain("--disable");
     expect(command.args).toContain("memories");
     expect(command.args).not.toContain("--ignore-user-config");
+  });
+
+  it("passes the frozen Codex model and reasoning effort on fresh and resume", () => {
+    const invocation = fixture("codex", "executor");
+    invocation.model = "gpt-5.6-terra";
+    invocation.reasoningEffort = "high";
+    const fresh = buildAgentCommand(invocation);
+    expect(fresh.args).toContain("--model");
+    expect(fresh.args).toContain("gpt-5.6-terra");
+    expect(fresh.args).toContain("model_reasoning_effort=high");
+    invocation.sessionId = "00000000-0000-4000-8000-000000000001";
+    const resumed = buildAgentCommand(invocation);
+    expect(resumed.args).toContain("--model");
+    expect(resumed.args).toContain("model_reasoning_effort=high");
+  });
+
+  it("passes the frozen Claude model and effort", () => {
+    const invocation = fixture("claude", "executor");
+    invocation.model = "opus";
+    invocation.reasoningEffort = "max";
+    const command = buildAgentCommand(invocation);
+    expect(command.args).toContain("--model");
+    expect(command.args).toContain("opus");
+    expect(command.args).toContain("--effort");
+    expect(command.args).toContain("max");
   });
 
   it(

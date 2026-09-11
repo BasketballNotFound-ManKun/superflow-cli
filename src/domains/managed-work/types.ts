@@ -6,6 +6,22 @@ export type ManagedSupervisorExecution = "external_host";
 export type ManagedExecutionMode = "delegated" | "human_directed";
 export type ManagedRetention = "full" | "compact" | "none";
 export type ManagedTaskKind = "code" | "docs-only" | "review-only";
+export type ManagedReasoningEffort =
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh"
+  | "max"
+  | "ultra";
+
+export interface ManagedExecutorConfig {
+  model: string | null;
+  reasoningEffort: ManagedReasoningEffort | null;
+  provider: string | null;
+  source: "explicit" | "codex_config" | "claude_config" | "unknown";
+  confirmed: boolean;
+}
 
 /**
  * A Host-frozen statement of what the first execution and review must cover.
@@ -125,6 +141,7 @@ export interface AgentRuntimeTelemetry {
     | "workspace_writing"
     | "awaiting_local_approval";
   model: string | null;
+  reasoningEffort: ManagedReasoningEffort | null;
   tools: string[];
   toolUses: string[];
   plugins: string[];
@@ -161,6 +178,7 @@ export interface ManagedTaskContract {
   taskPrompt: ManagedTaskPrompt | null;
   supervisorAgent: ManagedAgent;
   executorAgent: ManagedAgent;
+  executorConfig?: ManagedExecutorConfig;
   supervisorExecution: ManagedSupervisorExecution;
   executionMode?: ManagedExecutionMode;
   /** Deterministic process/artifact retention policy for this task. */
@@ -368,6 +386,8 @@ export interface AgentInvocation {
   role: "supervisor" | "executor";
   language?: Language;
   agent: ManagedAgent;
+  model?: string | null;
+  reasoningEffort?: ManagedReasoningEffort | null;
   projectRoot: string;
   writableRoots: string[];
   prompt: string;

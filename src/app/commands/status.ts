@@ -81,6 +81,8 @@ export interface ManagedTaskStatus {
   executorStage: string;
   executorMilestone: string;
   runtimeModel: string;
+  runtimeReasoningEffort: string;
+  executorConfig: string;
   runtimeTools: string;
   invocationElapsedSeconds: number | null;
   sinceProgressSeconds: number | null;
@@ -344,8 +346,8 @@ function printStatus(result: StatusResult, language: Language): void {
       console.log(
         managedText(
           language,
-          `  运行遥测：${task.runtimePhase} | 当前阶段 ${task.executorStage} | 已达里程碑 ${task.executorMilestone} | 模型 ${task.runtimeModel} | 工具 ${task.runtimeTools} | 调用耗时 ${task.invocationElapsedSeconds ?? "-"}s | 最近进展 ${task.sinceProgressSeconds ?? "-"}s`,
-          `  runtime telemetry: ${task.runtimePhase} | active stage ${task.executorStage} | reached milestone ${task.executorMilestone} | model ${task.runtimeModel} | tools ${task.runtimeTools} | invocation elapsed ${task.invocationElapsedSeconds ?? "-"}s | since progress ${task.sinceProgressSeconds ?? "-"}s`,
+          `  运行遥测：${task.runtimePhase} | 当前阶段 ${task.executorStage} | 已达里程碑 ${task.executorMilestone} | 模型 ${task.runtimeModel} | 推理深度 ${task.runtimeReasoningEffort} | 配置 ${task.executorConfig} | 工具 ${task.runtimeTools} | 调用耗时 ${task.invocationElapsedSeconds ?? "-"}s | 最近进展 ${task.sinceProgressSeconds ?? "-"}s`,
+          `  runtime telemetry: ${task.runtimePhase} | active stage ${task.executorStage} | reached milestone ${task.executorMilestone} | model ${task.runtimeModel} | reasoning effort ${task.runtimeReasoningEffort} | config ${task.executorConfig} | tools ${task.runtimeTools} | invocation elapsed ${task.invocationElapsedSeconds ?? "-"}s | since progress ${task.sinceProgressSeconds ?? "-"}s`,
         ),
       );
       console.log(
@@ -486,6 +488,11 @@ function collectManagedTasks(
           ),
         ) as {
           taskPrompt?: { originalPath: string } | null;
+          executorConfig?: {
+            model: string | null;
+            reasoningEffort: string | null;
+            confirmed: boolean;
+          };
           budgets: {
             maxReviewRounds: number;
             maxExecutorInvocations: number;
@@ -528,6 +535,11 @@ function collectManagedTasks(
             state.executorActiveStage ?? state.executorStage ?? "unknown",
           executorMilestone: state.executorStage ?? "unknown",
           runtimeModel: state.runtimeTelemetry?.model ?? "unknown",
+          runtimeReasoningEffort:
+            state.runtimeTelemetry?.reasoningEffort ?? "unknown",
+          executorConfig: task.executorConfig
+            ? `${task.executorConfig.model ?? "unknown"}/${task.executorConfig.reasoningEffort ?? "unknown"} (${task.executorConfig.confirmed ? "confirmed" : "pending confirmation"})`
+            : "not applicable",
           runtimeTools: state.runtimeTelemetry?.tools.join(",") || "unknown",
           invocationElapsedSeconds: state.activeSince
             ? Math.round((Date.now() - Date.parse(state.activeSince)) / 1_000)
@@ -576,6 +588,8 @@ function collectManagedTasks(
           executorStage: "unknown",
           executorMilestone: "unknown",
           runtimeModel: "unknown",
+          runtimeReasoningEffort: "unknown",
+          executorConfig: "unknown",
           runtimeTools: "unknown",
           invocationElapsedSeconds: null,
           sinceProgressSeconds: null,

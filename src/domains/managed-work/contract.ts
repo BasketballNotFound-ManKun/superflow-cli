@@ -11,6 +11,7 @@ import type {
   ManagedTaskContract,
   ManagedRetention,
   ManagedTaskKind,
+  ManagedExecutorConfig,
 } from "./types.js";
 import { managedText } from "./i18n.js";
 import { validateManagedAcceptanceContract } from "./acceptance-contract.js";
@@ -46,6 +47,7 @@ export interface CreateManagedTaskInput {
   retention?: ManagedRetention;
   taskKind?: ManagedTaskKind;
   acceptanceContract?: ManagedAcceptanceContract;
+  executorConfig?: ManagedExecutorConfig;
 }
 
 export function createManagedTaskContract(
@@ -124,6 +126,7 @@ export function createManagedTaskContract(
     taskPrompt,
     supervisorAgent,
     executorAgent,
+    executorConfig: input.executorConfig,
     supervisorExecution: "external_host",
     executionMode: input.executionMode ?? "delegated",
     retention: input.retention ?? "compact",
@@ -280,6 +283,9 @@ export function calculateManagedContractHash(
     taskPrompt: contract.taskPrompt,
     supervisorAgent: contract.supervisorAgent,
     executorAgent: contract.executorAgent,
+    ...(contract.executorConfig
+      ? { executorConfig: contract.executorConfig }
+      : {}),
     ...(contract.supervisorExecution
       ? { supervisorExecution: contract.supervisorExecution }
       : {}),

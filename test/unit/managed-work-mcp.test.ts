@@ -172,7 +172,8 @@ describe("Superflow managed MCP", () => {
     expect(contract.supervisorAgent).toBe("codex");
     expect(contract.executorAgent).toBe("claude");
     expect(fixture.serviceStarts).toHaveLength(1);
-    expect(snapshot.status).toBe("queued");
+    expect(snapshot.status).toBe("waiting_for_human");
+    expect(snapshot.executorConfig?.confirmed).toBe(false);
     expect(snapshot.latestEvents[0].summary).toContain("禁止嵌套");
   });
 
@@ -193,6 +194,7 @@ describe("Superflow managed MCP", () => {
     );
     state.status = "waiting_for_human";
     state.currentStep = "human_input_required";
+    state.blocker = null;
     saveManagedRun(state);
 
     const result = await waitForManagedTaskChange(

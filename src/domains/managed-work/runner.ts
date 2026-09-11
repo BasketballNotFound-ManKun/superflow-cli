@@ -873,8 +873,8 @@ async function executeWorker(
     role: "executor",
     summary: mt(
       contract,
-      `开始第 ${state.executorInvocations} 次执行调用`,
-      `Started executor invocation ${state.executorInvocations}`,
+      `开始第 ${state.executorInvocations} 次执行调用；${contract.executorAgent} 模型 ${contract.executorConfig?.model ?? "未知"}，推理深度 ${contract.executorConfig?.reasoningEffort ?? "未知"}`,
+      `Started executor invocation ${state.executorInvocations}; ${contract.executorAgent} model ${contract.executorConfig?.model ?? "unknown"}, reasoning effort ${contract.executorConfig?.reasoningEffort ?? "unknown"}`,
     ),
   });
   appendExecutorStageEvent(contract, state, state.executorStage);
@@ -2243,6 +2243,8 @@ function invocation(
     role: "executor",
     language: contract.language,
     agent: contract.executorAgent,
+    model: contract.executorConfig?.model,
+    reasoningEffort: contract.executorConfig?.reasoningEffort,
     projectRoot: state.projectRoot,
     writableRoots: contract.relatedProjectRoots,
     prompt,

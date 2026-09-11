@@ -14,6 +14,7 @@ import {
   resumeManagedTaskFromHost,
   recordManagedValidation,
   startManagedTaskFromHost,
+  confirmManagedExecutor,
   submitManagedHostReview,
   waitForManagedTaskChange,
   type ManagedControlRuntime,
@@ -138,6 +139,11 @@ export function createSuperflowMcpServer(
           .enum(["codex", "claude"])
           .optional()
           .describe("研发 Agent 类型；默认使用主 Agent 的对端"),
+        executorModel: z.string().min(1).optional().describe("执行 Agent 模型；未提供时启动前展示本机配置并等待确认"),
+        executorReasoningEffort: z
+          .enum(["minimal", "low", "medium", "high", "xhigh", "max", "ultra"])
+          .optional()
+          .describe("执行 Agent 推理深度；未提供时启动前展示本机配置并等待确认"),
         language: z.enum(["zh", "en"]).optional().default("zh"),
         mandatoryEngineeringRules: z
           .array(z.string().min(1))
@@ -181,6 +187,8 @@ export function createSuperflowMcpServer(
             profile: input.profile,
             supervisorAgent: input.supervisorAgent,
             executorAgent: input.executorAgent,
+            executorModel: input.executorModel,
+            executorReasoningEffort: input.executorReasoningEffort,
             language: input.language,
             mandatoryEngineeringRules: input.mandatoryEngineeringRules,
             acceptanceContract: input.acceptanceContract,
@@ -192,6 +200,27 @@ export function createSuperflowMcpServer(
           runtime,
         );
       }),
+  );
+
+  server.registerTool(
+    "superflow_managed_confirm_executor",
+    {
+      title: "确认执行 Agent 配置 / Confirm executor configuration",
+      description:
+        "确认启动前展示的执行 Agent 模型和推理深度；确认前不会启动 Executor。Confirm the executor model and reasoning effort shown before launch; the executor will not start until confirmed.",
+      inputSchema: {
+        taskId: z.string().min(1),
+        approvedBy: z.string().min(1).optional().default("user"),
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async ({ taskId, approvedBy }) =>
+      runTool(() => confirmManagedExecutor(taskId, approvedBy, runtime)),
   );
 
   server.registerTool(

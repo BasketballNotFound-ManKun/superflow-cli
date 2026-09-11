@@ -9,6 +9,7 @@ import type {
   AgentUsage,
   ManagedAgent,
   UnresumableSessionFailureReason,
+  ManagedReasoningEffort,
 } from "../domains/managed-work/types.js";
 import { managedText } from "../domains/managed-work/i18n.js";
 import type { Language } from "../types.js";
@@ -426,6 +427,7 @@ export function initialTelemetry(): AgentRuntimeTelemetry {
   return {
     phase: "model_waiting",
     model: null,
+    reasoningEffort: null,
     tools: [],
     toolUses: [],
     plugins: [],
@@ -460,6 +462,16 @@ export function updateTelemetry(
   }
   if (event.type === "system" && event.subtype === "init") {
     next.model = stringValue(event.model) ?? next.model;
+    const effort =
+      stringValue(event.reasoning_effort) ??
+      stringValue(event.model_reasoning_effort) ??
+      stringValue(event.effort);
+    if (
+      effort &&
+      ["minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(effort)
+    ) {
+      next.reasoningEffort = effort as ManagedReasoningEffort;
+    }
     next.tools = stringArray(event.tools);
     next.plugins = stringArray(event.plugins);
     next.lastProgressAt = now;
@@ -634,6 +646,10 @@ function buildCodexCommand(invocation: AgentInvocation) {
         "exec",
         "resume",
         ...(invocation.role === "executor" ? ["--disable", "memories"] : []),
+        ...(invocation.model ? ["--model", invocation.model] : []),
+        ...(invocation.reasoningEffort
+          ? ["-c", `model_reasoning_effort=${invocation.reasoningEffort}`]
+          : []),
         invocation.sessionId,
         "--json",
         "--output-schema",
@@ -655,6 +671,10 @@ function buildCodexCommand(invocation: AgentInvocation) {
     args: [
       "exec",
       ...(invocation.role === "executor" ? ["--disable", "memories"] : []),
+      ...(invocation.model ? ["--model", invocation.model] : []),
+      ...(invocation.reasoningEffort
+        ? ["-c", `model_reasoning_effort=${invocation.reasoningEffort}`]
+        : []),
       "-C",
       invocation.projectRoot,
       "--sandbox",
@@ -675,6 +695,10 @@ function buildCodexCommand(invocation: AgentInvocation) {
 function buildClaudeCommand(invocation: AgentInvocation) {
   const schema = readFileSync(invocation.schemaPath, "utf-8");
   const args = ["--bare", "-p"];
+  if (invocation.model) args.push("--model", invocation.model);
+  if (invocation.reasoningEffort) {
+    args.push("--effort", invocation.reasoningEffort);
+  }
   let initialSessionId = invocation.sessionId;
   if (invocation.sessionId) args.push("--resume", invocation.sessionId);
   else {
