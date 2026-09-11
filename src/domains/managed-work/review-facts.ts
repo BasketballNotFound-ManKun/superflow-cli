@@ -1,5 +1,14 @@
 import { createHash } from "crypto";
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  statSync,
+  writeFileSync,
+} from "fs";
 import path from "path";
 import { readCompletionTasks } from "./completion-policy.js";
 import {
@@ -58,9 +67,18 @@ export interface ManagedReviewFacts {
     sha256: string | null;
   }>;
   executorObstacles: {
+    /** Rejections found inside the inspected window; not a whole-history total. */
     guardedRejectionCount: number;
     recentRejections: string[];
     lastInvocationFailure: string | null;
+    inspection: {
+      /** Recent stderr logs actually inspected (newest first). */
+      inspectedLogs: string[];
+      inspectedLogCount: number;
+      totalStderrLogCount: number;
+      /** Per-log read budget; older bytes stay in task evidence. */
+      tailBytesPerLog: number;
+    };
   };
 }
 
@@ -157,33 +175,62 @@ function evidencePaths(result: ExecutorResult): string[] {
 
 const GUARDED_REJECTION_PATTERN =
   /Command blocked by PreToolUse hook[^\r\n]*/g;
+const STDERR_LOG_PATTERN = /^executor-\d+(?:-invalid|-failed)?-stderr(?:-part-\d+)?\.log$/;
+/** Deterministic read budget: only the most recent logs, tail bytes each. */
+const MAX_INSPECTED_STDERR_LOGS = 3;
+const STDERR_TAIL_BYTES = 64 * 1024;
+const MAX_REJECTION_SAMPLES = 5;
+
+function invocationOrder(name: string): number {
+  const match = /^executor-(\d+)/.exec(name);
+  return match ? Number(match[1]) : 0;
+}
+
+/** Reads at most the trailing {@link bytes} of a file; older bytes stay untouched. */
+function readTail(file: string, bytes: number): string {
+  const stat = statSync(file);
+  const start = Math.max(0, stat.size - bytes);
+  const length = stat.size - start;
+  const handle = openSync(file, "r");
+  try {
+    const buffer = Buffer.alloc(length);
+    readSync(handle, buffer, 0, length, start);
+    return buffer.toString("utf-8");
+  } finally {
+    closeSync(handle);
+  }
+}
 
 /**
  * Surfaces deterministic executor-side obstacles (hook rejections, invocation
  * failures) so the Host can diagnose tooling problems in one review round
  * instead of reconstructing them from raw session logs.
+ *
+ * Reads are bounded: only the most recent {@link MAX_INSPECTED_STDERR_LOGS}
+ * stderr logs are inspected, and only the trailing {@link STDERR_TAIL_BYTES}
+ * bytes of each. Counts therefore describe the inspected window; full raw
+ * logs remain in task evidence for manual inspection.
  */
 export function collectExecutorObstacles(
   runDir: string,
   lastInvocationFailure: string | null,
 ): ManagedReviewFacts["executorObstacles"] {
+  const stderrLogs = existsSync(runDir)
+    ? readdirSync(runDir)
+        .filter((name) => STDERR_LOG_PATTERN.test(name))
+        .sort()
+    : [];
+  const inspected = [...stderrLogs]
+    .sort((a, b) => invocationOrder(b) - invocationOrder(a))
+    .slice(0, MAX_INSPECTED_STDERR_LOGS);
   const recentRejections: string[] = [];
   let guardedRejectionCount = 0;
-  if (existsSync(runDir)) {
-    const stderrLogs = readdirSync(runDir)
-      .filter((name) =>
-        /^executor-\d+(?:-invalid|-failed)?-stderr(?:-part-\d+)?\.log$/.test(
-          name,
-        ),
-      )
-      .sort();
-    for (const name of stderrLogs) {
-      const content = readFileSync(path.join(runDir, name), "utf-8");
-      for (const match of content.matchAll(GUARDED_REJECTION_PATTERN)) {
-        guardedRejectionCount += 1;
-        if (recentRejections.length < 5) {
-          recentRejections.push(redactManagedLog(match[0].slice(0, 240)));
-        }
+  for (const name of inspected) {
+    const content = readTail(path.join(runDir, name), STDERR_TAIL_BYTES);
+    for (const match of content.matchAll(GUARDED_REJECTION_PATTERN)) {
+      guardedRejectionCount += 1;
+      if (recentRejections.length < MAX_REJECTION_SAMPLES) {
+        recentRejections.push(redactManagedLog(match[0].slice(0, 240)));
       }
     }
   }
@@ -193,6 +240,12 @@ export function collectExecutorObstacles(
     lastInvocationFailure: lastInvocationFailure
       ? redactManagedLog(lastInvocationFailure.slice(0, 240))
       : null,
+    inspection: {
+      inspectedLogs: inspected,
+      inspectedLogCount: inspected.length,
+      totalStderrLogCount: stderrLogs.length,
+      tailBytesPerLog: STDERR_TAIL_BYTES,
+    },
   };
 }
 
@@ -308,6 +361,9 @@ function renderReviewFacts(
     ),
     "",
     `## ${labels.obstacles} (${facts.executorObstacles.guardedRejectionCount})`,
+    language === "en"
+      ? `- scope: ${facts.executorObstacles.inspection.inspectedLogCount} of ${facts.executorObstacles.inspection.totalStderrLogCount} stderr logs, trailing ${facts.executorObstacles.inspection.tailBytesPerLog} bytes each; full logs stay in task evidence`
+      : `- 口径：共 ${facts.executorObstacles.inspection.totalStderrLogCount} 个 stderr 日志，仅检查最近 ${facts.executorObstacles.inspection.inspectedLogCount} 个的末尾 ${facts.executorObstacles.inspection.tailBytesPerLog} 字节；完整日志仍在任务证据中`,
     ...facts.executorObstacles.recentRejections.map((line) => `- ${line}`),
     ...(facts.executorObstacles.lastInvocationFailure
       ? [`- ${facts.executorObstacles.lastInvocationFailure}`]

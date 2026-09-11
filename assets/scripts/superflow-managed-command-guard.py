@@ -171,23 +171,26 @@ def guard_supervisor(tool_name: str, command: str) -> None:
         )
 
 
-def patch_target_paths(command: str) -> list[str]:
-    """Extracts target paths from patch markup inside a command payload.
+PATCH_TARGET_PATTERN = re.compile(
+    r"\*{3}\s*(Update|Add|Delete)\s+File:\s*([^\r\n]+)"
+)
+
+
+def patch_target_paths(command: str) -> list[tuple[str, str]]:
+    """Extracts (action, path) targets from patch markup inside a command.
 
     Codex 0.154 routes ``tools.apply_patch(patch)`` through the hook as an
     ``apply_patch`` tool call whose input only carries the patch text, so the
     declared file_path is empty.  The patch markup itself names every target
     path, which lets the guard validate real targets instead of failing closed.
     """
-    paths: list[str] = []
-    for match in re.finditer(
-        r"\*{3}\s*(?:Update|Add)\s+File:\s*([^\r\n]+)",
-        command or "",
-    ):
-        value = match.group(1).strip().strip("\"'")
+    targets: list[tuple[str, str]] = []
+    for match in PATCH_TARGET_PATTERN.finditer(command or ""):
+        action = match.group(1).lower()
+        value = match.group(2).strip().strip("\"'")
         if value:
-            paths.append(value)
-    return paths
+            targets.append((action, value))
+    return targets
 
 
 def guard_executor(
@@ -201,16 +204,19 @@ def guard_executor(
     write_tools = {"Edit", "Write", "MultiEdit", "NotebookEdit", "apply_patch"}
     if tool_name in write_tools:
         if file_path:
-            targets = [canonical(file_path, root)]
+            targets: list[tuple[Path, str]] = [(canonical(file_path, root), "update")]
         else:
-            patch_paths = patch_target_paths(command)
-            if not patch_paths:
+            patch_targets = patch_target_paths(command)
+            if not patch_targets:
                 block(
                     "写入工具缺少目标路径，按失败关闭。",
                     "The write tool has no target path; failing closed.",
                 )
-            targets = [canonical(value, root) for value in patch_paths]
-        for target in targets:
+            targets = [
+                (canonical(value, root), action)
+                for action, value in patch_targets
+            ]
+        for target, action in targets:
             if ".superflow/tasks" in target.as_posix():
                 block(
                     "执行角色禁止修改托管状态、事件、Prompt 和过程报告。",
@@ -220,6 +226,11 @@ def guard_executor(
                 block(
                     f"冻结输入只读，禁止修改：{target}",
                     f"Frozen input is read-only: {target}",
+                )
+            if action == "delete" and target in retained:
+                block(
+                    "命令试图删除受保护的交付文档。",
+                    "The command would delete a retained delivery document.",
                 )
 
     if command and ".superflow/tasks/" in command.replace("\\", "/"):

@@ -33,7 +33,15 @@ export const EXECUTOR_RESULT_SCHEMA = {
             enum: ["positive", "negative"],
           },
         },
-        required: ["command", "exitCode", "result"],
+        required: [
+          // OpenAI strict schema requires every property key to be listed in
+          // required; optional semantics are carried by the caller instead.
+          "command",
+          "exitCode",
+          "result",
+          "categories",
+          "assertion",
+        ],
       },
     },
     evidence: { type: "array", items: { type: "string" } },
@@ -78,10 +86,12 @@ export const EXECUTOR_RESULT_SCHEMA = {
     "messageType",
     "status",
     "summary",
+    "changedFiles",
     "commands",
     "evidence",
     "releasePrerequisites",
     "blockers",
+    "taskEvidence",
   ],
 } as const;
 
@@ -126,6 +136,7 @@ export const REVIEW_RESULT_SCHEMA = {
           "risk",
           "requiredFix",
           "acceptanceChecks",
+          "acceptanceContractRefs",
         ],
       },
     },
@@ -151,7 +162,15 @@ export const REVIEW_RESULT_SCHEMA = {
       required: ["reviewed"],
     },
   },
-  required: ["protocolVersion", "messageType", "result", "summary", "findings"],
+  required: [
+    "protocolVersion",
+    "messageType",
+    "result",
+    "summary",
+    "findings",
+    "verificationCommands",
+    "acceptanceCoverage",
+  ],
 } as const;
 
 export function writeManagedSchemas(state: ManagedRunState): {

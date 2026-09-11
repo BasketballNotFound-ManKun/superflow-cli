@@ -169,14 +169,60 @@ describe("managed work pre-tool guard", () => {
       invokeGuard(fixture, {
         tool_name: "apply_patch",
         tool_input: {
+          command: ["*** Begin Patch", "@@", "-const a = 1;", "*** End Patch"].join(
+            "\n",
+          ),
+        },
+      }),
+    ).toThrow("写入工具缺少目标路径");
+  });
+
+  it("allows patch deletion of ordinary business source", () => {
+    const fixture = createFixture();
+    const result = invokeGuard(fixture, {
+      tool_name: "apply_patch",
+      tool_input: {
+        command: [
+          "*** Begin Patch",
+          "*** Delete File: src/demo.ts",
+          "*** End Patch",
+        ].join("\n"),
+      },
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+  });
+
+  it("blocks patch deletion of retained delivery documents", () => {
+    const fixture = createFixture();
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "apply_patch",
+        tool_input: {
           command: [
             "*** Begin Patch",
-            "*** Delete File: src/demo.ts",
+            `*** Delete File: ${fixture.report}`,
             "*** End Patch",
           ].join("\n"),
         },
       }),
-    ).toThrow("写入工具缺少目标路径");
+    ).toThrow("试图删除受保护的交付文档");
+  });
+
+  it("blocks patch deletion of frozen immutable inputs", () => {
+    const fixture = createFixture();
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "apply_patch",
+        tool_input: {
+          command: [
+            "*** Begin Patch",
+            `*** Delete File: ${fixture.design}`,
+            "*** End Patch",
+          ].join("\n"),
+        },
+      }),
+    ).toThrow("冻结输入只读");
   });
 
   it("blocks patch markup targeting managed task state", () => {
