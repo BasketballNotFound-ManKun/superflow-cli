@@ -39,16 +39,16 @@ Worker 自测通过 ≠ 完成任务
 12. 涉及第三方/设备/支付/客户端/外部集成时，已区分 mock、测试端点和真实入口证据；mock-only 不得标记真实链路完成
 13. 五项硬门禁全部通过：字段语义合同、写入闭环、真实入口调用链、禁止 fallback 与猜测实现、Agent 执行前自检
 14. Superpowers 技术详设接管源码级 HOW，但不得覆盖 OpenSpec/SDD 的需求、API、DB、字段语义、tests 或验收门禁
-15. SDD handoff hash 已继承并核对，不能凭压缩后的聊天记忆继续开发
+15. SDD handoff 继承已核对（.sdd/state.yaml 与 sdd-context.sha256 一致），不能凭压缩后的聊天记忆继续开发
 
 ## Superpower 技术详设继承（强制）
 
 读取 [Superpowers 技术详设](../docs/superpowers/specs/YYYY-MM-DD-{change-id}-technical-design.md)，继承其中与本批次相关的源码级 HOW 和执行约束。
 本章节只允许描述实现路径、团队组织、拆分、TDD/RED、独立测试、Review 和验证闭环，不允许新增或替换需求/API/DB/tests 合同。
 
-| 执行模式 | 团队角色 | 拆分建议 | TDD/RED切入点 | 独立Tester验证点 | 高风险猜测点 | 禁止自由发挥项 | handoff_hash | 进入prompt的强制要求 |
-|----------|----------|----------|----------------|------------------|--------------|----------------|--------------|----------------------|
-| ____ | Worker / Tester / Reviewer / Leader | ____ | ____ | ____ | ____ | ____ | ____ | ____ |
+| 执行模式 | 团队角色 | 拆分建议 | TDD/RED切入点 | 独立Tester验证点 | 高风险猜测点 | 禁止自由发挥项 | 进入prompt的强制要求 |
+|----------|----------|----------|----------------|------------------|--------------|----------------|----------------------|
+| ____ | Worker / Tester / Reviewer / Leader | ____ | ____ | ____ | ____ | ____ | ____ |
 
 规则：
 - OpenSpec/SDD 的 [design.md](../design.md)、[api.md](../api.md)、[tests.md](../tests.md) 是 WHAT/API/DB/tests 事实源。
@@ -61,8 +61,8 @@ Worker 自测通过 ≠ 完成任务
 
 - Handoff: [.sdd/handoff/sdd-context.md](../.sdd/handoff/sdd-context.md)
 - Handoff JSON: [.sdd/handoff/sdd-context.json](../.sdd/handoff/sdd-context.json)
-- Handoff hash: `{handoff_hash}`
 - State file: [.sdd/state.yaml](../.sdd/state.yaml)
+- Hash 绑定：`.sdd/state.yaml` 的 `handoff_hash` 单点维护，编码前核对其与 sdd-context.sha256 一致
 
 执行规则：
 1. Worker、Tester、Reviewer 都必须先读 handoff，再回读原始 [api.md](../api.md)、

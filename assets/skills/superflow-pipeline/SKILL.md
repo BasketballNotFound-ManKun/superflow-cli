@@ -243,12 +243,14 @@ SDD 的核心价值是可追溯事实链、接口验证、hook 质量监控、�
   手动压缩或明确确认继续。确认结果写入 `.sdd/state.yaml` 的
   `context_compression` 相关记录或 `sdd-quality-gate.md`。
 - `design.md` 的 "Superpowers Technical Design Handoff" 必须引用
-  `technical_design` 和 handoff hash，并声明 OpenSpec/SDD 文档仍是
-  WHAT/API/DB/tests 的事实源。
-- 每个实现 prompt 必须引用 `.sdd/handoff/sdd-context.md`，写明继承的
-  `handoff_hash`，并要求 agent 在编码前核对 hash 是否与当前文档一致。
-- `test-report.md` 必须记录本批次使用的 handoff hash、状态阶段和执行过的
-  SDD hook/guard 脚本。
+  `technical_design`，并声明 OpenSpec/SDD 文档仍是
+  WHAT/API/DB/tests 的事实源。handoff hash 的绑定关系由 `.sdd/state.yaml`
+  的 `handoff_hash` 字段单点维护，不要求把原始 hash 抄进正文文档。
+- 每个实现 prompt 必须引用 `.sdd/handoff/sdd-context.md`；继承校验以
+  `.sdd/state.yaml` 的 `handoff_hash` 与
+  `.sdd/handoff/sdd-context.sha256` 一致为准。
+- `test-report.md` 必须记录本批次的 status 阶段和执行过的
+  SDD hook/guard 脚本；无需手工维护 handoff hash。
 
 **阻塞规则：**
 
@@ -258,7 +260,7 @@ SDD 的核心价值是可追溯事实链、接口验证、hook 质量监控、�
   confirmed/candidate/pending/rejected，阻塞创建最终设计。
 - `brainstorm-summary.md` 已定稿但未经过主动压缩门禁或用户确认继续，阻塞进入
   `design.md` 生成/重写。
-- `design.md`/prompt/test-report 中记录的 handoff hash 与
+- `.sdd/state.yaml` 的 `handoff_hash` 与
   `.sdd/handoff/sdd-context.sha256` 不一致，阻塞。
 - 会话压缩、换 agent、切 worktree 或并行窗口后，只凭聊天记忆继续设计/编码，
   未先读 handoff 和原始文档，阻塞。

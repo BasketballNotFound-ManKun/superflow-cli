@@ -254,8 +254,8 @@ Rules:
 - Never proceed when superflow-guard fails.
 - If any SDD/OpenSpec document changes, regenerate handoff and update all stored
   handoff_hash references.
-- design.md, sdd-quality-gate.md, implementation prompts, and test-report.md
-  must record the same handoff_hash as .sdd/handoff/sdd-context.sha256.
+- The handoff_hash binding lives in .sdd/state.yaml. Prose documents reference
+  the handoff context by path; do not copy the raw hash into every document.
 - After context compaction or session handoff, reload .sdd/state.yaml and
   .sdd/handoff/sdd-context.md before acting.
 

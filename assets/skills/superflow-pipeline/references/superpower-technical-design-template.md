@@ -11,7 +11,6 @@ semantics, tests, and acceptance gates.
 ---
 change: <change-id>
 status: draft|ready|final
-handoff_hash: <sha256>
 canonical_sources:
   - ../../openspec/changes/<change-id>/proposal.md
   - ../../openspec/changes/<change-id>/api.md
@@ -247,5 +246,6 @@ already-rounded money.
 - Do not invent API fields, DB columns, status semantics, fallback behavior, or
   acceptance criteria.
 - Keep unresolved source facts as blockers. Do not convert them to guesses.
-- Record the same `handoff_hash` as `.sdd/handoff/sdd-context.sha256`.
+- Hash binding is owned by `.sdd/state.yaml` (`handoff_hash`); this document
+  must not embed the raw hash.
 ```

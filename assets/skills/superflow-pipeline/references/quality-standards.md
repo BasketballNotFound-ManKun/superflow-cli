@@ -121,7 +121,7 @@ review.md（设计评审，检查 spec → design → tasks → tests 一致性�
 
 ## Superpowers Technical Design Handoff
 - 技术详设：`docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md`
-- handoff_hash: `<sha256>`
+- hash 绑定：`.sdd/state.yaml` 的 `handoff_hash` 单点维护，正文不嵌入原始 hash
 - 边界：OpenSpec/SDD 管 WHAT/API/DB/tests，Superpowers 管源码级 HOW/执行编排
 
 ## API Design（如有）
