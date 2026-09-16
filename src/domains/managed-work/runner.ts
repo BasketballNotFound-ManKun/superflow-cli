@@ -971,6 +971,37 @@ async function executeWorker(
     managedRunDir(state.projectRoot, state.taskId, state.runId),
     `executor-result-${state.executorInvocations}.json`,
   );
+  // A delivery that truthfully reports an unreachable external dependency is
+  // a legitimate terminal state. Persist and finalize it before the evidence
+  // gates run so a missing runtime cannot burn executor rounds in repair.
+  if (
+    result.output.status === "blocked" &&
+    result.output.blockers.some((blocker) =>
+      environmentUnreachableBlocker(blocker),
+    )
+  ) {
+    writeJsonAtomic(resultFile, result.output);
+    state.lastExecutorResult = resultFile;
+    state.currentStep = "environment_blocked";
+    saveManagedRun(state);
+    appendManagedEvent(state, {
+      eventType: "executor.environment_blocked",
+      actor: contract.executorAgent,
+      role: "executor",
+      summary: mt(
+        contract,
+        "执行 Agent 如实上报外部环境不可达；记录证据并转交 Host 处理，不触发整改重跑",
+        "The executor truthfully reported an unreachable external environment; evidence was kept and the host decides, without an automatic repair rerun",
+      ),
+      evidencePaths: [resultFile],
+    });
+    return finishBlocked(
+      contract,
+      state,
+      result.output.blockers.join("；"),
+      env,
+    );
+  }
   let finalPreflightLogs: string[] = [];
   appendManagedEvent(state, {
     eventType: "executor.delivery_received",
@@ -3148,6 +3179,18 @@ function validateEngineeringEvidence(
       throw new Error(message);
     }
   }
+}
+
+/**
+ * Recognizes truthful "external environment is unreachable" blockers.  These
+ * are terminal for the current run: the runtime gate must not send the whole
+ * delivery back into a full engineering rerun when the only missing piece is
+ * an out-of-reach service, database, or credential.
+ */
+export function environmentUnreachableBlocker(blocker: string): boolean {
+  return /(?:database|mysql|redis|mq|rocketmq|kafka|server|service|network|host|port|凭据|密码|账号|数据库|缓存|消息队列|服务|网络|主机|端口|连接).{0,40}(?:unreachable|unavailable|refused|timeout|timed? out|无法连接|连接失败|不可达|不可用|拒绝|超时)|(?:unreachable|unavailable|refused|timeout|timed? out|无法连接|连接失败|不可达|不可用|拒绝|超时).{0,40}(?:database|mysql|redis|mq|rocketmq|kafka|server|service|network|host|port|凭据|密码|账号|数据库|缓存|消息队列|服务|网络|主机|端口|连接)/i.test(
+    blocker,
+  );
 }
 
 class VerificationMetadataAmbiguityError extends Error {}

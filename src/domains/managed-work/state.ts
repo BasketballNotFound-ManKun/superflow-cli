@@ -225,6 +225,7 @@ function walkWorkspaceFiles(root: string): string[] {
       const relative = path.relative(root, path.join(directory, entry));
       if (
         [".git", ".superflow"].includes(entry) ||
+        entry === ".gitignore" ||
         isGeneratedWorkspacePath(relative)
       ) {
         continue;
@@ -301,6 +302,7 @@ function isManagedRuntimePath(value: string): boolean {
   const normalized = value.trim().replaceAll("\\", "/");
   return (
     normalized.startsWith(".superflow/tasks/") ||
+    normalized === ".gitignore" ||
     normalized === ".superflow/managed-project.lock"
   );
 }

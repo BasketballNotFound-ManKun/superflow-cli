@@ -549,7 +549,7 @@ function classifyManagedTaskKind(
   profile: ManagedProfile,
   request: string,
 ): ManagedTaskKind {
-  if (source === "sdd" || profile === "engineering" || profile === "sdd") {
+  if (source === "sdd") {
     return "code";
   }
   if (
@@ -559,6 +559,9 @@ function classifyManagedTaskKind(
   }
   if (/\b(?:review|audit|inspect|评审|审查|检查|复盘)\b/i.test(request)) {
     return "review-only";
+  }
+  if (profile === "engineering" || profile === "sdd") {
+    return "code";
   }
   return "code";
 }
