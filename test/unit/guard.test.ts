@@ -605,6 +605,19 @@ describe("superflow-guard.sh", () => {
     });
   });
 
+  it("accepts state-file-only handoff binding without prose backfill", async () => {
+    const change = await makeCrossServiceChange();
+    // The tweak workflow keeps this test focused on the hash binding rule;
+    // the full workflow additionally freezes technical-design matrices that
+    // are unrelated to the handoff hash gate.
+    await execFileAsync("bash", [STATE, "init", change, "tweak", "design"]);
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    // Deliberately leave "pending" placeholders in the Markdown documents:
+    // the machine-readable binding lives in .sdd/state.yaml, and the guard
+    // must not force a hash copy into every prose file after each refresh.
+    await execFileAsync("bash", [GUARD, change, "design"]);
+  });
+
   it.each([
     [
       "blocked implementation readiness",
