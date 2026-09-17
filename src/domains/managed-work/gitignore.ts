@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, lstatSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 
 /**
@@ -10,6 +10,9 @@ import path from "path";
  */
 export function ensureSuperflowGitignore(projectRoot: string): void {
   const file = path.join(projectRoot, ".gitignore");
+  if (lstatSync(file, { throwIfNoEntry: false })?.isSymbolicLink()) {
+    throw new Error("Refusing to modify a symlinked .gitignore");
+  }
   const existing = existsSync(file) ? readFileSync(file, "utf-8") : "";
   if (superflowIgnorePresent(existing)) return;
   const separator = existing.length === 0 ? "" : existing.endsWith("\n") ? "" : "\n";
@@ -21,7 +24,7 @@ export function ensureSuperflowGitignore(projectRoot: string): void {
 }
 
 function superflowIgnorePresent(content: string): boolean {
-  return content
-    .split(/\r?\n/)
-    .some((line) => /^\s*\.superflow\b/.test(line));
+  const lines = content.split(/\r?\n/).map((line) => line.trim());
+  const lastRule = lines.filter((line) => line && !line.startsWith("#")).at(-1);
+  return lastRule !== undefined && /^\/?\.superflow\/?$/.test(lastRule);
 }

@@ -304,6 +304,8 @@ source_discovery → implementation → unit_test → package
 
 ## 证据模型
 
+SDD handoff hash 绑定仅由 `.sdd/state.yaml` 维护。任务勾选和测试报告属于执行进度，不使冻结合同失效；任务内容、设计、API、SQL 与测试合同变更必须检测。不得按 `pending` 或任意长哈希字符串过滤业务整行。中英文模板不得要求正文重复回填原始 hash。
+
 1. 所有可被 Host、MCP 或任务报告读取的持久化内容（原始日志、流式 progress、交付 JSON、
    事件账本、事实包和状态快照）必须在**首次写盘前**复用同一脱敏器；禁止以“仅展示时脱敏”
    代替落盘边界脱敏。

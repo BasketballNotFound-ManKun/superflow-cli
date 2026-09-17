@@ -22,6 +22,14 @@ afterEach(() => {
 });
 
 describe("managed task retention cleanup", () => {
+  it("retains raw evidence referenced by the latest handoff or final report", () => {
+    const fixture = createFixture();
+    const name = "executor-1-invalid-events-part-001.jsonl";
+    fs.writeFileSync(fixture.latestHandoff, JSON.stringify({ evidence: [name] }));
+    const plan = planManagedTaskCleanup(fixture.root, fixture.taskId, "compact");
+    expect(plan.actions.some((item) => item.path.endsWith(name))).toBe(false);
+    expect(plan.retained.some((item) => item.path.endsWith(name) && item.reason.includes("引用"))).toBe(true);
+  });
   it("keeps full artifacts but compacts superseded streams idempotently", () => {
     const fixture = createFixture();
     const full = planManagedTaskCleanup(fixture.root, fixture.taskId, "full");

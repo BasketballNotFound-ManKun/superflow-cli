@@ -9,7 +9,7 @@
 - Branch: {branch}
 - Ports: app={port}, debug={port}
 - Handoff: .sdd/handoff/sdd-context.md
-- Handoff hash: {hash}
+- Handoff binding: `.sdd/state.yaml` → `.sdd/handoff/sdd-context.sha256`; link the context pack without copying the hash into this prompt.
 - Technical design: {path}
 
 ## Required Reading

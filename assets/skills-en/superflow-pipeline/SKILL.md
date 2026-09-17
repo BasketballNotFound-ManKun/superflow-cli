@@ -252,8 +252,8 @@ Before moving phases, run the local scripts from this skill directory:
 Rules:
 
 - Never proceed when superflow-guard fails.
-- If any SDD/OpenSpec document changes, regenerate handoff and update all stored
-  handoff_hash references.
+- If a frozen SDD/OpenSpec contract changes, regenerate handoff and its state-file
+  binding. Task checkbox progress and test-report updates do not require refresh.
 - The handoff_hash binding lives in .sdd/state.yaml. Prose documents reference
   the handoff context by path; do not copy the raw hash into every document.
 - After context compaction or session handoff, reload .sdd/state.yaml and

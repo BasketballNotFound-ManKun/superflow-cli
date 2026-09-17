@@ -17,6 +17,34 @@ const SCRIPT_DIR = path.join(
 const HANDOFF = path.join(SCRIPT_DIR, "superflow-handoff.sh");
 const STATE = path.join(SCRIPT_DIR, "superflow-state.sh");
 
+describe("handoff contract fingerprint boundaries", () => {
+  it.each(["skills", "skills-en"])("%s ignores progress but detects task semantics and pending business rules", async (language) => {
+    const change = await fs.promises.mkdtemp(path.join(os.tmpdir(), "handoff-boundary-"));
+    const script = path.join(ROOT, "assets", language, "superflow-pipeline", "scripts", "superflow-handoff.sh");
+    const hash = async () => (await execFileAsync("bash", [script, change, "--hash-only"])).stdout.trim();
+    try {
+      await write(path.join(change, "tasks.md"), "- [ ] Reject unauthorized users\n");
+      await write(path.join(change, "design.md"), "pending policy: deny unauthorized users\n");
+      await write(path.join(change, "test-report.md"), "Not run\n");
+      const initial = await hash();
+      await write(path.join(change, "tasks.md"), "- [x] Reject unauthorized users\n");
+      await write(path.join(change, "test-report.md"), "Tests: 10 passed\n");
+      expect(await hash()).toBe(initial);
+      await write(path.join(change, "tasks.md"), "- [x] Allow unauthorized users\n");
+      expect(await hash()).not.toBe(initial);
+      const changedTask = await hash();
+      await write(path.join(change, "design.md"), "pending policy: allow unauthorized users\n");
+      expect(await hash()).not.toBe(changedTask);
+      await write(path.join(change, "design.md"), `Artifact ${"a".repeat(64)}: reject unsigned input\n`);
+      const withDigest = await hash();
+      await write(path.join(change, "design.md"), `Artifact ${"a".repeat(64)}: allow unsigned input\n`);
+      expect(await hash()).not.toBe(withDigest);
+    } finally {
+      await fs.promises.rm(change, { recursive: true, force: true });
+    }
+  });
+});
+
 let tmp: string;
 
 async function write(file: string, content: string) {

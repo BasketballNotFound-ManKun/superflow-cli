@@ -1,5 +1,45 @@
 # 首次托管运行复盘
 
+## 2026-09-17 源码复验与修复
+
+基线为 `526d3d1`，修改保留在本地工作区。本次边界实验确认：任务勾选和测试报告
+回填会误使 handoff 失效，含 `pending` 的业务规则却会漏检；部分模板仍要求正文
+复制 hash；忽略规则仅覆盖 tasks 时被误判为完整覆盖；未跟踪 `.gitignore` 的修改
+没有进入工作区指纹；留存清理没有自动入口，引用解析还错误读取不存在的正则分组。
+
+修复及验证映射：
+
+| 项目 | 当前行为 | 回归证据 |
+| --- | --- | --- |
+| handoff | state 单点绑定；进度回填不失效；任务内容、pending 及含摘要的业务规则修改仍检出 | handoff.test.ts 中英文边界、guard.test.ts 错误绑定拒绝 |
+| 文档一致性 | 中英文模板链接上下文包，不要求多处复制原始 hash | english-assets.test.ts；旧指引搜索无命中 |
+| 运行目录忽略 | 项目 init 与创建任务接入；补齐部分/反向规则；拒绝符号链接 | init.test.ts、managed-work-reliability.test.ts（真实 git check-ignore） |
+| 变更审计 | 自动追加规则后采集基线；后续 gitignore 修改仍可检测 | managed-work-state.test.ts |
+| 环境阻塞 | 保存脱敏原始证据；不自动重试；恢复后续跑原任务 | managed-work-runner.test.ts 阻塞及恢复场景 |
+| 自动清理 | 交付终态复用既有策略；引用证据保护；失败记录延期 | managed-work-cleanup.test.ts、managed-work-runner.test.ts |
+| 安装残留 | init/update 明确覆盖部署，不自动堆积备份；保留历史备份 | skills.test.ts 重复部署用例 |
+| 实际接口验收 | 模板要求冻结环境与接口/角色/场景矩阵，复用一次启动，记录响应及数据库集合对账 | 中英文 test-execution-template.md；由任务合同及 Host 判断业务覆盖充分性 |
+
+最后一轮全量回归：79 个测试文件、551 条用例全部通过（2026-09-17 12:35:03 开始，
+83.05 秒）；日志 `/tmp/superflow-closeout-tests.log`。审批服务恢复后，最终 Lint、
+设计门禁、TypeScript 构建及 npm pack 均通过。本地包已安装至
+`~/.local/share/superflow-cli-local/node_modules/@chenmk/superflow`，用户目录的
+`superflow` 和 `superflow-mcp` 入口已切换；原入口分别为
+`/opt/homebrew/bin/superflow` 和 `/opt/homebrew/bin/superflow-mcp`，未修改原全局包。
+通过新 CLI 的 `update --agent codex --scope global --language zh` 完成 Codex 资产
+及 MCP 刷新，结果保存在 `/tmp/superflow-local-update.json`。未修改 Claude 安装目录。
+
+已逐文件核对安装包的 Runner、清理实现、更新入口、中英文关键模板，以及部署后的
+Codex handoff/guard/实现模板，均与源码哈希一致。通过真实 stdio 客户端启动新 MCP、
+完成握手并调用 `superflow_managed_runtime` 成功；版本仍为本地未发布的 0.5.8，指纹为
+`e5374b792c2e6393337b8672da15632f0ec05465e68e5e05e4a764149c68a319`，验证进程已关闭。
+现有 Host 会话须重启以加载新技能和 MCP 配置；本次没有伪称旧会话已自动切换。
+
+这些是确定性脚本及 Runner 回归，包括测试替身驱动的状态机测试，不是新的真实双模型
+托管性能基准。没有据此宣称 Token 或耗时下降。本次未清理 operator-api 历史产物，
+没有发布或推送。若进度归一化漏检业务合同，或清理误删被引用证据，必须阻止交付并
+恢复对应保护；不得通过删除断言放行。
+
 ## 范围与基线
 
 证据来自 `evcharge-operator-api` 的

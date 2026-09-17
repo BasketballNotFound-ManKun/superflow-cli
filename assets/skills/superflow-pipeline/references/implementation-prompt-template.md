@@ -67,11 +67,11 @@ Worker 自测通过 ≠ 完成任务
 执行规则：
 1. Worker、Tester、Reviewer 都必须先读 handoff，再回读原始 [api.md](../api.md)、
    [design.md](../design.md)、[tests.md](../tests.md) 和 Superpowers 技术详设。
-2. 如果任何 SDD 文档发生修改，先执行：
+2. 如果需求、设计、API、SQL、测试合同或任务内容发生修改，先执行（任务勾选和测试报告回填除外）：
    `~/.codex/skills/superflow-pipeline/scripts/superflow-handoff.sh {change-dir} --refresh`
    并比较新的 `.sdd/handoff/sdd-context.sha256`。
-3. prompt、test-report、design.md 中记录的 hash 必须一致；不一致时停止并返回
-   `$superflow-docs`，不得继续编码。
+3. hash 仅由 `.sdd/state.yaml` 的 `handoff_hash` 绑定，必须与
+   `.sdd/handoff/sdd-context.sha256` 及当前合同一致；正文只链接上下文包，不复制 hash。
 4. 进入验证前执行：
    `~/.codex/skills/superflow-pipeline/scripts/superflow-guard.sh {change-dir} implement`
    失败则补文档或 prompt，不得把失败项写成通过。

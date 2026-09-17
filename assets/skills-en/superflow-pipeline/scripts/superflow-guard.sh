@@ -313,14 +313,9 @@ require_hash_recorded() {
   # hash inside prose documents turned every refresh into a four-file manual
   # backfill loop that blocked real delivery work, so a human-readable pointer
   # is enough here.
-  if grep -Eq '^handoff_hash:[[:space:]]*' "$CHANGE_DIR/.sdd/state.yaml" 2>/dev/null; then
-    return 0
-  fi
-  if ! grep -Riq "$hash" \
-    "$CHANGE_DIR/design.md" "$CHANGE_DIR/sdd-quality-gate.md" \
-    "$CHANGE_DIR/test-report.md" "$CHANGE_DIR/prompt" 2>/dev/null; then
-    issues+=("handoff hash is not recorded in design, quality gate, prompt, or test-report")
-  fi
+  local binding
+  binding="$(state_get handoff_hash)"
+  [[ "$binding" == "$hash" ]] || issues+=("state handoff_hash does not match handoff pack; run superflow-handoff.sh --refresh")
 }
 
 change_has_field_status_risk() {

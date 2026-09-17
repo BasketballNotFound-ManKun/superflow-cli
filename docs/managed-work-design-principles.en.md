@@ -379,6 +379,12 @@ reopen. `release_ready` never grants Git, deployment, or production-write rights
 
 ## Evidence
 
+SDD handoff hashes are bound only in `.sdd/state.yaml`. Task checkbox progress
+and test reports do not invalidate frozen contracts; task content, design, API,
+SQL and test contract changes must remain detectable. Never discard business
+lines because they contain `pending` or arbitrary hash strings. Neither language
+may require raw hash backfill across prose documents.
+
 - Every persisted value readable by Host, MCP, or task reports (raw logs,
   streamed progress, delivery JSON, event journals, fact packs, and state
   snapshots) must pass through one redactor **before its first write**.

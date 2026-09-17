@@ -45,6 +45,52 @@ afterEach(() => {
 });
 
 describe("managed work runner", () => {
+  it("preserves blocked environment logs and does not restart the executor", async () => {
+    const fixture = createFixture("engineering");
+    fs.writeFileSync(path.join(fixture.root, "pom.xml"),
+      "<project><artifactId>spring-boot-starter-web</artifactId></project>");
+    const result = executorBlocked("无法连接共享开发数据库");
+    result.blockers = ["MySQL connection refused"];
+    const invoker = new FakeInvoker([result]);
+    const originalInvoke = invoker.invoke.bind(invoker);
+    invoker.invoke = async <T>(invocation: AgentInvocation) => ({
+      ...await originalInvoke<T>(invocation),
+      stdout: "MySQL connection refused; DB_PASSWORD=fixture-secret\n",
+    });
+    const state = await runManagedTask(fixture.root, fixture.contract.taskId, invoker, fixture.env);
+    expect(state.status).toBe("waiting_for_human");
+    expect(state.executorInvocations).toBe(1);
+    expect(state.executorSelfRepairCount).toBe(0);
+    expect(fs.existsSync(state.lastExecutorResult!)).toBe(true);
+    const event = readManagedEvents(state).find((item) => item.eventType === "executor.environment_blocked");
+    expect(event?.evidencePaths?.length).toBeGreaterThan(1);
+    for (const file of event!.evidencePaths!) {
+      expect(fs.readFileSync(file, "utf8")).not.toContain("fixture-secret");
+    }
+    expect(readManagedEvents(state).some((item) => item.eventType === "run.delivery_ready")).toBe(false);
+    appendManagedHumanMessage(fixture.contract, "开发数据库已恢复，继续剩余验收");
+    const resumed = await runManagedTaskWithHostReviews(
+      fixture.root, fixture.contract.taskId,
+      new FakeInvoker([executorReady("恢复后验收通过"), reviewPass("通过")]),
+      fixture.env,
+    );
+    expect(resumed.status).toBe("release_ready");
+    expect(resumed.executorInvocations).toBe(2);
+    expect(fs.existsSync(state.lastExecutorResult!)).toBe(true);
+  });
+
+  it("automatically compacts obsolete artifacts only after delivery", async () => {
+    const fixture = createFixture();
+    const runDir = path.join(fixture.root, ".superflow", "tasks", fixture.contract.taskId, "runs", fixture.state.runId);
+    const obsolete = path.join(runDir, "workspace-change-999.txt");
+    fs.writeFileSync(obsolete, "obsolete snapshot\n");
+    const invoker = new FakeInvoker([executorReady("完成"), reviewPass("通过")]);
+    const state = await runManagedTaskWithHostReviews(fixture.root, fixture.contract.taskId, invoker, fixture.env);
+    expect(state.status).toBe("release_ready");
+    expect(fs.existsSync(obsolete)).toBe(false);
+    expect(fs.existsSync(state.lastExecutorResult!)).toBe(true);
+    expect(readManagedEvents(state).some((item) => item.eventType === "run.retention_applied")).toBe(true);
+  });
   it("splits large raw logs without dropping audit bytes", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-log-parts-"));
     roots.push(root);

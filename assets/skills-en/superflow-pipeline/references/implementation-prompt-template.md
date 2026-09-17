@@ -6,11 +6,12 @@ Use this as the prefix for every implementation prompt.
 
 - Handoff: [.sdd/handoff/sdd-context.md](../.sdd/handoff/sdd-context.md)
 - Handoff JSON: [.sdd/handoff/sdd-context.json](../.sdd/handoff/sdd-context.json)
-- Handoff hash: {handoff_hash}
+- Hash binding: `handoff_hash` in `.sdd/state.yaml` must match `.sdd/handoff/sdd-context.sha256` and the current contract. Do not copy the hash into prose.
 - State: .sdd/state.yaml
 
-If any SDD/OpenSpec doc changes, rerun superflow-handoff.sh --refresh and compare
-the new hash before continuing.
+If requirements, design, API, SQL, test contracts or task content change, rerun
+superflow-handoff.sh --refresh. Task checkbox progress and test-report updates
+do not invalidate the frozen contract hash.
 
 ## Contract Boundary
 

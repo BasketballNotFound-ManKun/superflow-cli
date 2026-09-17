@@ -1,5 +1,14 @@
 # Test Execution Template
 
+Use the environment frozen in tests.md; do not substitute local containers or
+mocks for an explicitly required shared development environment. When the user
+requires every endpoint to be exercised, freeze an endpoint/role/scenario matrix,
+reuse one healthy application instance and test accounts, and record redacted
+requests, response files, and expected versus actual database sets for every row.
+List missing, failed and blocked rows explicitly. Restart only when code,
+configuration or process health requires it, and record the reason. Future release
+environments must not become gates for a development-only delivery.
+
 ## Test Case
 
 - ID:

@@ -233,7 +233,7 @@ SDD 的核心价值是可追溯事实链、接口验证、hook 质量监控、�
 
 **强制记录：**
 
-- `sdd-quality-gate.md` 必须记录 handoff 文件路径、hash、生成命令和生成时间。
+- `sdd-quality-gate.md` 记录 handoff 文件路径和生成命令；hash 仅绑定在 `.sdd/state.yaml`，不在正文重复回填。任务勾选和测试报告属于执行进度，不触发合同 hash 更新。
 - 需求澄清、方案讨论或设计路线仍在变化时，必须增量维护
   `.sdd/handoff/brainstorm-summary.md`，把已确认结论、候选方案、待确认问题、
   放弃方案和下一步决策点分开记录。它是压缩恢复检查点，不替代 OpenSpec/SDD

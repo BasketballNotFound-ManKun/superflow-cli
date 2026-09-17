@@ -31,6 +31,10 @@ session mutation flags are rejected.
 
 ## Handoff decision boundary
 
+Project-scoped init (except dry-run) and managed task creation append the `.superflow/` ignore rule before capturing the workspace baseline. Later `.gitignore` edits remain audited. Delivery terminal states automatically run the existing retention cleanup; blocked and active tasks retain recovery artifacts. Current handoff, report and journal references protect evidence. Cleanup failures emit `run.retention_deferred` without invalidating delivery or claiming successful deletion.
+
+Unreachable-environment reports are redacted and stored with raw logs before automatic repair stops. Host verifies the report; keyword routing is not proof of truth. Existing human guidance resumes the same task after recovery and preserves valid evidence.
+
 | Fact type                                                                          | Decider        | Transition                                                                                                                 |
 | ---------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Schema, hashes, budgets, state, explicit exits, file/port existence                | Runner script  | Continue on deterministic success; repair or stop on deterministic failure                                                 |

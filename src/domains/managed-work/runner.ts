@@ -32,6 +32,7 @@ import { isAcceptedEvidenceCommand } from "./execution-contract.js";
 import { writeManagedSchemas } from "./schemas.js";
 import { verificationCategories } from "./verification-categories.js";
 import { assessReviewConvergence } from "./review-convergence.js";
+import { executeManagedTaskCleanup, planManagedTaskCleanup } from "./cleanup.js";
 import {
   ensureManagedWorkspaceBinding,
   managedWorkspaceBindingFingerprint,
@@ -974,6 +975,7 @@ async function executeWorker(
   // A delivery that truthfully reports an unreachable external dependency is
   // a legitimate terminal state. Persist and finalize it before the evidence
   // gates run so a missing runtime cannot burn executor rounds in repair.
+  result.output = redactManagedValue(result.output);
   if (
     result.output.status === "blocked" &&
     result.output.blockers.some((blocker) =>
@@ -981,7 +983,14 @@ async function executeWorker(
     )
   ) {
     writeJsonAtomic(resultFile, result.output);
+    const logFiles = writeInvocationLogs(
+      state, `executor-${state.executorInvocations}`,
+      result.stdout, result.stderr,
+    );
     state.lastExecutorResult = resultFile;
+    state.workspaceFingerprint = computeWorkspaceFingerprintForRoots([
+      contract.projectRoot, ...contract.relatedProjectRoots,
+    ]);
     state.currentStep = "environment_blocked";
     saveManagedRun(state);
     appendManagedEvent(state, {
@@ -990,10 +999,10 @@ async function executeWorker(
       role: "executor",
       summary: mt(
         contract,
-        "执行 Agent 如实上报外部环境不可达；记录证据并转交 Host 处理，不触发整改重跑",
-        "The executor truthfully reported an unreachable external environment; evidence was kept and the host decides, without an automatic repair rerun",
+        "执行 Agent 报告外部环境不可达；保留原始证据供 Host 核验，不触发整改重跑",
+        "The executor reported an unreachable environment; preserve raw evidence for Host verification without an automatic repair rerun",
       ),
-      evidencePaths: [resultFile],
+      evidencePaths: [resultFile, ...logFiles],
     });
     return finishBlocked(
       contract,
@@ -2510,6 +2519,7 @@ function finishDeliveryReady(
       `Task passed local review and entered ${status}`,
     ),
   });
+  compactCompletedTask(contract, state);
   if (
     notifyManagedTask(
       {
@@ -2537,6 +2547,30 @@ function finishDeliveryReady(
     });
   }
   return state;
+}
+
+function compactCompletedTask(
+  contract: ManagedTaskContract,
+  state: ManagedRunState,
+): void {
+  try {
+    const plan = planManagedTaskCleanup(contract.projectRoot, contract.taskId);
+    if (plan.actions.length === 0) return;
+    const result = executeManagedTaskCleanup(plan);
+    appendManagedEvent(state, {
+      eventType: "run.retention_applied",
+      actor: "managed-runner",
+      role: "runner",
+      summary: `Retention ${plan.retention}: ${result.deletedFiles} files, ${result.releasedBytes} bytes`,
+    });
+  } catch (error) {
+    appendManagedEvent(state, {
+      eventType: "run.retention_deferred",
+      actor: "managed-runner",
+      role: "runner",
+      summary: `Retention deferred: ${(error as Error).message}`,
+    });
+  }
 }
 
 function finishBlocked(

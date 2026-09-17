@@ -44,6 +44,15 @@ describe('core/skills', () => {
     expect(list).toContain('sdd-test-skill');
   });
 
+  it('重复覆盖部署保留旧备份但不增加新备份', async () => {
+    const historical = path.join(TMP_SKILLS, 'sdd-test-skill.backup-old');
+    await fs.promises.mkdir(historical);
+    for (let i = 0; i < 2; i++) {
+      await deploySkill('sdd-test-skill', TMP_ASSETS, TMP_SKILLS, { overwrite: true });
+    }
+    expect(fs.readdirSync(TMP_SKILLS).filter(d => d.includes('.backup-'))).toEqual(['sdd-test-skill.backup-old']);
+  });
+
   it('deploySkill 部署到 Claude 时改写 Codex 文档路径', async () => {
     await deploySkill('sdd-test-skill', TMP_ASSETS, TMP_SKILLS, { agent: 'claude' });
     const content = fs.readFileSync(

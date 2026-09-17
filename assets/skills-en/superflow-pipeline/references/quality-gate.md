@@ -67,7 +67,7 @@
 
 ## Implementation Gate
 
-- Every prompt references handoff hash and technical design.
+- Every prompt links the handoff pack, state-file hash binding and technical design; no prose hash backfill is required. Task checkbox progress and test-report updates do not change the contract hash.
 - Every prompt includes TDD RED/GREEN plan.
 - Every L3/L4 test has executable command and evidence target.
 - Workers update only task-local docs.

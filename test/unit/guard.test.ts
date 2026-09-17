@@ -616,6 +616,10 @@ describe("superflow-guard.sh", () => {
     // the machine-readable binding lives in .sdd/state.yaml, and the guard
     // must not force a hash copy into every prose file after each refresh.
     await execFileAsync("bash", [GUARD, change, "design"]);
+    await execFileAsync("bash", [STATE, "set", change, "handoff_hash", "0".repeat(64)]);
+    await expect(execFileAsync("bash", [GUARD, change, "design"])).rejects.toMatchObject({
+      stderr: expect.stringContaining("state handoff_hash does not match"),
+    });
   });
 
   it.each([

@@ -17,6 +17,16 @@ afterEach(() => {
 });
 
 describe("managed workspace fingerprint", () => {
+  it("detects edits to an untracked gitignore", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-ignore-"));
+    roots.push(root);
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    fs.writeFileSync(path.join(root, ".gitignore"), ".superflow/\n");
+    const before = computeWorkspaceFingerprint(root);
+    fs.appendFileSync(path.join(root, ".gitignore"), "private-source/\n");
+    expect(computeWorkspaceFingerprint(root)).not.toBe(before);
+    expect(snapshotChangedWorkspaceFiles([root])[`${root}::.gitignore`]).toBeTruthy();
+  });
   it("ignores managed runtime files but detects target changes", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-fingerprint-"));
     roots.push(root);

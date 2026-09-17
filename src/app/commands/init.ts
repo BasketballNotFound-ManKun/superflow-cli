@@ -37,6 +37,7 @@ import {
 import { normalizeLanguage, t } from '../../domains/config/i18n.js';
 import type { Agent, AgentSelection, InstallScope, Language } from '../../types.js';
 import { ASSETS_DIR } from '../../platform/assets.js';
+import { ensureSuperflowGitignore } from '../../domains/managed-work/gitignore.js';
 
 export interface InitOptions {
   dryRun: boolean;
@@ -260,6 +261,9 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
   const zh = options.language === 'zh';
   const agents = resolveAgents(options.agent);
   const projectPath = options.projectPath;
+  if (!options.dryRun && options.scope === 'project') {
+    ensureSuperflowGitignore(projectPath);
+  }
   const result: InitResult = {
     ok: true,
     dryRun: options.dryRun,
@@ -383,7 +387,7 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
           const existed = existsSync(dest);
           await deploySkill(name, skillsRoot, platform.skillsDir, {
             agent,
-            overwrite: options.overwrite,
+            overwrite: true,
             skipExisting: options.skipExisting,
           });
           log(`    ${options.skipExisting && existed ? '-' : '✓'} ${name}`);

@@ -21,12 +21,24 @@ sha_file() {
   # Ignore generated state/hash marker lines so recording the handoff hash in
   # SDD docs does not change the handoff hash itself.
   if command -v sha256sum >/dev/null 2>&1; then
-    sed -E '/handoff_hash/d;/context_hash/d;/sdd-context\.sha256/d;/[a-f0-9]{64}/d;/pending/d;/^[[:space:]]*$/d' "$1" \
+    canonical_contract "$1" \
       | sha256sum | awk '{print $1}'
   else
-    sed -E '/handoff_hash/d;/context_hash/d;/sdd-context\.sha256/d;/[a-f0-9]{64}/d;/pending/d;/^[[:space:]]*$/d' "$1" \
+    canonical_contract "$1" \
       | shasum -a 256 | awk '{print $1}'
   fi
+}
+
+canonical_contract() {
+  # Reports are execution evidence, not frozen requirements. Their existence
+  # and validity are checked separately by the delivery/report gates.
+  if [[ "${1##*/}" == "test-report.md" ]]; then
+    return 0
+  fi
+  sed -E \
+    -e '/^[[:space:]]*(handoff_hash|context_hash):[[:space:]]*[^[:space:]]*[[:space:]]*$/d' \
+    -e 's/^([[:space:]]*[-*][[:space:]]+)\[[xX ]\]/\1[ ]/' \
+    -e '/^[[:space:]]*$/d' "$1"
 }
 
 json_escape() {
@@ -144,6 +156,7 @@ fi
 context_hash_input=""
 while IFS= read -r file; do
   rel="${file#"$CHANGE_DIR"/}"
+  [[ "${file##*/}" == "test-report.md" ]] && continue
   hash="$(sha_file "$file")"
   context_hash_input+="${rel}:${hash}"$'\n'
 done < "$TMP_LIST"

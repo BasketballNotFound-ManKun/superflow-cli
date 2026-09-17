@@ -291,17 +291,21 @@ function cleanupReason(
 
 function readProtectedReferences(runDir: string, names: string[]): Set<string> {
   const references = new Set<string>();
+  const latestHandoff = latestNumber(names, /^executor-handoff-(\d+)\.(?:json|md)$/);
+  const latestRepair = latestNumber(names, /^repair-(\d+)\.md$/);
   const candidates = names.filter((name) =>
     /^(?:run-state\.json|progress\.jsonl|progress\.md|task-report\.md|review-facts-\d+\.(?:json|md)|review-result-\d+\.json|host-review-\d+\.md|executor-result-\d+\.json|retention-summary\.jsonl)$/.test(
       name,
-    ),
+    ) || name === `executor-handoff-${latestHandoff}.json`
+      || name === `executor-handoff-${latestHandoff}.md`
+      || name === `repair-${latestRepair}.md`,
   );
   for (const name of candidates) {
     const content = readFileSync(path.join(runDir, name), "utf-8");
     for (const match of content.matchAll(
       /(?:[A-Za-z0-9_.-]+\.(?:jsonl|json|md|log|txt))/g,
     )) {
-      references.add(match[1]);
+      references.add(match[0]);
     }
   }
   return references;

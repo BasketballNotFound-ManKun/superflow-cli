@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { execFileSync } from "child_process";
 import { describe, expect, it } from "vitest";
 import { createManagedTaskContract } from "../../src/domains/managed-work/contract.js";
 import {
@@ -17,6 +18,32 @@ import { initManagedRunState } from "../../src/domains/managed-work/state.js";
 
 describe("managed work reliability hardening", () =>
 {
+  it("covers partial and negated ignore rules using actual git semantics", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "sf-ignore-git-"));
+    try {
+      execFileSync("git", ["init", "-q", root]);
+      fs.writeFileSync(path.join(root, ".gitignore"), ".superflow/tasks/\n!.superflow/\n");
+      ensureSuperflowGitignore(root);
+      for (const file of [".superflow/probe.log", ".superflow/tasks/demo/state.json"]) {
+        expect(execFileSync("git", ["check-ignore", file], { cwd: root, encoding: "utf8" }).trim()).toBe(file);
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses symlinked ignore files without modifying their target", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "sf-ignore-link-"));
+    try {
+      const target = path.join(root, "external-ignore");
+      fs.writeFileSync(target, "original\n");
+      fs.symlinkSync(target, path.join(root, ".gitignore"));
+      expect(() => ensureSuperflowGitignore(root)).toThrow("symlinked");
+      expect(fs.readFileSync(target, "utf8")).toBe("original\n");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
   it("recognizes truthful unreachable-environment blockers", () =>
   {
     expect(
@@ -67,7 +94,7 @@ describe("managed work reliability hardening", () =>
     }
   });
 
-  it("does not rewrite an existing gitignore that already ignores superflow", () =>
+  it("extends a partial tasks ignore to cover all runtime files", () =>
   {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "sfgi2-"));
     try
@@ -79,7 +106,7 @@ describe("managed work reliability hardening", () =>
       ensureSuperflowGitignore(root);
       expect(
         fs.readFileSync(path.join(root, ".gitignore"), "utf-8"),
-      ).toBe("node_modules/\n.superflow/tasks/\n");
+      ).toContain("\n.superflow/\n");
     }
     finally
     {

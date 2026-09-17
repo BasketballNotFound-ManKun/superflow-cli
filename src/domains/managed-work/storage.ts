@@ -26,6 +26,7 @@ import { generatedStandardPromptContent } from "./contract.js";
 import { writeManagedWorkspaceBinding } from "./workspace-binding.js";
 import { managedAcceptanceContractHash } from "./acceptance-contract.js";
 import { ensureSuperflowGitignore } from "./gitignore.js";
+import { computeWorkspaceFingerprintForRoots, snapshotChangedWorkspaceFiles } from "./state.js";
 
 export function writeJsonAtomic(file: string, value: unknown): void {
   mkdirSync(path.dirname(file), { recursive: true });
@@ -44,6 +45,9 @@ export function createManagedTaskFiles(
   env: NodeJS.ProcessEnv = process.env,
 ): void {
   ensureSuperflowGitignore(contract.projectRoot);
+  const roots = [contract.projectRoot, ...contract.relatedProjectRoots];
+  runState.workspaceFingerprint = computeWorkspaceFingerprintForRoots(roots);
+  runState.baselineWorkspaceFiles = snapshotChangedWorkspaceFiles(roots);
   const taskDir = managedTaskDir(contract.projectRoot, contract.taskId);
   const runDir = managedRunDir(
     contract.projectRoot,
