@@ -5,7 +5,6 @@ import type { Agent } from '../../types.js';
 
 export interface DeploySkillOptions {
   agent?: Agent;
-  overwrite?: boolean;
   skipExisting?: boolean;
 }
 
@@ -18,14 +17,7 @@ export async function deploySkill(
   const source = path.join(assetsDir, name);
   const dest = path.join(skillsDir, name);
 
-  if (existsSync(dest)) {
-    if (options.skipExisting) return;
-    if (options.overwrite !== true) {
-      const ts = Date.now();
-      const backup = path.join(skillsDir, `${name}.backup-${ts}`);
-      await fs.cp(dest, backup, { recursive: true});
-    }
-  }
+  if (options.skipExisting && existsSync(dest)) return;
 
   await fs.rm(dest, { recursive: true, force: true });
   await copySkillTree(source, dest, options.agent ?? 'codex');

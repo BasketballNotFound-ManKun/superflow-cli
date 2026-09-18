@@ -49,7 +49,6 @@ export interface InitOptions {
   yes: boolean;
   json: boolean;
   skipExisting: boolean;
-  overwrite: boolean;
   scope: InstallScope;
   language: Language;
   projectPath: string;
@@ -100,7 +99,6 @@ export async function initCommand(cmdOptions: {
       yes: !!cmdOptions.yes,
       json: !!cmdOptions.json,
       skipExisting: !!cmdOptions.skipExisting,
-      overwrite: !!cmdOptions.overwrite,
       scope: parseInstallScope(cmdOptions.scope),
       language,
       projectPath: path.resolve(cmdOptions.targetPath ?? process.cwd()),
@@ -248,10 +246,6 @@ async function promptLanguageSelection(): Promise<Language> {
 }
 
 export async function runInit(options: InitOptions): Promise<InitResult> {
-  if (options.skipExisting && options.overwrite) {
-    throw new Error('--skip-existing and --overwrite cannot be used together');
-  }
-
   const state = options.resume
     ? (loadState(stateFile) ?? initState('0.1.0', 'claude', options.language))
     : initState('0.1.0', 'claude', options.language);
@@ -387,7 +381,6 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
           const existed = existsSync(dest);
           await deploySkill(name, skillsRoot, platform.skillsDir, {
             agent,
-            overwrite: true,
             skipExisting: options.skipExisting,
           });
           log(`    ${options.skipExisting && existed ? '-' : '✓'} ${name}`);

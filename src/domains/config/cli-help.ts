@@ -115,7 +115,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "Aggregate the supplied comparable task runs into a baseline",
     resumeOption: "Resume from the failed step",
     skipExistingOption: "Keep existing skills/scripts unchanged",
-    overwriteOption: "Overwrite existing skills without creating backups",
+    overwriteOption:
+      "Legacy compatibility option; managed skills overwrite by default without backups",
     noHooksOption: "Install skills and scripts only; skip hook registration",
     noOpenspecInitOption:
       "Skip native OpenSpec initialization for this project",
@@ -208,7 +209,7 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     summaryOption: "汇总传入且可比较的任务 Run，形成评估基线",
     resumeOption: "从失败步骤继续",
     skipExistingOption: "已存在的 skill/script 保持不动",
-    overwriteOption: "已存在的 skill 直接覆盖，不额外生成 backup",
+    overwriteOption: "兼容旧参数；受管理的 skill 默认直接覆盖，不生成 backup",
     noHooksOption: "只装技能 + 脚本，跳过 hook 注册（hook 手工配）",
     noOpenspecInitOption: "跳过当前项目 OpenSpec 原生初始化",
     noScanOption: "跳过项目上下文脚手架和扫描提示",

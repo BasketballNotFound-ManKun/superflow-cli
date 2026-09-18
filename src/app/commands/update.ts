@@ -124,7 +124,7 @@ export async function updateCommand(options: {
     const platform = getPlatformPaths(agent, scope, target.projectPath);
     for (const skill of ALL_SKILLS) {
       const skillsRoot = skillsRootForLanguage(language);
-      await deploySkill(skill, skillsRoot, platform.skillsDir, { agent, overwrite: true });
+      await deploySkill(skill, skillsRoot, platform.skillsDir, { agent });
     }
     await deployRules(ALL_RULES, path.join(ASSETS_DIR, 'rules'), platform.rulesDir);
     const scripts = scriptsForAgent(agent);

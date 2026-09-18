@@ -142,8 +142,7 @@ CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code，
 | `superflow init --dry-run` | 只打印计划，不写文件 |
 | `superflow init --json` | 输出 JSON，适合脚本集成 |
 | `superflow init --resume` | 从上次失败步骤继续 |
-| `superflow init --overwrite` | 覆盖已安装的 SuperBridge Flow 技能 |
-| `superflow init --skip-existing` | 保留已存在技能，不覆盖 |
+| `superflow init --skip-existing` | 保留已存在技能，不覆盖；默认直接更新受管理技能且不生成备份副本 |
 
 语言可以通过两种方式选择：
 

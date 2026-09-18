@@ -27,15 +27,22 @@ describe('core/skills', () => {
     expect(fs.existsSync(path.join(TMP_SKILLS, 'sdd-test-skill', 'SKILL.md'))).toBe(true);
   });
 
-  it('deploySkill 目标已存在时备份', async () => {
+  it('deploySkill 目标已存在时直接替换且不创建备份', async () => {
     await fs.promises.mkdir(path.join(TMP_SKILLS, 'sdd-test-skill'), {recursive: true});
     await fs.promises.writeFile(
       path.join(TMP_SKILLS, 'sdd-test-skill', 'SKILL.md'),
       '# old\n'
     );
     await deploySkill('sdd-test-skill', TMP_ASSETS, TMP_SKILLS);
-    const backups = fs.readdirSync(TMP_SKILLS).filter(d => d.startsWith('sdd-test-skill.backup-'));
-    expect(backups.length).toBe(1);
+    const content = fs.readFileSync(
+      path.join(TMP_SKILLS, 'sdd-test-skill', 'SKILL.md'),
+      'utf-8'
+    );
+    const backups = fs.readdirSync(TMP_SKILLS)
+      .filter(d => d.startsWith('sdd-test-skill.backup-'));
+
+    expect(content).toContain('# test');
+    expect(backups).toHaveLength(0);
   });
 
   it('listDeployedSkills 列出已部署技能', async () => {
@@ -44,11 +51,11 @@ describe('core/skills', () => {
     expect(list).toContain('sdd-test-skill');
   });
 
-  it('重复覆盖部署保留旧备份但不增加新备份', async () => {
+  it('重复部署保留历史备份但不增加新备份', async () => {
     const historical = path.join(TMP_SKILLS, 'sdd-test-skill.backup-old');
     await fs.promises.mkdir(historical);
     for (let i = 0; i < 2; i++) {
-      await deploySkill('sdd-test-skill', TMP_ASSETS, TMP_SKILLS, { overwrite: true });
+      await deploySkill('sdd-test-skill', TMP_ASSETS, TMP_SKILLS);
     }
     expect(fs.readdirSync(TMP_SKILLS).filter(d => d.includes('.backup-'))).toEqual(['sdd-test-skill.backup-old']);
   });
