@@ -517,7 +517,7 @@ Claude Code 里也可以直接用当前阶段命令继续，例如：
 
 - `@chenmk/superflow`
 - `@fission-ai/openspec`
-- Claude Code / Codex 的 Superpowers 插件
+- Superpowers 插件在手动更新或 `apply` 时刷新；默认检查仅提供刷新提示
 
 同一会话只检查一次；默认只提示，不自动安装。至少间隔 6 小时才真正访问
 npm/plugin 源，避免每次 prompt 都联网。可用：
@@ -540,11 +540,21 @@ export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 `superflow update --with-package` 更新；个人机器如果接受自动升级风险，再设置
 `SUPERFLOW_AUTO_UPDATE=apply`。
 
-显式更新和 Hook `apply` 使用同一闭环：先更新依赖包，再由新版本 CLI 重新部署全部 Agent
+显式更新和 Hook `apply` 使用同一闭环：先升级 CLI 包，再由新版本 CLI 更新 OpenSpec、
+从 Codex 原生目录发现官方 Superpowers（当前为 `openai-curated-remote`），并重新部署全部 Agent
 资产并刷新 MCP 注册。任一步失败会记录日志、删除本轮节流戳并允许下次会话重试；成功后需
 重启 Agent 才会加载新的 MCP 进程。
 
 ### 8.2 手动更新
+
+仅更新 OpenSpec、Superpowers 和宿主资产（不重装 CLI）：
+
+```bash
+superflow update --agent codex --scope global --with-dependencies
+```
+
+最新版远端插件启用状态以 `codex plugin list --json` 为准，不一定写入 config.toml；
+doctor 检查当前启用版本的技能文件。旧缓存不能代替当前版本缺失的技能。
 
 只刷新已安装技能、脚本、规则和 hook：
 

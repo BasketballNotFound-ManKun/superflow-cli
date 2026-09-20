@@ -22,18 +22,9 @@ describe("dependency update hook", () => {
     expect(commands).toContain(
       "npm install -g @chenmk/superflow@latest",
     );
-    expect(commands).toContain(
-      "npm install -g @fission-ai/openspec@latest",
-    );
-    expect(commands).toContain(
-      "claude plugin install superpowers@superpowers-marketplace",
-    );
-    expect(commands).toContain(
-      "codex plugin add superpowers@openai-api-curated",
-    );
-    expect(commands).toContain(
-      "superflow update --agent codex,claude --scope global",
-    );
+    expect(commands).toContain("dist/app/cli.js update --agent codex,claude --scope global --with-dependencies");
+    expect(commands).not.toContain("codex plugin add");
+    expect(commands).not.toContain("superflow update --agent");
     expect(result.stderr).toContain("自动升级已完整更新");
   });
 
@@ -86,6 +77,13 @@ function createFixture(
   const stateRoot = path.join(root, "state");
   const commandLog = path.join(root, "commands.log");
   fs.mkdirSync(bin, { recursive: true });
+  const cli = path.join(root, 'node_modules/@chenmk/superflow/dist/app/cli.js');
+  fs.mkdirSync(path.dirname(cli), { recursive: true });
+  fs.writeFileSync(cli, '// freshly installed CLI fixture');
+  writeExecutable(path.join(bin, 'node'), `#!/bin/bash
+printf 'node %s\\n' "$*" >> "$COMMAND_LOG"
+exit ${options.failSuperflow ? 1 : 0}
+`);
   writeExecutable(
     path.join(bin, "npm"),
     `#!/bin/bash

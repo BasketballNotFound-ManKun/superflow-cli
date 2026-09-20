@@ -296,7 +296,8 @@ Agent 进程树；macOS/Linux 继续使用独立进程组。三端均不通过�
 - 第三方（`superflow init` 自动装）：
   - openspec CLI（硬依赖，npm 全局）并在当前项目执行 `openspec init --tools ...`
   - superpowers（Claude Code / Codex 为硬依赖；Codex 自动安装官方
-    `superpowers@openai-api-curated`，确保包含验证、代码评审和分支收尾三个强制技能）
+    当前渠道 `superpowers@openai-curated-remote`；从原生插件清单发现版本并核验验证、
+    代码评审和分支收尾三个强制技能，不以旧 config.toml 条目或缓存存在代替可用性）
   - understand-anything（尽力安装，失败只警告）
   - api-doc-changelog（辅助 skill，复制到目标 agent skills 目录）
 
@@ -306,10 +307,12 @@ Agent 进程树；macOS/Linux 继续使用独立进程组。三端均不通过�
 
 - `@chenmk/superflow`
 - `@fission-ai/openspec`
-- Claude Code / Codex 的 Superpowers 插件
+- Superpowers 在手动更新或 `apply` 时通过原生插件命令更新；默认 `check` 仅给出刷新提示
 
 推荐策略是“自动检查，手动更新”：默认只提示，不自动安装；执行
 `superflow update --with-package` 才会统一更新。
+只更新 OpenSpec、Superpowers 和宿主资产、不重装 CLI 时，可执行
+`superflow update --agent codex --scope global --with-dependencies`。
 同一会话只检查一次，并且默认至少间隔 6 小时才真正访问 npm/plugin 源。
 
 ```bash
@@ -326,7 +329,8 @@ export SUPERFLOW_AUTO_UPDATE=apply
 export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 ```
 
-`apply` 会在包升级后重新进入新版本 CLI，统一刷新所有已检测到的 Agent 资产和 MCP 注册。
+`apply` 会在包升级后按 npm 根目录定位新版本 CLI（不受旧 PATH 启动器遮蔽），由新版本
+统一更新 OpenSpec/Superpowers、所有已检测到的 Agent 资产和 MCP 注册。
 任一步失败都会保留日志和下次会话重试资格，不会把半升级状态标记为成功。升级完成后需要
 重启 Agent，旧会话不会热加载新的 MCP 运行时。
 

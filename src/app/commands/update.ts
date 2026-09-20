@@ -23,7 +23,7 @@ import { runCommand } from '../../platform/process.js';
 import {
   CODEX_SUPERPOWERS_PLUGIN,
   installCodexSuperpowers,
-  installSuperpowers,
+  updateClaudeSuperpowers,
 } from '../../domains/deps.js';
 import { ASSETS_DIR, PACKAGE_ROOT } from '../../platform/assets.js';
 import { stateFile } from '../../platform/paths.js';
@@ -63,6 +63,7 @@ export async function updateCommand(options: {
   noHooks?: boolean;
   scope?: string;
   withPackage?: boolean;
+  withDependencies?: boolean;
   targetPath?: string;
   language?: string;
 } = {}): Promise<void> {
@@ -84,6 +85,12 @@ export async function updateCommand(options: {
     packageScope,
     language,
   );
+  if (options.withDependencies && !options.withPackage) {
+    plan.packageUpdate = {
+      enabled: true,
+      commands: formatDependencyUpdateCommands(planAgents, packageScope).slice(1),
+    };
+  }
 
   if (options.dryRun) {
     printPlan(plan, !!options.json);
@@ -94,9 +101,6 @@ export async function updateCommand(options: {
     const failures: string[] = [];
     await collectUpdateFailure(failures, () =>
       updateNpmPackage(PACKAGE_NAME, packageScope, 'superflow package'));
-    await collectUpdateFailure(failures, () =>
-      updateNpmPackage(OPENSPEC_PACKAGE_NAME, 'global', 'openspec package'));
-    await collectUpdateFailure(failures, () => updateSuperpowers(planAgents));
     await collectUpdateFailure(failures, () =>
       refreshWithInstalledCli({
         agents: planAgents,
@@ -117,6 +121,15 @@ export async function updateCommand(options: {
       );
     }
     return;
+  }
+
+  // The new CLI owns dependency compatibility. Never update dependencies using
+  // stale code before handing off after a package upgrade.
+  const dependencyFailures: string[] = [];
+  if (options.withDependencies) {
+    await collectUpdateFailure(dependencyFailures, () =>
+      updateNpmPackage(OPENSPEC_PACKAGE_NAME, 'global', 'openspec package'));
+    await collectUpdateFailure(dependencyFailures, () => updateSuperpowers(planAgents));
   }
 
   for (const target of targets) {
@@ -153,6 +166,10 @@ export async function updateCommand(options: {
   );
 
   persistUpdateLanguage(language, planAgents);
+
+  if (dependencyFailures.length > 0) {
+    throw new Error(dependencyFailures.join('; '));
+  }
 
   printPlan(plan, !!options.json, 'updated');
 }
@@ -258,9 +275,11 @@ export function formatDependencyUpdateCommands(agents: Agent[], packageScope: In
   ];
   if (agents.includes('claude')) {
     commands.push('claude plugin install superpowers@superpowers-marketplace');
+    commands.push('claude plugin update superpowers@superpowers-marketplace');
   }
   if (agents.includes('codex')) {
-    commands.push(`codex plugin add ${CODEX_SUPERPOWERS_PLUGIN}`);
+    commands.push('codex plugin list --available --json');
+    commands.push(`codex plugin add ${CODEX_SUPERPOWERS_PLUGIN} --json`);
   }
   return commands;
 }
@@ -284,6 +303,7 @@ export function buildPostPackageRefreshArgs(input: {
     input.requestedScope,
     '--language',
     input.language,
+    '--with-dependencies',
   ];
   if (input.noHooks) args.push('--no-hooks');
   if (input.json) args.push('--json');
@@ -432,7 +452,7 @@ async function globalNpmRoot(): Promise<string> {
 async function updateSuperpowers(agents: Agent[]): Promise<void> {
   const failures: string[] = [];
   if (agents.includes('claude')) {
-    const result = await installSuperpowers();
+    const result = await updateClaudeSuperpowers();
     if (!result.ok) {
       failures.push(`claude superpowers update failed: ${result.error}`);
     }

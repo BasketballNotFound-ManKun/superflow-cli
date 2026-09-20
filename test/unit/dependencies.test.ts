@@ -5,7 +5,9 @@ import {
   openspecInitArgs,
   installSuperpowers,
   installCodexSuperpowers,
-  isCodexSuperpowersEnabled,
+  selectCodexSuperpowers,
+  inspectCodexSuperpowers,
+  updateClaudeSuperpowers,
   installUnderstand,
   installApiDocChangelog,
 } from '../../src/domains/deps.js';
@@ -20,6 +22,27 @@ vi.mock('../../src/platform/process.js', () => ({
 }));
 
 describe('core/dependencies', () => {
+  it('发现官方新渠道最新版，不选择同名第三方或预发布插件', () => {
+    expect(selectCodexSuperpowers({ available: [
+      { name: 'superpowers', pluginId: 'superpowers@unknown', marketplaceName: 'unknown', version: '99.0.0' },
+      { name: 'superpowers', pluginId: 'superpowers@openai-curated-remote', marketplaceName: 'openai-curated-remote', version: '7.0.0-beta.1' },
+      { name: 'superpowers', pluginId: 'superpowers@openai-api-curated', marketplaceName: 'openai-api-curated', version: '6.3.0' },
+      { name: 'superpowers', pluginId: 'superpowers@openai-curated-remote', marketplaceName: 'openai-curated-remote', version: '6.4.1' },
+    ] })).toMatchObject({ pluginId: 'superpowers@openai-curated-remote', version: '6.4.1' });
+    expect(() => selectCodexSuperpowers({ available: [] })).toThrow();
+  });
+
+  it('新版远端插件不需要 config.toml 启用段', async () => {
+    const root = fsSync.mkdtempSync(path.join(os.tmpdir(), 'superflow-plugin-new-'));
+    for (const skill of ['verification-before-completion', 'requesting-code-review', 'finishing-a-development-branch']) {
+      const file = path.join(root, 'openai-curated-remote/superpowers/6.4.1/skills', skill, 'SKILL.md');
+      fsSync.mkdirSync(path.dirname(file), { recursive: true });
+      fsSync.writeFileSync(file, 'skill');
+    }
+    expect((await inspectCodexSuperpowers(inventory(), root)).missing).toEqual([]);
+    expect((await inspectCodexSuperpowers(inventory(false), root)).missing).toHaveLength(3);
+    fsSync.rmSync(root, { recursive: true, force: true });
+  });
   it('installOpenspec 调用 npm install -g @fission-ai/openspec@latest', async () => {
     await installOpenspec();
     expect(runCommand).toHaveBeenCalledWith(
@@ -79,35 +102,32 @@ describe('core/dependencies', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('installCodexSuperpowers 已安装时视为成功', async () => {
+  it('installCodexSuperpowers 不能把未确认版本的已安装提示当成升级成功', async () => {
+    mockCodexCatalog();
     vi.mocked(runCommand).mockResolvedValueOnce({
       code: 1,
       stdout: 'plugin already added',
       stderr: '',
     });
     const result = await installCodexSuperpowers();
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
   it('installCodexSuperpowers 使用 Codex 官方 marketplace', async () => {
-    await installCodexSuperpowers();
+    mockCodexCatalog();
+    vi.mocked(runCommand).mockResolvedValueOnce({ code: 0, stderr: '', stdout: JSON.stringify({
+      pluginId: 'superpowers@openai-curated-remote', version: '6.4.1',
+    }) });
+    expect((await installCodexSuperpowers()).ok).toBe(true);
     expect(runCommand).toHaveBeenCalledWith(
       'codex',
-      ['plugin', 'add', 'superpowers@openai-api-curated']
+      ['plugin', 'add', 'superpowers@openai-curated-remote', '--json']
     );
   });
 
-  it('仅当 Codex 配置中启用插件时才确认 Superpowers 已安装', () => {
-    const root = fsSync.mkdtempSync(path.join(os.tmpdir(), 'superflow-plugin-config-'));
-    const config = path.join(root, 'config.toml');
-    fsSync.writeFileSync(
-      config,
-      '[plugins."superpowers@openai-api-curated"]\nenabled = true\n',
-    );
-    expect(isCodexSuperpowersEnabled(config)).toBe(true);
-    fsSync.writeFileSync(config, '[plugins."superpowers@openai-api-curated"]\nenabled = false\n');
-    expect(isCodexSuperpowersEnabled(config)).toBe(false);
-    fsSync.rmSync(root, { recursive: true, force: true });
+  it('插件清单不可用时不使用旧配置或缓存冒充通过', async () => {
+    const failed = vi.fn().mockResolvedValue({ code: 1, stdout: '', stderr: 'offline' });
+    expect(await inspectCodexSuperpowers(failed)).toMatchObject({ error: 'offline' });
   });
 
   it('Codex 验证依赖插件不可用时阻塞初始化', async () => {
@@ -124,17 +144,15 @@ describe('core/dependencies', () => {
       path.resolve('assets/scripts/superflow-dependency-update-hook.sh'),
       'utf-8'
     );
+    expect(script).not.toContain('codex plugin add');
     expect(script).toContain(
-      'codex plugin add superpowers@openai-api-curated'
-    );
-    expect(script).toContain(
-      'superflow update --agent "$agents" --scope global'
+      'node "$cli" update --agent "$agents" --scope global --with-dependencies'
     );
     expect(script).toContain(
       '自动升级已完整更新 CLI、依赖、Skills、Hooks、规则和托管 MCP'
     );
     expect(script).toContain('rm -f "$STAMP" "$GLOBAL_STAMP"');
-    expect(script).not.toContain('superpowers@openai-curated');
+    expect(script).not.toContain('superpowers@openai-api-curated');
   });
 
   it('installUnderstand 失败时返回 ok=false', async () => {
@@ -149,4 +167,51 @@ describe('core/dependencies', () => {
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
   });
+
+  it('拒绝安装结果比官方目录版本旧', async () => {
+    mockCodexCatalog();
+    vi.mocked(runCommand).mockResolvedValueOnce({ code: 0, stderr: '', stdout: JSON.stringify({
+      pluginId: 'superpowers@openai-curated-remote', version: '6.3.0',
+    }) });
+    expect((await installCodexSuperpowers()).ok).toBe(false);
+  });
+
+  it('已安装插件不在 available 中时仍能升级到新版', async () => {
+    vi.mocked(runCommand).mockResolvedValueOnce({ code: 0, stderr: '', stdout: JSON.stringify({
+      available: [], installed: [{ name: 'superpowers', pluginId: 'superpowers@openai-curated-remote', marketplaceName: 'openai-curated-remote', version: '6.3.0' }],
+    }) });
+    vi.mocked(runCommand).mockResolvedValueOnce({ code: 0, stderr: '', stdout: JSON.stringify({
+      pluginId: 'superpowers@openai-curated-remote', version: '6.4.1',
+    }) });
+    expect((await installCodexSuperpowers()).ok).toBe(true);
+  });
+
+  it('Claude 已安装时仍执行真正的 plugin update', async () => {
+    vi.mocked(runCommand).mockResolvedValueOnce({ code: 1, stdout: 'already installed', stderr: '' });
+    expect((await updateClaudeSuperpowers()).ok).toBe(true);
+    expect(runCommand).toHaveBeenLastCalledWith('claude', ['plugin', 'update', 'superpowers@superpowers-marketplace']);
+  });
+
+  it('新渠道缺技能不能借用旧缓存通过', async () => {
+    const root = fsSync.mkdtempSync(path.join(os.tmpdir(), 'superflow-cache-'));
+    const oldFile = path.join(root, 'openai-curated-remote/superpowers/6.3.0/skills/verification-before-completion/SKILL.md');
+    fsSync.mkdirSync(path.dirname(oldFile), { recursive: true });
+    fsSync.writeFileSync(oldFile, 'old');
+    const current = path.join(root, 'openai-curated-remote/superpowers/6.4.1');
+    fsSync.mkdirSync(current, { recursive: true });
+    expect((await inspectCodexSuperpowers(inventory(), root)).missing).toContain('verification-before-completion');
+    fsSync.rmSync(root, { recursive: true, force: true });
+  });
 });
+
+function inventory(enabled = true) {
+  return vi.fn().mockResolvedValue({ code: 0, stderr: '', stdout: JSON.stringify({ installed: [{
+    name: 'superpowers', pluginId: 'superpowers@openai-curated-remote', marketplaceName: 'openai-curated-remote', version: '6.4.1', installed: true, enabled,
+  }] }) });
+}
+
+function mockCodexCatalog() {
+  vi.mocked(runCommand).mockResolvedValueOnce({ code: 0, stderr: '', stdout: JSON.stringify({ available: [{
+    name: 'superpowers', pluginId: 'superpowers@openai-curated-remote', marketplaceName: 'openai-curated-remote', version: '6.4.1',
+  }] }) });
+}

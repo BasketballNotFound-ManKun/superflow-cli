@@ -155,6 +155,12 @@ superflow update --with-package
 
 Automatic checks are enabled by default but do not install updates:
 
+Default checks query npm and remind you to refresh Superpowers. Manual update or
+`apply` updates the plugins. Use `superflow update --agent codex --scope global --with-dependencies`
+to refresh OpenSpec, Superpowers and host assets without reinstalling the CLI.
+Codex plugin identity/version/enablement comes from native inventory (currently
+`superpowers@openai-curated-remote`), not legacy config.toml entries or residual caches.
+
 ```bash
 export SUPERFLOW_AUTO_UPDATE=check
 export SUPERFLOW_AUTO_UPDATE=0
@@ -164,7 +170,7 @@ export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 
 Team environments should keep `check`. Personal machines may choose `apply`.
 In `apply` mode, package upgrades are followed by the newly installed CLI, which
-redeploys Skills, Hooks, rules, scripts, and managed MCP registrations. Partial
+updates OpenSpec/Superpowers and redeploys Skills, Hooks, rules, scripts, and managed MCP registrations. Partial
 failure removes the throttle stamp and remains eligible for the next-session retry.
 Restart the Agent after success to load the new MCP process.
 

@@ -1,7 +1,6 @@
 import {
   existsSync,
   promises as fs,
-  readFileSync,
   readdirSync,
   statSync,
 } from 'fs';
@@ -17,7 +16,39 @@ export interface InstallResult {
 }
 
 export const CODEX_SUPERPOWERS_PLUGIN =
-  'superpowers@openai-api-curated';
+  'superpowers@openai-curated-remote';
+
+const CODEX_SUPERPOWERS_MARKETS = ['openai-curated-remote', 'openai-api-curated'];
+
+interface CodexSuperpowersPlugin {
+  name: string;
+  pluginId: string;
+  marketplaceName: string;
+  version: string;
+  enabled?: boolean;
+  installed?: boolean;
+}
+
+export function selectCodexSuperpowers(catalog: {
+  available?: CodexSuperpowersPlugin[];
+  installed?: CodexSuperpowersPlugin[];
+}): CodexSuperpowersPlugin {
+  const plugins = [...(catalog.available ?? []), ...(catalog.installed ?? [])].filter((plugin) =>
+    plugin.name === 'superpowers' &&
+    CODEX_SUPERPOWERS_MARKETS.includes(plugin.marketplaceName) &&
+    plugin.pluginId === `superpowers@${plugin.marketplaceName}` &&
+    /^\d+\.\d+\.\d+$/.test(plugin.version),
+  );
+  plugins.sort((a, b) => compareVersions(b.version, a.version));
+  if (!plugins[0]) throw new Error('Cannot confirm the latest official Superpowers plugin; run codex plugin list --available --json');
+  return plugins[0];
+}
+
+function compareVersions(a: string, b: string): number {
+  const left = a.split('.').map(Number);
+  const right = b.split('.').map(Number);
+  return left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
+}
 
 export const REQUIRED_CODEX_SUPERPOWER_SKILLS = [
   'verification-before-completion',
@@ -27,16 +58,9 @@ export const REQUIRED_CODEX_SUPERPOWER_SKILLS = [
 
 export function hasCodexSuperpowerSkill(
   skill: string,
-  root = path.join(
-    homedir(),
-    '.codex',
-    'plugins',
-    'cache',
-    'openai-api-curated',
-    'superpowers',
-  ),
+  root: string,
 ): boolean {
-  if (!existsSync(root)) return false;
+  if (!root || !existsSync(root)) return false;
   const expected = path.join('skills', skill, 'SKILL.md');
   const stack = [root];
   while (stack.length > 0) {
@@ -62,25 +86,25 @@ export function hasCodexSuperpowerSkill(
   return false;
 }
 
-export function isCodexSuperpowersEnabled(
-  configPath = path.join(homedir(), '.codex', 'config.toml'),
-): boolean {
-  if (!existsSync(configPath)) return false;
+export async function inspectCodexSuperpowers(
+  run: typeof runCommand = runCommand,
+  cacheRoot = path.join(homedir(), '.codex/plugins/cache'),
+): Promise<{ plugin?: CodexSuperpowersPlugin; missing: string[]; error?: string }> {
   try {
-    const config = readFileSync(configPath, 'utf8');
-    return /\[plugins\."superpowers@openai-api-curated"\]\s*enabled\s*=\s*true\b/.test(config);
-  } catch {
-    return false;
+    // Remote plugin enablement is account-backed, not necessarily in config.toml.
+    const result = await run('codex', ['plugin', 'list', '--json']);
+    if (result.code !== 0) throw new Error(result.stderr || result.stdout);
+    const installed = JSON.parse(result.stdout).installed;
+    if (!Array.isArray(installed)) throw new Error('Invalid Codex plugin inventory');
+    const plugin = selectCodexSuperpowers({ installed: installed.filter((item) => item.installed === true && item.enabled === true) });
+    const root = path.join(cacheRoot, plugin.marketplaceName, 'superpowers', plugin.version);
+    const missing = REQUIRED_CODEX_SUPERPOWER_SKILLS.filter((skill) =>
+      !hasCodexSuperpowerSkill(skill, root),
+    );
+    return { plugin, missing };
+  } catch (error) {
+    return { missing: [...REQUIRED_CODEX_SUPERPOWER_SKILLS], error: (error as Error).message };
   }
-}
-
-export function missingCodexSuperpowerSkills(): string[] {
-  if (!isCodexSuperpowersEnabled()) {
-    return [...REQUIRED_CODEX_SUPERPOWER_SKILLS];
-  }
-  return REQUIRED_CODEX_SUPERPOWER_SKILLS.filter(
-    (skill) => !hasCodexSuperpowerSkill(skill),
-  );
 }
 
 function alreadyInstalled(output: string): boolean {
@@ -163,22 +187,34 @@ export async function installSuperpowers(): Promise<InstallResult> {
 export async function installCodexSuperpowers(
   verifySkills = false,
 ): Promise<InstallResult> {
-  const result = await runCommand('codex', [
-    'plugin',
-    'add',
-    CODEX_SUPERPOWERS_PLUGIN,
-  ]);
-  if (result.code !== 0) {
-    const output = `${result.stderr}\n${result.stdout}`;
-    if (alreadyInstalled(output)) return verifiedCodexSuperpowers(verifySkills);
-    return { ok: false, error: result.stderr || result.stdout };
+  try {
+    const catalog = await runCommand('codex', ['plugin', 'list', '--available', '--json']);
+    if (catalog.code !== 0) return { ok: false, error: catalog.stderr || catalog.stdout };
+    const plugin = selectCodexSuperpowers(JSON.parse(catalog.stdout));
+    const result = await runCommand('codex', ['plugin', 'add', plugin.pluginId, '--json']);
+    if (result.code !== 0) return { ok: false, error: result.stderr || result.stdout };
+    const installed = JSON.parse(result.stdout);
+    if (installed.pluginId !== plugin.pluginId || !/^\d+\.\d+\.\d+$/.test(installed.version ?? '') ||
+        compareVersions(installed.version, plugin.version) < 0) {
+      return { ok: false, error: `Superpowers installation did not confirm ${plugin.pluginId}@${plugin.version}` };
+    }
+    return verifiedCodexSuperpowers(verifySkills);
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
   }
-  return verifiedCodexSuperpowers(verifySkills);
 }
 
-function verifiedCodexSuperpowers(verifySkills: boolean): InstallResult {
+export async function updateClaudeSuperpowers(): Promise<InstallResult> {
+  const installed = await installSuperpowers();
+  if (!installed.ok) return installed;
+  const result = await runCommand('claude', ['plugin', 'update', 'superpowers@superpowers-marketplace']);
+  return result.code === 0 ? { ok: true } : { ok: false, error: result.stderr || result.stdout };
+}
+
+async function verifiedCodexSuperpowers(verifySkills: boolean): Promise<InstallResult> {
   if (!verifySkills) return { ok: true };
-  const missing = missingCodexSuperpowerSkills();
+  const { missing, error } = await inspectCodexSuperpowers();
+  if (error) return { ok: false, error };
   if (missing.length === 0) return { ok: true };
   return { ok: false, error: `required skills missing: ${missing.join(', ')}` };
 }

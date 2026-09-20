@@ -104,7 +104,7 @@ run_logged() {
 }
 
 latest_npm_version() {
-  npm view "$1" version 2>/dev/null | tail -n 1
+  npm view "$1" version --registry https://registry.npmjs.org 2>/dev/null | tail -n 1
 }
 
 installed_npm_version() {
@@ -143,7 +143,7 @@ update_npm_if_needed() {
   fi
   current="$(installed_npm_version "$package_name")"
   if [ "$current" != "$latest" ]; then
-    run_logged npm install -g "$package_name@latest"
+    run_logged npm install -g "$package_name@latest" --registry https://registry.npmjs.org
   fi
 }
 
@@ -159,15 +159,12 @@ detected_agents() {
 refresh_superflow_installation() {
   local agents="$1"
   [ -n "$agents" ] || return 1
-  if command -v superflow >/dev/null 2>&1; then
-    run_logged superflow update --agent "$agents" --scope global
-    return $?
-  fi
+  # Always run the package just installed, not an older PATH shadow.
   local npm_root cli
   npm_root="$(npm root -g 2>/dev/null)" || return 1
   cli="$npm_root/@chenmk/superflow/dist/app/cli.js"
   [ -f "$cli" ] || return 1
-  run_logged node "$cli" update --agent "$agents" --scope global
+  run_logged node "$cli" update --agent "$agents" --scope global --with-dependencies
 }
 
 check_npm_package() {
@@ -187,16 +184,6 @@ check_npm_package() {
 if [ "$MODE" = "apply" ]; then
   APPLY_FAILED=0
   update_npm_if_needed "@chenmk/superflow" || APPLY_FAILED=1
-  update_npm_if_needed "@fission-ai/openspec" || APPLY_FAILED=1
-
-  if command -v claude >/dev/null 2>&1; then
-    run_logged claude plugin install superpowers@superpowers-marketplace || APPLY_FAILED=1
-  fi
-
-  if command -v codex >/dev/null 2>&1; then
-    run_logged codex plugin add superpowers@openai-api-curated || APPLY_FAILED=1
-  fi
-
   AGENT_VALUE="$(detected_agents)"
   refresh_superflow_installation "$AGENT_VALUE" || APPLY_FAILED=1
 

@@ -20,7 +20,7 @@ import type { Language } from '../../types.js';
 import { resolveRuntimeLanguage } from '../../domains/config/cli-help.js';
 import { managedText } from '../../domains/managed-work/i18n.js';
 import {
-  missingCodexSuperpowerSkills,
+  inspectCodexSuperpowers,
   REQUIRED_CODEX_SUPERPOWER_SKILLS,
 } from '../../domains/deps.js';
 import { resolveMcpServerPath } from './mcp.js';
@@ -178,7 +178,13 @@ export async function collectDoctor(options: {
         : managedText(language, '未检测', 'not detected'),
     });
     if (agent === 'codex') {
-      const missingSkills = new Set(missingCodexSuperpowerSkills());
+      const installation = await inspectCodexSuperpowers(run);
+      const missingSkills = new Set(installation.missing);
+      checks.push({
+        check: 'superpowers:codex:installation',
+        status: installation.error ? 'fail' : 'pass',
+        message: installation.error ?? `${installation.plugin?.pluginId} ${installation.plugin?.version}`,
+      });
       for (const skill of REQUIRED_CODEX_SUPERPOWER_SKILLS) {
         const available = !missingSkills.has(skill);
         checks.push({
@@ -190,8 +196,8 @@ export async function collectDoctor(options: {
           ...(available ? {} : {
             remediation: managedText(
               language,
-              '运行 superflow update --agent codex --scope global，并重启 Codex Host',
-              'Run superflow update --agent codex --scope global, then restart the Codex host',
+              '运行 superflow update --agent codex --scope global --with-dependencies，并重启 Codex Host',
+              'Run superflow update --agent codex --scope global --with-dependencies, then restart the Codex host',
             ),
           }),
         });

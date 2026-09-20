@@ -29,7 +29,7 @@ describe('commands/uninstall', () => {
     );
 
     expect(plan.dependencyCommands).toContain(
-      'codex plugin remove superpowers@openai-api-curated'
+      'codex plugin remove superpowers@openai-curated-remote'
     );
   });
 

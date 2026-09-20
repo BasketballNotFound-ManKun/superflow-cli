@@ -42,6 +42,7 @@ export interface CliHelpText {
   forceOption: string;
   noHooksUpdateOption: string;
   withPackageOption: string;
+  withDependenciesOption: string;
   uninstallForceOption: string;
   withDepsOption: string;
   managedOption: string;
@@ -123,7 +124,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     noScanOption: "Skip project context scaffolding and scan hints",
     forceOption: "Overwrite existing docs/sdd-context files",
     noHooksUpdateOption: "Skip hook re-registration",
-    withPackageOption: "Also run npm update for @chenmk/superflow",
+    withPackageOption: "Update CLI, OpenSpec, Superpowers and host assets together",
+    withDependenciesOption: "Update OpenSpec/Superpowers and host assets without reinstalling the CLI",
     uninstallForceOption: "Skip confirmation prompt",
     withDepsOption:
       "Also uninstall OpenSpec, Superpowers, and Understand dependencies",
@@ -215,7 +217,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     noScanOption: "跳过项目上下文脚手架和扫描提示",
     forceOption: "覆盖现有 docs/sdd-context 文件",
     noHooksUpdateOption: "跳过 hook 重新注册",
-    withPackageOption: "同时执行 npm update 更新 @chenmk/superflow 包",
+    withPackageOption: "统一更新 CLI、OpenSpec、Superpowers 和宿主资产",
+    withDependenciesOption: "更新 OpenSpec、Superpowers 和宿主资产，不重装 CLI 包",
     uninstallForceOption: "跳过确认提示",
     withDepsOption: "同时卸载 OpenSpec、Superpowers、Understand 依赖",
     managedOption:

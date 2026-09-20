@@ -306,6 +306,7 @@ program
   .option("--json", helpText.jsonOption)
   .option("--no-hooks", helpText.noHooksUpdateOption)
   .option("--with-package", helpText.withPackageOption)
+  .option("--with-dependencies", helpText.withDependenciesOption)
   .option("--language <language>", helpText.languageOption)
   .action(async (targetPath, options) => {
     const { updateCommand } = await import("./commands/update.js");

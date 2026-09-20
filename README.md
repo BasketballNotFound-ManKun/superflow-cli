@@ -306,7 +306,7 @@ Design and field evidence:
 
 - OpenSpec CLI, then runs `openspec init <project> --tools ...`
 - Superpowers for the selected agent tools. Codex uses the official
-  `superpowers@openai-api-curated` plugin, including
+  current `superpowers@openai-curated-remote` plugin, discovering versions from native inventory and checking
   `verification-before-completion`, `requesting-code-review`, and
   `finishing-a-development-branch`.
 - SuperBridge Flow/OpenSpec skills
@@ -374,6 +374,10 @@ default.
 Default behavior is **check only**. It reports available updates but does not
 install them. Run this to update explicitly:
 
+The default check queries npm versions; Superpowers receives a refresh reminder.
+Manual update or `apply` refreshes plugins through native commands. To update only
+OpenSpec, Superpowers and host assets, use `superflow update --agent codex --scope global --with-dependencies`.
+
 ```bash
 superflow update --with-package
 ```
@@ -394,7 +398,8 @@ export SUPERFLOW_AUTO_UPDATE=apply
 export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 ```
 
-`apply` re-enters the newly installed CLI after package upgrade and refreshes all
+`apply` resolves the newly installed CLI from the npm root, avoiding stale PATH shims,
+then lets that runtime update OpenSpec/Superpowers and refresh all
 detected Agent assets plus managed MCP registrations. A partial failure keeps its
 log and removes the throttle stamp so the next session can retry. Restart the
 Agent after success because an existing MCP process cannot hot-load the upgrade.
