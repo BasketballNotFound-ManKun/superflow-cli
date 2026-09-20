@@ -32,6 +32,7 @@
     "superflow-test-report-lint.py",
     "superflow-managed-work-check.mjs",
     "superflow-document-audit.mjs",
+    "superflow-review-coverage.mjs",
     "superflow-environment-preflight.mjs",
     "superflow-coding-ready.mjs",
     "superflow-managed-executor-preflight.mjs",

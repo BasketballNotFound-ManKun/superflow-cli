@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { fileHash, reviewPath } from "./superflow-review-coverage.mjs";
 
 const args = process.argv.slice(2);
 const changeArg = args.find((arg) => !arg.startsWith("--"));
@@ -18,12 +19,40 @@ const changeDir = fs.realpathSync(path.resolve(changeArg));
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const pipelineScripts = resolvePipelineScripts(scriptDir);
 const checks = [
-  ["YAML 状态", "bash", [path.join(pipelineScripts, "superflow-yaml-validate.sh"), changeDir]],
-  ["docs 门禁", "bash", [path.join(pipelineScripts, "superflow-guard.sh"), changeDir, "docs"]],
-  ["design 门禁", "bash", [path.join(pipelineScripts, "superflow-guard.sh"), changeDir, "design"]],
-  ["implement 门禁", "bash", [path.join(pipelineScripts, "superflow-guard.sh"), changeDir, "implement"]],
-  ["文档交付审计", process.execPath, [path.join(scriptDir, "superflow-document-audit.mjs"), changeDir, "--json"]],
-  ["环境预检", process.execPath, [path.join(scriptDir, "superflow-environment-preflight.mjs"), changeDir, "--json"]],
+  [
+    "YAML 状态",
+    "bash",
+    [path.join(pipelineScripts, "superflow-yaml-validate.sh"), changeDir],
+  ],
+  [
+    "docs 门禁",
+    "bash",
+    [path.join(pipelineScripts, "superflow-guard.sh"), changeDir, "docs"],
+  ],
+  [
+    "design 门禁",
+    "bash",
+    [path.join(pipelineScripts, "superflow-guard.sh"), changeDir, "design"],
+  ],
+  [
+    "implement 门禁",
+    "bash",
+    [path.join(pipelineScripts, "superflow-guard.sh"), changeDir, "implement"],
+  ],
+  [
+    "文档交付审计",
+    process.execPath,
+    [path.join(scriptDir, "superflow-document-audit.mjs"), changeDir, "--json"],
+  ],
+  [
+    "环境预检",
+    process.execPath,
+    [
+      path.join(scriptDir, "superflow-environment-preflight.mjs"),
+      changeDir,
+      "--json",
+    ],
+  ],
 ];
 const issues = [];
 const evidence = [];
@@ -40,17 +69,29 @@ for (const [label, command, commandArgs] of checks) {
   }
 }
 
-const openspec = spawnSync("openspec", ["validate", path.basename(changeDir), "--strict"], {
-  cwd: projectRoot(changeDir),
-  encoding: "utf-8",
-});
+const openspec = spawnSync(
+  "openspec",
+  ["validate", path.basename(changeDir), "--strict"],
+  {
+    cwd: projectRoot(changeDir),
+    encoding: "utf-8",
+  },
+);
 evidence.push({ label: "OpenSpec strict", exitCode: openspec.status ?? 1 });
 if (openspec.status !== 0) {
-  issues.push(`OpenSpec strict 失败：${tail(openspec.stderr || openspec.stdout)}`);
+  issues.push(
+    `OpenSpec strict 失败：${tail(openspec.stderr || openspec.stdout)}`,
+  );
 }
 
 const handoffHash = readHandoffHash(changeDir, issues);
 const reviewRounds = readReviewRounds(changeDir);
+let reviewHash = "";
+try {
+  reviewHash = fileHash(path.join(changeDir, reviewPath));
+} catch {
+  issues.push("无法冻结文档评审凭证指纹");
+}
 const receipt = {
   schemaVersion: "superflow.coding-ready.v1",
   codingReady: issues.length === 0,
@@ -58,20 +99,27 @@ const receipt = {
   environmentReadiness: issues.length === 0 ? "READY" : "BLOCKED",
   reviewRounds,
   handoffHash,
+  reviewHash,
   checkedAt: new Date().toISOString(),
   evidence,
   ownerDecisions: 0,
   issues,
 };
 
-if (issues.length > 0) fail(issues, receipt);
-
 const receiptDir = path.join(changeDir, ".sdd", "readiness");
 fs.mkdirSync(receiptDir, { recursive: true });
 const target = path.join(receiptDir, "coding-ready.json");
-const temporary = path.join(receiptDir, `.coding-ready-${process.pid}-${Date.now()}.tmp`);
-fs.writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 });
+const temporary = path.join(
+  receiptDir,
+  `.coding-ready-${process.pid}-${Date.now()}.tmp`,
+);
+fs.writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`, {
+  mode: 0o600,
+});
 fs.renameSync(temporary, target);
+
+// Persist BLOCKED too: a failed recheck must revoke an earlier READY receipt.
+if (issues.length > 0) fail(issues, receipt);
 
 if (jsonOutput) {
   process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
@@ -81,9 +129,27 @@ if (jsonOutput) {
 
 function resolvePipelineScripts(currentScriptDir) {
   const candidates = [
-    path.resolve(currentScriptDir, "..", "skills", "superflow-pipeline", "scripts"),
-    path.join(os.homedir(), ".codex", "skills", "superflow-pipeline", "scripts"),
-    path.join(os.homedir(), ".claude", "skills", "superflow-pipeline", "scripts"),
+    path.resolve(
+      currentScriptDir,
+      "..",
+      "skills",
+      "superflow-pipeline",
+      "scripts",
+    ),
+    path.join(
+      os.homedir(),
+      ".codex",
+      "skills",
+      "superflow-pipeline",
+      "scripts",
+    ),
+    path.join(
+      os.homedir(),
+      ".claude",
+      "skills",
+      "superflow-pipeline",
+      "scripts",
+    ),
   ];
   const found = candidates.find((candidate) =>
     fs.existsSync(path.join(candidate, "superflow-guard.sh")),
@@ -123,7 +189,10 @@ function tail(value) {
   return String(value).trim().split("\n").slice(-4).join(" | ").slice(0, 800);
 }
 
-function fail(targetIssues, receipt = { codingReady: false, issues: targetIssues }) {
+function fail(
+  targetIssues,
+  receipt = { codingReady: false, issues: targetIssues },
+) {
   if (jsonOutput) {
     process.stderr.write(`${JSON.stringify(receipt, null, 2)}\n`);
   } else {

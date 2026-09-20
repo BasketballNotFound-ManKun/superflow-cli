@@ -107,20 +107,9 @@ superflow check <change> --level coding-ready
 BLOCK_MSG
     return 2
   fi
-  python3 - "$receipt" "$expected_hash" <<'PY'
-import json, sys
-try:
-    with open(sys.argv[1], encoding="utf-8") as handle:
-        receipt = json.load(handle)
-except Exception:
-    raise SystemExit(2)
-if receipt.get("codingReady") is not True:
-    raise SystemExit(2)
-if receipt.get("schemaVersion") != "superflow.coding-ready.v1":
-    raise SystemExit(2)
-if receipt.get("handoffHash") != sys.argv[2]:
-    raise SystemExit(2)
-PY
+  # Same validator as CLI/managed start. Source code is expected to change during
+  # implementation; only dispatch rechecks code snapshots, not every write.
+  node "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/superflow-review-coverage.mjs" "$change_dir"
   if [ $? -ne 0 ]; then
     cat <<'BLOCK_MSG' >&2
 [SDD Coding Ready] 凭证已过期或与当前 handoff hash 不一致。

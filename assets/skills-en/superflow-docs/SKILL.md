@@ -5,6 +5,12 @@ description: Use when confirmed requirements or OpenSpec artifacts need SDD cont
 
 # SDD Docs
 
+For full document delivery, read and apply
+[requirement × real-entry review](../superflow-pipeline/references/document-review-coverage.md).
+Extend the existing three-round receipt with original-source, real-caller,
+EXCLUDED/VERIFY_EXISTING and assertion coverage. Internal document consistency
+is not evidence of fidelity to the user's original semantics.
+
 Use this skill after a feature is frozen or after `$openspec-propose` has
 created the base OpenSpec artifacts. This skill is an SDD contract-doc wrapper;
 it must not replace the installed OpenSpec skills for core artifact generation

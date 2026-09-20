@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { ASSETS_DIR } from "../platform/assets.js";
 
 export interface CodingReadyReceipt {
   schemaVersion?: string;
@@ -33,6 +35,16 @@ export function assertCodingReadyForPrompt(promptPath: string): void {
   ) {
     throw codingReadyError(changeDir);
   }
+  const checked = spawnSync(
+    process.execPath,
+    [
+      path.join(ASSETS_DIR, "scripts", "superflow-review-coverage.mjs"),
+      changeDir,
+      "--check-sources",
+    ],
+    { encoding: "utf-8", timeout: 35000 },
+  );
+  if (checked.status !== 0) throw codingReadyError(changeDir);
 }
 
 function findChangeDirectory(promptPath: string): string {

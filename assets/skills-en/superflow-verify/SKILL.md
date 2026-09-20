@@ -5,6 +5,11 @@ description: Use when an OpenSpec/SDD change is ready for verification, real evi
 
 # SDD Verify
 
+For full workflow acceptance, read [requirement × real-entry review](../superflow-pipeline/references/document-review-coverage.md).
+Reuse R/E/C IDs in the existing test-report with actual actors, page actions, request routes,
+final state and forbidden-effect evidence. Independently compare originals and actual callers;
+API-only is not browser E2E, and planned cases are not execution evidence.
+
 Verification is a phase, not a final sentence. Use this skill after
 implementation work claims completion and before archive or delivery.
 

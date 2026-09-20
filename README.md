@@ -48,6 +48,11 @@ state, and dependency guards for Claude Code and Codex.
 
 ## Highlights
 
+0.5.10 strengthens document delivery: requirement × real-entry coverage (including
+exclusions), real-entry test contracts, and content-bound Coding Ready receipts.
+Existing document receipts need [coverage migration and re-review](assets/skills-en/superflow-pipeline/references/document-review-coverage.md)
+before new dispatch or source edits. Semantic correctness remains an Agent review responsibility.
+
 - **Dual-Agent managed delivery.** The current host Agent reviews directly while
   the peer Agent develops, starts, and verifies in one CLI session without a
   tool-turn limit, then actively returns one structured result. A later session

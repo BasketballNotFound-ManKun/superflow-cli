@@ -5,6 +5,10 @@ description: 对已澄清或已形成 OpenSpec/SDD 草案的需求和设计执�
 
 # Superflow Requirement Review
 
+必须读取并执行[需求×真实入口评审](../superflow-pipeline/references/document-review-coverage.md)。
+从原始需求独立建立核对清单，不从 FIX 任务反推范围；逐需求维度核对全部入口，特别是
+EXCLUDED、VERIFY_EXISTING 和无代码改动的路径。用户允许的动作不能被擅自改成拒绝。
+
 对当前 OpenSpec change 进行独立、对抗式但基于证据的反向评审。评审不是旁路建议：
 阻塞级问题必须回写并修正文档，复审通过后才能离开 docs 阶段。
 

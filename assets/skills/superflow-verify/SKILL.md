@@ -5,6 +5,10 @@ description: Use when an SDD/OpenSpec change is ready for verification, test-rep
 
 # SDD Verify
 
+完整 workflow 验收必须读取[需求×真实入口评审](../superflow-pipeline/references/document-review-coverage.md)。
+沿 R/E/C ID 在现有 test-report 回填实际角色、页面动作、请求路由、最终状态与禁止副作用
+的原始证据。独立对照原始来源及实际调用方；API-only 不得冒充 browser E2E，计划不等于执行。
+
 Verification is a phase, not a final sentence. Use this skill after
 implementation work claims completion and before archive or delivery.
 

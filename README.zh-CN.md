@@ -41,6 +41,11 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 
 ## 亮点
 
+0.5.10 加强文档交付：逐需求×真实入口核对（含排除项）、真实入口验收合同、
+绑定内容指纹的 Coding Ready。旧文档凭证需先完成
+[覆盖补齐与复审](assets/skills/superflow-pipeline/references/document-review-coverage.md)，
+才能新启动任务或编辑源码；业务语义正确性仍由智能体独立评审负责。
+
 - **双 Agent 托管到真实交付。** 当前 Host Agent 直接监督，另一个 Agent 在一次不限制工具
   轮数的 CLI 会话中持续开发、启动和验证，完成后主动返回结构化结果；只有评审整改、进程异常
   或人工恢复才创建后续会话。工作区与落盘 finding 负责交接，默认最多 5 轮评审、7 次执行、

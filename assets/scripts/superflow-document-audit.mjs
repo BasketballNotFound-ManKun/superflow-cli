@@ -2,6 +2,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import {
+  currentHandoffHash,
+  validateCoverage,
+} from "./superflow-review-coverage.mjs";
 
 const args = process.argv.slice(2);
 const changeArg = args.find((arg) => !arg.startsWith("--"));
@@ -34,7 +38,9 @@ for (const document of aggregateDocuments) {
   }
   const links = markdownTargets(fs.readFileSync(documentPath, "utf-8"));
   for (const prompt of prompts) {
-    const relativePrompt = path.relative(changeDir, prompt).replaceAll("\\", "/");
+    const relativePrompt = path
+      .relative(changeDir, prompt)
+      .replaceAll("\\", "/");
     if (!links.has(relativePrompt)) {
       issues.push(`${document} 未链接 ${relativePrompt}`);
     }
@@ -47,6 +53,14 @@ const review = readJson(
   issues,
 );
 validateReview(review, handoffHash, issues);
+validateCoverage(changeDir, review, issues);
+try {
+  if (currentHandoffHash(changeDir) !== handoffHash) {
+    issues.push("冻结文档内容已变化，请刷新 handoff 并重新评审");
+  }
+} catch (error) {
+  issues.push(error.message);
+}
 validateMermaid(changeDir, issues);
 
 const result = {
@@ -67,7 +81,9 @@ print(result);
 function validateReview(review, currentHash, targetIssues) {
   if (!review) return;
   if (review.schemaVersion !== "superflow.document-review.v1") {
-    targetIssues.push("文档评审凭证 schemaVersion 必须为 superflow.document-review.v1");
+    targetIssues.push(
+      "文档评审凭证 schemaVersion 必须为 superflow.document-review.v1",
+    );
   }
   if (review.handoffHash !== currentHash) {
     targetIssues.push("文档评审凭证未绑定当前 handoff hash");
@@ -88,12 +104,18 @@ function validateReview(review, currentHash, targetIssues) {
     "e2e-environment",
   ]);
   for (const round of review.rounds) {
+    if (!round || !Array.isArray(round.findings)) {
+      targetIssues.push("评审轮必须显式提供 findings 数组");
+      continue;
+    }
     requiredLenses.delete(round.lens);
     if (round.inputHash !== currentHash) {
-      targetIssues.push(`第 ${round.round ?? "?"} 轮评审不是基于当前 handoff hash`);
+      targetIssues.push(
+        `第 ${round.round ?? "?"} 轮评审不是基于当前 handoff hash`,
+      );
     }
     const openFindings = (round.findings ?? []).filter(
-      (finding) => finding.status !== "closed",
+      (finding) => finding?.status !== "closed",
     );
     if (openFindings.length > 0) {
       targetIssues.push(`第 ${round.round ?? "?"} 轮仍有未关闭评审发现`);
@@ -149,7 +171,9 @@ function validateMermaidBlock(block, targetIssues) {
     if (arrows.length === 0) {
       targetIssues.push("Mermaid sequenceDiagram 缺少有效消息箭头");
     }
-    const openings = lines.filter((line) => /^(alt|opt|loop|par|critical)\b/.test(line)).length;
+    const openings = lines.filter((line) =>
+      /^(alt|opt|loop|par|critical)\b/.test(line),
+    ).length;
     const endings = lines.filter((line) => line === "end").length;
     if (openings !== endings) {
       targetIssues.push("Mermaid sequenceDiagram 分支块未正确闭合");

@@ -5,6 +5,11 @@ description: Use when confirmed OpenSpec artifacts need SDD contract docs such a
 
 # SDD Docs
 
+完整文档交付必须读取并执行
+[需求×真实入口评审](../superflow-pipeline/references/document-review-coverage.md)：
+扩展现有三轮评审凭证，逐项核对原始需求、真实调用分支、EXCLUDED/VERIFY_EXISTING
+及验收断言。禁止用“文档内部一致”代替对用户原始语义的核验。
+
 Use this skill after a feature is frozen or after `$openspec-propose` has
 created the base OpenSpec artifacts. This skill is an SDD contract-doc wrapper;
 it must not replace the installed OpenSpec skills for core artifact generation

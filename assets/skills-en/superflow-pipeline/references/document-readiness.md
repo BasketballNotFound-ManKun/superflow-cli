@@ -1,5 +1,9 @@
 # Document Delivery Readiness Contract
 
+The base review example below is not a complete receipt. From 0.5.10, also apply
+[requirement × real-entry review](document-review-coverage.md): add `coverage` and
+`reviewedPairs` to source-contract/e2e-environment rounds. Old receipts require re-review.
+
 ## Applicability
 
 Declare applicability in `.openspec.yaml`. Keyword scans may suggest a risk but

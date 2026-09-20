@@ -23,6 +23,10 @@ applicability:
 
 ## 三轮评审凭证
 
+下方为基础字段示例，不是完整凭证。0.5.10 起必须同时按
+[需求×真实入口评审](document-review-coverage.md) 添加 `coverage`，以及 source-contract/
+e2e-environment 轮的 `reviewedPairs`。旧凭证需要补齐并重新评审。
+
 文件：`.sdd/reviews/document-review.json`
 
 ```json

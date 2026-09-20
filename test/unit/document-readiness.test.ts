@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { prepareCoverage, mutateReview } from "../helpers/review-coverage.js";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "../..");
@@ -216,6 +217,11 @@ describe("document delivery readiness", () => {
       path.join(os.tmpdir(), "superflow-doc-readiness-"),
     );
     await prepareReadyChange();
+    const hash = prepareCoverage(change);
+    const envFile = path.join(change, ".sdd/readiness/environment.json");
+    const env = JSON.parse(fs.readFileSync(envFile, "utf8"));
+    env.handoffHash = hash;
+    fs.writeFileSync(envFile, JSON.stringify(env));
   });
 
   afterEach(async () => {
@@ -236,6 +242,136 @@ describe("document delivery readiness", () => {
       stderr: expect.stringContaining("test-report.md 未链接 prompt/p01.md"),
     });
   });
+
+  it.each([
+    [
+      "missing legacy coverage",
+      (r: any) => {
+        delete r.coverage;
+      },
+      "缺少需求×入口",
+    ],
+    [
+      "endpoint-wide exclusion",
+      (r: any) => {
+        r.coverage.decisions.pop();
+      },
+      "缺少映射",
+    ],
+    [
+      "exclusion without source authority",
+      (r: any) => {
+        Object.assign(r.coverage.decisions[0], {
+          disposition: "EXCLUDED",
+          caseIds: [],
+          sourceRefs: ["caller"],
+        });
+      },
+      "缺少 requirement 来源",
+    ],
+    [
+      "API-only replacing page E2E",
+      (r: any) => {
+        r.coverage.cases[0].level = "api";
+      },
+      "验收等级",
+    ],
+    [
+      "wrong endpoint case",
+      (r: any) => {
+        r.coverage.decisions[0].caseIds = ["C2"];
+      },
+      "对应真实入口",
+    ],
+    [
+      "success-only assertions",
+      (r: any) => {
+        delete r.coverage.cases[0].assertions.forbiddenEffects;
+      },
+      "forbiddenEffects",
+    ],
+    [
+      "unreviewed exclusions",
+      (r: any) => {
+        r.rounds[0].reviewedPairs.pop();
+      },
+      "逐项评审",
+    ],
+    [
+      "unknown evidence",
+      (r: any) => {
+        r.coverage.requirements[0].sourceRefs = ["missing"];
+      },
+      "有效来源引用",
+    ],
+    [
+      "duplicate mapping",
+      (r: any) => {
+        r.coverage.decisions.push(r.coverage.decisions[0]);
+      },
+      "重复映射",
+    ],
+  ])("blocks %s", async (_name, mutate, error) => {
+    mutateReview(change, mutate as (r: any) => void);
+    await expect(execFileAsync("node", [AUDIT, change])).rejects.toMatchObject({
+      stderr: expect.stringContaining(error as string),
+    });
+  });
+
+  it("accepts source-backed exclusions without inventing a runtime test", async () => {
+    mutateReview(change, (r) => {
+      Object.assign(r.coverage.decisions[1], {
+        disposition: "EXCLUDED",
+        caseIds: [],
+        rationale: "Source-backed scope exclusion reviewed independently",
+      });
+      r.coverage.cases.pop();
+    });
+    await expect(execFileAsync("node", [AUDIT, change])).resolves.toBeDefined();
+  });
+
+  it("blocks caller drift even when handoff hash markers did not change", async () => {
+    await write(
+      "caller.ts",
+      "export const create = () => post('/different/add');\n",
+    );
+    await expect(execFileAsync("node", [AUDIT, change])).rejects.toMatchObject({
+      stderr: expect.stringContaining("来源 caller 内容已变化"),
+    });
+  });
+
+  it("revokes an earlier READY receipt when a recheck fails", async () => {
+    const command = path.join(
+      ROOT,
+      "assets/scripts/superflow-coding-ready.mjs",
+    );
+    await write("tasks.md", "# broken contract\n");
+    await expect(
+      execFileAsync("node", [command, change, "--json"]),
+    ).rejects.toBeDefined();
+    const receipt = JSON.parse(
+      fs.readFileSync(
+        path.join(change, ".sdd/readiness/coding-ready.json"),
+        "utf8",
+      ),
+    );
+    expect(receipt.codingReady).toBe(false);
+    expect(receipt.documentReadiness).toBe("BLOCKED");
+  }, 15000);
+
+  it.each(["sources", "requirements", "entries", "cases", "decisions"])(
+    "rejects malformed coverage.%s with a diagnostic",
+    async (field) => {
+      mutateReview(change, (r) => {
+        r.coverage[field] = [null];
+      });
+      await expect(
+        execFileAsync("node", [AUDIT, change]),
+      ).rejects.toMatchObject({
+        stderr: expect.stringContaining(`coverage.${field} 必须是对象数组`),
+      });
+    },
+  );
 
   it("requires all three independent review lenses", async () => {
     const reviewFile = path.join(

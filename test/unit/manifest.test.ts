@@ -26,6 +26,8 @@ describe("core/manifest", () => {
     expect(codexScripts).toContain("superflow-dependency-update-hook.sh");
     expect(codexScripts).toContain("superflow-managed-work-check.mjs");
     expect(codexScripts).toContain("superflow-document-audit.mjs");
+    expect(codexScripts).toContain("superflow-review-coverage.mjs");
+    expect(claudeScripts).toContain("superflow-review-coverage.mjs");
     expect(codexScripts).toContain("superflow-environment-preflight.mjs");
     expect(codexScripts).toContain("superflow-coding-ready.mjs");
     expect(codexScripts).toContain("superflow-managed-executor-preflight.mjs");

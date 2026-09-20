@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { prepareCoverage } from "../helpers/review-coverage.js";
 
 const ROOT = path.resolve(__dirname, "../..");
 const HOOK = path.join(ROOT, "assets", "scripts", "superflow-hook-guard.sh");
@@ -39,22 +39,22 @@ describe("coding-ready source edit hook", () => {
   });
 
   it("allows runtime edits with a receipt bound to the current handoff hash", () => {
-    const hash = createHash("sha256").update("current").digest("hex");
-    fs.writeFileSync(
-      path.join(change, ".sdd", "state.yaml"),
-      `phase: implement\nhandoff_hash: ${hash}\n`,
-    );
-    fs.mkdirSync(path.join(change, ".sdd", "readiness"), { recursive: true });
-    fs.writeFileSync(
-      path.join(change, ".sdd", "readiness", "coding-ready.json"),
-      JSON.stringify({
-        schemaVersion: "superflow.coding-ready.v1",
-        codingReady: true,
-        handoffHash: hash,
-      }),
-    );
+    fs.writeFileSync(path.join(change, "tests.md"), "# Tests\n");
+    prepareCoverage(change);
     const result = runHook(sourceFile);
     expect(result.status).toBe(0);
+  });
+
+  it("allows implementation edits but blocks changed contracts", () => {
+    fs.writeFileSync(path.join(change, "tests.md"), "# Tests\n");
+    prepareCoverage(change);
+    fs.appendFileSync(
+      path.join(change, "caller.ts"),
+      "// intended implementation\n",
+    );
+    expect(runHook(sourceFile).status).toBe(0);
+    fs.appendFileSync(path.join(change, "tests.md"), "changed contract\n");
+    expect(runHook(sourceFile).status).toBe(2);
   });
 });
 
