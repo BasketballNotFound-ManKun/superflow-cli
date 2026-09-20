@@ -25,19 +25,22 @@ contracts, managed state transitions, or relaxed verification requirements.
 - Installed-only catalog entries remain upgradable when available is empty.
 - Third-party namesakes, prereleases, downgraded results, and unverified already-installed messages fail.
 - Missing current-version skills and unavailable native inventory cannot borrow stale cache evidence.
-- Claude installation is followed by plugin update; simulated only, without changing user Claude skills.
+- Claude installation is followed by plugin update; simulation was supplemented with live checks at the user's request.
 - Package updates and daily apply hand dependency ownership to the new CLI; failures propagate and do not retain success stamps.
 - Real installation and repeat upgrade confirmed Superpowers 6.4.1 and all three skills.
 - Final full suite passed 81 files / 585 tests, including installed-only upgrade coverage; lint and build passed.
 - Live dependency update succeeded, updating the global OpenSpec package to 1.13.1; all doctor checks passed.
+- Claude live update moved from 6.0.2 to 6.4.1, with native enabled=true and all three skill files present.
+  Full refresh installed 15 skills, 22 scripts, 10 Hooks, and MCP; all 52 doctor checks passed.
+  All 63 Codex doctor checks passed; the business project's NVM OpenSpec installation also reached 1.13.1.
 
 ## Scope, conclusion, and rollback
 
 Daily policy remains check by default: npm version checks and plugin refresh hints.
 Only apply or explicit dependency updates actually upgrade OpenSpec, Superpowers,
 and Superflow assets. No silent switch to background mutation was introduced.
-Help and installation instructions are bilingual. Codex live verification and
-Claude simulation are not equivalent to live cross-host verification.
+Help and installation instructions are bilingual. Both hosts received live update
+and environment checks; no model-driven business task was executed.
 No charging-platform business code or managed protocol changed; no business-bug
 fix or new Agent semantic-quality benchmark is claimed.
 
