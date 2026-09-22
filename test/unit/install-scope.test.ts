@@ -132,4 +132,40 @@ describe('commands/init 受管登记链路', () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('TC-10b: global scope init 同样持久化 scope 记录', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-global-init-'));
+    const saved: SddState[] = [];
+    const resumed = stateModule.initState('0.5.12', 'codex');
+    resumed.completedSteps = [1, 2, 3, 4, 5, 6, 7];
+    vi.spyOn(stateModule, 'loadState').mockReturnValue(resumed);
+    vi.spyOn(stateModule, 'saveState').mockImplementation((_file, state) => {
+      saved.push(state);
+    });
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const result = await runInit({
+        dryRun: false,
+        agent: 'codex',
+        resume: true,
+        noHooks: true,
+        noOpenspecInit: true,
+        noScan: true,
+        yes: true,
+        json: true,
+        skipExisting: false,
+        language: 'zh',
+        scope: 'global',
+        projectPath: root,
+      });
+      expect(result.ok).toBe(true);
+      const last = saved[saved.length - 1];
+      expect(last?.platforms.codex.scope).toBe('global');
+      expect(last?.managedProjects?.projects ?? []).toHaveLength(0);
+    } finally {
+      vi.restoreAllMocks();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

@@ -586,8 +586,8 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
         hooks: agents.flatMap((agent) => state.platforms[agent].hooks),
         registeredAt: new Date().toISOString(),
       });
-      saveState(stateFile, state);
     }
+    saveState(stateFile, state);
     log(`\n=== ${t(options.language, 'initComplete')} ===`);
     log(`${t(options.language, 'stateLabel')}: ${stateFile}`);
     printInitSummary(result, log);
