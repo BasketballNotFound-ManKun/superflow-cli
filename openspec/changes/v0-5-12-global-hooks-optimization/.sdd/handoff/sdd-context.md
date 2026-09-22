@@ -3,9 +3,9 @@
 > OpenSpec/SDD docs remain canonical. This file is a deterministic context pack for Superpowers execution strategy and implementation prompts.
 
 - change_dir: `/Users/chenmankun/cmk-project/superflow-cli/openspec/changes/v0-5-12-global-hooks-optimization`
-- context_hash: `f543684a0ba19f897ea5459a027f0717bfd81053b82f56bc3dfaf38cd529c125`
+- context_hash: `22800f2e918acb6ad9ce7883ca5d92a87616b703850c0033da6279742bdd71c7`
 - context_compression: `off`
-- generated_at: `2026-09-22T09:46:08Z`
+- generated_at: `2026-09-22T09:47:54Z`
 
 ## Source Inventory
 
@@ -15,6 +15,7 @@
 | `api.md` | `api` | `37864e205aea8fa97daba0cb86ea1928e49efb26e022e4feec67e93c37aacd97` | 69 |
 | `design.md` | `design` | `99bad163144859ca6233d5749781ed8e1f5ed5b246c820007996f569e208c362` | 87 |
 | `prompt/implementation.md` | `supporting` | `e862a1294c1bf8bfed5090d0b7bc5cd359ce6694ba35c726ce3c3ae1d98be69c` | 46 |
+| `prompt/p1-global-hooks-optimization.md` | `supporting` | `7b225c34ec26e78f91105b4a4b0049057ded85b810716e4a21aae6b42eda661b` | 17 |
 | `proposal.md` | `supporting` | `d0d55aa9e0768bbdc25d326c57798c3195eb28432d52ee95ebc3e080a6742c33` | 33 |
 | `requirement-review.md` | `supporting` | `3400f019f4884ac404a8902cb5e2ad4e8e874329137f7642cbe4c29b4cd51451` | 36 |
 | `review-checklist.md` | `supporting` | `71a24dddcba18036f474ef2fd69f3e281a2b461e978a3b9de592142a5e4fefd9` | 36 |
@@ -23,10 +24,10 @@
 | `specs/hook-short-circuit/spec.md` | `spec` | `828595e393ea8e43d4a7f0dbbc893fa06dca67a953c89aa7015dfc143dbc80d8` | 64 |
 | `specs/install-scope/spec.md` | `spec` | `3609ddbf5aedc3f35f521cfede34b91193033378ad617168c35b45a99fb4b21b` | 44 |
 | `specs/managed-projects/spec.md` | `spec` | `c08790d5b950581d26c6741da253681df39802dfc20313cdea39ed72f881a0c6` | 63 |
-| `tasks.md` | `task` | `7ed53bc1a43417d2868b931180fbfb5efc88f907835a5cfb70445f17a6ecd691` | 30 |
-| `test-report.md` | `test` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | 32 |
+| `tasks.md` | `task` | `6f679ca0a7ae6c5ff01ff6690a3f2914df40ba4efe6296310bcab97761d44137` | 32 |
+| `test-report.md` | `test` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | 39 |
 | `tests.md` | `test` | `8a881dc79d6317cd7b004869679339a38247afd10953b7f323ee93c78b17e293` | 29 |
-| `traceability-matrix.md` | `supporting` | `d208cc0a74965b2267196821fafc2e5b6b4a4f825cee268399a303ae81dc2ef5` | 22 |
+| `traceability-matrix.md` | `supporting` | `b49d6b65b277c88ff8d653f65ca50fce33c6772c5b4613e6ea78d67ed5aa1c71` | 24 |
 
 ## Required Superpower Boundary
 
@@ -262,6 +263,28 @@ RED 测试已执行：[待填，附失败输出位置]
 禁止修改文件：见上文"禁止修改"
 阻塞项：无
 ```
+```
+
+### `prompt/p1-global-hooks-optimization.md`
+
+```text
+# P1 任务 Prompt — v0-5-12 全局安装架构优化
+
+> 总入口与完整合同：[implementation.md](implementation.md)。
+> 本文件是该变更唯一实现任务（单任务变更）的执行清单，继承同一 handoff hash 与禁止项。
+
+## 执行清单（对应 [tasks.md](../tasks.md) 分组）
+
+| 组 | 内容 | 关键验证 |
+|---|---|---|
+| 2 | scope 一致性修复（types/state/uninstall/update） | TC-04/05/10 + `npx vitest run test/unit/install-scope.test.ts` |
+| 3 | 受管项目清单（登记/遍历清理/遍历同步） | TC-06~09 |
+| 1 | 8 个 hook 脚本前置短路（bash 首可执行行前 / py import 块后） | TC-01~03 空目录 exit 0 无输出 |
+| 4 | 全量回归 + 发版迁移 + 装版二次验证 | 594 用例、残留 0、拦截 exit 2 |
+
+## 完成定义
+
+全部任务勾选 + [test-report.md](../test-report.md) 终态 PASS + 发版 tag 合规（release:check 通过）。
 ```
 
 ### `proposal.md`
@@ -677,6 +700,8 @@ update MUST 遍历 `managedProjects`，将各项目的脚本与 hooks 同步到�
 ```text
 # Tasks
 
+> 实现入口：[prompt/implementation.md](prompt/implementation.md)；任务级 prompt：[prompt/p1-global-hooks-optimization.md](prompt/p1-global-hooks-optimization.md)。
+
 ## 1. hook 前置短路
 
 - [x] 1.1 为 6 个有 `.sdd-enforced` 门控的脚本加前置短路（enforce-hook、hook-guard、contract-hooks、sql-sync-hook、integration-evidence、delivery-check）：在 stdin 读取之前插入 `[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0`（py 脚本用 `os.path` 等价判断）；验证：在无标记目录执行脚本并喂入 hook JSON，进程立即退出 0 且无输出
@@ -712,7 +737,7 @@ update MUST 遍历 `managedProjects`，将各项目的脚本与 hooks 同步到�
 ```text
 # Test Report — v0-5-12 全局安装架构优化
 
-> 对应用例：[tests.md](tests.md) TC-01 ~ TC-12。执行日期：2026-09-22。
+> 对应用例：[tests.md](tests.md) TC-01 ~ TC-12；实现入口：[prompt/implementation.md](prompt/implementation.md)。执行日期：2026-09-22。
 
 ## 执行环境
 
@@ -736,12 +761,19 @@ update MUST 遍历 `managedProjects`，将各项目的脚本与 hooks 同步到�
 
 ## 发版迁移验收（TC-12）
 
-- 待回填：0.5.12 安装输出；`~/.claude/settings.json` 无 superflow 残留的检查结果
-- 待回填：`claude --debug` 非 SDD 项目 hook 短路耗时；本仓库门禁正常证据
+- **0.5.12 构建安装**：`npm run build` + `npm install -g .` + 本机 `~/.local/share/superflow-cli-local` 本地路径升级 → `superflow --version` = 0.5.12。
+- **迁移实测**：`superflow uninstall` 移除 105 项 → `~/.claude/settings.json` superflow hooks 残留 **0**（用户自定义 hooks 保留）；cc-switch `settings.json` 深度扫描 superflow 引用 **0**（无需手动清理）；`superflow init --scope global --yes` 重装后 hooks 10 条（9 PreToolUse 含双 matcher + 1 UserPromptSubmit）、双端 `platforms[agent].scope='global'` 记录写入、`managedProjects` 空（global 安装符合设计）。
+- **装版后三方冒烟**（直接执行 hooks 真实加载的全局脚本，与 hook runner 等效）：
+  - 非 SDD 空目录：8 个 hook 一轮 **0.084s**（~10ms/hook），短路路径零输出零 python3；
+  - SDD 项目（git + `.sdd-enforced`）：enforce-hook **exit 2**，主工作树拦截消息完整；
+  - openspec 项目（本仓库）：enforce-hook **exit 0** 正确放行。
+- `claude --debug` 会话内观察留待下一次真实会话（当前安装与 hook 文件与会话验证等效，证据见上）。
 
 ## 结论
 
-- 状态：**代码与单元/集成证据通过；TC-12 待发版装版后回填**（0.5.12 安装后补齐终态证据）。
+- 状态：**PASS**——全部 12 类用例闭环：594 用例全量通过（新增 9 个）；发版 0.5.12（commit `34e2d5a` + 修复 `eef5952`，tag `v0.5.12`）；本机迁移与二次验证完成。
+- 实现期发现并修复 1 个缺陷：global scope init 末尾未持久化 scope 记录（commit `eef5952`，补 TC-10b 回归用例）。
+- 回滚条件：重装 v0.5.11 即恢复原行为（state 新字段被旧版忽略，无 schema 破坏）；若发现任一 SDD 项目门禁未生效且项目内三判据（openspec/、.sdd/、.sdd-enforced）均不存在，立即回滚并重新评估判据集合。
 ```
 
 ### `tests.md`
@@ -796,6 +828,8 @@ update MUST 遍历 `managedProjects`，将各项目的脚本与 hooks 同步到�
 | managed-projects：向后兼容 | D4 缺失按空清单 | 3.1 | TC-07 | state 读写模块 | 禁止修改/删除既有字段；禁止损坏时抛错中断 |
 
 ## 禁止项汇总（实现 prompt 必须继承）
+
+实现入口：[prompt/implementation.md](prompt/implementation.md)（继承本表六条禁止项与 handoff hash）。
 
 1. 禁止迁移全局 hooks 到项目级（用户决策：全局安装一次、所有项目可用）。
 2. 禁止引入 launcher 转发层（已否决：过度设计）。

@@ -1,5 +1,7 @@
 # Tasks
 
+> 实现入口：[prompt/implementation.md](prompt/implementation.md)；任务级 prompt：[prompt/p1-global-hooks-optimization.md](prompt/p1-global-hooks-optimization.md)。
+
 ## 1. hook 前置短路
 
 - [x] 1.1 为 6 个有 `.sdd-enforced` 门控的脚本加前置短路（enforce-hook、hook-guard、contract-hooks、sql-sync-hook、integration-evidence、delivery-check）：在 stdin 读取之前插入 `[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0`（py 脚本用 `os.path` 等价判断）；验证：在无标记目录执行脚本并喂入 hook JSON，进程立即退出 0 且无输出

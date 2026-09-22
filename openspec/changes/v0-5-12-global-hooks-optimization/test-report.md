@@ -1,6 +1,6 @@
 # Test Report — v0-5-12 全局安装架构优化
 
-> 对应用例：[tests.md](tests.md) TC-01 ~ TC-12。执行日期：2026-09-22。
+> 对应用例：[tests.md](tests.md) TC-01 ~ TC-12；实现入口：[prompt/implementation.md](prompt/implementation.md)。执行日期：2026-09-22。
 
 ## 执行环境
 
