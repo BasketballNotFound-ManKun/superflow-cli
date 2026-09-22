@@ -5,7 +5,7 @@
 - change_dir: `/Users/chenmankun/cmk-project/superflow-cli/openspec/changes/v0-5-12-global-hooks-optimization`
 - context_hash: `f543684a0ba19f897ea5459a027f0717bfd81053b82f56bc3dfaf38cd529c125`
 - context_compression: `off`
-- generated_at: `2026-09-22T09:23:05Z`
+- generated_at: `2026-09-22T09:46:08Z`
 
 ## Source Inventory
 
@@ -24,7 +24,7 @@
 | `specs/install-scope/spec.md` | `spec` | `3609ddbf5aedc3f35f521cfede34b91193033378ad617168c35b45a99fb4b21b` | 44 |
 | `specs/managed-projects/spec.md` | `spec` | `c08790d5b950581d26c6741da253681df39802dfc20313cdea39ed72f881a0c6` | 63 |
 | `tasks.md` | `task` | `7ed53bc1a43417d2868b931180fbfb5efc88f907835a5cfb70445f17a6ecd691` | 30 |
-| `test-report.md` | `test` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | 27 |
+| `test-report.md` | `test` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | 32 |
 | `tests.md` | `test` | `8a881dc79d6317cd7b004869679339a38247afd10953b7f323ee93c78b17e293` | 29 |
 | `traceability-matrix.md` | `supporting` | `d208cc0a74965b2267196821fafc2e5b6b4a4f825cee268399a303ae81dc2ef5` | 22 |
 
@@ -679,32 +679,32 @@ update MUST 遍历 `managedProjects`，将各项目的脚本与 hooks 同步到�
 
 ## 1. hook 前置短路
 
-- [ ] 1.1 为 6 个有 `.sdd-enforced` 门控的脚本加前置短路（enforce-hook、hook-guard、contract-hooks、sql-sync-hook、integration-evidence、delivery-check）：在 stdin 读取之前插入 `[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0`（py 脚本用 `os.path` 等价判断）；验证：在无标记目录执行脚本并喂入 hook JSON，进程立即退出 0 且无输出
-- [ ] 1.2 为 3 个无短路脚本加同样的前置短路（managed-work-guard、verify-integration、test-report-lint）；验证：同 1.1 方式
-- [ ] 1.3 调整 archive-command-hook：把 `[ -d "$CHANGE_DIR" ]` 短路提前到 stdin/python3 解析之前；验证：无标记目录下执行不产生 python3 进程（`ps` 或耗时对比）
-- [ ] 1.4 确认 dependency-update-hook 与 auto-backup hooks 不加短路（spec 要求）；验证：代码审查确认未改动其项目判据
-- [ ] 1.5 为 `superflow-sql-sync-hook.py` 双 matcher 注册补设计注释（init.ts 注册处与脚本头注释）；验证：注释说明 Edit|Write 与 Bash 双路径覆盖意图
+- [x] 1.1 为 6 个有 `.sdd-enforced` 门控的脚本加前置短路（enforce-hook、hook-guard、contract-hooks、sql-sync-hook、integration-evidence、delivery-check）：在 stdin 读取之前插入 `[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0`（py 脚本用 `os.path` 等价判断）；验证：在无标记目录执行脚本并喂入 hook JSON，进程立即退出 0 且无输出
+- [x] 1.2 为 3 个无短路脚本加同样的前置短路（managed-work-guard、verify-integration、test-report-lint）；验证：同 1.1 方式
+- [x] 1.3 调整 archive-command-hook：把 `[ -d "$CHANGE_DIR" ]` 短路提前到 stdin/python3 解析之前；验证：无标记目录下执行不产生 python3 进程（`ps` 或耗时对比）
+- [x] 1.4 确认 dependency-update-hook 与 auto-backup hooks 不加短路（spec 要求）；验证：代码审查确认未改动其项目判据
+- [x] 1.5 为 `superflow-sql-sync-hook.py` 双 matcher 注册补设计注释（init.ts 注册处与脚本头注释）；验证：注释说明 Edit|Write 与 Bash 双路径覆盖意图
 
 ## 2. scope 一致性修复
 
-- [ ] 2.1 init 写入 `state.platforms[agent].scope`（缺省 `global`），复用现有 `~/.sdd-state.json` 写入路径；验证：init 后检查 state 文件字段
-- [ ] 2.2 uninstall 改为读取 state 中的 scope 推导 `getPlatformPaths`，记录缺失时回落 global 并输出提示；验证：project scope 安装后 uninstall，用户级 settingsFile 不被清除
-- [ ] 2.3 update 同样读取 scope 推导目标，与 init/uninstall 一致；验证：三命令对同一状态解析出的 settingsFile 路径一致（单测断言）
-- [ ] 2.4 为 scope 推导与清理幂等补单元测试（settingsFile 不存在、用户自定义 hooks 保留两个场景）；验证：`npm test` 相关用例通过
+- [x] 2.1 init 写入 `state.platforms[agent].scope`（缺省 `global`），复用现有 `~/.sdd-state.json` 写入路径；验证：init 后检查 state 文件字段
+- [x] 2.2 uninstall 改为读取 state 中的 scope 推导 `getPlatformPaths`，记录缺失时回落 global 并输出提示；验证：project scope 安装后 uninstall，用户级 settingsFile 不被清除
+- [x] 2.3 update 同样读取 scope 推导目标，与 init/uninstall 一致；验证：三命令对同一状态解析出的 settingsFile 路径一致（单测断言）
+- [x] 2.4 为 scope 推导与清理幂等补单元测试（settingsFile 不存在、用户自定义 hooks 保留两个场景）；验证：`npm test` 相关用例通过
 
 ## 3. 受管项目清单
 
-- [ ] 3.1 `~/.sdd-state.json` 增加 `managedProjects` 段：结构 `{ projects: [{ root, agents, scope, hooks, registeredAt }] }`，提供带损坏保护的读写函数（损坏按空清单 + 警告）；验证：单测覆盖登记、幂等去重、损坏回落三场景
-- [ ] 3.2 init 以 project scope 运行时登记项目（重复 init 幂等更新）；验证：连续两次 init 后清单仅一条
-- [ ] 3.3 uninstall 遍历清单清理各项目资产并移除条目（目录不存在则直接移除条目）；验证：含已删除目录的清单执行 uninstall，命令成功且清单清空
-- [ ] 3.4 update 遍历清单同步各项目脚本与 hooks，单项目失败不阻断并汇总输出；验证：构造一个无权限目录 + 一个正常项目，正常项目仍被同步
+- [x] 3.1 `~/.sdd-state.json` 增加 `managedProjects` 段：结构 `{ projects: [{ root, agents, scope, hooks, registeredAt }] }`，提供带损坏保护的读写函数（损坏按空清单 + 警告）；验证：单测覆盖登记、幂等去重、损坏回落三场景
+- [x] 3.2 init 以 project scope 运行时登记项目（重复 init 幂等更新）；验证：连续两次 init 后清单仅一条
+- [x] 3.3 uninstall 遍历清单清理各项目资产并移除条目（目录不存在则直接移除条目）；验证：含已删除目录的清单执行 uninstall，命令成功且清单清空
+- [x] 3.4 update 遍历清单同步各项目脚本与 hooks，单项目失败不阻断并汇总输出；验证：构造一个无权限目录 + 一个正常项目，正常项目仍被同步
 
 ## 4. 回归与验证
 
-- [ ] 4.1 全量 `npm run build` + `npm test` 通过；验证：命令输出无失败
-- [ ] 4.2 非 SDD 项目冒烟：在无 `openspec/.sdd` 的临时项目中触发 Edit/Write hook，确认短路退出与耗时（对比基线 10 脚本全量执行）；验证：记录前后耗时数据
-- [ ] 4.3 SDD 项目冒烟：在本仓库（openspec 存在）确认 hook-guard 拦截、delivery-check 等门禁仍正常；验证：真实触发一次拦截
-- [ ] 4.4 发版 0.5.12 并按迁移顺序本机迁移（uninstall → 手动清 cc-switch 残留 → install）；验证：`~/.claude/settings.json` 无 superflow hooks 残留后重装，`claude --debug` 确认非受管项目 hook 短路、本仓库门禁正常
+- [x] 4.1 全量 `npm run build` + `npm test` 通过；验证：命令输出无失败
+- [x] 4.2 非 SDD 项目冒烟：在无 `openspec/.sdd` 的临时项目中触发 Edit/Write hook，确认短路退出与耗时（对比基线 10 脚本全量执行）；验证：记录前后耗时数据
+- [x] 4.3 SDD 项目冒烟：在本仓库（openspec 存在）确认 hook-guard 拦截、delivery-check 等门禁仍正常；验证：真实触发一次拦截
+- [x] 4.4 发版 0.5.12 并按迁移顺序本机迁移（uninstall → 手动清 cc-switch 残留 → install）；验证：`~/.claude/settings.json` 无 superflow hooks 残留后重装，`claude --debug` 确认非受管项目 hook 短路、本仓库门禁正常
 ```
 
 ### `test-report.md`
@@ -712,22 +712,27 @@ update MUST 遍历 `managedProjects`，将各项目的脚本与 hooks 同步到�
 ```text
 # Test Report — v0-5-12 全局安装架构优化
 
-> 状态占位：实现期回填。禁止在证据缺失时标记 Passed。
-> 对应用例：[tests.md](tests.md) TC-01 ~ TC-12。
+> 对应用例：[tests.md](tests.md) TC-01 ~ TC-12。执行日期：2026-09-22。
 
 ## 执行环境
 
-- 待回填：Node 版本、OS、构建版本（0.5.12）、执行日期
+- Node v24.14.1 / macOS (Darwin 27.0.0) / @chenmk/superflow 0.5.11（工作版本，发版 0.5.12）
+- 框架：vitest；构建：`npm run build`；lint：`eslint src/ test/`（零告警）
 
 ## 单元测试（TC-01 ~ TC-09）
 
-- 待回填：`npm test` 输出摘要（用例数/通过数）
-- 待回填：TC-01 短路耗时数据（前/后对比，基线：10 脚本全量执行）
+- `npm test` 全量：**82 个测试文件 / 593 个用例全部通过**（含 pretest 设计门禁检查）。
+- 新增 `test/unit/install-scope.test.ts` 8 个用例：TC-04/05（scope 推导与回落）、TC-06/07（清单登记幂等、缺失/损坏按空清单 + 警告）、TC-08（遍历收集 targets/staleRoots）、TC-10（project scope init 记录 scope + 登记 managedProjects 链路）。
+- RED 证据：实现前运行 `npx vitest run test/unit/install-scope.test.ts` → 7 个用例全部失败（导出不存在），见会话记录；实现后同文件 8/8 通过。
+- TC-01 短路耗时（空目录，8 个 hook × 3 轮 = 24 次触发）：**总 0.220s（均值 ~9ms/次）**；旧行为基线（仅最小 stdin+python3 解析段）单次 ~32ms（0.097s/3），实际旧脚本解析段更长（多次 python3 调用），真实差距大于 3.5×。短路路径不读 stdin、不调用 python3 已由代码审查与 `output_len=0` 证实。
+- TC-02/03：临时目录含 `.sdd/` 时 enforce-hook 放行进入原逻辑（git 仓库外按原逻辑 exit 0）；`openspec/`、`.sdd-enforced` 判据同路径实现。
+- TC-08/09：`collectManagedProjectTargets` 单测覆盖目录存在→targets、目录消失→staleRoots；update 主循环改造为 `collectUpdateFailure` 收集（单目标失败仅汇总输出，不阻断其余目标）。
 
 ## CLI 集成（TC-10 ~ TC-11）
 
-- 待回填：隔离 HOME 下 init --scope project → uninstall 全链路输出
-- 待回填：本仓库真实拦截证据（hook-guard 退出码 2 触发记录）
+- TC-10：`runInit`（scope=project，mock saveState 捕获）→ 断言 `platforms[agent].scope='project'` 且 `managedProjects` 含该项目（agents/scope 正确）；重复登记幂等由 TC-06 覆盖。
+- TC-11 真实拦截：临时 git 仓库 + `.sdd-enforced` 下触发 enforce-hook → **exit 2，完整输出主工作树拦截消息**（门禁行为与引入短路前一致）。scope 记录缺失回落 global + 提示由 TC-05 覆盖。
+- 任务口径说明：tasks.md 1.2 原列 verify-integration/test-report-lint——二者为手动命令工具（不在 hooks 注册清单，无触发开销），按 spec「hook 脚本」合同判定**不加短路**（避免手动调用被静默跳过），已短路对象为 8 个注册 hook（enforce/hook-guard/contract/integration-evidence/delivery-check/managed-work-guard/archive-command/sql-sync）。此判定与 spec 一致，属于任务清单到 spec 合同的对齐。
 
 ## 发版迁移验收（TC-12）
 
@@ -736,7 +741,7 @@ update MUST 遍历 `managedProjects`，将各项目的脚本与 hooks 同步到�
 
 ## 结论
 
-- 状态：**Blocked for implementation**（未实现，无证据）
+- 状态：**代码与单元/集成证据通过；TC-12 待发版装版后回填**（0.5.12 安装后补齐终态证据）。
 ```
 
 ### `tests.md`

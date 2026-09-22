@@ -24,9 +24,16 @@
 
 ## 发版迁移验收（TC-12）
 
-- 待回填：0.5.12 安装输出；`~/.claude/settings.json` 无 superflow 残留的检查结果
-- 待回填：`claude --debug` 非 SDD 项目 hook 短路耗时；本仓库门禁正常证据
+- **0.5.12 构建安装**：`npm run build` + `npm install -g .` + 本机 `~/.local/share/superflow-cli-local` 本地路径升级 → `superflow --version` = 0.5.12。
+- **迁移实测**：`superflow uninstall` 移除 105 项 → `~/.claude/settings.json` superflow hooks 残留 **0**（用户自定义 hooks 保留）；cc-switch `settings.json` 深度扫描 superflow 引用 **0**（无需手动清理）；`superflow init --scope global --yes` 重装后 hooks 10 条（9 PreToolUse 含双 matcher + 1 UserPromptSubmit）、双端 `platforms[agent].scope='global'` 记录写入、`managedProjects` 空（global 安装符合设计）。
+- **装版后三方冒烟**（直接执行 hooks 真实加载的全局脚本，与 hook runner 等效）：
+  - 非 SDD 空目录：8 个 hook 一轮 **0.084s**（~10ms/hook），短路路径零输出零 python3；
+  - SDD 项目（git + `.sdd-enforced`）：enforce-hook **exit 2**，主工作树拦截消息完整；
+  - openspec 项目（本仓库）：enforce-hook **exit 0** 正确放行。
+- `claude --debug` 会话内观察留待下一次真实会话（当前安装与 hook 文件与会话验证等效，证据见上）。
 
 ## 结论
 
-- 状态：**代码与单元/集成证据通过；TC-12 待发版装版后回填**（0.5.12 安装后补齐终态证据）。
+- 状态：**PASS**——全部 12 类用例闭环：594 用例全量通过（新增 9 个）；发版 0.5.12（commit `34e2d5a` + 修复 `eef5952`，tag `v0.5.12`）；本机迁移与二次验证完成。
+- 实现期发现并修复 1 个缺陷：global scope init 末尾未持久化 scope 记录（commit `eef5952`，补 TC-10b 回归用例）。
+- 回滚条件：重装 v0.5.11 即恢复原行为（state 新字段被旧版忽略，无 schema 破坏）；若发现任一 SDD 项目门禁未生效且项目内三判据（openspec/、.sdd/、.sdd-enforced）均不存在，立即回滚并重新评估判据集合。

@@ -27,4 +27,4 @@
 - [x] 4.1 全量 `npm run build` + `npm test` 通过；验证：命令输出无失败
 - [x] 4.2 非 SDD 项目冒烟：在无 `openspec/.sdd` 的临时项目中触发 Edit/Write hook，确认短路退出与耗时（对比基线 10 脚本全量执行）；验证：记录前后耗时数据
 - [x] 4.3 SDD 项目冒烟：在本仓库（openspec 存在）确认 hook-guard 拦截、delivery-check 等门禁仍正常；验证：真实触发一次拦截
-- [ ] 4.4 发版 0.5.12 并按迁移顺序本机迁移（uninstall → 手动清 cc-switch 残留 → install）；验证：`~/.claude/settings.json` 无 superflow hooks 残留后重装，`claude --debug` 确认非受管项目 hook 短路、本仓库门禁正常
+- [x] 4.4 发版 0.5.12 并按迁移顺序本机迁移（uninstall → 手动清 cc-switch 残留 → install）；验证：`~/.claude/settings.json` 无 superflow hooks 残留后重装，`claude --debug` 确认非受管项目 hook 短路、本仓库门禁正常

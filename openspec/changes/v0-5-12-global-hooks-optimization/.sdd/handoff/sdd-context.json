@@ -18,7 +18,7 @@
     {"path": "specs/install-scope/spec.md", "sha256": "3609ddbf5aedc3f35f521cfede34b91193033378ad617168c35b45a99fb4b21b", "lines": 44, "role": "spec", "projected": true},
     {"path": "specs/managed-projects/spec.md", "sha256": "c08790d5b950581d26c6741da253681df39802dfc20313cdea39ed72f881a0c6", "lines": 63, "role": "spec", "projected": true},
     {"path": "tasks.md", "sha256": "7ed53bc1a43417d2868b931180fbfb5efc88f907835a5cfb70445f17a6ecd691", "lines": 30, "role": "task", "projected": true},
-    {"path": "test-report.md", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "lines": 27, "role": "test", "projected": true},
+    {"path": "test-report.md", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "lines": 32, "role": "test", "projected": true},
     {"path": "tests.md", "sha256": "8a881dc79d6317cd7b004869679339a38247afd10953b7f323ee93c78b17e293", "lines": 29, "role": "test", "projected": true},
     {"path": "traceability-matrix.md", "sha256": "d208cc0a74965b2267196821fafc2e5b6b4a4f825cee268399a303ae81dc2ef5", "lines": 22, "role": "supporting", "projected": true}
   ]
