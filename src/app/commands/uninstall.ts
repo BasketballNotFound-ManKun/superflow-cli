@@ -18,9 +18,49 @@ import { rulePath } from '../../domains/skill/rules.js';
 import { clearSddHooks } from '../../domains/hook.js';
 import { runCommand } from '../../platform/process.js';
 import { CODEX_SUPERPOWERS_PLUGIN } from '../../domains/deps.js';
-import type { Agent, InstallScope } from '../../types.js';
+import { stateFile } from '../../platform/paths.js';
+import {
+  collectManagedProjectTargets,
+  loadState,
+  readManagedProjects,
+  removeManagedProject,
+  saveState,
+} from '../../domains/state.js';
+import type { Agent, InstallScope, SddState } from '../../types.js';
 
 type UninstallScope = InstallScope | 'auto';
+
+/** 读取某 agent 的安装范围记录；缺失回落 global 并通过 warn 上报（保持三命令目标一致）。 */
+export function scopeForAgent(
+  agent: Agent,
+  state: SddState | null,
+  warn: (message: string) => void = () => {},
+): InstallScope {
+  const recorded = state?.platforms?.[agent]?.scope;
+  if (recorded === 'project' || recorded === 'global') return recorded;
+  warn(`no install scope recorded for ${agent}; falling back to global`);
+  return 'global';
+}
+
+/** 用户未显式指定 --scope 时，按 state 记录的安装范围推导各 agent 目标。 */
+export function resolveUninstallTargetsFromRecord(
+  projectPath: string,
+  agents: Agent[],
+  statePath = stateFile,
+  warn: (message: string) => void = () => {},
+): UninstallTarget[] {
+  let state: SddState | null = null;
+  try {
+    state = loadState(statePath);
+  } catch (err) {
+    warn(`state file unreadable, ignoring recorded scopes: ${(err as Error).message}`);
+  }
+  return agents.map((agent) => ({
+    agent,
+    scope: scopeForAgent(agent, state, warn),
+    projectPath,
+  }));
+}
 
 const LEGACY_SKILLS = [
   'sdd-archive',
@@ -69,9 +109,16 @@ export async function uninstallCommand(options: {
   targetPath?: string;
 } = {}): Promise<void> {
   const agents = resolveAgents(parseAgentSelection(options.agent));
-  const scope = parseUninstallScope(options.scope);
   const projectPath = path.resolve(options.targetPath ?? process.cwd());
-  const targets = resolveUninstallTargets(projectPath, agents, scope);
+  // 未显式指定 --scope 时按 state 记录的安装范围推导目标（与 init 保持一致）
+  const hasExplicitScope = options.scope !== undefined && options.scope !== '';
+  const scope: UninstallScope = hasExplicitScope ? parseUninstallScope(options.scope) : 'auto';
+  const warn = (message: string) => {
+    if (!options.json) console.warn(`  [WARN] ${message}`);
+  };
+  const targets = hasExplicitScope
+    ? resolveUninstallTargets(projectPath, agents, scope)
+    : resolveUninstallTargetsFromRecord(projectPath, agents, stateFile, warn);
   if (options.json && options.dryRun) {
     console.log(JSON.stringify(createUninstallPlan(agents, !!options.withDeps, scope, projectPath, targets), null, 2));
     return;
@@ -103,6 +150,7 @@ export async function runUninstall(options: {
   withDeps: boolean;
   quiet?: boolean;
   targets?: UninstallTarget[];
+  statePath?: string;
 }): Promise<UninstallResult> {
   const removed: string[] = [];
   let hookCommandsRemoved = 0;
@@ -113,30 +161,14 @@ export async function runUninstall(options: {
   );
 
   for (const target of targets) {
-    const platform = getPlatformPaths(target.agent, target.scope, target.projectPath);
-    if (existsSync(platform.settingsFile)) {
-      if (options.dryRun) {
-        removed.push(platform.settingsFile);
-      } else {
-        hookCommandsRemoved += clearSddHooks(platform.settingsFile);
-      }
-    }
-
-    for (const skill of [...ALL_SKILLS, ...LEGACY_SKILLS]) {
-      removeSkillWithBackups(platform.skillsDir, skill, options.dryRun, removed, !!options.quiet);
-    }
-    for (const rule of ALL_RULES) {
-      removePath(rulePath(platform.rulesDir, rule), options.dryRun, removed, !!options.quiet);
-    }
-    for (const script of scriptsForAgent(target.agent)) {
-      removePath(path.join(platform.scriptsDir, script), options.dryRun, removed, !!options.quiet);
-    }
-    if (target.agent === 'codex') {
-      for (const prompt of [...CODEX_PROMPTS, ...LEGACY_CODEX_PROMPTS]) {
-        removePath(path.join(platform.promptsDir, prompt), options.dryRun, removed, !!options.quiet);
-      }
-    }
+    hookCommandsRemoved += cleanUninstallTarget(
+      target,
+      options.dryRun,
+      removed,
+      !!options.quiet
+    );
   }
+  hookCommandsRemoved += cleanManagedProjects(options, targets, removed);
 
   const dependencyCommands = dependencyUninstallCommands(options.agents, options.withDeps);
   if (options.withDeps) {
@@ -160,6 +192,93 @@ export async function runUninstall(options: {
       totalHookCommandsRemoved: hookCommandsRemoved,
     },
   };
+}
+
+/** 清理单个目标的 hooks/skills/rules/scripts/prompts；返回移除的 hook 命令数。 */
+function cleanUninstallTarget(
+  target: UninstallTarget,
+  dryRun: boolean,
+  removed: string[],
+  quiet: boolean
+): number {
+  let hookCommandsRemoved = 0;
+  const platform = getPlatformPaths(target.agent, target.scope, target.projectPath);
+  if (existsSync(platform.settingsFile)) {
+    if (dryRun) {
+      removed.push(platform.settingsFile);
+    } else {
+      hookCommandsRemoved += clearSddHooks(platform.settingsFile);
+    }
+  }
+  for (const skill of [...ALL_SKILLS, ...LEGACY_SKILLS]) {
+    removeSkillWithBackups(platform.skillsDir, skill, dryRun, removed, quiet);
+  }
+  for (const rule of ALL_RULES) {
+    removePath(rulePath(platform.rulesDir, rule), dryRun, removed, quiet);
+  }
+  for (const script of scriptsForAgent(target.agent)) {
+    removePath(path.join(platform.scriptsDir, script), dryRun, removed, quiet);
+  }
+  if (target.agent === 'codex') {
+    for (const prompt of [...CODEX_PROMPTS, ...LEGACY_CODEX_PROMPTS]) {
+      removePath(path.join(platform.promptsDir, prompt), dryRun, removed, quiet);
+    }
+  }
+  return hookCommandsRemoved;
+}
+
+function targetKey(target: UninstallTarget): string {
+  return `${target.agent}|${target.scope}|${target.projectPath}`;
+}
+
+/** 遍历受管项目清单：清理目录仍存在的项目，目录已消失的条目直接移除；损坏/缺失不阻断。 */
+function cleanManagedProjects(
+  options: { dryRun: boolean; quiet?: boolean; statePath?: string },
+  processedTargets: UninstallTarget[],
+  removed: string[]
+): number {
+  const statePath = options.statePath ?? stateFile;
+  let state: SddState | null = null;
+  try {
+    state = loadState(statePath);
+  } catch (err) {
+    if (!options.quiet) {
+      console.warn(`  [WARN] managed project list skipped: ${(err as Error).message}`);
+    }
+    return 0;
+  }
+  if (!state) return 0;
+  const quiet = !!options.quiet;
+  const warn = (message: string) => {
+    if (!quiet) console.warn(`  [WARN] ${message}`);
+  };
+  const projects = readManagedProjects(state, warn);
+  const { targets, staleRoots } = collectManagedProjectTargets(projects);
+  for (const root of staleRoots) {
+    removeManagedProject(state, root);
+    if (!quiet) console.log(`  ✓ pruned stale managed project entry: ${root}`);
+  }
+  const seen = new Set(processedTargets.map(targetKey));
+  let hookCommandsRemoved = 0;
+  let cleaned = 0;
+  for (const project of targets) {
+    for (const agent of project.agents) {
+      const target: UninstallTarget = { agent, scope: 'project', projectPath: project.root };
+      const key = targetKey(target);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      hookCommandsRemoved += cleanUninstallTarget(target, options.dryRun, removed, quiet);
+      cleaned++;
+    }
+  }
+  if (!options.dryRun && (staleRoots.length > 0 || cleaned > 0)) {
+    try {
+      saveState(statePath, state);
+    } catch (err) {
+      warn(`failed to update managed project list: ${(err as Error).message}`);
+    }
+  }
+  return hookCommandsRemoved;
 }
 
 export function createUninstallPlan(

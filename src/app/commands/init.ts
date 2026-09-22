@@ -25,7 +25,7 @@ import { deployScripts } from '../../domains/skill/scripts.js';
 import { deployPrompts } from '../../domains/skill/prompts.js';
 import { deployRules } from '../../domains/skill/rules.js';
 import { registerHook, clearSddHooks } from '../../domains/hook.js';
-import { loadState, saveState, initState } from '../../domains/state.js';
+import { loadState, saveState, initState, upsertManagedProject } from '../../domains/state.js';
 import { scaffoldBusinessContext, checkUnderstandScan, printSoftPrompt } from '../../domains/config/context.js';
 import {
   ALL_RULES,
@@ -440,6 +440,8 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
               const timeout = script === 'superflow-dependency-update-hook.sh' ? 300 : undefined;
               registerHook(platform.settingsFile, script, command, { timeout });
               if (script === 'superflow-sql-sync-hook.py') {
+                // 双 matcher 是有意设计：默认 matcher 覆盖 SQL 文件编辑路径，Bash 覆盖 git 提交路径；
+                // 两条触发面都需要 SQL 同步检查，不要当作重复注册移除。
                 registerHook(platform.settingsFile, script, command, { matcherOverride: 'Bash' });
               }
             } catch (err) {
@@ -571,6 +573,21 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
   }
 
   if (!options.dryRun) {
+    // 统一记录安装范围（不依赖 step 4 是否执行，resume 跳过场景也保持一致）
+    for (const agent of agents) {
+      state.platforms[agent].scope = options.scope;
+    }
+    if (options.scope === 'project') {
+      // 登记/更新受管项目清单（按 root 幂等），供 uninstall/update 遍历
+      upsertManagedProject(state, {
+        root: projectPath,
+        agents,
+        scope: options.scope,
+        hooks: agents.flatMap((agent) => state.platforms[agent].hooks),
+        registeredAt: new Date().toISOString(),
+      });
+      saveState(stateFile, state);
+    }
     log(`\n=== ${t(options.language, 'initComplete')} ===`);
     log(`${t(options.language, 'stateLabel')}: ${stateFile}`);
     printInitSummary(result, log);

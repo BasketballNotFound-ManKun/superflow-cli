@@ -3,6 +3,10 @@
 # Blocks implementation commits that forget to update the matching PXX
 # delivery documents and test evidence.
 
+# Defensive short-circuit: run SDD gates only in SDD projects
+# (openspec/, .sdd/, .sdd-enforced); zero-cost exit elsewhere.
+[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0
+
 set -u
 
 MODE="${1:-}"

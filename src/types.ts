@@ -41,10 +41,26 @@ export interface SddState {
     skills: string[];
   };
   previousVersion: string | null;
+  /** 受管项目清单（向后兼容：缺失/损坏按空清单处理） */
+  managedProjects?: ManagedProjects;
 }
 
 export interface PlatformState {
   skills: string[];
   scripts: string[];
   hooks: string[];
+  /** init 记录的安装范围；uninstall/update 读取以保持目标一致，缺失回落 global */
+  scope?: InstallScope;
+}
+
+export interface ManagedProjectEntry {
+  root: string;
+  agents: Agent[];
+  scope: InstallScope;
+  hooks: string[];
+  registeredAt: string;
+}
+
+export interface ManagedProjects {
+  projects: ManagedProjectEntry[];
 }

@@ -18,7 +18,7 @@ import { deployScripts } from '../../domains/skill/scripts.js';
 import { deploySkill } from '../../domains/skill/deploy.js';
 import { deployPrompts } from '../../domains/skill/prompts.js';
 import { clearSddHooks, registerHook } from '../../domains/hook.js';
-import type { Agent, InstallScope, Language } from '../../types.js';
+import type { Agent, InstallScope, Language, SddState } from '../../types.js';
 import { runCommand } from '../../platform/process.js';
 import {
   CODEX_SUPERPOWERS_PLUGIN,
@@ -27,7 +27,13 @@ import {
 } from '../../domains/deps.js';
 import { ASSETS_DIR, PACKAGE_ROOT } from '../../platform/assets.js';
 import { stateFile } from '../../platform/paths.js';
-import { initState, loadState, saveState } from '../../domains/state.js';
+import {
+  collectManagedProjectTargets,
+  initState,
+  loadState,
+  readManagedProjects,
+  saveState,
+} from '../../domains/state.js';
 import { resolveRuntimeLanguage } from '../../domains/config/cli-help.js';
 import { managedText } from '../../domains/managed-work/i18n.js';
 import { manageMcpIntegration } from './mcp.js';
@@ -70,7 +76,16 @@ export async function updateCommand(options: {
   const language = resolveUpdateLanguage(options.language);
   const agents = resolveAgents(parseAgentSelection(options.agent));
   const projectPath = path.resolve(options.targetPath ?? process.cwd());
-  const targets = resolveUpdateTargets(projectPath, agents, options.scope);
+  const warn = (message: string) => {
+    if (!options.json) console.warn(`  [WARN] ${message}`);
+  };
+  let recordedState: SddState | null = null;
+  try {
+    recordedState = loadState(stateFile);
+  } catch (err) {
+    warn(`state file unreadable, ignoring managed project list: ${(err as Error).message}`);
+  }
+  const targets = resolveUpdateTargetsFromState(projectPath, agents, options.scope, recordedState, warn);
   const planScope = targets[0]?.scope ?? 'global';
   const packageScope = options.scope && options.scope !== 'auto'
     ? parseInstallScope(options.scope)
@@ -132,31 +147,40 @@ export async function updateCommand(options: {
     await collectUpdateFailure(dependencyFailures, () => updateSuperpowers(planAgents));
   }
 
+  const syncFailures: string[] = [];
   for (const target of targets) {
-    const { agent, scope } = target;
-    const platform = getPlatformPaths(agent, scope, target.projectPath);
-    for (const skill of ALL_SKILLS) {
-      const skillsRoot = skillsRootForLanguage(language);
-      await deploySkill(skill, skillsRoot, platform.skillsDir, { agent });
-    }
-    await deployRules(ALL_RULES, path.join(ASSETS_DIR, 'rules'), platform.rulesDir);
-    const scripts = scriptsForAgent(agent);
-    await deployScripts(scripts, path.join(ASSETS_DIR, 'scripts'), platform.scriptsDir, { agent });
-    if (agent === 'codex') {
-      await deployPrompts(CODEX_PROMPTS, path.join(ASSETS_DIR, 'prompts'), platform.promptsDir);
-    }
-    const hooks = hookScriptsForAgent(agent);
-    if (!options.noHooks && hooks.length > 0) {
-      clearSddHooks(platform.settingsFile);
-      for (const hook of hooks) {
-        const command = path.join(platform.scriptsDir, hook);
-        const timeout = hook === 'superflow-dependency-update-hook.sh' ? 300 : undefined;
-        registerHook(platform.settingsFile, hook, command, { timeout });
-        if (hook === 'superflow-sql-sync-hook.py') {
-          registerHook(platform.settingsFile, hook, command, { matcherOverride: 'Bash' });
+    await collectUpdateFailure(syncFailures, async () => {
+      const { agent, scope } = target;
+      const platform = getPlatformPaths(agent, scope, target.projectPath);
+      for (const skill of ALL_SKILLS) {
+        const skillsRoot = skillsRootForLanguage(language);
+        await deploySkill(skill, skillsRoot, platform.skillsDir, { agent });
+      }
+      await deployRules(ALL_RULES, path.join(ASSETS_DIR, 'rules'), platform.rulesDir);
+      const scripts = scriptsForAgent(agent);
+      await deployScripts(scripts, path.join(ASSETS_DIR, 'scripts'), platform.scriptsDir, { agent });
+      if (agent === 'codex') {
+        await deployPrompts(CODEX_PROMPTS, path.join(ASSETS_DIR, 'prompts'), platform.promptsDir);
+      }
+      const hooks = hookScriptsForAgent(agent);
+      if (!options.noHooks && hooks.length > 0) {
+        clearSddHooks(platform.settingsFile);
+        for (const hook of hooks) {
+          const command = path.join(platform.scriptsDir, hook);
+          const timeout = hook === 'superflow-dependency-update-hook.sh' ? 300 : undefined;
+          registerHook(platform.settingsFile, hook, command, { timeout });
+          if (hook === 'superflow-sql-sync-hook.py') {
+            // 双 matcher 是有意设计：Edit|Write 覆盖 SQL 文件编辑路径，Bash 覆盖 git 提交路径，
+            // 两条触发面都需要 SQL 同步检查；不要当作重复注册移除。
+            registerHook(platform.settingsFile, hook, command, { matcherOverride: 'Bash' });
+          }
         }
       }
-    }
+    });
+  }
+  if (syncFailures.length > 0) {
+    // 遍历同步失败不阻断其他项目，仅汇总输出
+    warn(`some targets failed to sync: ${syncFailures.join('; ')}`);
   }
 
   manageMcpIntegration(
@@ -207,6 +231,34 @@ export function resolveUpdateTargets(
 
   const scope = parseInstallScope(scopeValue);
   return agents.map((agent) => ({ agent, scope, projectPath }));
+}
+
+/** 在既有目标解析之上合并受管项目清单（目录存在的项目），供 update 遍历同步；stale 项目跳过并提示。 */
+export function resolveUpdateTargetsFromState(
+  projectPath: string,
+  agents: Agent[],
+  scopeValue?: string,
+  state: SddState | null = null,
+  warn: (message: string) => void = () => {},
+): UpdateTarget[] {
+  const base = resolveUpdateTargets(projectPath, agents, scopeValue);
+  const { targets: managed, staleRoots } = collectManagedProjectTargets(
+    readManagedProjects(state, warn)
+  );
+  for (const root of staleRoots) {
+    warn(`managed project directory missing, skipping sync: ${root}`);
+  }
+  const seen = new Set(base.map((t) => `${t.agent}|${t.scope}|${t.projectPath}`));
+  const merged = [...base];
+  for (const project of managed) {
+    for (const agent of project.agents) {
+      const key = `${agent}|project|${project.root}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push({ agent, scope: 'project', projectPath: project.root });
+    }
+  }
+  return merged;
 }
 
 export function createUpdatePlan(

@@ -2,6 +2,10 @@
 # SDD phase-aware hook guard.
 # Blocks writes that conflict with .sdd/state.yaml when .sdd-enforced is active.
 
+# Defensive short-circuit: run SDD gates only in SDD projects
+# (openspec/, .sdd/, .sdd-enforced); zero-cost exit elsewhere.
+[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0
+
 set -u
 
 INPUT=""

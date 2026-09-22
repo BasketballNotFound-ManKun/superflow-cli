@@ -3,6 +3,10 @@
 # When .sdd-enforced is active, block git commit for runtime code changes unless
 # staged test-report evidence passes superflow-verify-integration.sh.
 
+# Defensive short-circuit: run SDD gates only in SDD projects
+# (openspec/, .sdd/, .sdd-enforced); zero-cost exit elsewhere.
+[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0
+
 INPUT=$(cat)
 
 COMMAND=$(echo "$INPUT" | python3 -c "

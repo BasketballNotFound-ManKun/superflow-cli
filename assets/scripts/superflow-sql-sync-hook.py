@@ -5,6 +5,11 @@ SDD SQL sync hook.
 Warns when database-backed Java/XML changes are made without a version-level
 summary SQL change. Blocks forbidden migration SQL style before commit.
 
+Hook registration note: this hook is intentionally registered twice
+(default matcher + Bash matcher override). The default matcher covers SQL
+file edits; the Bash matcher covers git commit paths. Both trigger surfaces
+need the SQL sync check -- do not "fix" this as a duplicate registration.
+
 Forbidden (B1-B8, blocks commit):
 - B1 ALTER TABLE ADD COLUMN IF NOT EXISTS
 - B2 CREATE [UNIQUE] INDEX IF NOT EXISTS
@@ -62,6 +67,11 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+# Defensive short-circuit: run SDD gates only in SDD projects
+# (openspec/, .sdd/, .sdd-enforced); zero-cost exit elsewhere.
+if not (os.path.isdir('openspec') or os.path.isdir('.sdd') or os.path.isfile('.sdd-enforced')):
+    raise SystemExit(0)
 
 
 DB_CODE_FILE = re.compile(r"\.(java|xml)$", re.I)

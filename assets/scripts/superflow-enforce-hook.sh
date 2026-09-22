@@ -11,6 +11,10 @@
 #
 # 退出码：0=允许  2=拦截
 
+# Defensive short-circuit: run SDD gates only in SDD projects
+# (openspec/, .sdd/, .sdd-enforced); zero-cost exit elsewhere.
+[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0
+
 INPUT=$(cat)
 
 FILE_PATH=$(echo "$INPUT" | python3 -c "

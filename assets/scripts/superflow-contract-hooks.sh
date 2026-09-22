@@ -9,6 +9,10 @@
 # 环境变量：
 #   SDD_CONTRACT_HOOK_DEBUG=1  开启调试输出
 
+# Defensive short-circuit: run SDD gates only in SDD projects
+# (openspec/, .sdd/, .sdd-enforced); zero-cost exit elsewhere.
+[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0
+
 INPUT=$(cat)
 
 # 提取 file_path

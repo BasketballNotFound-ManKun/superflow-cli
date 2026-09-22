@@ -1,6 +1,10 @@
 #!/bin/bash
 # Managed-work role guard. Active only inside a Superflow managed Agent process.
 
+# Defensive short-circuit: run SDD gates only in SDD projects
+# (openspec/, .sdd/, .sdd-enforced); zero-cost exit elsewhere.
+[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0
+
 set -u
 
 ROLE="${SUPERFLOW_MANAGED_ROLE:-}"

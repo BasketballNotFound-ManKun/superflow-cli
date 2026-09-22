@@ -1,6 +1,10 @@
 #!/bin/bash
 # Blocks direct OpenSpec/Superflow archive commands that bypass lifecycle gates.
 
+# Defensive short-circuit: run SDD gates only in SDD projects
+# (openspec/, .sdd/, .sdd-enforced); zero-cost exit elsewhere.
+[ -d openspec ] || [ -d .sdd ] || [ -f .sdd-enforced ] || exit 0
+
 set -u
 
 INPUT=$(cat)
