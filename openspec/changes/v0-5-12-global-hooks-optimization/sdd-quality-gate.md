@@ -13,7 +13,7 @@
 - [x] [review-checklist.md](review-checklist.md)
 - [x] [source-code-audit.md](source-code-audit.md)
 - [x] [test-report.md](test-report.md)（占位，实现期回填）
-- [x] [prompt/implementation.md](prompt/implementation.md)
+- [x] [prompt/implementation.md](prompt/implementation.md) 与 [prompt/p1-global-hooks-optimization.md](prompt/p1-global-hooks-optimization.md)
 
 ## 门禁记录
 

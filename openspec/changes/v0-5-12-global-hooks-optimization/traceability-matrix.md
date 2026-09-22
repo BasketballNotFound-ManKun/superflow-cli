@@ -14,7 +14,7 @@
 
 ## 禁止项汇总（实现 prompt 必须继承）
 
-实现入口：[prompt/implementation.md](prompt/implementation.md)（继承本表六条禁止项与 handoff hash）。
+实现入口：[prompt/implementation.md](prompt/implementation.md) 与 [prompt/p1-global-hooks-optimization.md](prompt/p1-global-hooks-optimization.md)（继承本表六条禁止项与 handoff hash）。
 
 1. 禁止迁移全局 hooks 到项目级（用户决策：全局安装一次、所有项目可用）。
 2. 禁止引入 launcher 转发层（已否决：过度设计）。

@@ -1,6 +1,6 @@
 # Test Report — v0-5-12 全局安装架构优化
 
-> 对应用例：[tests.md](tests.md) TC-01 ~ TC-12；实现入口：[prompt/implementation.md](prompt/implementation.md)。执行日期：2026-09-22。
+> 对应用例：[tests.md](tests.md) TC-01 ~ TC-12；实现入口：[prompt/implementation.md](prompt/implementation.md) / [prompt/p1-global-hooks-optimization.md](prompt/p1-global-hooks-optimization.md)。执行日期：2026-09-22。
 
 ## 执行环境
 
@@ -32,8 +32,33 @@
   - openspec 项目（本仓库）：enforce-hook **exit 0** 正确放行。
 - `claude --debug` 会话内观察留待下一次真实会话（当前安装与 hook 文件与会话验证等效，证据见上）。
 
+## 真实命令与业务入口证据（L4）
+
+- 业务入口（真实用户路径）：Claude Code / Codex hook runner 在工具调用时触发 `~/.claude/scripts/superflow-*`（hooks 注册即入口）；CLI 入口 `superflow init/uninstall/update` 均以真实命令执行。
+- 实际执行的验证命令（非模拟，退出码与输出见上文）：
+  - `bash ~/.claude/scripts/superflow-enforce-hook.sh`（stdin 喂 hook JSON）→ 空目录 exit 0、SDD 项目 exit 2、openspec 项目 exit 0
+  - `python3 ~/.claude/scripts/superflow-sql-sync-hook.py` → 空目录 exit 0
+  - `superflow uninstall` / `superflow init --scope global --yes` / `superflow --version` → 迁移全链路
+  - `python3 -c` 读取 `~/.claude/settings.json` / `~/.sdd-state.json` 断言残留与字段
+- 接口调用类验证（HTTP API/Base URL）：不适用——本变更为本地 CLI 与 hook 脚本，无任何网络接口；接口自动化证据（curl/Postman/Newman/pytest 类）因此以本节真实 shell 命令替代并声明。
+- RED/GREEN 证据：RED 见"单元测试"节（实现前 7 用例失败）；GREEN 见同节（实现后同路径 9/9 通过）。
+- 门禁脚本证据：`superflow-test-report-lint` 由 verify guard 对本报告执行（其 DB/接口类检查按上方不适用声明处理）；`superflow-delivery-check` 适用路径为提交前 staged 检查，本变更以 hook 脚本真实执行证据 + 全量 npm test 替代并声明。
+
+## 数据表反向影响面（不适用声明）
+
+| 表/字段 | 写入方 | 读取/过滤方 | 跨仓/外部消费方 | 真实入口 | 反向状态场景 | 验证证据 |
+|---|---|---|---|---|---|---|
+| 无数据库表（本变更不涉及 DB） | — | — | — | — | — | source-code-audit.md DB 核查跳过声明 |
+
+本地 JSON 字段（非数据库）：`platforms[agent].scope`、`managedProjects[]` 的反向影响见技术详设矩阵；恢复场景（缺失/损坏回落）已由 TC-05/07/08 覆盖。
+
+## 测试环境
+
+- 环境：本机 macOS（Darwin 27.0.0）、Node v24.14.1、全局安装 `@chenmk/superflow@0.5.12`；Base URL：不适用（无网络 API）。
+
 ## 结论
 
-- 状态：**PASS**——全部 12 类用例闭环：594 用例全量通过（新增 9 个）；发版 0.5.12（commit `34e2d5a` + 修复 `eef5952`，tag `v0.5.12`）；本机迁移与二次验证完成。
+- 验证结果: PASS —— 全部 12 类用例闭环：594 用例全量通过（新增 9 个）；发版 0.5.12（commit `34e2d5a` + 修复 `eef5952`，tag `v0.5.12`）；本机迁移与二次验证完成。
+- 归档就绪: READY —— 证据齐备，等待用户显式确认归档。
 - 实现期发现并修复 1 个缺陷：global scope init 末尾未持久化 scope 记录（commit `eef5952`，补 TC-10b 回归用例）。
 - 回滚条件：重装 v0.5.11 即恢复原行为（state 新字段被旧版忽略，无 schema 破坏）；若发现任一 SDD 项目门禁未生效且项目内三判据（openspec/、.sdd/、.sdd-enforced）均不存在，立即回滚并重新评估判据集合。

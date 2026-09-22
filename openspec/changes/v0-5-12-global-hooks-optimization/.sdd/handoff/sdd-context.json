@@ -1,6 +1,6 @@
 {
   "changeDir": "/Users/chenmankun/cmk-project/superflow-cli/openspec/changes/v0-5-12-global-hooks-optimization",
-  "contextHash": "22800f2e918acb6ad9ce7883ca5d92a87616b703850c0033da6279742bdd71c7",
+  "contextHash": "db74543e5444b5f7b0c0cf909b9914f2cb39f99a742ef9c95475341eb582c4a7",
   "canonical": "openspec-sdd",
   "contextCompression": "off",
   "role": "superpowers-execution-context",
@@ -9,18 +9,18 @@
     {"path": "api.md", "sha256": "37864e205aea8fa97daba0cb86ea1928e49efb26e022e4feec67e93c37aacd97", "lines": 69, "role": "api", "projected": true},
     {"path": "design.md", "sha256": "99bad163144859ca6233d5749781ed8e1f5ed5b246c820007996f569e208c362", "lines": 87, "role": "design", "projected": true},
     {"path": "prompt/implementation.md", "sha256": "e862a1294c1bf8bfed5090d0b7bc5cd359ce6694ba35c726ce3c3ae1d98be69c", "lines": 46, "role": "supporting", "projected": true},
-    {"path": "prompt/p1-global-hooks-optimization.md", "sha256": "7b225c34ec26e78f91105b4a4b0049057ded85b810716e4a21aae6b42eda661b", "lines": 17, "role": "supporting", "projected": true},
+    {"path": "prompt/p1-global-hooks-optimization.md", "sha256": "a3f4542178d006f02d85731bcbb0ce99f0df59809acf91e99de72033005f9d41", "lines": 23, "role": "supporting", "projected": true},
     {"path": "proposal.md", "sha256": "d0d55aa9e0768bbdc25d326c57798c3195eb28432d52ee95ebc3e080a6742c33", "lines": 33, "role": "supporting", "projected": true},
     {"path": "requirement-review.md", "sha256": "3400f019f4884ac404a8902cb5e2ad4e8e874329137f7642cbe4c29b4cd51451", "lines": 36, "role": "supporting", "projected": true},
     {"path": "review-checklist.md", "sha256": "71a24dddcba18036f474ef2fd69f3e281a2b461e978a3b9de592142a5e4fefd9", "lines": 36, "role": "supporting", "projected": true},
-    {"path": "sdd-quality-gate.md", "sha256": "a9e0193e885448c1e708b103976872c3919725cda6d0ce7e9d861be6e75788ca", "lines": 42, "role": "supporting", "projected": true},
+    {"path": "sdd-quality-gate.md", "sha256": "71e559d2ce90369f50ac65dccf78ef503d39a4e89ff33d456b1dae151652d44d", "lines": 42, "role": "supporting", "projected": true},
     {"path": "source-code-audit.md", "sha256": "b25c308c4101833afb48c82020485e5f4e9c776ec0beae20fe85e60dcb1994f2", "lines": 50, "role": "supporting", "projected": true},
     {"path": "specs/hook-short-circuit/spec.md", "sha256": "828595e393ea8e43d4a7f0dbbc893fa06dca67a953c89aa7015dfc143dbc80d8", "lines": 64, "role": "spec", "projected": true},
     {"path": "specs/install-scope/spec.md", "sha256": "3609ddbf5aedc3f35f521cfede34b91193033378ad617168c35b45a99fb4b21b", "lines": 44, "role": "spec", "projected": true},
     {"path": "specs/managed-projects/spec.md", "sha256": "c08790d5b950581d26c6741da253681df39802dfc20313cdea39ed72f881a0c6", "lines": 63, "role": "spec", "projected": true},
     {"path": "tasks.md", "sha256": "6f679ca0a7ae6c5ff01ff6690a3f2914df40ba4efe6296310bcab97761d44137", "lines": 32, "role": "task", "projected": true},
-    {"path": "test-report.md", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "lines": 39, "role": "test", "projected": true},
+    {"path": "test-report.md", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "lines": 64, "role": "test", "projected": true},
     {"path": "tests.md", "sha256": "8a881dc79d6317cd7b004869679339a38247afd10953b7f323ee93c78b17e293", "lines": 29, "role": "test", "projected": true},
-    {"path": "traceability-matrix.md", "sha256": "b49d6b65b277c88ff8d653f65ca50fce33c6772c5b4613e6ea78d67ed5aa1c71", "lines": 24, "role": "supporting", "projected": true}
+    {"path": "traceability-matrix.md", "sha256": "10bea5201b24ad24d2d52e404844506ecbe161f940d467a38d71b1ae00da52fa", "lines": 24, "role": "supporting", "projected": true}
   ]
 }
