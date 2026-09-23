@@ -20,6 +20,23 @@ canonical_sources:
 
 # Superpowers Technical Design: <change title>
 
+## Design-It-Twice：接口与 seam 选择
+
+仅在新增或改变模块接口时填写；纯实现内重构可写“无接口变化”。
+
+| 项目 | 方案 A | 方案 B |
+|---|---|---|
+| 接口与调用方约束 |  |  |
+| seam 与 adapter owner |  |  |
+| 真实测试面 |  |  |
+| 复用证据（文件/符号） |  |  |
+| 爆炸半径与后果 |  |  |
+
+- 选择：A / B
+- 选择理由：
+- 被拒绝方案的具体代价：
+- 两种方案不能只是改名或换参数顺序。
+
 ## Boundary
 
 - This document owns source-level HOW only.

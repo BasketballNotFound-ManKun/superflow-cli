@@ -58,7 +58,12 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
 5. Write:
    `docs/superpowers/specs/YYYY-MM-DD-<change-id>-technical-design.md`
    using `../superflow-pipeline/references/superpower-technical-design-template.md`.
-6. Complete `Minimal Design Review` before expanding source-level HOW. For
+6. For each new or changed module interface, add a `Design-It-Twice` card to
+   the technical design: two materially different interfaces, seam and adapter
+   ownership, the real test surface, reuse evidence, caller consequences, and
+   an explicit choice. Renaming the same interface does not count as two
+   options; revisit it. This card is advisory and does not add a state gate.
+7. Complete `Minimal Design Review` before expanding source-level HOW. For
    every new table, field, API, service/component, abstraction, cache,
    async/MQ/event flow, scheduled job, or compatibility layer, prove existing
    reuse options, necessity, and why the simplest direct implementation is
