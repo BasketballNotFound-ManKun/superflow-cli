@@ -1,3 +1,7 @@
+---
+archived-with: 2026-09-23-v0-5-12-global-hooks-optimization
+status: final
+---
 # Design
 
 ## Context

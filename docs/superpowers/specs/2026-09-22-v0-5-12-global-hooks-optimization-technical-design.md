@@ -1,3 +1,7 @@
+---
+archived-with: 2026-09-23-v0-5-12-global-hooks-optimization
+status: final
+---
 # 技术详设 — v0-5-12 全局安装架构优化（Superpowers Technical Design）
 
 > WHAT/API/tests 合同见 OpenSpec change `openspec/changes/v0-5-12-global-hooks-optimization/`
