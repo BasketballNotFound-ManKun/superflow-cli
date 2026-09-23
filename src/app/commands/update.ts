@@ -172,7 +172,7 @@ export async function updateCommand(options: {
           if (hook === 'superflow-sql-sync-hook.py') {
             // 双 matcher 是有意设计：Edit|Write 覆盖 SQL 文件编辑路径，Bash 覆盖 git 提交路径，
             // 两条触发面都需要 SQL 同步检查；不要当作重复注册移除。
-            registerHook(platform.settingsFile, hook, command, { matcherOverride: 'Bash' });
+            registerHook(platform.settingsFile, hook, command, { matcherOverride: 'Bash|Shell|exec_command' });
           }
         }
       }

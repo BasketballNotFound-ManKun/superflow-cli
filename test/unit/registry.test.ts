@@ -25,8 +25,8 @@ describe("core/registry", () => {
     fs.rmSync(TMP, { recursive: true, force: true });
   });
 
-  it("HOOK_MAP 含 11 个 hook 脚本", () => {
-    expect(Object.keys(HOOK_MAP).length).toBe(11);
+  it("HOOK_MAP 含 13 个 hook 脚本", () => {
+    expect(Object.keys(HOOK_MAP).length).toBe(13);
     expect(HOOK_MAP["superflow-enforce-hook.sh"]).toBeDefined();
     expect(HOOK_MAP["superflow-hook-guard.sh"]).toBeDefined();
     expect(HOOK_MAP["superflow-dependency-update-hook.sh"].event).toBe(
@@ -38,7 +38,7 @@ describe("core/registry", () => {
     // sql-sync-hook.py 的 Bash 注册通过 registerHook 第二次调用（matcherOverride）实现
     // 不在 HOOK_MAP 默认 matcher 里
     expect(HOOK_MAP["superflow-sql-sync-hook.py"].matcher).toBe(
-      "Edit|Write|NotebookEdit",
+      "Edit|Write|MultiEdit|apply_patch|NotebookEdit",
     );
   });
 
@@ -67,14 +67,14 @@ describe("core/registry", () => {
     const cmd = "/home/test/.claude/scripts/superflow-sql-sync-hook.py";
     registerHook(SETTINGS, "superflow-sql-sync-hook.py", cmd);
     registerHook(SETTINGS, "superflow-sql-sync-hook.py", cmd, {
-      matcherOverride: "Bash",
+      matcherOverride: "Bash|Shell|exec_command",
     });
     const result = JSON.parse(fs.readFileSync(SETTINGS, "utf-8"));
     const entries = result.hooks.PreToolUse;
     expect(entries.length).toBe(2);
     expect(entries.map((e: any) => e.matcher).sort()).toEqual([
-      "Bash",
-      "Edit|Write|NotebookEdit",
+      "Bash|Shell|exec_command",
+      "Edit|Write|MultiEdit|apply_patch|NotebookEdit",
     ]);
   });
 
@@ -240,7 +240,7 @@ describe("core/registry", () => {
         const command = path.join("/home/test", ".claude", "scripts", script);
         registerHook(SETTINGS, script, command);
         if (script === "superflow-sql-sync-hook.py") {
-          registerHook(SETTINGS, script, command, { matcherOverride: "Bash" });
+          registerHook(SETTINGS, script, command, { matcherOverride: "Bash|Shell|exec_command" });
         }
       }
     };
@@ -264,10 +264,10 @@ describe("core/registry", () => {
 
     // 第一次 init
     runInitLike();
-    expect(countSuperflowCommands(SETTINGS)).toBe(11); // 10 hook 脚本 + sql-sync 双注册
+    expect(countSuperflowCommands(SETTINGS)).toBe(13); // 12 hook 脚本 + sql-sync 双注册
 
     // 第二次 init（幂等性：数量应不变）
     runInitLike();
-    expect(countSuperflowCommands(SETTINGS)).toBe(11);
+    expect(countSuperflowCommands(SETTINGS)).toBe(13);
   });
 });

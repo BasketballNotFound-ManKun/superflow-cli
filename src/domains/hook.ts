@@ -29,8 +29,13 @@ export const HOOK_MAP: Record<string, HookMapEntry> = {
   "superflow-dependency-update-hook.sh": { event: "UserPromptSubmit" },
   "superflow-sql-sync-hook.py": {
     event: "PreToolUse",
-    matcher: "Edit|Write|NotebookEdit",
+    matcher: "Edit|Write|MultiEdit|apply_patch|NotebookEdit",
   },
+  "superflow-java-build-hook.py": {
+    event: "PostToolUse",
+    matcher: "Edit|Write|MultiEdit|apply_patch",
+  },
+  "superflow-java-stop-hook.sh": { event: "Stop" },
   "superflow-delivery-check.sh": { event: "PreToolUse", matcher: "Bash" },
   "superflow-integration-evidence-hook.sh": {
     event: "PreToolUse",

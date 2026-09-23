@@ -46,6 +46,11 @@ real verified delivery. SuperBridge Flow makes that gap explicit:
 The CLI installs skills, hooks or command aliases, rules, scripts, handoff
 state, and dependency guards for Claude Code and Codex.
 
+In OpenSpec/SDD Java repositories, hooks also block unsafe MyBatis `${}`
+interpolation, Git hook bypasses, and staged secrets. Java/build edits are
+accumulated and compiled once at Stop for affected Maven/Gradle modules. Missing
+build tools or compilation failures are reported as failed verification.
+
 ## Highlights
 
 0.5.10 strengthens document delivery: requirement × real-entry coverage (including

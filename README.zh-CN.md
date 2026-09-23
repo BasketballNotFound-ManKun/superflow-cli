@@ -34,6 +34,7 @@ Superpowers 编排成一个有状态的研发流程：前者负责需求、合�
 后者负责源码级设计、TDD 顺序、实现分工、review 和真实验证。
 
 CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 npm 包，
+启用 OpenSpec/SDD 的 Java 仓库还会在写码时拦截危险 Mapper `${}` 插值、Git Hook 绕过和暂存密钥；Java/构建文件编辑只记录路径，在 Stop 时按受影响 Maven/Gradle 模块批量编译一次。缺少构建工具或编译失败会明确报告，不能当作验证通过。
 自动部署到：
 
 - Claude Code：`~/.claude/skills/`、`~/.claude/scripts/`，并注册 `~/.claude/settings.json` hook

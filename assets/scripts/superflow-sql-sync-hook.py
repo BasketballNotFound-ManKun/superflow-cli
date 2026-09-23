@@ -64,6 +64,7 @@ per finding for the developer to apply):
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -75,6 +76,15 @@ if not (os.path.isdir('openspec') or os.path.isdir('.sdd') or os.path.isfile('.s
 
 
 DB_CODE_FILE = re.compile(r"\.(java|xml)$", re.I)
+MYBATIS_SAFE_EXPRESSIONS = frozenset({
+    "ew.sqlSegment", "ew.customSqlSegment", "ew.sqlSet", "ew.sqlComment",
+})
+MYBATIS_INTERPOLATION = re.compile(r"\$\{([^}]+)\}")
+SECRET_PATTERNS = (
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    re.compile(r"\b(?:api[_-]?key|api[_-]?secret)\s*[:=]\s*['\"][^'\"]{8,}", re.I),
+    re.compile(r"\b[a-z_][a-z0-9_]*_(?:secret|token)\s*[:=]\s*['\"][^'\"]{16,}['\"]", re.I),
+)
 SQL_SUMMARY_FILE = re.compile(r"(^|/)sql/.*\.sql$", re.I)
 NO_SQL_ACK_FILE = re.compile(
     r"(^|/)(openspec/.*\.(md|yaml|yml)|ReleaseNotes\.md)$",
@@ -514,9 +524,104 @@ def warn(message, block=False):
     print(f"[SDD SQL 收口{prefix}] {message}", file=sys.stderr)
 
 
+def mapper_interpolations(file_path, content):
+    normalized = file_path.replace("\\", "/")
+    if not normalized.lower().endswith(".xml"):
+        return []
+    mapper_path = re.search(r"(?:^|/)(?:mapper|dao)/", normalized, re.I)
+    mapper_name = re.search(r"(?:Mapper|Dao)\.xml$", normalized)
+    mapper_body = re.search(r"<mapper\b|<!DOCTYPE\s+mapper", content, re.I)
+    if not (mapper_path or mapper_name or mapper_body):
+        return []
+    return [match.group(1).strip() for match in MYBATIS_INTERPOLATION.finditer(content)
+            if match.group(1).strip() not in MYBATIS_SAFE_EXPRESSIONS]
+
+
+def check_git_bypass(command):
+    for segment in re.split(r"\|\||&&|[;|\n]", command):
+        try:
+            tokens = shlex.split(segment)
+        except ValueError:
+            if "git" in segment and ("--no-verify" in segment or "core.hooksPath" in segment):
+                return "Git 命令无法解析且包含 Hook 绕过参数"
+            continue
+        git_at = next((i for i, token in enumerate(tokens)
+                       if token == "git" or token.endswith("/git")), -1)
+        if git_at < 0:
+            continue
+        args = tokens[git_at + 1:]
+        config_override = any(
+            arg.startswith("core.hooksPath=") for arg in args
+        ) or any(token.startswith("GIT_CONFIG_") and "core.hooksPath" in token
+                 for token in tokens[:git_at])
+        if config_override or "--no-verify" in args:
+            return "禁止使用 --no-verify 或 core.hooksPath 绕过 Git Hook"
+        index = 0
+        while index < len(args) and args[index].startswith("-"):
+            index += 2 if args[index] in ("-c", "-C") else 1
+        if index < len(args) and args[index] == "commit":
+            flags = []
+            skip_value = False
+            for arg in args[index + 1:]:
+                if skip_value:
+                    skip_value = False
+                    continue
+                if arg in ("-m", "--message", "-F", "--file"):
+                    skip_value = True
+                    continue
+                flags.append(arg)
+            if any(re.fullmatch(r"-[a-zA-Z]*n[a-zA-Z]*", arg)
+                   for arg in flags):
+                return "禁止使用 git commit -n 绕过 Git Hook"
+    return None
+
+
+def is_git_commit(command):
+    for segment in re.split(r"\|\||&&|[;|\n]", command):
+        try:
+            tokens = shlex.split(segment)
+        except ValueError:
+            continue
+        git_at = next((i for i, token in enumerate(tokens)
+                       if token == "git" or token.endswith("/git")), -1)
+        if git_at < 0:
+            continue
+        args = tokens[git_at + 1:]
+        index = 0
+        while index < len(args) and args[index].startswith("-"):
+            index += 2 if args[index] in ("-c", "-C") else 1
+        if index < len(args) and args[index] == "commit":
+            return True
+    return False
+
+
+def check_staged_secrets(root):
+    result = run(["git", "diff", "--cached", "--unified=0", "--no-ext-diff"], cwd=root)
+    if result.returncode != 0:
+        return []
+    findings = []
+    current_path = ""
+    for line in result.stdout.splitlines():
+        if line.startswith("+++ b/"):
+            current_path = line[6:]
+        elif line.startswith("+") and not line.startswith("+++"):
+            if any(pattern.search(line[1:]) for pattern in SECRET_PATTERNS):
+                findings.append(current_path)
+    return sorted(set(findings))
+
+
 def handle_commit(command, root):
-    if not re.search(r"\bgit\s+commit\b", command):
+    bypass = check_git_bypass(command)
+    if bypass:
+        warn(bypass, block=True)
+        return 2
+    if not is_git_commit(command):
         return 0
+
+    secrets = check_staged_secrets(root)
+    if secrets:
+        warn("暂存差异包含疑似硬编码密钥：" + ", ".join(secrets), block=True)
+        return 2
 
     files = staged_files(root)
     if not files:
@@ -595,6 +700,11 @@ def handle_commit(command, root):
 def handle_edit(file_path, edit_content):
     if not file_path:
         return 0
+    unsafe = mapper_interpolations(file_path, edit_content)
+    if unsafe:
+        warn("Mapper XML 使用危险 ${} 插值：" + ", ".join(unsafe[:3])
+             + "；请使用 #{}，动态标识符须在 Java 侧白名单校验。", block=True)
+        return 2
     if SQL_SUMMARY_FILE.search(file_path):
         sql_style_issues = lint_sql_style(file_path, edit_content)
         if sql_style_issues:
@@ -944,7 +1054,9 @@ def main():
 
     start = Path.cwd()
     if file_path:
-        start = Path(file_path).expanduser().resolve().parent
+        candidate = Path(file_path).expanduser().resolve().parent
+        if candidate.exists():
+            start = candidate
     root = repo_root(start)
     if root is None:
         return 0
@@ -952,7 +1064,25 @@ def main():
     if command:
         return handle_commit(command, root)
 
-    edit_content = tool_input.get("new_string") or tool_input.get("content") or ""
+    patch = tool_input.get("patch") or ""
+    if patch:
+        sections = re.split(r"(?=^\*\*\* (?:Add|Update) File: )", patch, flags=re.M)
+        for section in sections:
+            target = re.search(r"^\*\*\* (?:Add|Update) File: (.+)$", section, re.M)
+            if not target:
+                continue
+            added = "\n".join(line[1:] for line in section.splitlines()
+                              if line.startswith("+") and not line.startswith("+++"))
+            if handle_edit(target.group(1), added) == 2:
+                return 2
+        return 0
+
+    edits = tool_input.get("edits")
+    if isinstance(edits, list):
+        edit_content = "\n".join(str(edit.get("new_string") or "")
+                                 for edit in edits if isinstance(edit, dict))
+    else:
+        edit_content = tool_input.get("new_string") or tool_input.get("content") or ""
     return handle_edit(file_path, edit_content)
 
 
