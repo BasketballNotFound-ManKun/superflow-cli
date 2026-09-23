@@ -23,6 +23,19 @@ requires Host investigation of each concern before deciding. Re-read each
 anchor and attempt to disprove the finding before assigning severity. Keep
 unverifiable claims separate rather than giving them a guessed severity.
 
+## Review response discipline
+
+When receiving a finding, read all feedback before responding, restate the
+request, then verify it against the current source, project rules, callers, and
+tests. Do not agree or patch from the reviewer's wording alone. If the finding
+is valid, state the anchored defect and fix direction; if it is wrong, explain
+the concrete source or contract evidence and the rejected alternative. Apply
+one finding at a time and run the affected signal before claiming it is fixed.
+For broad “make it generic” advice, check actual call sites first; keep the
+smallest implementation when no second caller or contract requires expansion.
+Only propose a recurring project rule after the user confirms it; review
+feedback remains advisory and does not silently change repository policy.
+
 For full workflow acceptance, read [requirement × real-entry review](../superflow-pipeline/references/document-review-coverage.md).
 Reuse R/E/C IDs in the existing test-report with actual actors, page actions, request routes,
 final state and forbidden-effect evidence. Independently compare originals and actual callers;

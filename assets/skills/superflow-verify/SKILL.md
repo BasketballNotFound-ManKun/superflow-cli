@@ -23,6 +23,14 @@ requires Host investigation of each concern before deciding. Re-read each
 anchor and attempt to disprove the finding before assigning severity. Keep
 unverifiable claims separate rather than giving them a guessed severity.
 
+## 评审回应纪律
+
+收到 finding 后先通读全部反馈，复述要求，再对照当前源码、项目规则、调用方和测试验证。
+不得只依据评审者措辞附和或直接改。确认有效时说明代码锚点和修复方向；认为有误时给出
+具体源码或合同证据及被拒绝方案。一次处理一个 finding，跑受影响信号后才能声称已修复。
+遇到“做成通用版本”等宽泛建议，先检查真实调用点；没有第二个调用方或合同要求时保持最小实现。
+项目规则只有用户确认后才回写，评审反馈不会静默改变仓库政策。
+
 完整 workflow 验收必须读取[需求×真实入口评审](../superflow-pipeline/references/document-review-coverage.md)。
 沿 R/E/C ID 在现有 test-report 回填实际角色、页面动作、请求路由、最终状态与禁止副作用
 的原始证据。独立对照原始来源及实际调用方；API-only 不得冒充 browser E2E，计划不等于执行。
