@@ -338,6 +338,11 @@ context_compression | created_at | verified_at | updated_at`
 
 - 设计范围、API/DB 合同、执行模式、验证边界、archive closeout 需要用户取舍时，
   使用 `references/decision-point.md` 的格式记录，不用聊天记忆代替。
+
+仓库级术语或持久架构决定可运行 `superflow context-audit --path <project>`
+做只读检查。业务术语放入 `CONTEXT.md`；只有难逆转且存在有意义备选方案时才写 ADR。
+审计是 advisory：缺少 ADR 只提醒，ADR 字段不全或术语混入实现细节才报告修复项，
+不新增审批门禁，也不替代 `design.md`。
 - 脏工作区、并行 worktree 或跨会话接力前，使用 `references/dirty-worktree.md`
   的检查项，避免覆盖用户改动或拿旧 handoff 继续。
 - `build_mode: subagent-driven-development` 时，维护

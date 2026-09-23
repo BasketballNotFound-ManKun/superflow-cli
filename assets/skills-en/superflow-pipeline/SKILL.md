@@ -327,6 +327,14 @@ questions in one final batch.
 Record irreversible or ambiguous decisions in references/decision-point.md
 format. Do not store decisions only in chat memory.
 
+For repository-wide terminology, run `superflow context-audit --path <project>`
+when a change introduces a domain term or a durable architectural decision. Keep
+business vocabulary in `CONTEXT.md`; use an ADR only when the decision is hard
+to reverse and has meaningful alternatives. The audit is advisory: a missing
+ADR is a warning, while incomplete ADR fields or implementation details in the
+terminology list are reported for repair. It does not create approval gates or
+replace the canonical `design.md` contract.
+
 Decision points include:
 
 - API compatibility choices

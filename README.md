@@ -54,6 +54,9 @@ Native session observation hooks warn once on the sixth edit to one file in
 ten minutes or the third consecutive failure of one tool in five minutes. A
 successful call resets that tool's failure count, and SessionEnd clears the
 observation state. These warnings do not block tools or alter managed budgets.
+`superflow context-audit` provides a read-only check for `CONTEXT.md`
+terminology and required ADR fields. A missing ADR is advisory and does not add
+an approval gate.
 
 ## Highlights
 

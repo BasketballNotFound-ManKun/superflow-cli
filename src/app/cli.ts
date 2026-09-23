@@ -359,6 +359,16 @@ program
   });
 
 program
+  .command("context-audit")
+  .description("Audit CONTEXT terminology and ADR decision records")
+  .option("--path <path>", "Project path")
+  .option("--json", "Output JSON")
+  .action(async (options) => {
+    const { contextAuditCommand } = await import("./commands/context-audit.js");
+    contextAuditCommand(options);
+  });
+
+program
   .command("quick <request>")
   .description(helpText.quickDescription)
   .option("--project <path>", helpText.quickProjectOption)
