@@ -379,6 +379,18 @@ program
   });
 
 program
+  .command("map-audit")
+  .description("Compare Understand Anything map context modes without replacing the map")
+  .option("--path <path>", "Project path")
+  .option("--query <query>", "Task keywords")
+  .option("--limit <n>", "Top-K limit", "8")
+  .option("--json", "Output JSON")
+  .action(async (options) => {
+    const { mapAuditCommand } = await import("./commands/map-audit.js");
+    mapAuditCommand(options);
+  });
+
+program
   .command("quick <request>")
   .description(helpText.quickDescription)
   .option("--project <path>", helpText.quickProjectOption)

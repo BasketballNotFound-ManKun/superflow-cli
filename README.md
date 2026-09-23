@@ -60,6 +60,9 @@ an approval gate.
 `superflow docs-audit` reports Markdown age, dead code anchors, and inbound
 links. New Markdown placement reminders always exit successfully and never move,
 merge, or delete files.
+`superflow map-audit` compares full, task Top-K, and directory/symbol skeleton
+contexts from the existing Understand Anything graph without creating another
+persistent map.
 
 ## Highlights
 
