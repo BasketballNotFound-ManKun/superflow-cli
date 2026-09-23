@@ -48,7 +48,10 @@ import { evaluateCompletion } from "../../domains/managed-work/completion-policy
 import { isProcessAlive } from "../../platform/process-liveness.js";
 import { assertCodingReadyForPrompt } from "../../domains/sdd-readiness.js";
 import { assertManagedAgentPair } from "../../domains/managed-work/pair-admission.js";
-import { submitHumanDirectedDelivery } from "../../domains/managed-work/control.js";
+import {
+  resumeHumanDirectedAfterReview,
+  submitHumanDirectedDelivery,
+} from "../../domains/managed-work/control.js";
 import { writeManagedExecutorHandoff } from "../../domains/managed-work/runner.js";
 import {
   assertManagedAcceptanceContractForStart,
@@ -333,6 +336,17 @@ async function resumeManagedTask(
       ),
       evidencePaths: [resultPath],
     });
+    if (contract.executionMode === "human_directed") {
+      const resumed = await resumeHumanDirectedAfterReview(taskId);
+      console.log(
+        managedText(
+          language,
+          `已处理人工执行任务的 Host 评审：${taskId}，状态：${resumed.status}`,
+          `Processed the human-directed Host review for ${taskId}: ${resumed.status}`,
+        ),
+      );
+      return;
+    }
     const service = ensureManagedService(
       process.argv[1],
       process.env,
@@ -346,6 +360,21 @@ async function resumeManagedTask(
       ),
     );
     await waitAndReport(entry.projectRoot, taskId, state.runId, language);
+    return;
+  }
+  if (
+    contract.executionMode === "human_directed" &&
+    state.status === "queued" &&
+    state.currentStep === "external_review_received"
+  ) {
+    const resumed = await resumeHumanDirectedAfterReview(taskId);
+    console.log(
+      managedText(
+        language,
+        `已恢复人工执行任务的 Host 评审：${taskId}，状态：${resumed.status}`,
+        `Resumed the human-directed Host review for ${taskId}: ${resumed.status}`,
+      ),
+    );
     return;
   }
   if (shouldAttachRunningTask(state)) {

@@ -5,6 +5,24 @@ description: Use when an OpenSpec/SDD change is ready for verification, real evi
 
 # SDD Verify
 
+Before semantic code review, run `superflow review-coverage --json` (or pass
+`--base <ref>` for a branch review). Use its included/excluded inventory and
+path-specific rules to account for every changed file. Review related Java
+and Mapper XML files together when they share a bundle. Do not treat this
+mechanical inventory as a correctness verdict: findings still need source
+anchors, a fresh reading of the affected call path, and independent judgment.
+
+Use the reported risk tier to choose review depth: low may be reviewed inline;
+medium requires an independent view; high requires focused coverage of the
+named high-impact paths in addition to the ordinary Host review. Every
+reviewer report starts with `DONE`, `DONE_WITH_CONCERNS`, `BLOCKED`, or
+`NEEDS_CONTEXT`. Run `superflow review-coverage --report <file> --json` to
+validate that marker and every `file:line` finding anchor. `BLOCKED` and
+`NEEDS_CONTEXT` require more evidence before triage; `DONE_WITH_CONCERNS`
+requires Host investigation of each concern before deciding. Re-read each
+anchor and attempt to disprove the finding before assigning severity. Keep
+unverifiable claims separate rather than giving them a guessed severity.
+
 For full workflow acceptance, read [requirement × real-entry review](../superflow-pipeline/references/document-review-coverage.md).
 Reuse R/E/C IDs in the existing test-report with actual actors, page actions, request routes,
 final state and forbidden-effect evidence. Independently compare originals and actual callers;

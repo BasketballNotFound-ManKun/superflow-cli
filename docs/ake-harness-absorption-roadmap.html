@@ -168,6 +168,10 @@ const shippedDefaults={
   'Skill Contract / Registry':{
     status:'verified',
     evidence:'skill-audit --strict：15/15 contracts，英文镜像 0 缺口；虚构 Skill 冲突负向测试；603 项回归'
+  },
+  '确定性代码评审编排':{
+    status:'verified',
+    evidence:'多模块虚构需求 task-20260923120458-0a44d0b4：3/3 文件归属、high 风险、DONE/BLOCKED 正反验证；真实 manual Run release_ready，eval excellent（单样本）'
   }
 };
 const persist=()=>{try{localStorage.setItem(storageKey,JSON.stringify(saved))}catch(_){}}

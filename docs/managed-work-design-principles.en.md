@@ -52,6 +52,11 @@ Entry and asset protection follow these additional long-term principles:
   returns to clarification/documents first. All three user entries reuse one
   input resolver, execution contract, and context manifest rather than a
   parallel state machine.
+- After a human-directed task receives a Host review, the current caller
+  reconciles the persisted result directly. `pass` and `blocked` do not invoke
+  an Executor Agent; `needs_fix` returns to manual delivery with an audit event.
+  The background service never picks up human-directed tasks, while an ordinary
+  resume after restart can continue from `external_review_received`.
 - Runner derives protected assets from frozen inputs. Immutable requirements,
   designs, prompts, handoffs, rules, and task facts are read-only; retained
   tasks/test reports may record progress but cannot be deleted. Native hooks

@@ -1,0 +1,24 @@
+{
+  "rules": [
+    {
+      "path": "**/*Mapper.xml",
+      "rule": "Verify parameterized MyBatis bindings and dynamic identifier allowlists",
+      "source": "system"
+    },
+    {
+      "path": "**/*Controller.java",
+      "rule": "Review authentication, validation, and controller-to-service boundaries",
+      "source": "system"
+    },
+    {
+      "path": "**/*Service*.java",
+      "rule": "Review transactions, batch access, N+1 queries, and external-call boundaries",
+      "source": "system"
+    },
+    {
+      "path": "**/*.java",
+      "rule": "Review correctness, exceptions, sensitive logging, and concurrency",
+      "source": "system"
+    }
+  ]
+}

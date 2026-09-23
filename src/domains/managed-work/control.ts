@@ -15,6 +15,7 @@ import {
   initManagedRunState,
 } from "./state.js";
 import {
+  appendTaskReport,
   createManagedTaskFiles,
   loadManagedRun,
   loadManagedTask,
@@ -54,7 +55,7 @@ import { evaluateCompletion } from "./completion-policy.js";
 import type { ExecutorResult } from "./types.js";
 import { stopProcessTree } from "../../platform/process-tree.js";
 import { assertManagedAgentPair } from "./pair-admission.js";
-import { runManagedTask } from "./runner.js";
+import { runManagedTask, validateReviewResult } from "./runner.js";
 import { assertManagedAcceptanceContractForStart } from "./acceptance-contract.js";
 import {
   resolveClaudeExecutorConfig,
@@ -113,6 +114,77 @@ export function submitHumanDirectedDelivery(
     new ManualDeliveryInvoker(delivery),
     env,
   );
+}
+
+/** Reconcile a human-directed Host review without dispatching an Agent. */
+export async function resumeHumanDirectedAfterReview(
+  taskId: string,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<ManagedRunState> {
+  const { contract, state } = loadManagedContext(taskId, env);
+  if (
+    contract.executionMode !== "human_directed" ||
+    state.status !== "queued" ||
+    state.currentStep !== "external_review_received" ||
+    !state.lastReviewResult
+  ) {
+    throw new Error("当前任务没有可恢复的人工执行 Host 评审");
+  }
+  const review = JSON.parse(
+    readFileSync(state.lastReviewResult, "utf8"),
+  ) as ReviewResult;
+  validateReviewResult(review, contract.language);
+  if (review.result !== "needs_fix") {
+    return runManagedTask(
+      contract.projectRoot,
+      taskId,
+      new NoFurtherManualInvocation(),
+      env,
+    );
+  }
+  state.status = "waiting_for_human";
+  state.currentStep = "waiting_for_manual_delivery";
+  state.blocker = review.summary;
+  state.updatedAt = new Date().toISOString();
+  contract.status = state.status;
+  saveManagedRun(state);
+  saveManagedTask(contract);
+  upsertRegistryEntry({
+    taskId,
+    projectRoot: contract.projectRoot,
+    status: state.status,
+    profile: contract.profile,
+    language: contract.language,
+    activeRunId: state.runId,
+    createdAt: contract.createdAt,
+    updatedAt: state.updatedAt,
+    servicePid: null,
+  }, env);
+  appendTaskReport(
+    state,
+    `\n## Host review R${state.reviewRound}\n\n${review.summary}\n`,
+  );
+  appendManagedEvent(state, {
+    eventType: "review.ended",
+    actor: contract.supervisorAgent,
+    role: "supervisor",
+    summary: review.summary,
+    evidencePaths: [state.lastReviewResult],
+  });
+  appendManagedEvent(state, {
+    eventType: "review.manual_rework_requested",
+    actor: contract.supervisorAgent,
+    role: "supervisor",
+    summary: review.summary,
+    evidencePaths: [state.lastReviewResult],
+  });
+  return state;
+}
+
+class NoFurtherManualInvocation implements AgentInvoker {
+  async invoke<T>(_invocation: AgentInvocation): Promise<AgentInvocationResult<T>> {
+    throw new Error("人工执行任务不能在 Host 评审后自动调用研发 Agent");
+  }
 }
 
 class ManualDeliveryInvoker implements AgentInvoker {

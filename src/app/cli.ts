@@ -342,6 +342,23 @@ program
   });
 
 program
+  .command("review-coverage")
+  .description("Enumerate changed files and resolve review rules without an Agent")
+  .option("--base <ref>", "Review changes since a Git reference")
+  .option("--path <paths...>", "Review explicit files")
+  .option("--report <path>", "Audit a reviewer four-state report and finding anchors")
+  .option("--json", "Output JSON")
+  .action(async (options) => {
+    const { reviewCoverageCommand } = await import("./commands/review-coverage.js");
+    reviewCoverageCommand({
+      base: options.base,
+      paths: options.path,
+      report: options.report,
+      json: options.json,
+    });
+  });
+
+program
   .command("uninstall [targetPath]")
   .description(helpText.uninstallDescription)
   .option("--agent <agent>", helpText.agentOption, "both")

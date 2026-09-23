@@ -34,6 +34,9 @@ MCP 或状态机前，必须逐项核对本文；与实践报告冲突时，以�
 - 托管只接收两种已归一化执行入口：Coding Ready 的冻结 change/Prompt，或经 Host 判断为
   边界清晰的口头任务。纯文档模式不创建托管 Task/Run；口头任务出现方向性选择时先回到
   澄清/文档流程。三种用户入口复用同一输入解析、执行合同和上下文清单，不新增平行状态机。
+- 人工执行任务提交 Host 评审后，由当前调用直接按已落盘评审结果完成状态裁决；`pass` 或
+  `blocked` 不再调用研发 Agent，`needs_fix` 返回等待人工交付并记录评审事件。后台服务不领取
+  人工执行任务，重启后的普通 resume 仍可从 `external_review_received` 继续。
 - 受保护资产由 Runner 从冻结输入生成清单。`immutable` 的需求、设计、Prompt、handoff、
   规则和任务事实只能读取；`retain` 的 tasks/test-report 可回填但不得删除。Hook 在原生支持
   的 Host 上写入前阻断，preflight/最终门禁对所有 Host 复核；不得只在事后发现整份文档消失。
