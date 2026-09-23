@@ -98,6 +98,32 @@ a{color:var(--cyan);text-decoration:none} a:hover{text-decoration:underline}
     </div>
   </section>
 
+  <section class="section" id="absorption-summary">
+    <h2>吸收总览与验证记录</h2>
+    <div class="grid cols-3">
+      <div class="stat cyan"><div class="value">13</div><div class="label">已吸收并提交</div></div>
+      <div class="stat amber"><div class="value">1</div><div class="label">按路线图暂缓（qgate）</div></div>
+      <div class="stat green"><div class="value">643</div><div class="label">最后一轮全量测试通过</div></div>
+    </div>
+    <p class="track-summary">每项都使用虚构需求或故障样本做了实战验证；前 3 项涉及真实托管交付的能力使用了 <code>superflow eval</code>，结果为 <strong>excellent</strong>。Hook、文档、地图和清理扫描属于确定性 / advisory 能力，使用真实入口、负向样本、全量测试和安装诊断验证，不把评分器替代语义验收。</p>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>吸收项</th><th>提交</th><th>虚构需求 / 样本</th><th>验证与结果</th></tr></thead><tbody>
+      <tr><td>1</td><td>Skill Contract / Registry</td><td><code>6a7b64c</code></td><td>新增冲突 Skill、缺镜像、孤儿路由</td><td>15/15 契约通过；负向冲突报告；真实托管样本；全量回归</td></tr>
+      <tr><td>2</td><td>确定性代码评审编排</td><td><code>cb0f2f5</code></td><td>多模块 Java + Mapper + SQL 变更</td><td>真实人工 Run <code>release_ready</code>；<code>superflow eval: excellent</code>；覆盖锚点与恢复验证</td></tr>
+      <tr><td>3</td><td>Quick Path + Quick Spec</td><td><code>7a18610</code></td><td>邮箱校验小需求及 DB/API 高风险反例</td><td>真实 RED→GREEN；人工 Run <code>release_ready</code>；<code>superflow eval: excellent</code></td></tr>
+      <tr><td>4</td><td>Java 写码时护栏</td><td><code>328fd99</code></td><td>危险 Mapper 插值、Git 绕过、暂存密钥、Maven/Gradle 多模块</td><td>真实 PreToolUse/PostToolUse/Stop；危险 exit 2、安全 exit 0；10 次编辑 1 次编译</td></tr>
+      <tr><td>5</td><td>行为不变简化收尾</td><td><code>e5c8b96</code></td><td>收敛重复 Git 命令解析</td><td>原有 7 个 Hook 故障样本未改断言继续通过；中英文 verify 纪律同步</td></tr>
+      <tr><td>6</td><td>失败循环观测</td><td><code>448cf0a</code></td><td>连续编辑、连续工具失败、会话隔离</td><td>第 6 次编辑 / 第 3 次失败各提醒一次；成功清零；SessionEnd 清理；恒退 0</td></tr>
+      <tr><td>7</td><td>CONTEXT / ADR 三条件</td><td><code>3d68ce0</code></td><td>站点术语、存储策略 ADR、缺字段与普通决定</td><td><code>context-audit</code> PASS / warning / 修复项分流；不写状态</td></tr>
+      <tr><td>8</td><td>Seam / Design-It-Twice</td><td><code>dd474ef</code></td><td>跨模块存储接口两种方案</td><td>模板要求 A/B、seam、adapter、测试面、复用证据与选择；文档门禁通过</td></tr>
+      <tr><td>9</td><td>文档落位与策展</td><td><code>4e4e94a</code></td><td>流浪 Markdown、失效代码锚点、琐碎文档</td><td><code>docs-audit</code> 输出年龄/锚点/入链/四态；落位 Hook 恒退 0；不移动删除</td></tr>
+      <tr><td>10</td><td>评审回应纪律</td><td><code>3be42a3</code></td><td>单调用适配器被建议泛化成缓存层</td><td>先验证、有效/错误分支、YAGNI 调用点检查；规则不自动回写</td></tr>
+      <tr><td>11</td><td>BMAD 选择性职责路由</td><td><code>d90992e</code></td><td>Host 改代码、Executor 改合同、Runner 判业务、嵌套 Supervisor</td><td>三角色 owner 矩阵与互斥边界写入中英文 pipeline；无第二状态机</td></tr>
+      <tr><td>12</td><td>地图检索对照实验</td><td><code>a77caaa</code></td><td>Controller / Mapper 图谱 Top-K 召回</td><td><code>map-audit</code> 输出 full / Top-K / skeleton；缺图谱明确 fallback；不修改图谱</td></tr>
+      <tr><td>13</td><td>全仓清理候选扫描</td><td><code>1f83e28</code></td><td>重复 Service、TODO 热点、大文件</td><td><code>cleanup-audit</code> 带证据与路由；<code>modified=false</code>；不自动重构</td></tr>
+    </tbody></table></div>
+    <div class="callout"><strong>暂缓项：</strong>qgate 全套静态分析裁决。它需要任务快照、分析器 adapter、baseline、policy、缓存和控制面；当前已有 Hook、verify 和托管状态机尚无稳定漏报/误报证据，因此保留为实验触发项，不计入已吸收数量。</div>
+  </section>
+
   <section class="section">
     <h2>来源与当前关系</h2>
     <div class="table-wrap"><table><thead><tr><th>来源</th><th>主要贡献</th><th>Superflow 当前状态</th><th>处理决定</th></tr></thead><tbody>
