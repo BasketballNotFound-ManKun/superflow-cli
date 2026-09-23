@@ -15,6 +15,17 @@ the unified evaluation framework.
 ## Role
 
 This is the main router and stateful workflow orchestrator for SuperBridge Flow.
+
+## Role ownership and mutual exclusions
+
+| Role | Sole owner | May do | Must not do |
+|---|---|---|---|
+| Host | goal, clarification, supervision, semantic review | choose routing and judge code/architecture risk | write business code or start a nested Supervisor |
+| Executor | source implementation, tests, startup, repair | change the workspace within the frozen contract and return evidence | edit the contract/state, lower verification, or release automatically |
+| Runner | state, hashes, exit codes, evidence persistence | schedule, wait, recover, and enforce deterministic facts | guess business meaning or replace Host review |
+
+Menus and personas change entry wording only; they never create a second state
+machine. Return to Host clarification when ownership conflicts.
 It combines OpenSpec/SDD and Superpowers without letting them overwrite each
 other:
 

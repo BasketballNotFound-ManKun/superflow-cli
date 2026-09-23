@@ -7,6 +7,16 @@ description: SDD 总入口和路由技能。Use when the user says sdd, SDD 流�
 
 This is the lightweight SDD router. Do not load the whole SDD process when a smaller phase skill is enough.
 
+## 角色 owner 与互斥边界
+
+| 角色 | 唯一 owner | 可以做 | 不可以做 |
+|---|---|---|---|
+| Host | 目标、澄清、监督、语义评审 | 选择路由、判断代码/架构风险、决定是否接受反馈 | 代替 Executor 写业务代码；启动嵌套 Supervisor |
+| Executor | 源码实现、测试、启动、整改 | 在冻结合同内修改工作区并提交证据 | 改合同/状态；自行降低验收等级；自动提交发布 |
+| Runner | 状态、哈希、退出码、证据持久化 | 调度、等待、恢复、确定性门禁 | 猜业务语义；重新设计 API/DB；代替 Host 评审 |
+
+菜单或 persona 只改变入口表达，不创建第二套状态机；发现 owner 冲突时回到 Host 澄清。
+
 维护 Superflow CLI 自身时，必须先读取仓库根目录
 `docs/superflow-cli-design-principles.md` 和
 `docs/superflow-cli-evaluation-framework.md`；涉及托管时再读取托管专项宪章与协议。
