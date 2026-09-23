@@ -37,6 +37,7 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 启用 OpenSpec/SDD 的 Java 仓库还会在写码时拦截危险 Mapper `${}` 插值、Git Hook 绕过和暂存密钥；Java/构建文件编辑只记录路径，在 Stop 时按受影响 Maven/Gradle 模块批量编译一次。缺少构建工具或编译失败会明确报告，不能当作验证通过。
 原生会话的观察 Hook 会在同文件十分钟内第六次编辑、同工具五分钟内第三次连续失败时各提醒一次；成功调用重置该工具失败计数，SessionEnd 清理观察状态，提醒不阻断工具或改变托管预算。
 `superflow context-audit` 可只读检查 `CONTEXT.md` 术语和 ADR 必备字段：术语只写业务语言，ADR 只用于难逆转且有备选方案的决定；缺少 ADR 仅提醒，不增加审批门禁。
+`superflow docs-audit` 可只读盘点 Markdown 的年龄、失效代码锚点和入链数；新建 Markdown 的落位提醒恒退 0，不自动移动、合并或删除。
 自动部署到：
 
 - Claude Code：`~/.claude/skills/`、`~/.claude/scripts/`，并注册 `~/.claude/settings.json` hook

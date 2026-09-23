@@ -369,6 +369,16 @@ program
   });
 
 program
+  .command("docs-audit")
+  .description("Audit Markdown placement and mechanical freshness signals")
+  .option("--path <path>", "Project path")
+  .option("--json", "Output JSON")
+  .action(async (options) => {
+    const { docsAuditCommand } = await import("./commands/docs-audit.js");
+    docsAuditCommand(options);
+  });
+
+program
   .command("quick <request>")
   .description(helpText.quickDescription)
   .option("--project <path>", helpText.quickProjectOption)

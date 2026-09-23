@@ -25,8 +25,8 @@ describe("core/registry", () => {
     fs.rmSync(TMP, { recursive: true, force: true });
   });
 
-  it("HOOK_MAP 含 16 个 hook 脚本", () => {
-    expect(Object.keys(HOOK_MAP).length).toBe(16);
+  it("HOOK_MAP 含 17 个 hook 脚本", () => {
+    expect(Object.keys(HOOK_MAP).length).toBe(17);
     expect(HOOK_MAP["superflow-enforce-hook.sh"]).toBeDefined();
     expect(HOOK_MAP["superflow-hook-guard.sh"]).toBeDefined();
     expect(HOOK_MAP["superflow-dependency-update-hook.sh"].event).toBe(
@@ -264,10 +264,10 @@ describe("core/registry", () => {
 
     // 第一次 init
     runInitLike();
-    expect(countSuperflowCommands(SETTINGS)).toBe(16); // 15 hook 脚本 + sql-sync 双注册
+    expect(countSuperflowCommands(SETTINGS)).toBe(17); // 16 hook 脚本 + sql-sync 双注册
 
     // 第二次 init（幂等性：数量应不变）
     runInitLike();
-    expect(countSuperflowCommands(SETTINGS)).toBe(16);
+    expect(countSuperflowCommands(SETTINGS)).toBe(17);
   });
 });
