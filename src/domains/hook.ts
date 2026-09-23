@@ -36,6 +36,9 @@ export const HOOK_MAP: Record<string, HookMapEntry> = {
     matcher: "Edit|Write|MultiEdit|apply_patch",
   },
   "superflow-java-stop-hook.sh": { event: "Stop" },
+  "superflow-loop-observer.py": { event: "PostToolUse" },
+  "superflow-loop-failure-hook.sh": { event: "PostToolUseFailure" },
+  "superflow-loop-end-hook.sh": { event: "SessionEnd" },
   "superflow-delivery-check.sh": { event: "PreToolUse", matcher: "Bash" },
   "superflow-integration-evidence-hook.sh": {
     event: "PreToolUse",

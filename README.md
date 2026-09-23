@@ -50,6 +50,10 @@ In OpenSpec/SDD Java repositories, hooks also block unsafe MyBatis `${}`
 interpolation, Git hook bypasses, and staged secrets. Java/build edits are
 accumulated and compiled once at Stop for affected Maven/Gradle modules. Missing
 build tools or compilation failures are reported as failed verification.
+Native session observation hooks warn once on the sixth edit to one file in
+ten minutes or the third consecutive failure of one tool in five minutes. A
+successful call resets that tool's failure count, and SessionEnd clears the
+observation state. These warnings do not block tools or alter managed budgets.
 
 ## Highlights
 
