@@ -332,6 +332,16 @@ program
   });
 
 program
+  .command("skill-audit")
+  .description("Audit Skill contracts, routing metadata, and bilingual mirrors")
+  .option("--json", "Output JSON")
+  .option("--strict", "Exit with failure when the registry is invalid")
+  .action(async (options) => {
+    const { skillAuditCommand } = await import("./commands/skill-audit.js");
+    skillAuditCommand(options);
+  });
+
+program
   .command("uninstall [targetPath]")
   .description(helpText.uninstallDescription)
   .option("--agent <agent>", helpText.agentOption, "both")

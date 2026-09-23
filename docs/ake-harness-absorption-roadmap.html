@@ -164,6 +164,12 @@ const cards=[...document.querySelectorAll('.absorb')];
 const storageKey='superflow-absorption-roadmap-v2';
 let saved={};
 try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')}catch(_){saved={}}
+const shippedDefaults={
+  'Skill Contract / Registry':{
+    status:'verified',
+    evidence:'skill-audit --strict：15/15 contracts，英文镜像 0 缺口；虚构 Skill 冲突负向测试；603 项回归'
+  }
+};
 const persist=()=>{try{localStorage.setItem(storageKey,JSON.stringify(saved))}catch(_){}}
 const statusNames={planned:'待评估',designing:'设计中',implemented:'已实现',verified:'已验证',hold:'暂缓',rejected:'不吸收'};
 const updateSummary=()=>{
@@ -173,7 +179,7 @@ const updateSummary=()=>{
 };
 cards.forEach(card=>{
   const id=card.querySelector('h3').textContent.trim();
-  const entry=saved[id]||{status:card.dataset.priority==='暂缓'?'hold':'planned',evidence:''};
+  const entry=saved[id]||shippedDefaults[id]||{status:card.dataset.priority==='暂缓'?'hold':'planned',evidence:''};
   const tracking=document.createElement('div');tracking.className='tracking';
   const select=document.createElement('select');select.setAttribute('aria-label',`${id} 状态`);
   Object.entries(statusNames).forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.append(option)});

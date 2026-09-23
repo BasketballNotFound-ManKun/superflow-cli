@@ -1,0 +1,209 @@
+{
+  "version": "1.0.0",
+  "contracts": [
+    {
+      "name": "openspec-apply-change",
+      "owner": "implement",
+      "triggers": [
+        "implement approved change"
+      ],
+      "excludes": [],
+      "outputs": [
+        "tasks.md progress"
+      ],
+      "neighbors": []
+    },
+    {
+      "name": "openspec-archive-change",
+      "owner": "archive",
+      "triggers": [
+        "archive completed change"
+      ],
+      "excludes": [],
+      "outputs": [
+        "archive result"
+      ],
+      "neighbors": []
+    },
+    {
+      "name": "openspec-explore",
+      "owner": "explore",
+      "triggers": [
+        "explore requirements"
+      ],
+      "excludes": [],
+      "outputs": [
+        "alignment.md"
+      ],
+      "neighbors": [
+        "openspec-propose"
+      ]
+    },
+    {
+      "name": "openspec-propose",
+      "owner": "propose",
+      "triggers": [
+        "generate OpenSpec proposal"
+      ],
+      "excludes": [],
+      "outputs": [
+        "proposal.md specs design.md tasks.md"
+      ],
+      "neighbors": [
+        "superflow-clarify",
+        "superflow-design",
+        "superflow-implement"
+      ]
+    },
+    {
+      "name": "superflow-archive",
+      "owner": "archive",
+      "triggers": [
+        "archive SDD change"
+      ],
+      "excludes": [],
+      "outputs": [
+        "archive report"
+      ],
+      "neighbors": [
+        "superflow-verify"
+      ]
+    },
+    {
+      "name": "superflow-clarify",
+      "owner": "clarify",
+      "triggers": [
+        "clarify requirements"
+      ],
+      "excludes": [],
+      "outputs": [
+        "source-code-audit.md feature-gates.md brainstorm-summary.md"
+      ],
+      "neighbors": [
+        "openspec-propose",
+        "superflow-docs"
+      ]
+    },
+    {
+      "name": "superflow-design",
+      "owner": "design",
+      "triggers": [
+        "technical design"
+      ],
+      "excludes": [],
+      "outputs": [
+        "technical_design"
+      ],
+      "neighbors": [
+        "superflow-docs",
+        "superflow-implement"
+      ]
+    },
+    {
+      "name": "superflow-docs",
+      "owner": "docs",
+      "triggers": [
+        "SDD contract documents"
+      ],
+      "excludes": [],
+      "outputs": [
+        "api.md tests.md sdd-quality-gate.md"
+      ],
+      "neighbors": [
+        "superflow-clarify",
+        "superflow-design",
+        "superflow-implement"
+      ]
+    },
+    {
+      "name": "superflow-hotfix",
+      "owner": "pipeline",
+      "triggers": [
+        "urgent small fix"
+      ],
+      "excludes": [],
+      "outputs": [
+        "bug-fix-plan.md"
+      ],
+      "neighbors": []
+    },
+    {
+      "name": "superflow-implement",
+      "owner": "implement",
+      "triggers": [
+        "generate implementation prompts"
+      ],
+      "excludes": [],
+      "outputs": [
+        "prompt/ test-report.md"
+      ],
+      "neighbors": [
+        "superflow-design",
+        "superflow-verify"
+      ]
+    },
+    {
+      "name": "superflow-pipeline",
+      "owner": "pipeline",
+      "triggers": [
+        "Superflow SDD pipeline"
+      ],
+      "excludes": [],
+      "outputs": [
+        "state.yaml handoff"
+      ],
+      "neighbors": []
+    },
+    {
+      "name": "superflow-requirement-review",
+      "owner": "review",
+      "triggers": [
+        "review requirements"
+      ],
+      "excludes": [],
+      "outputs": [
+        "requirement-review.md"
+      ],
+      "neighbors": []
+    },
+    {
+      "name": "superflow-table-impact-analysis",
+      "owner": "docs",
+      "triggers": [
+        "table impact analysis"
+      ],
+      "excludes": [],
+      "outputs": [
+        "impact analysis"
+      ],
+      "neighbors": []
+    },
+    {
+      "name": "superflow-tweak",
+      "owner": "pipeline",
+      "triggers": [
+        "small wording tweak"
+      ],
+      "excludes": [],
+      "outputs": [
+        "tweak result"
+      ],
+      "neighbors": []
+    },
+    {
+      "name": "superflow-verify",
+      "owner": "verify",
+      "triggers": [
+        "verify implementation"
+      ],
+      "excludes": [],
+      "outputs": [
+        "verification report"
+      ],
+      "neighbors": [
+        "superflow-implement",
+        "superflow-archive"
+      ]
+    }
+  ]
+}
