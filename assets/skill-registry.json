@@ -191,6 +191,26 @@
       "neighbors": []
     },
     {
+      "name": "superflow-quick-dev",
+      "owner": "quick",
+      "triggers": [
+        "small code task",
+        "quick development"
+      ],
+      "excludes": [
+        "public API or database change",
+        "cross-module change"
+      ],
+      "outputs": [
+        ".sdd/tasks/<date>-<slug>/spec.md",
+        "quick evidence"
+      ],
+      "neighbors": [
+        "superflow-clarify",
+        "superflow-verify"
+      ]
+    },
+    {
       "name": "superflow-verify",
       "owner": "verify",
       "triggers": [

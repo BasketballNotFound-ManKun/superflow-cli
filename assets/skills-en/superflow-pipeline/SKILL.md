@@ -138,6 +138,11 @@ hotfix:
 
 ## Routing
 
+- One clear, low-blast-radius code change with an existing test seam: use
+  superflow-quick-dev before editing, then reuse the existing quick managed
+  profile after Quick Spec approval. API, DB, security, transaction,
+  concurrency, payment, cross-module, active-SDD, or ownership uncertainty
+  routes to superflow-clarify instead; do not add a second managed state machine.
 - When the user explicitly asks for rigorous questioning, or a bounded feature
   has unresolved owner decisions, mutually exclusive approaches, an unclear
   source of truth, unclear acceptance behavior, or cross-system responsibility,

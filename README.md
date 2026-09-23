@@ -330,6 +330,7 @@ best-effort and does not block initialization.
 | `superflow --language en --help`                             | Show English CLI help                                                    |
 | `superflow scan --language en`                               | Regenerate project context templates in English                          |
 | `superflow pipeline`                                         | Check pipeline skill deployment                                          |
+| `superflow quick "<task>" --path <file> --seam <existing-file>` | Gate a small code task before Quick Spec approval and quick managed execution |
 | `superflow pipeline "<task>" --managed --project <path>`     | Run short-session execution with direct review by the current host agent |
 | `--acceptance-contract <file>`                                | Required frozen acceptance JSON for prompt/SDD starts                    |
 | `superflow docs [change]`                                    | Run the docs gate and check the phase skill                              |

@@ -18,6 +18,13 @@ export interface CliHelpText {
   statusDescription: string;
   mcpDescription: string;
   evalDescription: string;
+  quickDescription: string;
+  quickProjectOption: string;
+  quickPathOption: string;
+  quickSeamOption: string;
+  quickActiveSddOption: string;
+  quickSpecOption: string;
+  quickApproveOption: string;
   cleanupDescription: string;
   cleanupProjectOption: string;
   cleanupRetentionOption: string;
@@ -95,6 +102,13 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     mcpDescription:
       "Install, remove, or inspect the Superflow managed MCP integration",
     evalDescription: "Evaluate a managed task offline from persisted evidence",
+    quickDescription: "Check narrow admission for a small code task",
+    quickProjectOption: "Project directory",
+    quickPathOption: "Files owned by this task",
+    quickSeamOption: "Existing file exposing the test seam",
+    quickActiveSddOption: "A related SDD change owns this behavior",
+    quickSpecOption: "Validate a Quick Spec",
+    quickApproveOption: "Approve the current draft Quick Spec after user confirmation",
     cleanupDescription:
       "Apply deterministic retention to stopped managed-task process artifacts",
     cleanupProjectOption: "Project directory that owns the managed task",
@@ -194,6 +208,13 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     statusDescription: "查看当前项目的托管任务、SDD changes 和下一步命令",
     mcpDescription: "安装、移除或检查 Superflow 托管 MCP 集成",
     evalDescription: "根据落盘证据离线评估托管任务的质量、效率与成本",
+    quickDescription: "检查小型代码任务是否满足 Quick 路径窄门",
+    quickProjectOption: "项目目录",
+    quickPathOption: "本任务拥有的文件",
+    quickSeamOption: "可核查测试 seam 的既有文件",
+    quickActiveSddOption: "相关在途 SDD 变更拥有同一行为",
+    quickSpecOption: "校验 Quick Spec",
+    quickApproveOption: "用户确认后批准当前 draft Quick Spec",
     cleanupDescription: "按确定性留存规则精简已停止托管任务的过程产物",
     cleanupProjectOption: "托管任务所属项目目录",
     cleanupRetentionOption: "留存策略：full | compact | none",

@@ -184,6 +184,17 @@ describe('core/dependencies', () => {
     expect((await installCodexSuperpowers()).ok).toBe(false);
   });
 
+  it('接受官方目录为语义版本而安装回执为内容哈希', async () => {
+    mockCodexCatalog();
+    vi.mocked(runCommand).mockResolvedValueOnce({
+      code: 0, stderr: '', stdout: JSON.stringify({
+        pluginId: 'superpowers@openai-curated-remote',
+        version: '1dc19589',
+      }),
+    });
+    expect((await installCodexSuperpowers()).ok).toBe(true);
+  });
+
   it('插件清单不可用时不使用旧配置或缓存冒充通过', async () => {
     const failed = vi.fn().mockResolvedValue({ code: 1, stdout: '', stderr: 'offline' });
     expect(await inspectCodexSuperpowers(failed)).toMatchObject({ error: 'offline' });

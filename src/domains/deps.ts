@@ -202,8 +202,9 @@ export async function installCodexSuperpowers(
     if (result.code !== 0) return { ok: false, error: result.stderr || result.stdout };
     const installed = JSON.parse(result.stdout);
     const versionConfirmed = /^\d+\.\d+\.\d+$/.test(plugin.version)
-      ? /^\d+\.\d+\.\d+$/.test(installed.version ?? '') &&
-        compareVersions(installed.version, plugin.version) >= 0
+      ? (/^\d+\.\d+\.\d+$/.test(installed.version ?? '') &&
+          compareVersions(installed.version, plugin.version) >= 0) ||
+        /^[a-f0-9]{8,64}$/.test(installed.version ?? '')
       : installed.version === plugin.version;
     if (installed.pluginId !== plugin.pluginId || !versionConfirmed) {
       return { ok: false, error: `Superpowers installation did not confirm ${plugin.pluginId}@${plugin.version}` };

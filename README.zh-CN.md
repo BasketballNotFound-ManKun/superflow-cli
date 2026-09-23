@@ -271,6 +271,7 @@ MCP 是主 Agent 与本地托管状态机的通信通道，不会把 Superflow �
 | `superflow design [change]`                                  | 校验 SuperBridge Flow design 阶段技能部署                   |
 | `superflow implement [change]`                               | 生成当前 Coding Ready 凭证后进入实现阶段                    |
 | `superflow pipeline`                                         | 校验 SuperBridge Flow pipeline 阶段技能部署                 |
+| `superflow quick "<任务>" --path <文件> --seam <既有文件>`    | 对小型代码任务做窄门判断；批准 Quick Spec 后复用 quick 托管档位 |
 | `superflow pipeline "<任务>" --managed --project <目录>`     | 执行 Agent 短会话开发，当前 Host Agent 直接评审             |
 | `--acceptance-contract <文件>`                                | Prompt/SDD 启动必填的冻结验收合同 JSON                      |
 | `superflow check <change> --level files\|docs\|coding-ready` | 分级检查文件、文档交付或可直接编码就绪度                    |

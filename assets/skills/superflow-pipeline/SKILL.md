@@ -86,6 +86,12 @@ JSON，再用 `--resume-task <task-id> --submit-host-review <json>` 恢复。监
 
 ## Choose The Right SDD Skill
 
+- Use `$superflow-quick-dev` for one clear, low-blast-radius code change along
+  an existing test seam. Run its narrow gate before editing; API, DB, security,
+  transactions, concurrency, payments, cross-module work, a related active SDD
+  change, or uncertain ownership goes to `$superflow-clarify` instead. Reuse
+  the current quick managed profile after the Quick Spec is approved; do not
+  create a second managed-task state machine.
 - Use `$openspec-explore` when the user is still thinking through a requirement,
   wants to compare options, or needs codebase investigation before a change.
 - Route to `$superflow-clarify` in embedded deep-clarification mode when the

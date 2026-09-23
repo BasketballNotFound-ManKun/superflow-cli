@@ -359,6 +359,21 @@ program
   });
 
 program
+  .command("quick <request>")
+  .description(helpText.quickDescription)
+  .option("--project <path>", helpText.quickProjectOption)
+  .option("--path <paths...>", helpText.quickPathOption)
+  .option("--seam <path>", helpText.quickSeamOption)
+  .option("--active-sdd", helpText.quickActiveSddOption)
+  .option("--spec <path>", helpText.quickSpecOption)
+  .option("--approve", helpText.quickApproveOption)
+  .option("--json", helpText.jsonOption)
+  .action(async (request, options) => {
+    const { quickCommand } = await import("./commands/quick.js");
+    quickCommand(request, options);
+  });
+
+program
   .command("uninstall [targetPath]")
   .description(helpText.uninstallDescription)
   .option("--agent <agent>", helpText.agentOption, "both")
