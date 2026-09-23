@@ -537,28 +537,40 @@ def mapper_interpolations(file_path, content):
             if match.group(1).strip() not in MYBATIS_SAFE_EXPRESSIONS]
 
 
+def git_segment_args(segment):
+    tokens = shlex.split(segment)
+    git_at = next((i for i, token in enumerate(tokens)
+                   if token == "git" or token.endswith("/git")), -1)
+    if git_at < 0:
+        return None
+    return tokens[:git_at], tokens[git_at + 1:]
+
+
+def git_subcommand_index(args):
+    index = 0
+    while index < len(args) and args[index].startswith("-"):
+        index += 2 if args[index] in ("-c", "-C") else 1
+    return index
+
+
 def check_git_bypass(command):
     for segment in re.split(r"\|\||&&|[;|\n]", command):
         try:
-            tokens = shlex.split(segment)
+            parsed = git_segment_args(segment)
         except ValueError:
             if "git" in segment and ("--no-verify" in segment or "core.hooksPath" in segment):
                 return "Git 命令无法解析且包含 Hook 绕过参数"
             continue
-        git_at = next((i for i, token in enumerate(tokens)
-                       if token == "git" or token.endswith("/git")), -1)
-        if git_at < 0:
+        if parsed is None:
             continue
-        args = tokens[git_at + 1:]
+        prefix, args = parsed
         config_override = any(
             arg.startswith("core.hooksPath=") for arg in args
         ) or any(token.startswith("GIT_CONFIG_") and "core.hooksPath" in token
-                 for token in tokens[:git_at])
+                 for token in prefix)
         if config_override or "--no-verify" in args:
             return "禁止使用 --no-verify 或 core.hooksPath 绕过 Git Hook"
-        index = 0
-        while index < len(args) and args[index].startswith("-"):
-            index += 2 if args[index] in ("-c", "-C") else 1
+        index = git_subcommand_index(args)
         if index < len(args) and args[index] == "commit":
             flags = []
             skip_value = False
@@ -579,17 +591,13 @@ def check_git_bypass(command):
 def is_git_commit(command):
     for segment in re.split(r"\|\||&&|[;|\n]", command):
         try:
-            tokens = shlex.split(segment)
+            parsed = git_segment_args(segment)
         except ValueError:
             continue
-        git_at = next((i for i, token in enumerate(tokens)
-                       if token == "git" or token.endswith("/git")), -1)
-        if git_at < 0:
+        if parsed is None:
             continue
-        args = tokens[git_at + 1:]
-        index = 0
-        while index < len(args) and args[index].startswith("-"):
-            index += 2 if args[index] in ("-c", "-C") else 1
+        _, args = parsed
+        index = git_subcommand_index(args)
         if index < len(args) and args[index] == "commit":
             return True
     return False

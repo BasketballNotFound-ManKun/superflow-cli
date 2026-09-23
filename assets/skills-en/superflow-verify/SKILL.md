@@ -31,6 +31,21 @@ API-only is not browser E2E, and planned cases are not execution evidence.
 Verification is a phase, not a final sentence. Use this skill after
 implementation work claims completion and before archive or delivery.
 
+## Behavior-preserving simplification
+
+After the implementation signals are green, inspect only the files changed by
+this change for missed reuse, duplicated logic, redundant defensive branches,
+and needless abstraction. Before removing a helper or guard, identify its
+callers, error behavior, side effects, and reason for existing. If that reason
+is unclear, leave it in place. Simplification is optional; clean code needs no
+ceremonial edit.
+
+Apply one small simplification at a time. Run the same tests and build signals
+without changing their assertions; if behavior, errors, or side effects change,
+revert that simplification. Keep simplification in a separate commit from the
+feature, and stop if it reaches files outside the original change. This is a
+readability pass, not a second code review or a license for unrelated cleanup.
+
 ## Entry Check
 
 Run:
