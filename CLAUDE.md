@@ -5,6 +5,10 @@
 - `docs/superflow-cli-design-principles.md`
 - `docs/superflow-cli-evaluation-framework.md`
 
+涉及安装面（install / uninstall / update / hooks 注册 / state schema）时，必须先读：
+
+- `AGENTS.local.md`（v0.5.12 安装面避坑规范，生命周期矩阵强制验收）
+
 涉及托管编排时，还必须阅读：
 
 - `docs/managed-work-design-principles.md`
