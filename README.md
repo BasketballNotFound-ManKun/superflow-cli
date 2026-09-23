@@ -63,6 +63,8 @@ merge, or delete files.
 `superflow map-audit` compares full, task Top-K, and directory/symbol skeleton
 contexts from the existing Understand Anything graph without creating another
 persistent map.
+`superflow cleanup-audit` reports duplicate names, complexity clues, and TODO
+hotspots with evidence and a route, without modifying source files.
 
 ## Highlights
 

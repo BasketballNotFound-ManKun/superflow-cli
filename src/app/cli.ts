@@ -391,6 +391,16 @@ program
   });
 
 program
+  .command("cleanup-audit")
+  .description("Scan cleanup candidates without modifying source files")
+  .option("--path <path>", "Project path")
+  .option("--json", "Output JSON")
+  .action(async (options) => {
+    const { cleanupAuditCommand } = await import("./commands/cleanup-audit.js");
+    cleanupAuditCommand(options);
+  });
+
+program
   .command("quick <request>")
   .description(helpText.quickDescription)
   .option("--project <path>", helpText.quickProjectOption)

@@ -39,6 +39,7 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 `superflow context-audit` 可只读检查 `CONTEXT.md` 术语和 ADR 必备字段：术语只写业务语言，ADR 只用于难逆转且有备选方案的决定；缺少 ADR 仅提醒，不增加审批门禁。
 `superflow docs-audit` 可只读盘点 Markdown 的年龄、失效代码锚点和入链数；新建 Markdown 的落位提醒恒退 0，不自动移动、合并或删除。
 `superflow map-audit` 只读比较 Understand Anything 的完整图谱、任务 Top-K 和目录/符号骨架，不创建第二套持久地图。
+`superflow cleanup-audit` 只读输出重复文件名、复杂度线索和 TODO 热点，带证据与执行路由，不修改源码。
 自动部署到：
 
 - Claude Code：`~/.claude/skills/`、`~/.claude/scripts/`，并注册 `~/.claude/settings.json` hook
