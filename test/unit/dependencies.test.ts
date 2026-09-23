@@ -32,6 +32,39 @@ describe('core/dependencies', () => {
     expect(() => selectCodexSuperpowers({ available: [] })).toThrow();
   });
 
+  it('接受官方市场的内容哈希版本，但拒绝不明确的多个哈希', () => {
+    const plugin = {
+      name: 'superpowers', pluginId: 'superpowers@openai-api-curated',
+      marketplaceName: 'openai-api-curated', version: '1dc19589',
+      installed: true, enabled: true,
+    };
+    expect(selectCodexSuperpowers({ installed: [plugin] })).toMatchObject(plugin);
+    expect(() => selectCodexSuperpowers({ available: [
+      { ...plugin, installed: false, enabled: false },
+      { ...plugin, version: 'aaaaaaaa', installed: false, enabled: false },
+    ] })).toThrow();
+    expect(() => selectCodexSuperpowers({
+      installed: [plugin],
+      available: [{ ...plugin, version: 'aaaaaaaa', installed: false, enabled: false }],
+    })).toThrow();
+  });
+
+  it('从官方内容哈希缓存核对 Codex 必备技能', async () => {
+    const root = fsSync.mkdtempSync(path.join(os.tmpdir(), 'superflow-plugin-hash-'));
+    for (const skill of ['verification-before-completion', 'requesting-code-review', 'finishing-a-development-branch']) {
+      const file = path.join(root, 'openai-api-curated/superpowers/1dc19589/skills', skill, 'SKILL.md');
+      fsSync.mkdirSync(path.dirname(file), { recursive: true });
+      fsSync.writeFileSync(file, 'skill');
+    }
+    const run = vi.fn().mockResolvedValue({ code: 0, stderr: '', stdout: JSON.stringify({ installed: [{
+      name: 'superpowers', pluginId: 'superpowers@openai-api-curated',
+      marketplaceName: 'openai-api-curated', version: '1dc19589',
+      installed: true, enabled: true,
+    }] }) });
+    expect((await inspectCodexSuperpowers(run, root)).missing).toEqual([]);
+    fsSync.rmSync(root, { recursive: true, force: true });
+  });
+
   it('新版远端插件不需要 config.toml 启用段', async () => {
     const root = fsSync.mkdtempSync(path.join(os.tmpdir(), 'superflow-plugin-new-'));
     for (const skill of ['verification-before-completion', 'requesting-code-review', 'finishing-a-development-branch']) {
@@ -123,6 +156,32 @@ describe('core/dependencies', () => {
       'codex',
       ['plugin', 'add', 'superpowers@openai-curated-remote', '--json']
     );
+  });
+
+  it('安装官方哈希版本时核对返回的精确身份', async () => {
+    const plugin = {
+      name: 'superpowers', pluginId: 'superpowers@openai-api-curated',
+      marketplaceName: 'openai-api-curated', version: '1dc19589',
+    };
+    vi.mocked(runCommand).mockResolvedValueOnce({
+      code: 0, stderr: '', stdout: JSON.stringify({ available: [plugin] }),
+    });
+    vi.mocked(runCommand).mockResolvedValueOnce({
+      code: 0, stderr: '', stdout: JSON.stringify({
+        pluginId: plugin.pluginId, version: plugin.version,
+      }),
+    });
+    expect((await installCodexSuperpowers()).ok).toBe(true);
+
+    vi.mocked(runCommand).mockResolvedValueOnce({
+      code: 0, stderr: '', stdout: JSON.stringify({ available: [plugin] }),
+    });
+    vi.mocked(runCommand).mockResolvedValueOnce({
+      code: 0, stderr: '', stdout: JSON.stringify({
+        pluginId: plugin.pluginId, version: 'aaaaaaaa',
+      }),
+    });
+    expect((await installCodexSuperpowers()).ok).toBe(false);
   });
 
   it('插件清单不可用时不使用旧配置或缓存冒充通过', async () => {

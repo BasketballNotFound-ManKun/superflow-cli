@@ -8,6 +8,70 @@ import { createManagedTaskFiles } from "../../src/domains/managed-work/storage.j
 import { initManagedRunState } from "../../src/domains/managed-work/state.js";
 
 describe("commands/status", () => {
+  it("derives the runnable frontier from a cross-module task graph", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-frontier-"));
+    const changeDir = path.join(root, "openspec", "changes", "charging-sites");
+    fs.mkdirSync(path.join(changeDir, ".sdd"), { recursive: true });
+    fs.writeFileSync(path.join(changeDir, ".sdd", "state.yaml"),
+      "workflow: full\nphase: implement\nreview_mode: standard\n");
+    const tasks = path.join(changeDir, "tasks.md");
+    fs.writeFileSync(tasks, [
+      "- [ ] [local_required] P00 Create station credential storage",
+      "  - Blocked by: none",
+      "- [ ] [local_required] P01 Route partner calls by station",
+      "  - Blocked by: P00",
+      "- [ ] [local_required] P02 Update management page",
+      "  - Blocked by: P00",
+      "- [ ] [environment_required] P03 Verify two-station callbacks",
+      "  - Blocked by: P01, P02",
+      "",
+    ].join("\n"));
+
+    try {
+      const initial = (await collectStatus(root)).changes[0];
+      expect(initial.taskFrontier).toEqual(["P00"]);
+      fs.writeFileSync(tasks, fs.readFileSync(tasks, "utf8")
+        .replace("- [ ] [local_required] P00", "- [x] [local_required] P00"));
+      const afterStorage = (await collectStatus(root)).changes[0];
+      expect(afterStorage.taskFrontier).toEqual(["P01", "P02"]);
+      expect(afterStorage.taskDependencyIssues).toEqual([]);
+
+      fs.writeFileSync(tasks, fs.readFileSync(tasks, "utf8")
+        .replace("Blocked by: P00", "Blocked by: P99"));
+      const broken = (await collectStatus(root)).changes[0];
+      expect(broken.taskFrontier).toEqual([]);
+      expect(broken.risks).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: "TASK_GRAPH_INVALID" }),
+      ]));
+
+      fs.writeFileSync(tasks, fs.readFileSync(tasks, "utf8")
+        .replace("Blocked by: P99", "Blocked by: P03")
+        .replace("- [x] [local_required] P00", "- [ ] [local_required] P00"));
+      const cyclic = (await collectStatus(root, "en")).changes[0];
+      expect(cyclic.taskFrontier).toEqual([]);
+      expect(cyclic.taskDependencyIssues.join(" ")).toContain("cycle");
+      expect(cyclic.taskDependencyIssues.join(" "))
+        .not.toMatch(/[\p{Script=Han}]/u);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not advertise an executable frontier before implementation", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-planning-frontier-"));
+    const changeDir = path.join(root, "openspec", "changes", "demo");
+    fs.mkdirSync(path.join(changeDir, ".sdd"), { recursive: true });
+    fs.writeFileSync(path.join(changeDir, ".sdd", "state.yaml"),
+      "workflow: full\nphase: docs\nreview_mode: standard\n");
+    fs.writeFileSync(path.join(changeDir, "tasks.md"),
+      "- [ ] T-01 Define migration\n  - Blocked by: none\n");
+    try {
+      expect((await collectStatus(root)).changes[0].taskFrontier).toEqual([]);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("collects active SDD changes with phase, tasks, and next skill", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-status-"));
     const changeDir = path.join(root, "openspec", "changes", "demo");

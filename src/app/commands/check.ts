@@ -201,15 +201,17 @@ export function collectCheck(
 
   // understand-anything 索引（项目级影响面发现前置条件）
   const projectRoot = path.resolve(changeDir, "..", "..", "..");
-  const uaGraph = path.join(
-    projectRoot,
-    ".understand-anything",
-    "knowledge-graph.json",
+  const graphPaths = [
+    ".ua/knowledge-graph.json",
+    ".understand-anything/knowledge-graph.json",
+  ];
+  const foundGraph = graphPaths.find((relative) =>
+    existsSync(path.join(projectRoot, relative)),
   );
   items.push({
-    file: ".understand-anything/knowledge-graph.json",
+    file: foundGraph ?? graphPaths[0],
     required: false,
-    exists: existsSync(uaGraph),
+    exists: foundGraph !== undefined,
     note: "平台级影响面导航工具（缺失时必须降级为源码、配置和跨仓检索并记录证据）",
   });
 

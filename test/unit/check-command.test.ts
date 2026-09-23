@@ -46,8 +46,18 @@ describe("check command levels", () => {
     expect(result.failed).toBe(0);
     expect(
       result.items.find(
-        (item) => item.file === ".understand-anything/knowledge-graph.json",
+        (item) => item.file === ".ua/knowledge-graph.json",
       ),
     ).toMatchObject({ required: false, exists: false });
+  });
+
+  it("detects the current Understand index at the project root", () => {
+    const graph = path.join(root, ".ua", "knowledge-graph.json");
+    fs.mkdirSync(path.dirname(graph), { recursive: true });
+    fs.writeFileSync(graph, "{}");
+
+    const result = collectCheck(change, "demo");
+    expect(result.items.find((item) => item.file === ".ua/knowledge-graph.json"))
+      .toMatchObject({ required: false, exists: true });
   });
 });

@@ -150,6 +150,16 @@ describe('core/context', () => {
   });
 
   describe('checkUnderstandScan', () => {
+    it('.ua/knowledge-graph.json 存在时返回 ok', async () => {
+      const uaDir = path.join(TMP, '.ua');
+      fs.mkdirSync(uaDir, { recursive: true });
+      fs.writeFileSync(path.join(uaDir, 'knowledge-graph.json'), '{}');
+
+      const result = await checkUnderstandScan(TMP);
+      expect(result.ok).toBe(true);
+      expect(result.graphPath).toBe(path.join(uaDir, 'knowledge-graph.json'));
+    });
+
     it('.understand-anything/knowledge-graph.json 存在时返回 ok', async () => {
       const uaDir = path.join(TMP, '.understand-anything');
       fs.mkdirSync(uaDir, { recursive: true });

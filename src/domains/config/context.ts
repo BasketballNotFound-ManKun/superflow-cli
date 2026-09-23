@@ -70,17 +70,20 @@ export async function scaffoldBusinessContext(
 /**
  * 检查 understand-anything 是否已扫过当前项目
  * （understand-anything 由 agent 技能触发，CLI 只做轻量检测）
- * - 扫过：返回 ok=true, graphPath 指向 .understand-anything/knowledge-graph.json
+ * - 扫过：返回 ok=true, graphPath 指向 .ua/ 或旧目录中的 knowledge-graph.json
  * - 没扫：返回 ok=false, 提示用户在 Claude 会话中跑 /understand
  */
 export async function checkUnderstandScan(cwd: string): Promise<UnderstandScanResult> {
-  const graphPath = path.join(cwd, '.understand-anything', 'knowledge-graph.json');
-  try {
-    await fs.access(graphPath);
-    return { ok: true, reason: 'already-scanned', graphPath };
-  } catch {
-    return { ok: false, reason: 'not-scanned' };
+  for (const directory of ['.ua', '.understand-anything']) {
+    const graphPath = path.join(cwd, directory, 'knowledge-graph.json');
+    try {
+      await fs.access(graphPath);
+      return { ok: true, reason: 'already-scanned', graphPath };
+    } catch {
+      // Continue with the other supported directory.
+    }
   }
+  return { ok: false, reason: 'not-scanned' };
 }
 
 /**
@@ -141,8 +144,8 @@ export function printSoftPrompt(
       : '⚠️  understand-anything has not scanned this project yet — required for SDD impact discovery'
     );
     console.log(zh
-      ? '   在 Claude 会话中跑 /understand（输出 .understand-anything/knowledge-graph.json）'
-      : '   Run /understand in an agent session to produce .understand-anything/knowledge-graph.json'
+      ? '   在 Agent 会话中跑 /understand（输出 .ua/ 或旧版 .understand-anything/）'
+      : '   Run /understand in an agent session to produce .ua/ or legacy .understand-anything/'
     );
     console.log(zh
       ? '   ⛔ 不跑的话，SDD docs/design 阶段的平台级影响面门禁会阻塞，届时仍需补跑或降级手动分析'

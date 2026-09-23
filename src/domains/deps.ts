@@ -36,12 +36,19 @@ export function selectCodexSuperpowers(catalog: {
   const plugins = [...(catalog.available ?? []), ...(catalog.installed ?? [])].filter((plugin) =>
     plugin.name === 'superpowers' &&
     CODEX_SUPERPOWERS_MARKETS.includes(plugin.marketplaceName) &&
-    plugin.pluginId === `superpowers@${plugin.marketplaceName}` &&
-    /^\d+\.\d+\.\d+$/.test(plugin.version),
+    plugin.pluginId === `superpowers@${plugin.marketplaceName}`,
   );
-  plugins.sort((a, b) => compareVersions(b.version, a.version));
-  if (!plugins[0]) throw new Error('Cannot confirm the latest official Superpowers plugin; run codex plugin list --available --json');
-  return plugins[0];
+  const versions = plugins.filter((plugin) => /^\d+\.\d+\.\d+$/.test(plugin.version));
+  versions.sort((a, b) => compareVersions(b.version, a.version));
+  if (versions[0]) return versions[0];
+
+  const hashes = plugins.filter((plugin) => /^[a-f0-9]{8,64}$/.test(plugin.version));
+  const distinct = [...new Set(hashes.map((plugin) => `${plugin.pluginId}@${plugin.version}`))];
+  if (distinct.length === 1) {
+    return hashes.find((plugin) => plugin.installed === true && plugin.enabled === true)
+      ?? hashes[0];
+  }
+  throw new Error('Cannot confirm the official Superpowers plugin; run codex plugin list --available --json');
 }
 
 function compareVersions(a: string, b: string): number {
@@ -194,8 +201,11 @@ export async function installCodexSuperpowers(
     const result = await runCommand('codex', ['plugin', 'add', plugin.pluginId, '--json']);
     if (result.code !== 0) return { ok: false, error: result.stderr || result.stdout };
     const installed = JSON.parse(result.stdout);
-    if (installed.pluginId !== plugin.pluginId || !/^\d+\.\d+\.\d+$/.test(installed.version ?? '') ||
-        compareVersions(installed.version, plugin.version) < 0) {
+    const versionConfirmed = /^\d+\.\d+\.\d+$/.test(plugin.version)
+      ? /^\d+\.\d+\.\d+$/.test(installed.version ?? '') &&
+        compareVersions(installed.version, plugin.version) >= 0
+      : installed.version === plugin.version;
+    if (installed.pluginId !== plugin.pluginId || !versionConfirmed) {
       return { ok: false, error: `Superpowers installation did not confirm ${plugin.pluginId}@${plugin.version}` };
     }
     return verifiedCodexSuperpowers(verifySkills);

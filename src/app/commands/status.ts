@@ -35,6 +35,8 @@ export interface ChangeStatus {
   verifyResult: string;
   tasksCompleted: number;
   tasksTotal: number;
+  taskFrontier: string[];
+  taskDependencyIssues: string[];
   nextCommand: string | null;
   nextReason: string;
   risks: Array<{
@@ -127,7 +129,7 @@ export async function collectStatus(
 
     const state = parseSimpleYaml(readFileSync(statePath, "utf-8"));
     if (state.archived === "true" || state.phase === "done") continue;
-    const tasks = countTasks(path.join(changeDir, "tasks.md"));
+    const tasks = readTasks(path.join(changeDir, "tasks.md"), language);
 
     const docCheck = collectCheck(changeDir, entry);
 
@@ -143,6 +145,8 @@ export async function collectStatus(
       verifyResult: state.verify_result ?? "pending",
       tasksCompleted: tasks.done,
       tasksTotal: tasks.total,
+      taskFrontier: state.phase === "implement" ? tasks.frontier : [],
+      taskDependencyIssues: tasks.issues,
       nextCommand: nextCommand(entry, state.phase),
       nextReason: nextReason(state.phase, tasks, state.verify_result, language),
       risks: buildRisks(changeDir, state, tasks, language),
@@ -168,13 +172,110 @@ function parseSimpleYaml(content: string): Record<string, string> {
   return result;
 }
 
-function countTasks(tasksPath: string): { done: number; total: number } {
-  if (!existsSync(tasksPath)) return { done: 0, total: 0 };
+interface TaskProgress {
+  done: number;
+  total: number;
+  frontier: string[];
+  issues: string[];
+}
+
+const TASK_ID = /\b(?:T-\d+|P\d+|\d+(?:\.\d+)*)\b/i;
+const TASK_IDS = /\b(?:T-\d+|P\d+|\d+(?:\.\d+)*)\b/gi;
+
+function readTasks(tasksPath: string, language: Language): TaskProgress {
+  if (!existsSync(tasksPath)) {
+    return { done: 0, total: 0, frontier: [], issues: [] };
+  }
   const lines = readFileSync(tasksPath, "utf-8").split(/\r?\n/);
-  return {
-    done: lines.filter((line) => /^\s*-\s*\[[xX]\]/.test(line)).length,
-    total: lines.filter((line) => /^\s*-\s*\[[ xX]\]/.test(line)).length,
+  const entries: Array<{
+    id: string;
+    done: boolean;
+    blockedBy: string[];
+    declared: boolean;
+  }> = [];
+  let current: (typeof entries)[number] | undefined;
+  let done = 0;
+  let total = 0;
+  let hasDependencyMetadata = false;
+  for (const line of lines) {
+    const checkbox = /^\s*-\s*\[([ xX])\]\s*(.*)$/.exec(line);
+    if (checkbox) {
+      total += 1;
+      const completed = checkbox[1].toLowerCase() === "x";
+      if (completed) done += 1;
+      const id = TASK_ID.exec(checkbox[2])?.[0].toUpperCase() ?? "";
+      current = { id, done: completed, blockedBy: [], declared: false };
+      entries.push(current);
+      continue;
+    }
+    const dependency = /^\s*-\s*(?:\*\*)?Blocked by(?:\*\*)?\s*:\s*(.*)$/i.exec(line);
+    if (current && dependency) {
+      hasDependencyMetadata = true;
+      current.declared = true;
+      current.blockedBy = [...dependency[1].matchAll(TASK_IDS)]
+        .map((match) => match[0].toUpperCase());
+    }
+  }
+  if (!hasDependencyMetadata) return { done, total, frontier: [], issues: [] };
+
+  const issues: string[] = [];
+  const byId = new Map<string, (typeof entries)[number]>();
+  for (const entry of entries) {
+    if (!entry.id) {
+      issues.push(language === "en"
+        ? "Task graph contains a checkbox without an ID"
+        : "任务图中有未标注编号的 checkbox");
+    } else if (byId.has(entry.id)) {
+      issues.push(language === "en"
+        ? `Duplicate task ID: ${entry.id}`
+        : `任务 ID 重复: ${entry.id}`);
+    } else {
+      byId.set(entry.id, entry);
+    }
+    if (!entry.declared) {
+      issues.push(language === "en"
+        ? `${entry.id || "Task"} lacks Blocked by metadata`
+        : `${entry.id || "任务"} 缺少 Blocked by 元数据`);
+    }
+  }
+  for (const entry of entries) {
+    for (const predecessor of entry.blockedBy) {
+      if (!byId.has(predecessor)) {
+        issues.push(language === "en"
+          ? `${entry.id} references missing predecessor ${predecessor}`
+          : `${entry.id} 引用了不存在的前置任务 ${predecessor}`);
+      }
+    }
+  }
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (id: string): void => {
+    if (visiting.has(id)) {
+      issues.push(language === "en"
+        ? `Task dependency cycle: ${id}`
+        : `任务依赖成环: ${id}`);
+      return;
+    }
+    if (visited.has(id)) return;
+    visiting.add(id);
+    for (const predecessor of byId.get(id)?.blockedBy ?? []) {
+      if (byId.has(predecessor)) visit(predecessor);
+    }
+    visiting.delete(id);
+    visited.add(id);
   };
+  for (const id of byId.keys()) visit(id);
+  for (const entry of entries) {
+    if (entry.done && entry.blockedBy.some((id) => !byId.get(id)?.done)) {
+      issues.push(language === "en"
+        ? `${entry.id} is complete before its predecessor`
+        : `${entry.id} 已完成，但前置任务尚未完成`);
+    }
+  }
+  const frontier = issues.length > 0 ? [] : entries
+    .filter((entry) => !entry.done && entry.blockedBy.every((id) => byId.get(id)?.done))
+    .map((entry) => entry.id);
+  return { done, total, frontier, issues };
 }
 
 function nextCommand(change: string, phase: string | undefined): string | null {
@@ -196,7 +297,7 @@ function nextCommand(change: string, phase: string | undefined): string | null {
 
 function nextReason(
   phase: string | undefined,
-  tasks: { done: number; total: number },
+  tasks: TaskProgress,
   verifyResult: string | undefined,
   language: Language,
 ): string {
@@ -227,7 +328,7 @@ function nextReason(
 function buildRisks(
   changeDir: string,
   state: Record<string, string>,
-  tasks: { done: number; total: number },
+  tasks: TaskProgress,
   language: Language,
 ): ChangeStatus["risks"] {
   const risks: ChangeStatus["risks"] = [];
@@ -255,6 +356,13 @@ function buildRisks(
         language === "en"
           ? `${remaining} task(s) remain.`
           : `仍有 ${remaining} 个任务未完成。`,
+    });
+  }
+  if (tasks.issues.length > 0) {
+    risks.push({
+      level: "warning",
+      code: "TASK_GRAPH_INVALID",
+      message: tasks.issues.join(language === "en" ? "; " : "；"),
     });
   }
   if (
@@ -450,6 +558,9 @@ function printStatus(result: StatusResult, language: Language): void {
     console.log(`  path: ${change.path}`);
     if (change.nextCommand) console.log(`  next: ${change.nextCommand}`);
     console.log(`  reason: ${change.nextReason}`);
+    if (change.taskFrontier.length > 0) {
+      console.log(`  frontier: ${change.taskFrontier.join(", ")}`);
+    }
     for (const risk of change.risks) {
       console.log(
         `  ${risk.level.toUpperCase()} ${risk.code}: ${risk.message}`,

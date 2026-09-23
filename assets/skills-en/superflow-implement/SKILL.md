@@ -96,6 +96,15 @@ Use references/batch-split-guide.md and references/batch-prompt-template.md.
 Split by business closure, not by file type. Each batch must have independent
 entry, implementation scope, verification, and report obligations.
 
+Read `tasks.md` predecessor links before splitting or dispatching. A batch is
+executable only when its real predecessors are complete; independent batches
+may run in parallel. Keep the existing checkbox and machine category as the
+progress authority. An implementation discovery that changes a confirmed
+owner decision or task acceptance requires canonical document repair, handoff
+refresh, document review, and a new Coding Ready receipt before the affected
+batch resumes. A free-text `Blocked by` note cannot downgrade a locally
+executable task to an external category.
+
 Workers may update only their own embedded-changes/pXX-* docs. Root aggregate
 docs are updated by the leader during closeout after related worktrees merge.
 

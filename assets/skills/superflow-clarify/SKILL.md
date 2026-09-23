@@ -13,7 +13,7 @@ any full SDD document or implementation prompt is generated.
 
 - Before freezing any new requirement or bug fix, perform platform-level impact
   discovery. Prefer understand-anything artifacts when present, such as
-  `.understand-anything/`, `understand-anything.md`, `understand anything.md`,
+  `.ua/`, `.understand-anything/`, `understand-anything.md`, `understand anything.md`,
   or the project-specific graph output, but treat them only as locator evidence.
   If artifacts are missing, stale, incomplete, or unavailable, degrade to `rg`,
   source reading, Mapper/XML, configuration, database table names, log
@@ -170,6 +170,28 @@ Use the detailed workflow in:
 18. Only after the current feature is frozen or blocked, move to the next
     indexed feature. Do not batch-confirm multiple features from memory or a
     compressed chat summary.
+
+### Change-level alignment before OpenSpec artifacts
+
+After all in-scope features are frozen, present one concise change-level
+`Consensus Summary` covering the goal, in/out scope, verified source facts,
+owner decisions with rejected alternatives, production and migration risks,
+and remaining non-blocking questions with owner and reopen trigger. Derive it
+from `source-code-audit.md`, `feature-gates.md`, and the confirmed decisions in
+`.sdd/handoff/brainstorm-summary.md`; the summary is a handoff view, not a
+second source of requirements. Record unresolved decisions as blockers and
+ask only the next owner decision. Do not ask the user to reconfirm facts or
+choices already explicit in the original request.
+
+When a material owner choice was made during clarification, show the current
+summary before generating OpenSpec artifacts. Reuse an explicit confirmation
+already given for that exact choice and summary; ask once only if the summary
+introduces a new choice or changes its consequence. The later `proposal.md`
+must carry the confirmed change-level
+decisions and cite their evidence. If a later finding changes a confirmed
+choice, return to that decision, update affected canonical documents, refresh
+the handoff hash and repeat document review and Coding Ready. Task checkbox
+progress alone does not change the agreed contract.
 
 ## Handoff
 

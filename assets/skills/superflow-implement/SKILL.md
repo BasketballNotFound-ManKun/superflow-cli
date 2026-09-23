@@ -83,6 +83,14 @@ Before implementation phase can exit:
 ## Prompt Splitting Rules
 
 - Split by independently verifiable feature closure, not by a giant backend module.
+- Read `tasks.md` predecessor links before splitting or dispatching. A batch is
+  executable only when its real predecessors are complete; independent batches
+  may run in parallel. Keep the existing checkbox and machine category as the
+  progress authority. An implementation discovery that changes a confirmed
+  owner decision or task acceptance requires canonical document repair,
+  handoff refresh, document review, and a new Coding Ready receipt before the
+  affected batch resumes. A free-text `Blocked by` note cannot downgrade a
+  locally executable task to an external category.
 - Use P0 for baseline only: worktree, branch, compile, SQL/entity/mapper/DTO consistency.
 - Keep business prompts small and explicit.
 - Every implementation prompt must begin with the mandatory superpower/team

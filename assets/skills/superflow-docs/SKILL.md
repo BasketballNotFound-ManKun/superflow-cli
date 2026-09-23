@@ -37,6 +37,12 @@ Do not invent new fields or requirements.
 
 For complex requirements, verify these before writing docs:
 
+- `proposal.md` carries the confirmed change-level Consensus Summary from
+  clarification: goal, scope, owner choices and rejected alternatives,
+  production/migration risks, and non-blocking reopen triggers. Check it
+  against original sources and `source-code-audit.md`; do not treat the
+  handoff summary as a second authority. If a material choice remains open,
+  return to `$superflow-clarify` before finalizing design or tasks.
 - `source-ingestion.md`, `feature-inventory.md`, and `feature-gates.md` prove
   that the original PRD/Lark/Feishu/screenshots were processed section by
   section, not summarized into tasks in one whole-document pass. Each feature
@@ -240,6 +246,12 @@ applicable:
 - `tasks.md` 每个 checkbox 必须带且只带一个机器分类：`[local_required]`、
   `[environment_required]` 或 `[release_required]`。能够在本地完成的编码、测试、启动和浏览器
   验证必须是 local_required；不得用自由文本 Blocker/owner 代替分类。
+- For each implementation task, review observable delivery, acceptance signal,
+  requirement/scenario coverage, and actual predecessors. Show the currently
+  executable tasks whose predecessors are complete. Reuse
+  `traceability-matrix.md` for detailed coverage; do not create another task
+  state file. `Blocked by` expresses execution order and never changes the
+  machine task classification above.
 - `tests.md`
 - `test-report.md` skeleton
 - `sdd-quality-gate.md`

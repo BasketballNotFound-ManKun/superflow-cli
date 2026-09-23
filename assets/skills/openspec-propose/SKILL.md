@@ -22,6 +22,14 @@ When ready to implement, run /opsx:apply
 
 **Input**: The user's request should include a change name (kebab-case) OR a description of what they want to build.
 
+When this skill follows `superflow-clarify`, read the confirmed change-level
+Consensus Summary and its source evidence before creating artifacts. Put the
+goal, scope, material owner decisions, rejected alternatives, migration risks,
+and non-blocking reopen triggers in canonical `proposal.md`; cite the existing
+source audit rather than copying it. A pending owner decision that changes the
+solution blocks downstream spec/design/tasks. An explicit decision in the
+user's original request needs no second confirmation.
+
 ### OpenSpec canonical change 目录（阻塞级）
 
 - change 必须只有一个实体目录：`openspec/changes/<name>/`。
@@ -108,6 +116,12 @@ After completing all artifacts, summarize:
 - Follow the `instruction` field from `openspec instructions` for each artifact type
 - The schema defines what each artifact should contain - follow it
 - Read dependency artifacts for context before creating new ones
+- For a Superflow change, keep ordinary OpenSpec checkbox task syntax. For each
+  independently verifiable task, state its observable delivery and acceptance
+  signal; record real predecessor task IDs as `Blocked by` and link the relevant
+  requirement/scenario or traceability row. A free-text blocker does not change
+  Superflow's `[local_required]` / `[environment_required]` /
+  `[release_required]` machine classification. Do not invent dependencies.
 - Use `template` as the structure for your output file - fill in its sections
 - **IMPORTANT**: `context` and `rules` are constraints for YOU, not content for the file
   - Do NOT copy `<context>`, `<rules>`, `<project_context>` blocks into the artifact

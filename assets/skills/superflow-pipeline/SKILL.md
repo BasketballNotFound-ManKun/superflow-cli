@@ -163,6 +163,12 @@ When the router selects embedded deep clarification, follow these rules inside
 - Exit deep clarification once only repository-verifiable facts remain and the
   user confirms the current feature understanding. Continue through the existing
   clarify workflow without invoking an external skill dependency.
+- After all relevant features are frozen, show the change-level Consensus
+  Summary from `superflow-clarify` before OpenSpec artifact generation. Carry
+  confirmed choices into canonical `proposal.md`; do not create a parallel
+  alignment fact source or add approval prompts for decisions already explicit
+  in the user's request. A changed owner choice requires affected documents,
+  handoff, review, and Coding Ready to be refreshed before execution.
 
 ## Non-Negotiable Rules
 
@@ -431,7 +437,7 @@ Mapper/XML、数据库样例、接口契约和真实消费入口验证。
 **影响面发现方式（优先但可降级）：**
 
 - 优先检查当前仓库是否存在 understand-anything 相关索引/产物，例如
-  `.understand-anything/`、`understand-anything.md`、`understand anything.md`、
+  `.ua/`、`.understand-anything/`、`understand-anything.md`、`understand anything.md`、
   或项目约定的 understand-anything 图谱文件。
 - 如果索引存在，可以用它快速定位整个平台相关代码，包括当前仓库、同平台
   sibling repo、共享 SDK、公共 DTO、数据库表消费方、定时任务、回调入口、外部平台

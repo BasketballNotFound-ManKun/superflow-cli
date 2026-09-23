@@ -179,6 +179,12 @@ When the router selects embedded deep clarification, follow these rules inside
 - Exit deep clarification once only repository-verifiable facts remain and the
   user confirms the current feature understanding. Continue through the existing
   clarify workflow without invoking an external skill dependency.
+- After all relevant features are frozen, show the change-level Consensus
+  Summary from `superflow-clarify` before OpenSpec artifact generation. Carry
+  confirmed choices into canonical `proposal.md`; do not create a parallel
+  alignment fact source or add approval prompts for decisions already explicit
+  in the user's request. A changed owner choice requires affected documents,
+  handoff, review, and Coding Ready to be refreshed before execution.
 
 ## Required Artifacts
 
