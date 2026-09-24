@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 devtools/ecc-governance-self-check.py",
+            "timeout": 5,
+            "statusMessage": "Superflow ECC 治理自审提醒"
+          }
+        ]
+      }
+    ]
+  }
+}
