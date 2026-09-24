@@ -10,6 +10,7 @@ const requirements = new Map([
       "docs/superflow-cli-design-principles.md",
       "docs/superflow-cli-evaluation-framework.md",
       "Codex、Claude",
+      "默认采用 ECC 治理",
     ],
   ],
   [
@@ -18,6 +19,7 @@ const requirements = new Map([
       "docs/superflow-cli-design-principles.md",
       "docs/superflow-cli-evaluation-framework.md",
       "docs/managed-work-design-principles.md",
+      "默认采用 ECC 治理",
     ],
   ],
   [
@@ -48,6 +50,7 @@ const requirements = new Map([
       "评价驱动维护",
       "Codex、Claude",
       "三个彼此独立但可衔接的入口",
+      "ECC 式能力治理",
     ],
   ],
   [
@@ -60,6 +63,7 @@ const requirements = new Map([
       "Evaluation-Driven Maintenance",
       "Codex and Claude",
       "three independent but composable entries",
+      "ECC-style capability governance",
     ],
   ],
   [

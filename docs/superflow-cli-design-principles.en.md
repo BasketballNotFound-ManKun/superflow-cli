@@ -88,6 +88,18 @@ entry, and recovery path.
 - Codex and Claude differences belong in adapters, not core state.
 - Chinese and English docs, skills, prompts, CLI help, and tests stay equivalent.
 
+### ECC-style capability governance (default)
+
+Before every Superflow change, inspect the capability inventory and sole owner:
+the Skill Registry owns triggers and exclusions, path-scoped rules own project
+applicability, hooks and scripts enforce narrow deterministic facts, and the
+existing state machine retains state ownership. Reuse and consolidate before
+adding a skill, hook, prompt, or durable state; a new entry must not conceal
+ambiguous routing. Installation and migration remain idempotent, diagnosable,
+backed up, and provenance-aware while preserving unknown and user-owned assets.
+Keep a change only after positive and negative examples, both host installs,
+and actual cost evidence support it.
+
 ## 5. Installation and Upgrade Closure
 
 Source install, npm install, and hook auto-upgrade install the same complete
