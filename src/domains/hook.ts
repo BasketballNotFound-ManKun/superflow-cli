@@ -185,12 +185,16 @@ export function registerHook(
     );
   });
   if (!exists) {
+    // Codex clamps SessionEnd/Interrupt hooks to 3 seconds. Writing the
+    // supported value avoids a warning on every new session and makes the
+    // installed contract match the host's actual limit.
+    const timeout = finalEvent === "SessionEnd" ? 3 : options.timeout ?? 120;
     const entry: Record<string, unknown> = {
       hooks: [
         {
           type: "command",
           command: commandPath,
-          timeout: options.timeout ?? 120,
+          timeout,
         },
       ],
     };

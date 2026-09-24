@@ -88,6 +88,12 @@ describe("core/registry", () => {
     expect(result.hooks.UserPromptSubmit[0].hooks[0].command).toBe(cmd);
   });
 
+  it("SessionEnd hook 使用 Codex 支持的 3 秒上限", () => {
+    registerHook(SETTINGS, "superflow-loop-end-hook.sh", "/home/test/.codex/hooks/superflow-loop-end-hook.sh");
+    const result = JSON.parse(fs.readFileSync(SETTINGS, "utf-8"));
+    expect(result.hooks.SessionEnd[0].hooks[0].timeout).toBe(3);
+  });
+
   it("registerHook 产生备份文件", () => {
     registerHook(SETTINGS, "superflow-enforce-hook.sh", "/x.sh");
     const backups = fs.readdirSync(TMP).filter((f) => f.includes("sdd-backup"));
