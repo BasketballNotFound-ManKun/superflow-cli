@@ -84,5 +84,6 @@ describe("quick development gate", () => {
     });
     expect(result.verdict).toBe("STOP");
     expect(result.reasons).toContain("存在相关在途 SDD 变更");
+    expect(result.nextSkill).toBe("superflow-clarify");
   });
 });

@@ -73,7 +73,8 @@ export function quickCommand(request: string, options: QuickCommandOptions = {})
     result.next = "Quick Spec 当前版本有效；按测试先行实施";
   }
   if (result.verdict === "STOP") {
-    result.next = "停止 Quick 路径，核实风险与范围后进入正式 SDD";
+    result.nextSkill = "superflow-clarify";
+    result.next = "停止 Quick；先核实在途变更是否拥有同一行为，再由 superflow-clarify 对齐正式 SDD。用户明确选择 ake SSD 时才切换到 ssd-propose";
   }
   if (options.json) {
     console.log(JSON.stringify({ ...result, changedFiles: files, ...(specResult ? { spec: specResult } : {}) }, null, 2));

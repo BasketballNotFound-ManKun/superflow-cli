@@ -15,11 +15,14 @@ Accept only one low-blast-radius code task that follows an existing seam.
 
 Inspect current source, callers, and tests, then run
 `superflow quick "<request>" --json --path <changed-files...> --seam <existing-file>`.
-Pass `--active-sdd` if a related SDD change owns the same behavior. Continue only
+Pass `--active-sdd` only after confirming an active SDD change owns the **same
+behavior**; reusing its code or depending on its output is insufficient. Continue only
 when it returns `QUICK`. Public APIs, databases/migrations, transactions,
 concurrency, locks, permissions, security, payments, cross-module work, active
 SDD changes, or a non-exclusive worktree must return `STOP` and switch to
-`superflow-clarify`.
+`superflow-clarify`. If ake-harness's `ssd-propose` is also visible, do not
+route there merely because it is installed. Switch to ake SSD only when the
+user explicitly chooses that workflow.
 
 ## Quick Spec
 

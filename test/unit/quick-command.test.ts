@@ -30,6 +30,8 @@ describe("quick CLI admission", () => {
       });
       const output = JSON.parse(String(log.mock.calls[0][0]));
       expect(output.verdict).toBe("STOP");
+      expect(output.nextSkill).toBe("superflow-clarify");
+      expect(output.next).toContain("用户明确选择 ake SSD 时才切换");
       expect(output.reasons).toEqual(expect.arrayContaining([
         expect.stringContaining("approved Quick Spec content has changed"),
       ]));

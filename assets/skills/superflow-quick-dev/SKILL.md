@@ -15,9 +15,12 @@ metadata:
 
 先查真实源码、调用方和测试，再运行
 `superflow quick "<request>" --json --path <changed-files...> --seam <existing-file>`。
-若同一行为已有在途 SDD 变更，追加 `--active-sdd`。只有返回
+只有确认**同一行为**由在途 SDD 变更拥有时才追加 `--active-sdd`；仅复用其代码或依赖
+其产出，不等于同一变更。只有返回
 `QUICK` 才能继续。公共 API、数据库/迁移、事务、并发、锁、权限、安全、支付、跨模块、
-在途 SDD 变更或非独占工作树必须返回 `STOP`，转 `superflow-clarify`。
+在途 SDD 变更或非独占工作树必须返回 `STOP`，转 `superflow-clarify`。若项目还安装了
+ake-harness 的 `ssd-propose`，不得因为它可见就自动改派；只有用户明确选择 ake SSD
+流程时才切换。
 
 ## Quick Spec
 

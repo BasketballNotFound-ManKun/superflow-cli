@@ -22,6 +22,7 @@ export interface QuickGateResult {
   target: string;
   reasons: string[];
   next: string;
+  nextSkill?: "superflow-clarify";
 }
 
 const HIGH_RISK_PATTERNS: Array<[RegExp, string]> = [
@@ -58,7 +59,8 @@ export function evaluateQuickGate(input: QuickGateInput): QuickGateResult {
     reasons,
     next: verdict === "QUICK"
       ? "写入 quick spec，用户批准当前磁盘版本后再实施"
-      : "新 turn 使用 superflow-clarify / OpenSpec SDD 完成正式对齐",
+      : "停止 Quick；先核实在途变更是否拥有同一行为，再由 superflow-clarify 对齐正式 SDD",
+    ...(verdict === "STOP" ? { nextSkill: "superflow-clarify" as const } : {}),
   };
 }
 
