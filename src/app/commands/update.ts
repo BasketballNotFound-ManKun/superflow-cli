@@ -17,7 +17,7 @@ import { deployRules } from '../../domains/skill/rules.js';
 import { deployScripts } from '../../domains/skill/scripts.js';
 import { deploySkill } from '../../domains/skill/deploy.js';
 import { deployPrompts } from '../../domains/skill/prompts.js';
-import { clearSddHooks, registerHook } from '../../domains/hook.js';
+import { syncManagedHooks } from '../../domains/hook.js';
 import type { Agent, InstallScope, Language, SddState } from '../../types.js';
 import { runCommand } from '../../platform/process.js';
 import {
@@ -37,6 +37,7 @@ import {
 import { resolveRuntimeLanguage } from '../../domains/config/cli-help.js';
 import { managedText } from '../../domains/managed-work/i18n.js';
 import { manageMcpIntegration } from './mcp.js';
+import { migrateProjectHooks } from '../../domains/hook-migration.js';
 
 const PACKAGE_NAME = '@chenmk/superflow';
 const OPENSPEC_PACKAGE_NAME = '@fission-ai/openspec';
@@ -151,6 +152,12 @@ export async function updateCommand(options: {
   for (const target of targets) {
     await collectUpdateFailure(syncFailures, async () => {
       const { agent, scope } = target;
+      if (scope === 'project' && !options.noHooks) {
+        const migration = migrateProjectHooks(target.projectPath, agent === 'codex' ? 'codex' : 'claude', { replacementAvailable: true });
+        if (migration.changed && !options.json) {
+          console.log(`  ✓ migrated legacy ${agent} Hooks; backup: ${migration.backup}`);
+        }
+      }
       const platform = getPlatformPaths(agent, scope, target.projectPath);
       for (const skill of ALL_SKILLS) {
         const skillsRoot = skillsRootForLanguage(language);
@@ -164,17 +171,7 @@ export async function updateCommand(options: {
       }
       const hooks = hookScriptsForAgent(agent);
       if (!options.noHooks && hooks.length > 0) {
-        clearSddHooks(platform.settingsFile);
-        for (const hook of hooks) {
-          const command = path.join(platform.scriptsDir, hook);
-          const timeout = hook === 'superflow-dependency-update-hook.sh' ? 300 : undefined;
-          registerHook(platform.settingsFile, hook, command, { timeout });
-          if (hook === 'superflow-sql-sync-hook.py') {
-            // 双 matcher 是有意设计：Edit|Write 覆盖 SQL 文件编辑路径，Bash 覆盖 git 提交路径，
-            // 两条触发面都需要 SQL 同步检查；不要当作重复注册移除。
-            registerHook(platform.settingsFile, hook, command, { matcherOverride: 'Bash|Shell|exec_command' });
-          }
-        }
+        syncManagedHooks(platform.settingsFile, platform.scriptsDir, hooks);
       }
     });
   }

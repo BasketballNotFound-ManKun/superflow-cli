@@ -401,6 +401,29 @@ program
   });
 
 program
+  .command("hook-migrate")
+  .description("Audit or migrate legacy project Hook registrations safely")
+  .option("--path <path>", "Project path")
+  .option("--agent <agent>", "codex | claude | both", "both")
+  .option("--apply", "Back up and remove only known legacy managed Hooks")
+  .option("--json", "Output JSON")
+  .action(async (options) => {
+    const { hookMigrateCommand } = await import("./commands/hook-migrate.js");
+    hookMigrateCommand(options);
+  });
+
+program
+  .command("hook-audit")
+  .description("Read-only audit of global and project Hook conflicts")
+  .option("--path <path>", "Project path")
+  .option("--agent <agent>", "codex | claude | both", "both")
+  .option("--json", "Output JSON")
+  .action(async (options) => {
+    const { hookMigrateCommand } = await import("./commands/hook-migrate.js");
+    hookMigrateCommand({ ...options, apply: false });
+  });
+
+program
   .command("quick <request>")
   .description(helpText.quickDescription)
   .option("--project <path>", helpText.quickProjectOption)

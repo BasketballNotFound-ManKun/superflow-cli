@@ -24,7 +24,8 @@ import { deploySkill } from '../../domains/skill/deploy.js';
 import { deployScripts } from '../../domains/skill/scripts.js';
 import { deployPrompts } from '../../domains/skill/prompts.js';
 import { deployRules } from '../../domains/skill/rules.js';
-import { registerHook, clearSddHooks } from '../../domains/hook.js';
+import { syncManagedHooks } from '../../domains/hook.js';
+import { migrateProjectHooks } from '../../domains/hook-migration.js';
 import { loadState, saveState, initState, upsertManagedProject } from '../../domains/state.js';
 import { scaffoldBusinessContext, checkUnderstandScan, printSoftPrompt } from '../../domains/config/context.js';
 import {
@@ -430,24 +431,12 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
             state.platforms[agent].hooks = [];
             continue;
           }
-          const cleared = clearSddHooks(platform.settingsFile);
-          if (cleared > 0) {
-            log(`  ✓ cleared ${cleared} old superflow/legacy sdd hooks (avoid duplicate registration)`);
+          if (options.scope === 'project') {
+            const migration = migrateProjectHooks(projectPath, agent === 'codex' ? 'codex' : 'claude', { replacementAvailable: true });
+            if (migration.changed) log(`  ✓ migrated legacy ${agent} project hooks; backup: ${migration.backup}`);
           }
-          for (const script of hookScripts) {
-            const command = path.join(platform.scriptsDir, script);
-            try {
-              const timeout = script === 'superflow-dependency-update-hook.sh' ? 300 : undefined;
-              registerHook(platform.settingsFile, script, command, { timeout });
-              if (script === 'superflow-sql-sync-hook.py') {
-                // 双 matcher 是有意设计：默认 matcher 覆盖 SQL 文件编辑路径，Bash 覆盖 git 提交路径；
-                // 两条触发面都需要 SQL 同步检查，不要当作重复注册移除。
-                registerHook(platform.settingsFile, script, command, { matcherOverride: 'Bash|Shell|exec_command' });
-              }
-            } catch (err) {
-              warn(`  [WARN] ${script}: ${(err as Error).message}`);
-            }
-          }
+          const synced = syncManagedHooks(platform.settingsFile, platform.scriptsDir, hookScripts);
+          if (synced.changed) log(`  ✓ reconciled ${synced.registered} hooks; removed ${synced.removed} old registrations`);
           state.platforms[agent].hooks = hookScripts;
           log(`  ✓ ${hookScripts.length} hooks registered to ${platform.settingsFile}`);
         }

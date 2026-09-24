@@ -205,3 +205,61 @@ export function registerHook(
   // 4. 保留所有现有 key
   writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf-8");
 }
+
+/** Reconcile all managed hooks in one write; identical definitions are a no-op. */
+export function syncManagedHooks(
+  settingsFile: string,
+  scriptsDir: string,
+  scriptNames: string[],
+): { changed: boolean; removed: number; registered: number } {
+  const original = existsSync(settingsFile)
+    ? readFileSync(settingsFile, "utf8") : "{}";
+  const settings = JSON.parse(original);
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    throw new Error(`Invalid hook settings: ${settingsFile}`);
+  }
+  const hooks = settings.hooks && typeof settings.hooks === "object"
+    ? settings.hooks : {};
+  let removed = 0;
+  for (const event of Object.keys(hooks)) {
+    if (!Array.isArray(hooks[event])) continue;
+    const kept = hooks[event].flatMap((entry: any) => {
+      if (!Array.isArray(entry?.hooks)) return [entry];
+      const remaining = entry.hooks.filter((item: any) => {
+        const managed = isSuperflowManagedHook(item?.command);
+        if (managed) removed += 1;
+        return !managed;
+      });
+      return remaining.length ? [{ ...entry, hooks: remaining }] : [];
+    });
+    if (kept.length) hooks[event] = kept;
+    else delete hooks[event];
+  }
+  let registered = 0;
+  for (const script of scriptNames) {
+    const map = HOOK_MAP[script];
+    if (!map) throw new Error(`Unknown hook script: ${script}`);
+    const command = path.join(scriptsDir, script);
+    const matchers = script === "superflow-sql-sync-hook.py"
+      ? [map.matcher, "Bash|Shell|exec_command"] : [map.matcher];
+    for (const matcher of matchers) {
+      const entry: Record<string, unknown> = {
+        hooks: [{ type: "command", command,
+          timeout: map.event === "SessionEnd" ? 3
+            : script === "superflow-dependency-update-hook.sh" ? 300 : 120 }],
+      };
+      if (matcher !== undefined) entry.matcher = matcher;
+      (hooks[map.event] ??= []).push(entry);
+      registered += 1;
+    }
+  }
+  settings.hooks = hooks;
+  const next = JSON.stringify(settings, null, 2);
+  if (original.trim() === next.trim()) return { changed: false, removed, registered };
+  mkdirSync(path.dirname(settingsFile), { recursive: true });
+  if (existsSync(settingsFile)) {
+    writeFileSync(`${settingsFile}.sdd-backup-${Date.now()}`, original);
+  }
+  writeFileSync(settingsFile, next + "\n");
+  return { changed: true, removed, registered };
+}

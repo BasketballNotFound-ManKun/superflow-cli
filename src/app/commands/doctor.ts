@@ -24,6 +24,7 @@ import {
   REQUIRED_CODEX_SUPERPOWER_SKILLS,
 } from '../../domains/deps.js';
 import { resolveMcpServerPath } from './mcp.js';
+import { auditProjectHooks } from '../../domains/hook-migration.js';
 
 type DoctorStatus = 'pass' | 'warn' | 'fail';
 type DoctorScope = InstallScope | 'auto';
@@ -150,6 +151,19 @@ export async function collectDoctor(options: {
     options.projectPath ?? options.targetPath ?? process.cwd()
   );
   const checks: DoctorCheck[] = [];
+  for (const agent of agents) {
+    const audit = auditProjectHooks(projectPath, agent === 'codex' ? 'codex' : 'claude');
+    checks.push({
+      check: `hooks:${agent}:legacy-project`,
+      status: audit.error ? 'fail' : audit.autoMigratable ? 'warn' : 'pass',
+      message: audit.error ?? managedText(language,
+        `项目旧 Hook ${audit.autoMigratable} 条；自定义保留 ${audit.retained} 条`,
+        `${audit.autoMigratable} legacy project Hook(s); ${audit.retained} custom retained`),
+      ...(audit.autoMigratable ? { remediation: managedText(language,
+        `运行 superflow hook-migrate --path ${projectPath} --agent ${agent} --apply，随后重启当前会话`,
+        `Run superflow hook-migrate --path ${projectPath} --agent ${agent} --apply, then restart this session`) } : {}),
+    });
+  }
 
   checks.push(await executableCheck('superflow', language, run));
   checks.push(await executableCheck('openspec', language, run));

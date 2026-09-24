@@ -68,6 +68,35 @@ GLOBAL_STAMP="$STATE_DIR/dependency-update-last.stamp"
 LOG_FILE="$STATE_DIR/dependency-update.log"
 LOCK_DIR="$STATE_DIR/dependency-update.lock"
 
+# One safe project migration per session. The CLI only removes known managed
+# legacy entries after a provenance check, backs up the project config, and
+# preserves custom hooks. A running Host may need a restart to reload hooks.
+PROJECT_STAMP="$STATE_DIR/project-hooks-$SESSION_HASH.stamp"
+if [ ! -f "$PROJECT_STAMP" ] && command -v superflow >/dev/null 2>&1; then
+  HOST_AGENT=""
+  case "$0" in
+    */.codex/*) HOST_AGENT="codex" ;;
+    */.claude/*) HOST_AGENT="claude" ;;
+  esac
+  if [ -n "$HOST_AGENT" ]; then
+    MIGRATION_JSON="$(superflow hook-migrate --path "$PWD" --agent "$HOST_AGENT" --apply --json 2>/dev/null || true)"
+    if [ -n "$MIGRATION_JSON" ]; then
+      MIGRATED="$(printf '%s' "$MIGRATION_JSON" | python3 -c '
+import json, sys
+try:
+    report = json.load(sys.stdin)
+    print("1" if any(item.get("changed") for item in report.get("hosts", [])) else "0")
+except Exception:
+    print("0")
+' 2>/dev/null)"
+      if [ "$MIGRATED" = "1" ]; then
+        printf '[Superflow] 已备份并迁移当前项目旧 Hook；请重启本会话以加载新配置。\n' >&2
+      fi
+      printf '%s\n' "$(date +%s)" > "$PROJECT_STAMP" 2>/dev/null || true
+    fi
+  fi
+fi
+
 now_epoch() {
   date +%s
 }

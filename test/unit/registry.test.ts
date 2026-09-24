@@ -5,6 +5,7 @@ import path from "path";
 import {
   registerHook,
   clearSddHooks,
+  syncManagedHooks,
   HOOK_MAP,
 } from "../../src/domains/hook.js";
 import { hookScriptsForAgent } from "../../src/domains/skill/assets.js";
@@ -92,6 +93,18 @@ describe("core/registry", () => {
     registerHook(SETTINGS, "superflow-loop-end-hook.sh", "/home/test/.codex/hooks/superflow-loop-end-hook.sh");
     const result = JSON.parse(fs.readFileSync(SETTINGS, "utf-8"));
     expect(result.hooks.SessionEnd[0].hooks[0].timeout).toBe(3);
+  });
+
+  it("相同 Hook 定义重复同步不改写配置", () => {
+    const scripts = ["superflow-hook-guard.sh", "superflow-loop-end-hook.sh"];
+    const first = syncManagedHooks(SETTINGS, "/tmp/hooks", scripts);
+    expect(first.changed).toBe(true);
+    const before = fs.readFileSync(SETTINGS, "utf8");
+    const mtime = fs.statSync(SETTINGS).mtimeMs;
+    const second = syncManagedHooks(SETTINGS, "/tmp/hooks", scripts);
+    expect(second.changed).toBe(false);
+    expect(fs.readFileSync(SETTINGS, "utf8")).toBe(before);
+    expect(fs.statSync(SETTINGS).mtimeMs).toBe(mtime);
   });
 
   it("registerHook 产生备份文件", () => {

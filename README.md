@@ -65,6 +65,11 @@ contexts from the existing Understand Anything graph without creating another
 persistent map.
 `superflow cleanup-audit` reports duplicate names, complexity clues, and TODO
 hotspots with evidence and a route, without modifying source files.
+`superflow hook-migrate --path <project> --json` audits project Hooks read-only;
+`--apply` backs up the config and removes only known legacy ake Hooks with
+provenance or managed Superflow/SDD entries. Custom Hooks remain. Project init
+and update use the same migration; the global prompt Hook also attempts one
+safe migration per project session and asks for a restart if definitions changed.
 
 ## Highlights
 
