@@ -25,7 +25,7 @@ import { deployScripts } from '../../domains/skill/scripts.js';
 import { deployPrompts } from '../../domains/skill/prompts.js';
 import { deployRules } from '../../domains/skill/rules.js';
 import { syncManagedHooks } from '../../domains/hook.js';
-import { migrateProjectHooks } from '../../domains/hook-migration.js';
+import { migrateGlobalHooks, migrateProjectHooks } from '../../domains/hook-migration.js';
 import { loadState, saveState, initState, upsertManagedProject } from '../../domains/state.js';
 import { scaffoldBusinessContext, checkUnderstandScan, printSoftPrompt } from '../../domains/config/context.js';
 import {
@@ -562,6 +562,15 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
   }
 
   if (!options.dryRun) {
+    if (!options.noHooks) {
+      for (const agent of agents) {
+        const globalSettings = getPlatformPaths(agent, 'global', projectPath).settingsFile;
+        const homeRoot = path.dirname(path.dirname(globalSettings));
+        const migration = migrateGlobalHooks(homeRoot, agent);
+        if (migration.error) throw new Error(`global ${agent} Hook migration failed: ${migration.error}`);
+        if (migration.changed) log(`  ✓ migrated legacy global ${agent} Hooks; backup: ${migration.backup}`);
+      }
+    }
     // 统一记录安装范围（不依赖 step 4 是否执行，resume 跳过场景也保持一致）
     for (const agent of agents) {
       state.platforms[agent].scope = options.scope;

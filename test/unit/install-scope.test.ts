@@ -94,6 +94,104 @@ describe('commands/uninstall scope 推导', () => {
 });
 
 describe('commands/init 受管登记链路', () => {
+  it('TC-10c: global init 自动清理旧全局 Hook 并备份，自定义注册保留', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-global-hook-init-'));
+    const file = path.join(root, '.codex', 'hooks.json');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({ hooks: { Stop: [{ hooks: [
+      { command: 'bash scripts/hooks/stop-compile-check.sh' },
+      { command: 'bash scripts/hooks/company-check.sh' },
+    ] }] } }));
+    const resumed = stateModule.initState('0.5.15', 'codex');
+    resumed.completedSteps = [1, 2, 3, 5, 6, 7];
+    vi.stubEnv('HOME', root);
+    vi.spyOn(stateModule, 'loadState').mockReturnValue(resumed);
+    vi.spyOn(stateModule, 'saveState').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const result = await runInit({
+        dryRun: false, agent: 'codex', resume: true, noHooks: false,
+        noOpenspecInit: true, noScan: true, yes: true, json: true,
+        skipExisting: false, language: 'zh', scope: 'global', projectPath: root,
+      });
+      expect(result.ok).toBe(true);
+      const config = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const commands = Object.values(config.hooks).flatMap((entries: any) =>
+        entries.flatMap((entry: any) => entry.hooks.map((hook: any) => hook.command)));
+      expect(commands).not.toContain('bash scripts/hooks/stop-compile-check.sh');
+      expect(commands).toContain('bash scripts/hooks/company-check.sh');
+      expect(commands.some((command: string) => command.endsWith('/superflow-java-stop-hook.sh'))).toBe(true);
+      expect(fs.readdirSync(path.dirname(file)).some((name) => name.includes('.superflow-migrate-'))).toBe(true);
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('TC-10d: project init 也清理已知全局残留，但保留项目范围配置', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-project-hook-init-'));
+    const project = path.join(root, 'project');
+    const globalFile = path.join(root, '.codex/hooks.json');
+    const projectFile = path.join(project, '.codex/hooks.json');
+    fs.mkdirSync(path.dirname(globalFile), { recursive: true });
+    fs.mkdirSync(path.dirname(projectFile), { recursive: true });
+    fs.writeFileSync(globalFile, JSON.stringify({ hooks: { Stop: [{ hooks: [
+      { command: 'bash scripts/hooks/stop-compile-check.sh' },
+    ] }] } }));
+    fs.writeFileSync(projectFile, JSON.stringify({ hooks: { Stop: [{ hooks: [
+      { command: 'bash scripts/hooks/project-custom.sh' },
+    ] }] } }));
+    const resumed = stateModule.initState('0.5.15', 'codex');
+    resumed.completedSteps = [1, 2, 3, 5, 6, 7];
+    vi.stubEnv('HOME', root);
+    vi.spyOn(stateModule, 'loadState').mockReturnValue(resumed);
+    vi.spyOn(stateModule, 'saveState').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await runInit({
+        dryRun: false, agent: 'codex', resume: true, noHooks: false,
+        noOpenspecInit: true, noScan: true, yes: true, json: true,
+        skipExisting: false, language: 'zh', scope: 'project', projectPath: project,
+      });
+      expect(fs.readFileSync(globalFile, 'utf8')).not.toContain('stop-compile-check.sh');
+      expect(fs.readFileSync(projectFile, 'utf8')).toContain('project-custom.sh');
+      expect(fs.readFileSync(projectFile, 'utf8')).toContain('superflow-java-stop-hook.sh');
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('TC-10e: resume 跳过已完成步骤后仍清理旧全局 Hook', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-resume-hook-init-'));
+    const file = path.join(root, '.codex/hooks.json');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({ hooks: { Stop: [{ hooks: [
+      { command: 'bash scripts/hooks/stop-compile-check.sh' },
+    ] }] } }));
+    const resumed = stateModule.initState('0.5.15', 'codex');
+    resumed.completedSteps = [1, 2, 3, 4, 5, 6, 7];
+    vi.stubEnv('HOME', root);
+    vi.spyOn(stateModule, 'loadState').mockReturnValue(resumed);
+    vi.spyOn(stateModule, 'saveState').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const result = await runInit({
+        dryRun: false, agent: 'codex', resume: true, noHooks: false,
+        noOpenspecInit: true, noScan: true, yes: true, json: true,
+        skipExisting: false, language: 'zh', scope: 'global', projectPath: root,
+      });
+      expect(result.ok).toBe(true);
+      expect(fs.readFileSync(file, 'utf8')).not.toContain('stop-compile-check.sh');
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('TC-10: project scope init 记录 scope 并登记受管清单', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-managed-init-'));
     const saved: SddState[] = [];

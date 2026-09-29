@@ -24,7 +24,7 @@ import {
   REQUIRED_CODEX_SUPERPOWER_SKILLS,
 } from '../../domains/deps.js';
 import { resolveMcpServerPath } from './mcp.js';
-import { auditProjectHooks } from '../../domains/hook-migration.js';
+import { auditGlobalHooks, auditProjectHooks } from '../../domains/hook-migration.js';
 
 type DoctorStatus = 'pass' | 'warn' | 'fail';
 type DoctorScope = InstallScope | 'auto';
@@ -162,6 +162,17 @@ export async function collectDoctor(options: {
       ...(audit.autoMigratable ? { remediation: managedText(language,
         `运行 superflow hook-migrate --path ${projectPath} --agent ${agent} --apply，随后重启当前会话`,
         `Run superflow hook-migrate --path ${projectPath} --agent ${agent} --apply, then restart this session`) } : {}),
+    });
+    const globalAudit = auditGlobalHooks(homedir(), agent);
+    checks.push({
+      check: `hooks:${agent}:legacy-global`,
+      status: globalAudit.error || globalAudit.autoMigratable > 0 ? 'fail' : 'pass',
+      message: globalAudit.error ?? managedText(language,
+        `全局旧 Hook ${globalAudit.autoMigratable} 条；其他注册保留 ${globalAudit.retained} 条`,
+        `${globalAudit.autoMigratable} legacy global Hook(s); ${globalAudit.retained} other registrations retained`),
+      ...(globalAudit.error || globalAudit.autoMigratable > 0 ? { remediation: managedText(language,
+        `运行 superflow update --agent ${agent} --scope global，备份迁移后重启当前会话`,
+        `Run superflow update --agent ${agent} --scope global, then restart this session after backup migration`) } : {}),
     });
   }
 

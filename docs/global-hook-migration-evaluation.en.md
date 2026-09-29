@@ -41,3 +41,24 @@ receive them; project-owned config remains unchanged. Roll back from the
 same-directory `.superflow-migrate-*.bak` file and restart the host. Stop
 release if matching deletes a custom command, backup fails, scope leaks, or
 a repeated apply rewrites config.
+
+## 0.5.16 install and update closure
+
+Version 0.5.15 exposed explicit migration only. This machine was cleaned, but
+ordinary installs and updates on other machines still retained old global
+registrations. To meet the user's requirement that others avoid the same 127,
+global npm postinstall, init, resumed init, and update now invoke the same
+allowlisted migration. Project-scoped operations also check the
+selected host's global config because global Hooks still fire in projects.
+Unknown and custom registrations remain. Migration failure makes install or
+update fail rather than reporting success.
+
+Isolated HOME fixtures cover global npm install, global/project init, resume,
+global/project update, repeated update, `--no-hooks`, and damaged config,
+checking cleanup, backup, custom
+preservation, idempotence, and fail-closed behavior. This machine's old entries
+were already removed explicitly in 0.5.15, so the 0.5.16 automatic path should
+be a no-op here. npm `--ignore-scripts` explicitly skips postinstall and requires
+a later `superflow init/update`. Roll back automatic invocation if project scope
+removes a custom Hook, damaged config reports success, or `--no-hooks` still edits Hooks;
+retain backups for recovery.

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'fs';
+import { homedir } from 'os';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname, join } from 'path';
 
@@ -46,11 +47,26 @@ function printInstallMessage(version, language) {
   console.log(buildInstallMessage(version, language));
 }
 
-export function runPostinstall(env = process.env) {
+export async function runPostinstall(env = process.env, runtime = {}) {
   if (!isGlobalInstall(env)) return;
+  const migrateGlobalHooks = runtime.migrateGlobalHooks
+    ?? (await import('../dist/domains/hook-migration.js')).migrateGlobalHooks;
+  const homeRoot = runtime.homeRoot ?? homedir();
+  for (const host of ['codex', 'claude']) {
+    const migration = migrateGlobalHooks(homeRoot, host);
+    if (migration.error) {
+      throw new Error(`${host} global Hook migration failed: ${migration.error}`);
+    }
+    if (migration.changed) {
+      console.log(`[Superflow] Migrated old ${host} global Hooks; backup: ${migration.backup}`);
+    }
+  }
   printInstallMessage(pkg.version, resolveInstallLanguage(env));
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runPostinstall();
+  runPostinstall().catch((error) => {
+    console.error(`[Superflow] Postinstall failed: ${error.message}`);
+    process.exitCode = 1;
+  });
 }

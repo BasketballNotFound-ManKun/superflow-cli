@@ -37,7 +37,7 @@ import {
 import { resolveRuntimeLanguage } from '../../domains/config/cli-help.js';
 import { managedText } from '../../domains/managed-work/i18n.js';
 import { manageMcpIntegration } from './mcp.js';
-import { migrateProjectHooks } from '../../domains/hook-migration.js';
+import { migrateGlobalHooks, migrateProjectHooks } from '../../domains/hook-migration.js';
 
 const PACKAGE_NAME = '@chenmk/superflow';
 const OPENSPEC_PACKAGE_NAME = '@fission-ai/openspec';
@@ -172,12 +172,18 @@ export async function updateCommand(options: {
       const hooks = hookScriptsForAgent(agent);
       if (!options.noHooks && hooks.length > 0) {
         syncManagedHooks(platform.settingsFile, platform.scriptsDir, hooks);
+        const globalSettings = getPlatformPaths(agent, 'global', target.projectPath).settingsFile;
+        const homeRoot = path.dirname(path.dirname(globalSettings));
+        const migration = migrateGlobalHooks(homeRoot, agent);
+        if (migration.error) throw new Error(`global ${agent} Hook migration failed: ${migration.error}`);
+        if (migration.changed && !options.json) {
+          console.log(`  ✓ migrated legacy global ${agent} Hooks; backup: ${migration.backup}`);
+        }
       }
     });
   }
   if (syncFailures.length > 0) {
-    // 遍历同步失败不阻断其他项目，仅汇总输出
-    warn(`some targets failed to sync: ${syncFailures.join('; ')}`);
+    throw new Error(`update did not complete; target sync failed: ${syncFailures.join('; ')}`);
   }
 
   manageMcpIntegration(

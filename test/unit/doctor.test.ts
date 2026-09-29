@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -9,6 +9,27 @@ import {
 import { hasCodexSuperpowerSkill } from '../../src/domains/deps.js';
 
 describe('commands/doctor', () => {
+  it('fails closed when the global host still references known missing legacy hooks', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-doctor-legacy-global-'));
+    const file = path.join(root, '.codex/hooks.json');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({ hooks: { Stop: [{ hooks: [
+      { command: 'bash scripts/hooks/stop-compile-check.sh' },
+    ] }] } }));
+    vi.stubEnv('HOME', root);
+    try {
+      const result = await collectDoctor({ agent: 'codex', scope: 'project', projectPath: root });
+      expect(result.checks).toContainEqual(expect.objectContaining({
+        check: 'hooks:codex:legacy-global',
+        status: 'fail',
+        remediation: expect.stringContaining('superflow update --agent codex'),
+      }));
+    } finally {
+      vi.unstubAllEnvs();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('逐项核验 Codex verify 所需的 Superpower 技能', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-superpowers-'));
 
