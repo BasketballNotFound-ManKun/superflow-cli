@@ -46,6 +46,10 @@ Hook 数量，减少全局无效命令尝试。
 全局更新、项目更新、重复更新、`--no-hooks` 和损坏配置分别验证旧注册清理、
 备份、自定义保留、幂等与失败关闭。npm `--ignore-scripts` 是明确跳过 postinstall
 的例外，用户须后续运行 `superflow init/update`。
+真实 tarball 安装另用隔离 HOME 执行 `npm install -g --prefix <临时目录>`：
+两宿主的旧 `stop-compile-check.sh` 均自动消失，自定义 Hook 留存，各生成一次备份，
+安装出的 CLI 返回 0.5.16。最终全量回归 **96 个文件、666 个用例通过**；
+构建、ESLint、设计门禁与 `skill-audit --strict` 通过。
 本机旧注册已在 0.5.15 显式迁移时清理，升级到 0.5.16 后的自动路径应为无改写。
 若项目级操作误改自定义 Hook、配置损坏却报告成功，或 `--no-hooks` 仍修改 Hook，
 需回滚自动调用并保留备份供用户恢复。

@@ -62,3 +62,8 @@ be a no-op here. npm `--ignore-scripts` explicitly skips postinstall and require
 a later `superflow init/update`. Roll back automatic invocation if project scope
 removes a custom Hook, damaged config reports success, or `--no-hooks` still edits Hooks;
 retain backups for recovery.
+A real `npm install -g --prefix <temporary directory>` of the 0.5.16 tarball
+under an isolated HOME also removed both hosts' old `stop-compile-check.sh`
+registrations, retained custom Hooks, made one backup per host, and installed
+a CLI reporting 0.5.16. Final full regression passed **96 files and 666 tests**;
+build, ESLint, design gates, and `skill-audit --strict` passed.

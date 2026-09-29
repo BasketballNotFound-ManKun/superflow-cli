@@ -75,7 +75,8 @@ relative global Hooks, or run `superflow hook-migrate --scope global --agent
 both --apply` separately. A normal global npm postinstall, `superflow init`,
 resumed init, and update run the same allowlisted migration. They back up host
 configs before editing, preserve unknown and custom Hooks, and leave files
-untouched on repeated runs. `init/update --no-hooks` skips their Hook steps;
+untouched on repeated runs. `superflow doctor` fails with a remediation command
+if a known old global registration remains. `init/update --no-hooks` skips their Hook steps;
 npm `--ignore-scripts` skips postinstall. Restart the host session after migration.
 
 ## Highlights
