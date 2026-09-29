@@ -60,6 +60,15 @@ function classify(command: string, provenance: boolean): Pick<HookFinding, "clas
   return { classification: "custom", reason: "来源不确定或属于项目自定义 Hook，保留" };
 }
 
+function classifyGlobal(command: string): Pick<HookFinding, "classification" | "reason"> {
+  const match = /^bash scripts\/hooks\/([a-z][a-z0-9-]*\.sh)(?: (record (?:codex|claude)|flush))?(?: \|\| true)?$/.exec(command.trim());
+  if (match && LEGACY_AKE_NAMES.has(match[1]) &&
+      (match[1] === "usage-collector.sh") === Boolean(match[2])) {
+    return { classification: "legacy-ake", reason: "命中已知旧 AKE 全局相对路径 Hook 的完整命令" };
+  }
+  return { classification: "custom", reason: "非白名单完整命令，保留" };
+}
+
 function readConfig(root: string, host: HookHost): { file: string; data: any; error?: string } {
   const file = hookConfigPath(root, host);
   if (!fs.existsSync(file)) return { file, data: null };
@@ -78,7 +87,7 @@ function readConfig(root: string, host: HookHost): { file: string; data: any; er
   }
 }
 
-export function auditProjectHooks(root: string, host: HookHost): HookAudit {
+function auditHooks(root: string, host: HookHost, scope: "project" | "global"): HookAudit {
   const provenance = hasAkeProvenance(root);
   const { file, data, error } = readConfig(root, host);
   const findings: HookFinding[] = [];
@@ -90,7 +99,8 @@ export function auditProjectHooks(root: string, host: HookHost): HookAudit {
         for (const hook of entry.hooks) {
           if (typeof hook?.command !== "string") continue;
           findings.push({ event, matcher: typeof entry.matcher === "string" ? entry.matcher : null,
-            command: hook.command, ...classify(hook.command, provenance) });
+            command: hook.command, ...(scope === "global"
+              ? classifyGlobal(hook.command) : classify(hook.command, provenance)) });
         }
       }
     }
@@ -100,6 +110,14 @@ export function auditProjectHooks(root: string, host: HookHost): HookAudit {
     autoMigratable: findings.filter((item) => item.classification !== "custom").length,
     retained: findings.filter((item) => item.classification === "custom").length,
     ...(error ? { error } : {}) };
+}
+
+export function auditProjectHooks(root: string, host: HookHost): HookAudit {
+  return auditHooks(root, host, "project");
+}
+
+export function auditGlobalHooks(homeRoot: string, host: HookHost): HookAudit {
+  return auditHooks(homeRoot, host, "global");
 }
 
 function hasGlobalReplacement(host: HookHost): boolean {
@@ -131,16 +149,35 @@ export function migrateProjectHooks(
   }
   const { file, data, error } = readConfig(root, host);
   if (error || !data) return { ...audit, changed: false, error: error ?? "配置不存在" };
+  removeKnownHooks(data, (command) => classify(command, audit.provenance).classification !== "custom");
+  const backup = writeMigrationConfig(file, data);
+  return { ...audit, changed: true, backup };
+}
+
+export function migrateGlobalHooks(homeRoot: string, host: HookHost): HookMigrationResult {
+  const audit = auditGlobalHooks(homeRoot, host);
+  if (audit.error || audit.autoMigratable === 0) return { ...audit, changed: false };
+  const { file, data, error } = readConfig(homeRoot, host);
+  if (error || !data) return { ...audit, changed: false, error: error ?? "配置不存在" };
+  removeKnownHooks(data, (command) => classifyGlobal(command).classification === "legacy-ake");
+  const backup = writeMigrationConfig(file, data);
+  return { ...audit, changed: true, backup };
+}
+
+function removeKnownHooks(data: any, shouldRemove: (command: string) => boolean): void {
   for (const [event, entries] of Object.entries(data.hooks ?? {})) {
     if (!Array.isArray(entries)) continue;
-    const kept = (entries as any[]).map((entry) => {
+    const kept = entries.map((entry) => {
       if (!Array.isArray(entry?.hooks)) return entry;
       return { ...entry, hooks: entry.hooks.filter((hook: any) =>
-        typeof hook?.command !== "string" || classify(hook.command, audit.provenance).classification === "custom") };
+        typeof hook?.command !== "string" || !shouldRemove(hook.command)) };
     }).filter((entry) => !Array.isArray(entry?.hooks) || entry.hooks.length > 0);
     if (kept.length) data.hooks[event] = kept;
     else delete data.hooks[event];
   }
+}
+
+function writeMigrationConfig(file: string, data: any): string {
   const backup = `${file}.superflow-migrate-${Date.now()}.bak`;
   fs.copyFileSync(file, backup, fs.constants.COPYFILE_EXCL);
   const temporary = `${file}.superflow-migrate-${process.pid}.tmp`;
@@ -151,5 +188,5 @@ export function migrateProjectHooks(
     fs.rmSync(temporary, { force: true });
     throw error;
   }
-  return { ...audit, changed: true, backup };
+  return backup;
 }

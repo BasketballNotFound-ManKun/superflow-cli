@@ -402,8 +402,9 @@ program
 
 program
   .command("hook-migrate")
-  .description("Audit or migrate legacy project Hook registrations safely")
+  .description("Audit or migrate known legacy Hook registrations safely")
   .option("--path <path>", "Project path")
+  .option("--scope <scope>", "project | global", "project")
   .option("--agent <agent>", "codex | claude | both", "both")
   .option("--apply", "Back up and remove only known legacy managed Hooks")
   .option("--json", "Output JSON")
@@ -416,6 +417,7 @@ program
   .command("hook-audit")
   .description("Read-only audit of global and project Hook conflicts")
   .option("--path <path>", "Project path")
+  .option("--scope <scope>", "project | global", "project")
   .option("--agent <agent>", "codex | claude | both", "both")
   .option("--json", "Output JSON")
   .action(async (options) => {

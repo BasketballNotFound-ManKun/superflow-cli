@@ -70,6 +70,12 @@ hotspots with evidence and a route, without modifying source files.
 provenance or managed Superflow/SDD entries. Custom Hooks remain. Project init
 and update use the same migration; the global prompt Hook also attempts one
 safe migration per project session and asks for a restart if definitions changed.
+Use `superflow hook-audit --scope global --agent both --json` to inspect old
+relative global Hooks. After review, run `superflow hook-migrate --scope global
+--agent both --apply`; it backs up both host configs and removes only exact
+allowlisted legacy commands. Unknown and custom Hooks remain. A normal
+`update` does not remove global registrations of uncertain origin. Restart the
+host session after migration.
 
 ## Highlights
 

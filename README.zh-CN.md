@@ -41,6 +41,7 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 `superflow map-audit` 只读比较 Understand Anything 的完整图谱、任务 Top-K 和目录/符号骨架，不创建第二套持久地图。
 `superflow cleanup-audit` 只读输出重复文件名、复杂度线索和 TODO 热点，带证据与执行路由，不修改源码。
 项目旧 Hook 可用 `superflow hook-migrate --path <项目> --json` 只读审计，追加 `--apply` 后只迁移有 ake 来源标记的已知旧 Hook 或 Superflow/SDD 管理项；先备份，保留自定义 Hook。项目级 init/update 自动执行同一迁移；全局会话 Hook 首次使用项目时也会尝试一次安全迁移，若配置已改变须重启当前会话。
+全局旧相对路径 Hook 用 `superflow hook-audit --scope global --agent both --json` 只读盘点；确认后运行 `superflow hook-migrate --scope global --agent both --apply`，仅删除白名单内的完整旧命令，先备份 `~/.codex/hooks.json` 和 `~/.claude/settings.json`，保留未知及自定义 Hook。普通 `update` 不自动清理来源不明的全局注册；迁移后重启宿主会话。
 自动部署到：
 
 - Claude Code：`~/.claude/skills/`、`~/.claude/scripts/`，并注册 `~/.claude/settings.json` hook
