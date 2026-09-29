@@ -92,6 +92,10 @@ require_test_report_lint() {
   root="$(project_root_for_change)"
   review="$CHANGE_DIR/.sdd/reviews/document-review.json"
   lint_args=(--tests "$CHANGE_DIR/tests.md")
+  if [[ "$(state_get workflow)" == "full" && ! -f "$review" ]]; then
+    issues+=("full SDD verify requires .sdd/reviews/document-review.json; complete the docs entry review before verify")
+    return
+  fi
   if [[ -f "$review" ]]; then
     lint_args+=(--review "$review")
   fi

@@ -1344,6 +1344,101 @@ describe("superflow-guard.sh", () => {
     });
   });
 
+  it("requires frozen entry review before a full verify can lint its report", async () => {
+    const change = await makeCrossServiceChange();
+    await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");
+    await execFileAsync("bash", [STATE, "init", change, "docs"]);
+    await execFileAsync("bash", [STATE, "set", change, "verify_mode", "light"]);
+    await execFileAsync("bash", [STATE, "set", change, "branch_status", "handled"]);
+
+    for (const guard of [GUARD, EN_GUARD]) {
+      await expect(execFileAsync("bash", [guard, change, "verify"])).rejects
+        .toMatchObject({
+          stderr: expect.stringContaining("full SDD verify requires .sdd/reviews/document-review.json"),
+        });
+    }
+
+    const review = path.join(change, ".sdd/reviews/document-review.json");
+    const caseIds = Array.from({ length: 15 }, (_, index) => `C${index + 1}`);
+    await write(review, JSON.stringify({
+      coverage: {
+        schemaVersion: "superflow.review-coverage.v1",
+        cases: caseIds.map((id) => ({ id, entryId: `E${id.slice(1)}`, level: "api" })),
+        decisions: caseIds.map((id) => ({ disposition: "FIX", caseIds: [id] })),
+      },
+    }));
+    await write(path.join(change, "tests.md"),
+      `# Tests\n\n${caseIds.join(" ")}\n\nRED/GREEN curl real API and database SELECT.\n`);
+    const rows = caseIds.slice(0, 13).map((id) =>
+      `| ${id} | E${id.slice(1)} | api | PASS | logs/${id}.json |`);
+    for (const id of caseIds.slice(0, 13)) {
+      await write(path.join(change, "logs", `${id}.json`), "{}");
+    }
+    await write(path.join(change, "test-report.md"), [
+      "# Test Report",
+      "RED failure evidence; GREEN pass evidence.",
+      "接口自动化 curl http://localhost:8080/api; HTTP 200 response assert.",
+      "数据库 SELECT completed; log ERROR checked.",
+      "表/字段 | 写入方 | 读取/过滤方 | 真实入口 | 反向状态场景 | 验证证据",
+      "superflow-test-report-lint passed.",
+      "| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |",
+      "|---|---|---|---|---|",
+      ...rows,
+      "验证结果: PASS",
+      "Verification Result: PASS",
+      "Archive Readiness: PASS",
+    ].join("\n"));
+    const localLint = path.join(tmp, ".codex/hooks/superflow-test-report-lint.py");
+    await fs.promises.mkdir(path.dirname(localLint), { recursive: true });
+    await fs.promises.copyFile(path.join(ROOT, "assets/scripts/superflow-test-report-lint.py"), localLint);
+    await fs.promises.chmod(localLint, 0o755);
+
+    for (const guard of [GUARD, EN_GUARD]) {
+      await expect(execFileAsync("bash", [guard, change, "verify"])).rejects
+        .toMatchObject({
+          stderr: expect.stringContaining("用例 C14 缺少逐项执行结果"),
+        });
+    }
+
+    for (const id of caseIds.slice(13)) {
+      await write(path.join(change, "logs", `${id}.json`), "{}");
+    }
+    const remainingRows = caseIds.slice(13).map((id) =>
+      `| ${id} | E${id.slice(1)} | api | PASS | logs/${id}.json |`);
+    const partialReport = await fs.promises.readFile(path.join(change, "test-report.md"), "utf8");
+    await write(path.join(change, "test-report.md"), partialReport.replace(
+      "验证结果: PASS", `${remainingRows.join("\n")}\n验证结果: PASS`,
+    ));
+    for (const guard of [GUARD, EN_GUARD]) {
+      await expect(execFileAsync("bash", [guard, change, "verify"]))
+        .resolves.toMatchObject({
+          stdout: expect.stringContaining("guard passed for phase verify"),
+        });
+    }
+  });
+
+  it("keeps a tweak verify usable without a full SDD entry review", async () => {
+    const change = path.join(tmp, "openspec", "changes", "small-tweak");
+    await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] Finish tweak\n");
+    await write(path.join(change, "tests.md"), "# Tests\n\nCheck the documented result.\n");
+    await write(path.join(change, "test-report.md"), [
+      "# Test Report",
+      "RED failure evidence; GREEN pass evidence.",
+      "接口自动化 curl http://localhost:8080/api; HTTP 200 response assert.",
+      "数据库 SELECT checked; log ERROR checked.",
+      "表/字段 | 写入方 | 读取/过滤方 | 真实入口 | 反向状态场景 | 验证证据",
+      "superflow-test-report-lint passed.",
+      "Verification Result: PASS",
+      "Archive Readiness: PASS",
+    ].join("\n"));
+    await execFileAsync("bash", [STATE, "init", change, "tweak", "docs"]);
+    await execFileAsync("bash", [STATE, "set", change, "branch_status", "handled"]);
+    await expect(execFileAsync("bash", [GUARD, change, "verify"]))
+      .resolves.toMatchObject({
+        stdout: expect.stringContaining("guard passed for phase verify"),
+      });
+  });
+
   it("blocks archive without an explicit PASS closeout marker", async () => {
     const change = await makeCrossServiceChange();
     await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");
