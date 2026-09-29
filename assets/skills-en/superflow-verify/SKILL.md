@@ -40,6 +40,10 @@ For full workflow acceptance, read [requirement × real-entry review](../superfl
 Reuse R/E/C IDs in the existing test-report with actual actors, page actions, request routes,
 final state and forbidden-effect evidence. Independently compare originals and actual callers;
 API-only is not browser E2E, and planned cases are not execution evidence.
+For cross-page field changes, recheck the exact Mapper statement reached by each
+page request and inspect same-ID API/DB comparisons on non-null records plus
+browser rendering. Historical NULL, field keys and static column configuration
+support narrower claims only.
 
 Verification is a phase, not a final sentence. Use this skill after
 implementation work claims completion and before archive or delivery.
@@ -146,7 +150,8 @@ Before pass:
    DB/log/API evidence, handoff hash, and phase state.
 2. `~/.codex/hooks/superflow-verify-integration.sh <test-report.md>` passes when the
    report involves integration evidence.
-3. `~/.codex/hooks/superflow-test-report-lint.py --tests <tests.md> <test-report.md>`
+3. `~/.codex/hooks/superflow-test-report-lint.py --tests <tests.md> --review
+   <.sdd/reviews/document-review.json> <test-report.md>`
    passes. If `tests.md` declares L3/L4, real-entry, third-party, device,
    database, log, or dev-tool evidence, mock-only/unit-only reports are hard
    failures unless the report is explicitly `Blocked` or `Partially verified`

@@ -71,6 +71,17 @@ mvn test -Dtest=UserServiceTest
 
 ## 4.1 真实测试数据与证据
 
+完整 SDD 变更还需按 `document-review.json` 的 R/E/C 索引逐项回填，不得用总通过数
+代替单个入口的结果。下表供 `superflow-test-report-lint.py --review` 校验：
+
+| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |
+|---|---|---|---|---|
+| C1 | E1 | browser | PASS | logs/C1-trace.zip |
+
+`PASS/FAIL/BLOCKED/PARTIAL` 之外的值无效；非 PASS 项在正文说明原因。
+数据库字段展示要分别记录非空数据按同一 ID 的 API/DB 值对账、历史 NULL 结果和
+真实浏览器展示。API 键存在、静态前端配置与浏览器显示分别记录证据等级。
+
 | 用例 ID | 真实参数 | 参数来源 | 自动化命令 | 证据等级 | 执行证据 | 结论 |
 |---------|----------|----------|------------|----------|----------|------|
 | TC-001 | parkCode=____ | 前端请求 / 用户提供 / DB查询 / Mock | curl/Newman/pytest/RestAssured | Mock only / 测试端点 / 真实入口 | 响应 + DB + 日志 | Passed / Blocked / Partial |

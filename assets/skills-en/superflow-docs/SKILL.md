@@ -376,6 +376,18 @@ Use references only as needed:
   `Case ID | Requirement/scenario | Level L1/L2/L3/L4 | Precondition data | Steps |
   Automation command | Response assertion | DB assertion | Log assertion | RED expected failure | GREEN expected pass |
   test-report evidence location`.
+- For cross-page management or database-backed display changes, reconcile the
+  frontend action/list inventory with real Controller, Service, exact Mapper
+  statement and table anchors before freezing tasks. Put the confirmed chain
+  and entry ID in `source-code-audit.md` and reuse it in `design.md`, `tasks.md`
+  and `tests.md`. A similarly named query is not evidence for the page route.
+  Include every visible mutation button, such as enable/disable, as an entry
+  even when the original task list omitted it.
+- For a returned persisted field, `tests.md` must freeze at least one non-null
+  fixture and an allowed historical-NULL fixture separately. Assert API and DB
+  values for the same record ID, then browser rendering where a page is in
+  scope. Key-presence, HTTP 200, empty-page and NULL-only assertions cannot
+  close the non-null data path. Name the exact query/command and evidence file.
 - For L3/L4 input validation, protocol rejection, and exceptional branches,
   `tests.md` also freezes the real injected payload and evidence that it reaches
   the intended parser or validation branch; matching the same HTTP status alone

@@ -34,6 +34,8 @@ unverifiable claims separate rather than giving them a guessed severity.
 完整 workflow 验收必须读取[需求×真实入口评审](../superflow-pipeline/references/document-review-coverage.md)。
 沿 R/E/C ID 在现有 test-report 回填实际角色、页面动作、请求路由、最终状态与禁止副作用
 的原始证据。独立对照原始来源及实际调用方；API-only 不得冒充 browser E2E，计划不等于执行。
+横向字段改造还要复核页面请求命中的精确 Mapper statement，并查看非空记录的同 ID
+API/DB 值对照与浏览器显示。历史 NULL、字段键存在和静态列配置各自只能支持较弱结论。
 
 Verification is a phase, not a final sentence. Use this skill after
 implementation work claims completion and before archive or delivery.
@@ -140,7 +142,8 @@ Before pass:
    DB/log/API evidence, handoff hash, and phase state.
 2. `~/.codex/hooks/superflow-verify-integration.sh <test-report.md>` passes when the
    report involves integration evidence.
-3. `~/.codex/hooks/superflow-test-report-lint.py --tests <tests.md> <test-report.md>`
+3. `~/.codex/hooks/superflow-test-report-lint.py --tests <tests.md> --review
+   <.sdd/reviews/document-review.json> <test-report.md>`
    passes. If `tests.md` declares L3/L4, real-entry, third-party, device,
    database, log, or dev-tool evidence, mock-only/unit-only reports are hard
    failures unless the report is explicitly `Blocked` or `Partially verified`

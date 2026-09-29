@@ -61,6 +61,10 @@ user-approved change/prompt is frozen from its original path. Only a bounded
 verbal request enters minimal or standard directly. Direction-changing API,
 data, concurrency, cross-repository, or owner choices return to
 clarification/documents; Runner regexes and Executor improvisation do not decide them.
+For cross-page, cross-stack or database-field changes requesting closed delivery,
+use full SDD to freeze real entries, `tests.md` and per-entry acceptance. A raw
+OpenSpec `spec/design/tasks` set or generic smoke report supports only its
+actually verified scope, not a full SDD acceptance claim.
 
 ```bash
 superflow pipeline "<implementation prompt, change directory, or direct task>" --managed --project "<project root>" \

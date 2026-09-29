@@ -87,15 +87,21 @@ project_root_for_change() {
 
 require_test_report_lint() {
   local report="$CHANGE_DIR/test-report.md"
-  local root lint output
+  local root lint output review
+  local -a lint_args
   root="$(project_root_for_change)"
+  review="$CHANGE_DIR/.sdd/reviews/document-review.json"
+  lint_args=(--tests "$CHANGE_DIR/tests.md")
+  if [[ -f "$review" ]]; then
+    lint_args+=(--review "$review")
+  fi
 
   for lint in \
     "$root/.codex/hooks/superflow-test-report-lint.py" \
     "$HOME/.codex/hooks/superflow-test-report-lint.py"; do
     if [[ -x "$lint" ]]; then
       output="$(mktemp)"
-      if ! "$lint" --tests "$CHANGE_DIR/tests.md" "$report" >"$output" 2>&1; then
+      if ! "$lint" "${lint_args[@]}" "$report" >"$output" 2>&1; then
         issues+=("superflow-test-report-lint failed: $(tr '\n' ' ' < "$output" | sed -E 's/[[:space:]]+/ /g')")
       fi
       rm -f "$output"

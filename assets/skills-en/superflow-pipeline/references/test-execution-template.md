@@ -55,6 +55,18 @@ Archive Readiness: PASS / BLOCKED
 
 Required for `verify_mode: full`:
 
+For full SDD changes, fill every R/E/C case from `document-review.json` in one
+execution table checked by `superflow-test-report-lint.py --review`:
+
+| Case ID | Entry ID | Acceptance level | Result | Evidence path |
+|---|---|---|---|---|
+| C1 | E1 | browser | PASS | logs/C1-trace.zip |
+
+Use only `PASS/FAIL/BLOCKED/PARTIAL`; explain non-PASS results in the report.
+For database-backed display fields, record same-ID API/DB values on non-null
+data, historical NULL separately, and real browser rendering. Distinguish
+field-key checks, static frontend inspection and browser evidence.
+
 - Test environment:
 - Branch/commit/build number or image:
 - Base URL:

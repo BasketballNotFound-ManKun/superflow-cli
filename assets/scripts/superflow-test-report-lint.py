@@ -14,6 +14,7 @@ mechanically:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -99,6 +100,13 @@ EXTERNAL_EVIDENCE_RE = re.compile(
     re.I,
 )
 CASE_ID_RE = re.compile(r"\bT\d+(?:\.\d+)+\b")
+CASE_EVIDENCE_HEADER = re.compile(
+    r"^\|\s*(?:用例\s*ID|Case\s*ID)\s*\|\s*(?:入口\s*ID|Entry\s*ID)\s*\|"
+    r"\s*(?:验收级别|Acceptance\s*level)\s*\|\s*(?:结果|Result)\s*\|"
+    r"\s*(?:证据|Evidence)(?:路径|\s*path)?\s*\|$",
+    re.I,
+)
+CASE_RESULTS = {"PASS", "FAIL", "BLOCKED", "PARTIAL"}
 OLD_PHRASES = (
     "不会按周期边界拆分子切片",
     "1 秒空窗落入下一周期对账无实质影响",
@@ -253,6 +261,69 @@ def lint_against_tests_contract(report_path: Path, report_text: str, tests_path:
     return issues
 
 
+def lint_case_evidence(report_path: Path, report_text: str, review_path: Path) -> list[Issue]:
+    """Check the frozen R/E/C index against per-case execution receipts."""
+    issues: list[Issue] = []
+    try:
+        review = json.loads(review_path.read_text(encoding="utf-8"))
+        coverage = review["coverage"]
+        if coverage["schemaVersion"] != "superflow.review-coverage.v1":
+            raise ValueError("unsupported coverage schema")
+        cases = {case["id"]: case for case in coverage["cases"]}
+        decisions = coverage["decisions"]
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        return [Issue("FAIL", report_path, 0, f"入口评审凭证无法读取：{error}")]
+
+    required = {
+        case_id
+        for decision in decisions
+        if decision.get("disposition") != "EXCLUDED"
+        for case_id in decision.get("caseIds", [])
+    }
+    lines = report_text.splitlines()
+    header_at = next(
+        (i for i, line in enumerate(lines) if CASE_EVIDENCE_HEADER.fullmatch(line.strip())),
+        None,
+    )
+    if header_at is None:
+        return [Issue("FAIL", report_path, 0, "缺少逐用例执行证据表；不能用汇总通过数代替 R/E/C 回填")]
+
+    receipts: dict[str, tuple[str, str, str, str]] = {}
+    for index, line in enumerate(lines[header_at + 2 :], start=header_at + 3):
+        if not line.startswith("|"):
+            break
+        columns = [column.strip() for column in line.strip().strip("|").split("|")]
+        if len(columns) != 5:
+            issues.append(Issue("FAIL", report_path, index, "逐用例执行证据表必须有五列"))
+            continue
+        case_id, entry_id, level, result, evidence = columns
+        if case_id in receipts:
+            issues.append(Issue("FAIL", report_path, index, f"用例 {case_id} 重复回填"))
+        receipts[case_id] = (entry_id, level, result.upper(), evidence)
+
+    for case_id in sorted(required):
+        if case_id not in receipts:
+            issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 缺少逐项执行结果"))
+            continue
+        entry_id, level, result, evidence = receipts[case_id]
+        case = cases.get(case_id)
+        if case is None or entry_id != case.get("entryId") or level != case.get("level"):
+            issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 的入口或验收级别与冻结合同不一致"))
+        if result not in CASE_RESULTS or not evidence or evidence.lower() in {"pending", "todo", "待补"}:
+            issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 缺少有效结果或证据位置"))
+        elif result == "PASS" and not re.match(r"^https?://", evidence, re.I):
+            evidence_file = Path(evidence.split("#", 1)[0])
+            if not evidence_file.is_absolute():
+                evidence_file = report_path.parent / evidence_file
+            if not evidence_file.is_file():
+                issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 的通过证据文件不存在：{evidence}"))
+        if result != "PASS" and re.search(r"验证结果\s*[:：]\s*PASS|Verification Result\s*[:：]\s*PASS", report_text, re.I):
+            issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 为 {result}，报告不能声明整体验证 PASS"))
+    for case_id in receipts.keys() - required:
+        issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 未在冻结入口评审中要求执行"))
+    return issues
+
+
 def infer_tests_path(report: Path) -> Path | None:
     direct = report.parent / "tests.md"
     if direct.exists():
@@ -268,7 +339,8 @@ def infer_tests_path(report: Path) -> Path | None:
     return None
 
 
-def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None) -> list[Issue]:
+def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None,
+                review_path: Path | None = None) -> list[Issue]:
     issues: list[Issue] = []
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
@@ -278,6 +350,8 @@ def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None) -
     blocked = bool(BLOCKED_RE.search(text))
     passed_or_partial = bool(PASS_WORDS.search(text) or re.search(r"Partially verified|部分验证", text, re.I))
     issues.extend(lint_against_tests_contract(path, text, tests_path or infer_tests_path(path)))
+    if review_path is not None:
+        issues.extend(lint_case_evidence(path, text, review_path))
 
     if db_backed and passed_or_partial and not blocked:
         if not TABLE_REVERSE_HEADER_RE.search(text):
@@ -395,6 +469,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Lint SuperBridge Flow test-report evidence")
     parser.add_argument("reports", nargs="+")
     parser.add_argument("--tests", default="")
+    parser.add_argument("--review", default="")
     parser.add_argument("--repo-root", default="")
     parser.add_argument("--warn-only", action="store_true")
     args = parser.parse_args()
@@ -407,7 +482,10 @@ def main() -> int:
             continue
         repo = Path(args.repo_root).resolve() if args.repo_root else repo_root_for(path)
         tests_path = Path(args.tests).resolve() if args.tests else None
-        all_issues.extend(lint_report(path, repo, tests_path))
+        if tests_path is not None and not tests_path.exists():
+            all_issues.append(Issue("FAIL", path, 0, f"显式指定的 tests.md 不存在：{tests_path}"))
+        review_path = Path(args.review).resolve() if args.review else None
+        all_issues.extend(lint_report(path, repo, tests_path, review_path))
 
     printable = []
     for issue in all_issues:

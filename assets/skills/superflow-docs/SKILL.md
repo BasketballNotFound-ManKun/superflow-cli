@@ -380,6 +380,18 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
   `用例ID | 需求/Scenario | 层级L1/L2/L3/L4 | 前置数据 | 操作步骤 |
   自动化命令 | 响应断言 | DB断言 | 日志断言 | RED预期失败 | GREEN预期通过 |
   test-report证据位置`.
+- For cross-page management or database-backed display changes, reconcile the
+  frontend action/list inventory with real Controller, Service, exact Mapper
+  statement and table anchors before freezing tasks. Put the confirmed chain
+  and entry ID in `source-code-audit.md` and reuse it in `design.md`, `tasks.md`
+  and `tests.md`. A similarly named query is not evidence for the page route.
+  Include every visible mutation button, such as enable/disable, as an entry
+  even when the original task list omitted it.
+- For a returned persisted field, `tests.md` must freeze at least one non-null
+  fixture and an allowed historical-NULL fixture separately. Assert API and DB
+  values for the same record ID, then browser rendering where a page is in
+  scope. Key-presence, HTTP 200, empty-page and NULL-only assertions cannot
+  close the non-null data path. Name the exact query/command and evidence file.
 - 对 L3/L4 的输入校验、协议拒绝或异常分支，`tests.md` 还必须冻结真实注入载荷及其到达
   目标解析/校验分支的证据；仅断言同一个 HTTP 状态码不算覆盖。原始畸形 JSON、错误
   Content-Type、越权身份或非法字段必须按真实线协议发送，并同时断言无副作用。

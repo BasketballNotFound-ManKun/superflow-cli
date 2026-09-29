@@ -26,6 +26,16 @@ investigate source-resolvable questions autonomously.
 5. Assert response, final state and forbidden effects. For read-only/pure-function work explain
    why no persistent change applies; do not leave blanks. Browser paths require browser acceptance;
    API checks can supplement, not replace them.
+6. For cross-page or field changes, inventory frontend routes, list columns and clickable actions
+   independently from backend Controllers, exact Mapper statements and all writers. Reconcile both
+   inventories before writing tasks/tests. Similar method names are not call-chain evidence. For
+   every list record page request, Controller, Service, exact Mapper statement, response DTO and
+   table; for every management button record its mutation API and write point. Investigate missing
+   or conflicting entries instead of treating matching totals as proof.
+7. A database-backed display case needs both a non-null fixture and a separate allowed historical
+   NULL case. Compare API fields with authoritative DB values for the same business ID, then check
+   browser rendering. Field keys, HTTP 200, empty lists and historical NULL alone are insufficient.
+   Mutation cases also check write-then-read behavior and forbidden side effects.
 
 ## Receipt extension
 
@@ -87,3 +97,13 @@ During verification, reuse R/E/C IDs in `test-report.md`, recording actual actor
 request route, state/forbidden-effect assertions, raw evidence paths and outcomes. The Host
 compares them to original sources, not only a test summary. Planned cases are not execution
 evidence; API-only results cannot claim browser E2E. Do not claim automatic semantic assurance.
+Full SDD reports use one per-case execution evidence table for the existing report linter:
+
+| Case ID | Entry ID | Acceptance level | Result | Evidence path |
+|---|---|---|---|---|
+| C1 | E1 | browser | PASS | logs/C1-trace.zip |
+
+Results are `PASS/FAIL/BLOCKED/PARTIAL`. Evidence points to actual command output, browser trace,
+response or DB reconciliation. Retain readable local evidence files for PASS; HTTP(S) links may
+identify remote evidence. Explain blockers in the report body. This table proves case-level
+accounting only; the Host must inspect evidence contents. Any non-PASS case prevents an overall PASS.

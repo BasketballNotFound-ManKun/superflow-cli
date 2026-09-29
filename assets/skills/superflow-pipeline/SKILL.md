@@ -41,6 +41,9 @@ CLI 命令：
 停止，不创建托管 Task；已有用户评审通过的 change/Prompt 时原路径冻结；只有边界清晰的
 口头小需求才直接进入 minimal/standard。若口头需求存在会改变实现方向的 API、数据、
 并发、跨仓或 owner 决策，先进入澄清/文档流程，不能把这一判断交给 Runner 正则或 Executor。
+多页面、跨前后端、数据库字段横向改造要求闭环交付时，按完整 SDD 冻结真实入口、
+`tests.md` 和逐入口验收合同。仅有 OpenSpec `spec/design/tasks` 或通用冒烟报告，
+只能声明相应范围已实现/验证，不得称为完整 SDD 验收。
 
 ```bash
 superflow pipeline "<implementation-prompt 路径、change 目录或简单任务>" --managed --project "<项目根目录>" \
