@@ -422,17 +422,24 @@ function printPlan(plan: UpdatePlan, json: boolean, status = 'planned'): void {
   console.log(`mcp: ${plan.mcp.agents.join(', ')}`);
 }
 
-function persistUpdateLanguage(language: Language, agents: Agent[]): void {
-  let state = loadState(stateFile);
-  if (!state) {
-    const packageJson = JSON.parse(
-      readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf-8')
-    ) as { version?: string };
-    state = initState(packageJson.version ?? 'unknown', agents[0] ?? 'claude', language);
+export function persistUpdateLanguage(
+  language: Language,
+  agents: Agent[],
+  file = stateFile,
+): void {
+  const packageJson = JSON.parse(
+    readFileSync(path.join(PACKAGE_ROOT, "package.json"), "utf-8"),
+  ) as { version?: string };
+  const version = packageJson.version ?? "unknown";
+  const state =
+    loadState(file) ?? initState(version, agents[0] ?? "claude", language);
+  if (state.version !== version) {
+    state.previousVersion = state.version;
+    state.version = version;
   }
   state.language = language;
   state.lastInit = new Date().toISOString();
-  saveState(stateFile, state);
+  saveState(file, state);
 }
 
 async function updateNpmPackage(

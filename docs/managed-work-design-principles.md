@@ -510,3 +510,7 @@ Spring Boot 启动、真实 HTTP、MySQL/Testcontainers、浏览器 E2E 或跨�
   后续使用提前自动压缩和 240 秒紧凑等待窗口验证成本下降。
 - 后续目标：修复 JSON 本地容错、阶段继承和规则注入后，同等 CRUD 稳定达到
   1 次有效 Claude + 1 轮 Host。
+
+## 逐用例运行证据边界
+
+完整 SDD 复用冻结 coverage 与 execution-receipt.v1，逐入口绑定原始命令输出、退出码、执行数、源码与构建指纹、实际运行目标及持久化前后断言。Runner/preflight/final gate 仅校验确定事实；精确 Service→Mapper statement、断言充分性与报告实施说明一致性仍由 Host 独立评审。历史 partial 不丢失，缺证据不能晋升完整交付；只采信最终一致汇总，不扫描历史关键词冒充完成。该扩展不改变三个 Agent JSON 协议或状态 owner。

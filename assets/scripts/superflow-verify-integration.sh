@@ -58,17 +58,12 @@ for REPORT in "$@"; do
   check_pattern "$REPORT" "证据等级/真实验证结论" \
     "Real integration passed|Partial real entry|Partially verified|Blocked|真实入口|API 集成|冒烟|Smoke"
 
-  if [ -x "$HOME/.codex/hooks/superflow-test-report-lint.py" ]; then
-    "$HOME/.codex/hooks/superflow-test-report-lint.py" "$REPORT"
-    if [ $? -ne 0 ]; then
-      FAILED=1
-    fi
-  fi
-
-  if grep -Eiq "跳过|未执行|待补充|TODO|后续测试|建议.*测试|是否.*测试" "$REPORT"; then
-    echo "FAIL [$REPORT] 存在跳过/待补充/后续测试类表述，不能标记完成"
+  # Always use the linter from this installation, on both Codex and Claude.
+  LINT="$(dirname "${BASH_SOURCE[0]}")/superflow-test-report-lint.py"
+  if [ ! -f "$LINT" ] || ! python3 "$LINT" --require-complete "$REPORT"; then
     FAILED=1
   fi
+
 done
 
 if [ "$FAILED" -ne 0 ]; then

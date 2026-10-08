@@ -80,5 +80,5 @@ for report in $REPORTS; do
   REPORT_ARGS="$REPORT_ARGS $REPO_ROOT/$report"
 done
 
-"$HOME/.codex/hooks/superflow-verify-integration.sh" $REPORT_ARGS
+"$(dirname "${BASH_SOURCE[0]}")/superflow-verify-integration.sh" $REPORT_ARGS
 exit $?

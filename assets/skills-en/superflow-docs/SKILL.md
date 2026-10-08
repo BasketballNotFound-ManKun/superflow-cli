@@ -486,3 +486,6 @@ Use references only as needed:
 
 When SDD docs pass quality gates, continue with `$superflow-design` for Superpowers
 technical design before prompt splitting or coding orchestration.
+
+
+Per-case PASS requires retained local execution receipts. Freeze service/entry, source write chains and before/after persistence assertions using pipeline/references/document-review-coverage.md and execution-receipt.v1. Keep legacy evidence PARTIAL. Independent review checks the exact Mapper statement and raw output; full delivery runs the current installation's lint --require-complete. Hashes do not prove authenticity or business sufficiency.

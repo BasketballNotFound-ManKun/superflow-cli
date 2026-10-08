@@ -28,6 +28,14 @@ export function runChangeGuard(
   const guard = path.join(PIPELINE_SCRIPTS, "superflow-guard.sh");
   execFileSync("bash", [guard, resolveChangeDir(change), phase], {
     stdio: options.quiet ? "pipe" : "inherit",
+    env: {
+      ...process.env,
+      SUPERFLOW_REPORT_LINT: path.join(
+        ASSETS_DIR,
+        "scripts",
+        "superflow-test-report-lint.py",
+      ),
+    },
   });
 }
 

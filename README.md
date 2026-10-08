@@ -31,6 +31,15 @@
 SuperBridge Flow is a workflow CLI for bringing OpenSpec/SDD and Superpowers
 together in real software delivery.
 
+## 0.5.17 acceptance evidence fixes
+
+- Per-case PASS binds retained receipts and raw output to the service entry and current source/build. Empty files, remote links, zero execution and substituted entries no longer pass.
+- Persisted fields freeze before/after values for the same business ID and expected assertions. Independent review still checks the actual Service-to-Mapper statement.
+- Keep partial results; only a complete final summary authorizes delivery. Lightweight documentation acquires no DB requirement.
+- CLI and Codex/Claude scripts use the same installation source. Repeated updates refresh version records and preserve custom state.
+
+Complete affected evidence for legacy reports. Hashes prove identity, not business correctness or authenticity.
+
 ## Why SuperBridge Flow
 
 Modern agentic coding often fails in the gap between a well-written spec and

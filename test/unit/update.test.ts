@@ -13,6 +13,7 @@ import {
   formatPackageUpdateCommand,
   resolveUpdateLanguage,
   skillsRootForLanguage,
+  persistUpdateLanguage,
 } from '../../src/app/commands/update.js';
 
 describe('commands/update', () => {
@@ -57,6 +58,40 @@ describe('commands/update', () => {
     expect(skillsRootForLanguage('zh')).toMatch(/assets\/skills$/);
     fs.rmSync(root, { recursive: true, force: true });
   });
+
+  it("records the deployed package version without losing custom state", () => {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "superflow-update-version-"),
+    );
+    const file = path.join(root, "state.json");
+    const current = JSON.parse(
+      fs.readFileSync(path.resolve("package.json"), "utf8"),
+    ).version;
+    fs.writeFileSync(
+      file,
+      JSON.stringify({
+        version: "0.1.0",
+        language: "zh",
+        completedSteps: [],
+        platforms: {},
+        backups: {},
+        custom: "retain",
+      }),
+    );
+    persistUpdateLanguage("zh", ["codex"], file);
+    const state = JSON.parse(fs.readFileSync(file, "utf8"));
+    expect(state).toMatchObject({
+      version: current,
+      previousVersion: "0.1.0",
+      custom: "retain",
+    });
+    persistUpdateLanguage("zh", ["codex"], file);
+    expect(JSON.parse(fs.readFileSync(file, "utf8")).previousVersion).toBe(
+      "0.1.0",
+    );
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
 
   it('includes npm package update command when requested', () => {
     const plan = createUpdatePlan(['codex'], 'global', process.cwd(), true);

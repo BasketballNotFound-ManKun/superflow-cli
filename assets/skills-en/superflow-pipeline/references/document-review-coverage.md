@@ -101,9 +101,24 @@ Full SDD reports use one per-case execution evidence table for the existing repo
 
 | Case ID | Entry ID | Acceptance level | Result | Evidence path |
 |---|---|---|---|---|
-| C1 | E1 | browser | PASS | logs/C1-trace.zip |
+| C1 | E1 | browser | PASS | logs/C1-receipt.json |
 
 Results are `PASS/FAIL/BLOCKED/PARTIAL`. Evidence points to actual command output, browser trace,
-response or DB reconciliation. Retain readable local evidence files for PASS; HTTP(S) links may
-identify remote evidence. Explain blockers in the report body. This table proves case-level
+response or DB reconciliation. Retain readable local execution receipts for PASS; remote material must be saved locally. Explain blockers in the report body. This table proves case-level
 accounting only; the Host must inspect evidence contents. Any non-PASS case prevents an overall PASS.
+
+## Replayable execution receipts (0.5.17)
+
+A PASS evidence path must reference a retained local `superflow.execution-receipt.v1` JSON. Empty files, arbitrary prose, remote URLs and aggregate counts cannot replace execution evidence. Keep legacy evidence PARTIAL until affected checks are completed.
+
+Receipt fields: `caseId/entryId/level/status=PASS/executed>=1/evidenceKind`; `command{argv,exitCode=0,output,sha256}`; `sources[{path,sha256}]`; `build{id,artifact,sha256,sourceFingerprint}`; `target{service,route,kind,buildId,buildSha256,sourceFingerprint}`; `assertions[{id,expected,actual,result=PASS}]`. Paths are relative to the receipt, including authorized sibling sources. Retain raw output. Compute sourceFingerprint as SHA-256 of sorted `path:sha256` lines joined with newline, without a trailing newline. Build and runtime target share the fingerprint and artifact identity. The reviewer still checks build commands and the actual process/image.
+
+Raw command output includes exactly one JSON line per case with `caseId/entryId/level/status/executed/assertions/persistence` matching the receipt. Other logs may coexist. Unknown IDs, zero execution, SKIP, placeholders and missing assertion events cannot PASS. Multiple cases may share one retained log, with each receipt selecting its own event.
+
+Frozen entries may declare `service` (default entryId) and `persistence:[{table,field}]`. Cases default to `evidenceKind=real`; `controlled-simulation` or `unit` require explicit frozen approval. Services writing the same table remain separate entries and source chains, with separate evidence.
+
+Freeze writes in `assertions.persistence:[{id,table,field,expected,allowNull?}]`. Receipt/raw event add `before{businessId,value}`, `after{businessId,value}`, and `result`. Business IDs must match and after.value must equal the frozen expectation. New/changed fields require non-null expectations; historical NULL explicitly uses allowNull. Schema/index existence, mock arguments and all-NULL samples cannot prove writes.
+
+Independent review checks the exact Mapper statement called by Service, every write chain, runtime identity, raw assertions and old-event/new-request isolation. Claims that implementation is complete must agree with source and runtime evidence. Hashes prove identity, not authenticity or test sufficiency. No new managed protocol/state owner is introduced; non-behavioral lightweight work does not acquire DB obligations.
+
+Raw case events also carry evidenceKind/sources/build/target and command{argv,exitCode}, exactly matching the receipt. build.command{argv,exitCode,output,sha256} retains build output with a JSON line {event:"build",buildId,sourceFingerprint,artifactSha256,argv,exitCode:0}. Independent review still verifies actual build/runtime behavior. Only the latest consistent bilingual Verification Result authorizes completion; historical records and fenced examples do not.

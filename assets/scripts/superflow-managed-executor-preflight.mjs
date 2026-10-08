@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const [projectArg = ".", taskId] = process.argv.slice(2);
 if (!taskId) {
@@ -102,6 +103,35 @@ if (changeDir) {
   }
   if (!fs.existsSync(reportFile))
     errors.push(`缺少 test-report.md: ${reportFile}`);
+  const stateFile = path.join(changeDir, ".sdd/state.yaml");
+  const reviewFile = path.join(changeDir, ".sdd/reviews/document-review.json");
+  const full =
+    fs.existsSync(stateFile) &&
+    /^workflow:\s*full\s*$/m.test(fs.readFileSync(stateFile, "utf8"));
+  if (full && !fs.existsSync(reviewFile))
+    errors.push("完整 SDD 缺少冻结入口评审凭证");
+  if (fs.existsSync(reviewFile)) {
+    try {
+      execFileSync(
+        "python3",
+        [
+          path.join(
+            path.dirname(fileURLToPath(import.meta.url)),
+            "superflow-test-report-lint.py",
+          ),
+          "--tests",
+          path.join(changeDir, "tests.md"),
+          "--review",
+          reviewFile,
+          "--require-complete",
+          reportFile,
+        ],
+        { encoding: "utf8", stdio: "pipe" },
+      );
+    } catch (error) {
+      errors.push(`逐用例执行凭证门禁失败: ${error.stdout ?? error.message}`);
+    }
+  }
 }
 
 if (errors.length > 0) {

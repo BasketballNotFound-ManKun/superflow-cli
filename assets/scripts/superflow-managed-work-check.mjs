@@ -2,6 +2,8 @@
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const [projectArg = ".", taskId, mode] = process.argv.slice(2);
 const beforeReadyEvent = mode === "--before-ready-event";
@@ -328,6 +330,39 @@ function verifyOpenSpecTasksComplete(task, executor) {
   while (current.startsWith(projectRoot)) {
     const tasksFile = path.join(current, "tasks.md");
     if (fs.existsSync(tasksFile)) {
+      const reviewFile = path.join(
+        current,
+        ".sdd/reviews/document-review.json",
+      );
+      const stateFile = path.join(current, ".sdd/state.yaml");
+      const full =
+        fs.existsSync(stateFile) &&
+        /^workflow:\s*full\s*$/m.test(fs.readFileSync(stateFile, "utf8"));
+      if (full && !fs.existsSync(reviewFile))
+        fail("完整 SDD 缺少冻结入口评审凭证");
+      if (fs.existsSync(reviewFile)) {
+        try {
+          execFileSync(
+            "python3",
+            [
+              path.join(
+                path.dirname(fileURLToPath(import.meta.url)),
+                "superflow-test-report-lint.py",
+              ),
+              "--tests",
+              path.join(current, "tests.md"),
+              "--review",
+              reviewFile,
+              "--require-complete",
+              path.join(current, "test-report.md"),
+            ],
+            { encoding: "utf8", stdio: "pipe" },
+          );
+        } catch (error) {
+          fail(`逐用例执行凭证门禁失败: ${error.stdout ?? error.message}`);
+        }
+      }
+
       const tasks = fs
         .readFileSync(tasksFile, "utf8")
         .split(/\r?\n/)

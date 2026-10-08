@@ -14,6 +14,7 @@ mechanically:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -261,6 +262,146 @@ def lint_against_tests_contract(report_path: Path, report_text: str, tests_path:
     return issues
 
 
+def final_report_result(text: str) -> str:
+    # Only the latest explicit summary per language is authoritative. Historical
+    # notes and fenced examples do not invalidate the final execution ledger.
+    text = re.sub(r"```.*?```", "", text, flags=re.S)
+    results = {}
+    for match in re.finditer(r"^(验证结果|Verification Result)\s*[:：]\s*([A-Z_]+)\s*$", text, re.I | re.M):
+        results[match[1].lower()] = match[2].upper()
+    if len(set(results.values())) > 1:
+        return "CONFLICT"
+    return next(iter(results.values()), "MISSING")
+
+
+def verified_file(base: Path, value: str) -> Path:
+    """Local retained artifacts only. Hashes prove identity, not truthfulness."""
+    if not isinstance(value, str) or not value.strip() or re.match(r"^[a-z]+://", value, re.I):
+        raise ValueError("需要本地可读取的执行证据，远端 URL 不能作为通过凭据")
+    file = (base / value).resolve()
+    if not file.is_file() or file.stat().st_size == 0:
+        raise ValueError(f"证据文件不存在或无内容：{value}")
+    return file
+
+
+def hashed_file(base: Path, value: str, sha256: str) -> Path:
+    file = verified_file(base, value)
+    if not isinstance(sha256, str) or not re.fullmatch(r"[a-f0-9]{64}", sha256):
+        raise ValueError(f"缺少有效 SHA-256：{value}")
+    if hashlib.sha256(file.read_bytes()).hexdigest() != sha256:
+        raise ValueError(f"证据指纹不一致或源码已变化：{value}")
+    return file
+
+
+def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: Path) -> None:
+    receipt = json.loads(file.read_text(encoding="utf-8"))
+    if receipt.get("schemaVersion") != "superflow.execution-receipt.v1":
+        raise ValueError("缺少 execution-receipt.v1；旧证据应保留为 PARTIAL")
+    for key, expected in [("caseId", case["id"]), ("entryId", case["entryId"]),
+                          ("level", case["level"]), ("status", "PASS")]:
+        if receipt.get(key) != expected:
+            raise ValueError(f"执行凭证 {key} 与冻结用例不一致")
+    if type(receipt.get("executed")) is not int or receipt["executed"] < 1:
+        raise ValueError("用例零执行/占位不能 PASS")
+    kind = case.get("evidenceKind", "real")
+    if kind not in {"real", "controlled-simulation", "unit"} or receipt.get("evidenceKind") != kind:
+        raise ValueError("执行证据等级与冻结合同不一致；模拟不能替代真实入口")
+    command = receipt["command"]
+    if (not isinstance(command.get("argv"), list) or not command["argv"]
+            or any(not isinstance(arg, str) or not arg.strip() for arg in command["argv"])
+            or type(command.get("exitCode")) is not int or command["exitCode"] != 0):
+        raise ValueError("缺少真实命令或命令退出码非零")
+    output = hashed_file(file.parent, command["output"], command["sha256"])
+    events = []
+    for line in output.read_text(encoding="utf-8").splitlines():
+        try:
+            event = json.loads(line)
+            if isinstance(event, dict) and event.get("caseId") == case["id"]:
+                events.append(event)
+        except ValueError:
+            continue
+    if len(events) != 1:
+        raise ValueError("原始输出缺少唯一用例执行事件；未知 ID/零执行不可 PASS")
+    event = events[0]
+    for key in ["caseId", "entryId", "level", "status", "executed", "assertions", "persistence",
+                "evidenceKind", "sources", "build", "target"]:
+        if event.get(key) != receipt.get(key):
+            raise ValueError(f"原始执行输出与凭证 {key} 不一致")
+    if event.get("command") != {"argv": command["argv"], "exitCode": command["exitCode"]}:
+        raise ValueError("原始执行命令与凭证不一致")
+    sources = receipt["sources"]
+    if not isinstance(sources, list) or not sources:
+        raise ValueError("缺少当前源码/构建指纹")
+    paths = set()
+    source_tokens = []
+    for source in sources:
+        paths.add(hashed_file(file.parent, source["path"], source["sha256"]))
+        source_tokens.append(source["path"] + ":" + source["sha256"])
+    entry = next((e for e in coverage.get("entries", []) if e["id"] == case["entryId"]), None)
+    if entry is None:
+        raise ValueError("执行凭证缺少冻结入口定义")
+    source_index = {s["id"]: s for s in coverage.get("sources", [])}
+    for ref in entry.get("sourceRefs", []):
+        source = source_index[ref]
+        if source.get("role") == "code" and (change / source["path"]).resolve() not in paths:
+            raise ValueError("执行凭证未覆盖该入口冻结的源码写入链")
+    build = receipt["build"]
+    target = receipt["target"]
+    fingerprint = hashlib.sha256("\n".join(sorted(source_tokens)).encode()).hexdigest()
+    if build.get("sourceFingerprint") != fingerprint or target.get("sourceFingerprint") != fingerprint:
+        raise ValueError("构建与运行目标未绑定当前源码指纹")
+    hashed_file(file.parent, build["artifact"], build["sha256"])
+    build_command = build["command"]
+    if (not isinstance(build_command.get("argv"), list) or not build_command["argv"]
+            or type(build_command.get("exitCode")) is not int or build_command["exitCode"] != 0):
+        raise ValueError("缺少成功构建命令")
+    build_output = hashed_file(file.parent, build_command["output"], build_command["sha256"])
+    expected_build = {"event": "build", "buildId": build["id"], "sourceFingerprint": fingerprint,
+                      "artifactSha256": build["sha256"], "argv": build_command["argv"], "exitCode": 0}
+    build_events = []
+    for line in build_output.read_text(encoding="utf-8").splitlines():
+        try:
+            value = json.loads(line)
+            if isinstance(value, dict) and value.get("event") == "build" and value.get("buildId") == build["id"]:
+                build_events.append(value)
+        except ValueError:
+            continue
+    if len(build_events) != 1 or build_events[0] != expected_build:
+        raise ValueError("构建原始输出未关联当前源码与构建产物")
+    if target.get("buildSha256") != build["sha256"]:
+        raise ValueError("运行目标不是本次验证的构建产物")
+    if not isinstance(build.get("id"), str) or not build["id"].strip() or target.get("buildId") != build["id"]:
+        raise ValueError("真实运行目标与构建指纹不一致")
+    for key, expected in [("service", entry.get("service", entry["id"])),
+                          ("route", entry["route"]), ("kind", case["level"])]:
+        if target.get(key) != expected:
+            raise ValueError(f"真实运行目标 {key} 与冻结入口不一致")
+    assertions = receipt["assertions"]
+    required = set(case.get("assertions", {})) - {"persistence"}
+    required |= {"response", "state", "forbiddenEffects"}
+    if not isinstance(assertions, list) or {a["id"] for a in assertions} != required or len(assertions) != len(required):
+        raise ValueError("缺少冻结响应/状态/禁止副作用断言")
+    for assertion in assertions:
+        if (assertion.get("result") != "PASS" or "expected" not in assertion
+                or "actual" not in assertion or assertion["expected"] != assertion["actual"]):
+            raise ValueError("断言失败或缺少预期值/实际值")
+    expected_writes = case.get("assertions", {}).get("persistence", [])
+    writes = receipt.get("persistence", [])
+    if not isinstance(writes, list) or len(writes) != len(expected_writes):
+        raise ValueError("缺少持久化字段同业务 ID 的调用前后对照")
+    for expected, actual in zip(expected_writes, writes):
+        for key in ["id", "table", "field", "expected"]:
+            if key not in actual or actual[key] != expected[key]:
+                raise ValueError("持久化断言与冻结字段/预期值不一致")
+        before, after = actual["before"], actual["after"]
+        if (not before.get("businessId") or before["businessId"] != after.get("businessId")
+                or "value" not in before or "value" not in after
+                or after["value"] != expected["expected"]
+                or (after["value"] is None and not expected.get("allowNull", False))
+                or actual.get("result") != "PASS"):
+            raise ValueError("持久化值未达到预期；结构存在/全 NULL/跨业务 ID 不能替代写入")
+
+
 def lint_case_evidence(report_path: Path, report_text: str, review_path: Path) -> list[Issue]:
     """Check the frozen R/E/C index against per-case execution receipts."""
     issues: list[Issue] = []
@@ -280,6 +421,8 @@ def lint_case_evidence(report_path: Path, report_text: str, review_path: Path) -
         if decision.get("disposition") != "EXCLUDED"
         for case_id in decision.get("caseIds", [])
     }
+    if final_report_result(report_text) == "CONFLICT":
+        issues.append(Issue("FAIL", report_path, 0, "中英文最终验证结果冲突"))
     lines = report_text.splitlines()
     header_at = next(
         (i for i, line in enumerate(lines) if CASE_EVIDENCE_HEADER.fullmatch(line.strip())),
@@ -311,13 +454,13 @@ def lint_case_evidence(report_path: Path, report_text: str, review_path: Path) -
             issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 的入口或验收级别与冻结合同不一致"))
         if result not in CASE_RESULTS or not evidence or evidence.lower() in {"pending", "todo", "待补"}:
             issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 缺少有效结果或证据位置"))
-        elif result == "PASS" and not re.match(r"^https?://", evidence, re.I):
-            evidence_file = Path(evidence.split("#", 1)[0])
-            if not evidence_file.is_absolute():
-                evidence_file = report_path.parent / evidence_file
-            if not evidence_file.is_file():
-                issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 的通过证据文件不存在：{evidence}"))
-        if result != "PASS" and re.search(r"验证结果\s*[:：]\s*PASS|Verification Result\s*[:：]\s*PASS", report_text, re.I):
+        elif result == "PASS":
+            try:
+                evidence_file = verified_file(report_path.parent, evidence.split("#", 1)[0])
+                validate_execution_receipt(evidence_file, case or {}, coverage, report_path.parent)
+            except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+                issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 的通过证据不可验证：{error}"))
+        if result != "PASS" and final_report_result(report_text) == "PASS":
             issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 为 {result}，报告不能声明整体验证 PASS"))
     for case_id in receipts.keys() - required:
         issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 未在冻结入口评审中要求执行"))
@@ -349,11 +492,19 @@ def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None,
     db_backed = bool(DB_BACKED_RE.search(text))
     blocked = bool(BLOCKED_RE.search(text))
     passed_or_partial = bool(PASS_WORDS.search(text) or re.search(r"Partially verified|部分验证", text, re.I))
-    issues.extend(lint_against_tests_contract(path, text, tests_path or infer_tests_path(path)))
+    adjacent_review = path.parent / ".sdd/reviews/document-review.json"
+    if review_path is None and adjacent_review.is_file():
+        review_path = adjacent_review
+    state_path = path.parent / ".sdd/state.yaml"
+    full = state_path.is_file() and re.search(r"^workflow:\s*[\"']?full[\"']?\s*$", state_path.read_text(), re.M)
+    if full and review_path is None:
+        issues.append(Issue("FAIL", path, 0, "完整 SDD 缺少冻结入口评审凭证，不能以旧关键词报告交付"))
     if review_path is not None:
         issues.extend(lint_case_evidence(path, text, review_path))
+    else:
+        issues.extend(lint_against_tests_contract(path, text, tests_path or infer_tests_path(path)))
 
-    if db_backed and passed_or_partial and not blocked:
+    if review_path is None and db_backed and passed_or_partial and not blocked:
         if not TABLE_REVERSE_HEADER_RE.search(text):
             issues.append(
                 Issue(
@@ -471,6 +622,7 @@ def main() -> int:
     parser.add_argument("--tests", default="")
     parser.add_argument("--review", default="")
     parser.add_argument("--repo-root", default="")
+    parser.add_argument("--require-complete", action="store_true")
     parser.add_argument("--warn-only", action="store_true")
     args = parser.parse_args()
 
@@ -486,6 +638,10 @@ def main() -> int:
             all_issues.append(Issue("FAIL", path, 0, f"显式指定的 tests.md 不存在：{tests_path}"))
         review_path = Path(args.review).resolve() if args.review else None
         all_issues.extend(lint_report(path, repo, tests_path, review_path))
+        if args.require_complete:
+            text = path.read_text(encoding="utf-8")
+            if final_report_result(text) != "PASS":
+                all_issues.append(Issue("FAIL", path, 0, "完整交付要求最终验证结果 PASS；局部证据保留为 PARTIAL"))
 
     printable = []
     for issue in all_issues:

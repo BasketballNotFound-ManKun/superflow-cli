@@ -138,6 +138,40 @@ export function validateCoverage(root, review, issues, checkCode = true) {
         issues.push(`用例 ${test.id} 缺少 ${key} 断言`);
     }
     refs(test.sourceRefs, "contract", `用例 ${test.id}`);
+    if (
+      test.evidenceKind !== undefined &&
+      !["real", "controlled-simulation", "unit"].includes(test.evidenceKind)
+    )
+      issues.push(`用例 ${test.id} 的 evidenceKind 无效`);
+    const writes = test.assertions?.persistence ?? [];
+    if (
+      !Array.isArray(writes) ||
+      writes.some(
+        (write) =>
+          !nonempty(write?.id) ||
+          !nonempty(write.table) ||
+          !nonempty(write.field) ||
+          !("expected" in write) ||
+          (write.expected === null && write.allowNull !== true),
+      )
+    ) {
+      issues.push(
+        `用例 ${test.id} 缺少持久化字段与非空预期值；历史 NULL 需明确 allowNull`,
+      );
+    } else {
+      const ids = new Set(writes.map((write) => write.id));
+      if (ids.size !== writes.length)
+        issues.push(`用例 ${test.id} 持久化断言 ID 重复`);
+      for (const field of entry?.persistence ?? []) {
+        if (
+          !writes.some(
+            (write) =>
+              write.table === field.table && write.field === field.field,
+          )
+        )
+          issues.push(`用例 ${test.id} 缺少入口写入字段的前后值断言`);
+      }
+    }
   }
   const pairs = new Set();
   for (const decision of list(coverage.decisions)) {

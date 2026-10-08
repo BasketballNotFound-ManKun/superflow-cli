@@ -421,3 +421,7 @@ depend on experimental MCP Tasks; its durable Task/Run remains authoritative.
 
 Legacy messages without protocol fields are normalized to v2 at the read boundary.
 Backward compatibility never justifies another executor round to repair formatting.
+
+## Per-case runtime evidence boundary
+
+Full SDD reuses frozen coverage and execution-receipt.v1 to bind each entry to raw command output, exit code, execution count, source/build fingerprints, runtime target and before/after persistence assertions. Runner/preflight/final gate validate deterministic facts only; Host independently reviews the exact Service-to-Mapper statement, assertion sufficiency and implementation claims. Retain partial history without promoting missing evidence to full delivery. Use the consistent final summary, not historical keywords. This extension does not change the three Agent JSON protocols or state ownership.

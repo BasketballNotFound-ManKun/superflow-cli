@@ -47,6 +47,15 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 - Claude Code：`~/.claude/skills/`、`~/.claude/scripts/`，并注册 `~/.claude/settings.json` hook
 - Codex：`~/.codex/skills/`、`~/.codex/hooks/`
 
+## 0.5.17 验收证据修复
+
+- 逐用例 PASS 绑定本地执行凭证、原始输出、具体服务入口及当前源码/构建；空文件、远端链接、零执行和入口替代不再通过。
+- 持久化字段需冻结同业务 ID 前后值与预期断言；独立评审继续核对实际 Service→Mapper statement。
+- 局部结果保留 PARTIAL，最终完整汇总才可交付；轻量文档不追加数据库要求。
+- CLI、Codex/Claude 脚本使用同一安装来源，重复更新刷新版本记录并保留自定义状态。
+
+旧报告缺执行凭证时补齐受影响证据；哈希只证明身份，不证明业务正确性或防伪。
+
 ## 亮点
 
 0.5.10 加强文档交付：逐需求×真实入口核对（含排除项）、真实入口验收合同、

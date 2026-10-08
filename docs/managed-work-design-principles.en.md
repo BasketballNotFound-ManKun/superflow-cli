@@ -683,3 +683,7 @@ single delivery-ready event.
 - Target: after local JSON recovery, stage inheritance, and rule injection are
   fixed, comparable CRUD work converges to one effective Claude call and one
   Host review.
+
+## Per-case runtime evidence boundary
+
+Full SDD reuses frozen coverage and execution-receipt.v1 to bind each entry to raw command output, exit code, execution count, source/build fingerprints, runtime target and before/after persistence assertions. Runner/preflight/final gate validate deterministic facts only; Host independently reviews the exact Service-to-Mapper statement, assertion sufficiency and implementation claims. Retain partial history without promoting missing evidence to full delivery. Use the consistent final summary, not historical keywords. This extension does not change the three Agent JSON protocols or state ownership.

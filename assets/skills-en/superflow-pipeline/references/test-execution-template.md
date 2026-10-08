@@ -60,7 +60,7 @@ execution table checked by `superflow-test-report-lint.py --review`:
 
 | Case ID | Entry ID | Acceptance level | Result | Evidence path |
 |---|---|---|---|---|
-| C1 | E1 | browser | PASS | logs/C1-trace.zip |
+| C1 | E1 | browser | PASS | logs/C1-receipt.json |
 
 Use only `PASS/FAIL/BLOCKED/PARTIAL`; explain non-PASS results in the report.
 For database-backed display fields, record same-ID API/DB values on non-null
@@ -71,3 +71,5 @@ field-key checks, static frontend inspection and browser evidence.
 - Branch/commit/build number or image:
 - Base URL:
 - Verification timestamp:
+
+Use [document-review-coverage.md](document-review-coverage.md) for receipts and persistence comparisons. Do not invent another format. Retain historical partial results; the latest consistent bilingual Verification Result is authoritative.

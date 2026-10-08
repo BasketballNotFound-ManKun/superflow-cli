@@ -486,3 +486,6 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
 
 When SDD docs pass quality gates, continue with `$superflow-design` for Superpowers
 technical design before prompt splitting or coding orchestration.
+
+
+逐用例 PASS 必须提供可重放本地执行凭证；冻结服务/入口、源码写入链与持久化前后值断言。沿用 pipeline/references/document-review-coverage.md 的 execution-receipt.v1 合同，旧证据保留 PARTIAL；独立评审核对精确 Mapper statement 与原始输出，完整交付运行当前安装的 lint --require-complete。哈希不等同防伪或业务充分性。

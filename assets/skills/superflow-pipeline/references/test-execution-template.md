@@ -76,7 +76,7 @@ mvn test -Dtest=UserServiceTest
 
 | 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |
 |---|---|---|---|---|
-| C1 | E1 | browser | PASS | logs/C1-trace.zip |
+| C1 | E1 | browser | PASS | logs/C1-receipt.json |
 
 `PASS/FAIL/BLOCKED/PARTIAL` 之外的值无效；非 PASS 项在正文说明原因。
 数据库字段展示要分别记录非空数据按同一 ID 的 API/DB 值对账、历史 NULL 结果和
@@ -261,3 +261,5 @@ HTTP 200、字段非空、mock-only、DB-only、`BUILD SUCCESS`、`Tests are ski
 - 不允许把泛化外部失败当作通过，除非需求明确要求该失败结果
 - 不允许只检查主仓数据库结构就关闭跨仓共享表任务；必须覆盖全部消费仓实体/Mapper/SQL
 - **不允许"编译成功 + 单元测试通过"就标记任务完成，必须完成上述 checklist 全部项**
+
+执行凭证格式与持久化前后对照遵循 [document-review-coverage.md](document-review-coverage.md)，不要另建格式；历史局部结论保留，以最后一个中英文一致的验证结果为最终汇总。

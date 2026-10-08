@@ -319,3 +319,7 @@ Task/Run 或 Executor。当前不依赖实验性 MCP Tasks；Superflow Task/Run 
 
 旧消息缺少协议字段时，Runner 在读取边界补全版本后按 v2 规范化，保留向后兼容，不要求
 Executor 再开一轮修复格式。
+
+## 逐用例运行证据边界
+
+完整 SDD 复用冻结 coverage 与 execution-receipt.v1，逐入口绑定原始命令输出、退出码、执行数、源码与构建指纹、实际运行目标及持久化前后断言。Runner/preflight/final gate 仅校验确定事实；精确 Service→Mapper statement、断言充分性与报告实施说明一致性仍由 Host 独立评审。历史 partial 不丢失，缺证据不能晋升完整交付；只采信最终一致汇总，不扫描历史关键词冒充完成。该扩展不改变三个 Agent JSON 协议或状态 owner。

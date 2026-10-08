@@ -134,3 +134,6 @@ Before moving to verify, run:
 Do not claim completion from unit tests alone. Runtime code changes require
 compile/build evidence, app start evidence when applicable, real API or event
 execution, DB/log checks, hook output, and test-report updates.
+
+
+Per-case PASS requires retained local execution receipts. Freeze service/entry, source write chains and before/after persistence assertions using pipeline/references/document-review-coverage.md and execution-receipt.v1. Keep legacy evidence PARTIAL. Independent review checks the exact Mapper statement and raw output; full delivery runs the current installation's lint --require-complete. Hashes do not prove authenticity or business sufficiency.

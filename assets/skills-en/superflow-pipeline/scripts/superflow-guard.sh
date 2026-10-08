@@ -91,7 +91,7 @@ require_test_report_lint() {
   local -a lint_args
   root="$(project_root_for_change)"
   review="$CHANGE_DIR/.sdd/reviews/document-review.json"
-  lint_args=(--tests "$CHANGE_DIR/tests.md")
+  lint_args=(--tests "$CHANGE_DIR/tests.md" --require-complete)
   if [[ "$(state_get workflow)" == "full" && ! -f "$review" ]]; then
     issues+=("full SDD verify requires .sdd/reviews/document-review.json; complete the docs entry review before verify")
     return
@@ -101,8 +101,8 @@ require_test_report_lint() {
   fi
 
   for lint in \
-    "$root/.codex/hooks/superflow-test-report-lint.py" \
-    "$HOME/.codex/hooks/superflow-test-report-lint.py"; do
+    "${SUPERFLOW_REPORT_LINT:-$SCRIPT_DIR/../../../scripts/superflow-test-report-lint.py}" \
+    "$SCRIPT_DIR/../../../hooks/superflow-test-report-lint.py"; do
     if [[ -x "$lint" ]]; then
       output="$(mktemp)"
       if ! "$lint" "${lint_args[@]}" "$report" >"$output" 2>&1; then
@@ -874,8 +874,12 @@ case "$PHASE" in
     require_file test-report.md
     require_grep 'RED|failure evidence' test-report.md "RED evidence"
     require_grep 'GREEN|pass evidence' test-report.md "GREEN evidence"
-    require_grep 'interface automation|curl|Postman|Newman|pytest|RestAssured' test-report.md "interface automation evidence"
-    require_grep 'DB|database|SELECT|SHOW CREATE' test-report.md "DB evidence"
+    if [[ "$(state_get workflow)" == "full" ]]; then
+      require_grep 'interface automation|curl|Postman|Newman|pytest|RestAssured' test-report.md "interface automation evidence"
+    fi
+    if change_has_database_change; then
+      require_grep 'DB|database|SELECT|SHOW CREATE' test-report.md "DB evidence"
+    fi
     require_grep 'superflow-verify-integration|superflow-delivery-check|superflow-test-report-lint' test-report.md "SuperBridge Flow hook/script evidence"
     if change_has_money_precision_risk; then
       require_money_precision_evidence test-report.md "money precision runtime evidence"

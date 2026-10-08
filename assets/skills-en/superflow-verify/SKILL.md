@@ -189,3 +189,6 @@ This advances to `phase: archive`, sets `verify_result: pass`, and records
 
 Passing verification does not authorize automatic archive. Enter `$superflow-archive`
 and wait for explicit user confirmation.
+
+
+Per-case PASS requires retained local execution receipts. Freeze service/entry, source write chains and before/after persistence assertions using pipeline/references/document-review-coverage.md and execution-receipt.v1. Keep legacy evidence PARTIAL. Independent review checks the exact Mapper statement and raw output; full delivery runs the current installation's lint --require-complete. Hashes do not prove authenticity or business sufficiency.

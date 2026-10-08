@@ -92,9 +92,24 @@ coding-ready 复检失败会写 BLOCKED 撤销旧 READY。
 
 | 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |
 |---|---|---|---|---|
-| C1 | E1 | browser | PASS | logs/C1-trace.zip |
+| C1 | E1 | browser | PASS | logs/C1-receipt.json |
 
 结果只用 `PASS/FAIL/BLOCKED/PARTIAL`；证据路径指向实际命令输出、浏览器 trace、
-响应或数据库对账记录。PASS 的本地证据文件必须保留到验收并可读取；远端证据可用
-HTTP(S) 链接。阻塞项在报告正文写明原因。表格仅证明用例逐项回填，不能证明
+响应或数据库对账记录。PASS 的本地证据文件必须保留到验收并可读取；远端资料须保存为本地可核验证据。阻塞项在报告正文写明原因。表格仅证明用例逐项回填，不能证明
 证据内容正确。任何非 PASS 用例存在时，不得声明整体验证 PASS。
+
+## 可重放执行凭证（0.5.17）
+
+PASS 的证据路径现在必须指向本地 `superflow.execution-receipt.v1` JSON；不得以空文件、任意文本、远端 URL 或测试总数代替。旧报告保留 PARTIAL，补齐受影响证据后再整体 PASS。
+
+凭证字段：`caseId/entryId/level/status=PASS/executed>=1/evidenceKind`；`command{argv,exitCode=0,output,sha256}`；`sources[{path,sha256}]`；`build{id,artifact,sha256,sourceFingerprint}`；`target{service,route,kind,buildId,buildSha256,sourceFingerprint}`；`assertions[{id,expected,actual,result=PASS}]`。路径相对凭证文件，可使用授权跨仓源码；输出需保留可读取的原始日志。源码指纹为 sources 按 `path:sha256` 排序后以换行连接的 SHA-256（末尾无换行）。构建与运行目标必须关联同一指纹和产物；Agent 仍核对构建命令与实际进程/镜像。
+
+命令输出中每个用例包含一个 JSON 行执行事件，携带 `caseId/entryId/level/status/executed/assertions/persistence`，与凭证相同。普通日志可混排；未知 ID、零执行、SKIP、占位或缺少断言事件不可 PASS。一个日志可包含多个用例，各凭证分别定位自己的事件。
+
+冻结入口可增加 `service`（默认 entryId）、`persistence:[{table,field}]`；用例默认 `evidenceKind=real`，只有冻结合同明确允许时才填 `controlled-simulation` 或 `unit`。两个服务写同表也必须分别登记入口和源码链，不得交换证据。
+
+持久化写入用例在 `assertions.persistence` 冻结 `[{id,table,field,expected,allowNull?}]`，凭证/原始事件同名数组追加 `before{businessId,value}`、`after{businessId,value}`、`result`。业务 ID 一致且 after.value 等于冻结预期；新增/改字段用非空预期，历史 NULL 明确 allowNull。字段索引存在、mock 参数赋值、全 NULL 数据不能证明写入。
+
+独立评审必须检查实际 Service 调用的精确 Mapper statement 和所有写入链、运行目标、原始断言及旧通知/新申请隔离；报告的“实现已补齐”必须与源码和运行证据一致。哈希和结构不保证日志真实或断言充分，不能当作防伪签名。该扩展不增加托管协议或状态 owner；纯文档/非行为轻量任务不强加 DB 验收。
+
+原始用例事件还必须携带 evidenceKind/sources/build/target 和 command{argv,exitCode}，与凭证完全一致。build.command{argv,exitCode,output,sha256} 引用构建原始日志，其中包含 JSON 行 {event:"build",buildId,sourceFingerprint,artifactSha256,argv,exitCode:0}；日志与实际构建/运行仍由独立评审核验。最终汇总仅取最后一个中英文一致的“验证结果/Verification Result”，历史记录与代码块示例不用于晋升。

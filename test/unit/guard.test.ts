@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { writeExecutionReceipt } from "../helpers/execution-receipt.js";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "../..");
@@ -1363,6 +1364,7 @@ describe("superflow-guard.sh", () => {
     await write(review, JSON.stringify({
       coverage: {
         schemaVersion: "superflow.review-coverage.v1",
+        entries: caseIds.map((id) => ({ id: `E${id.slice(1)}`, route: `POST /E${id.slice(1)}`, kind: "api" })),
         cases: caseIds.map((id) => ({ id, entryId: `E${id.slice(1)}`, level: "api" })),
         decisions: caseIds.map((id) => ({ disposition: "FIX", caseIds: [id] })),
       },
@@ -1372,7 +1374,7 @@ describe("superflow-guard.sh", () => {
     const rows = caseIds.slice(0, 13).map((id) =>
       `| ${id} | E${id.slice(1)} | api | PASS | logs/${id}.json |`);
     for (const id of caseIds.slice(0, 13)) {
-      await write(path.join(change, "logs", `${id}.json`), "{}");
+      writeExecutionReceipt(change, id, `E${id.slice(1)}`);
     }
     await write(path.join(change, "test-report.md"), [
       "# Test Report",
@@ -1401,7 +1403,7 @@ describe("superflow-guard.sh", () => {
     }
 
     for (const id of caseIds.slice(13)) {
-      await write(path.join(change, "logs", `${id}.json`), "{}");
+      writeExecutionReceipt(change, id, `E${id.slice(1)}`);
     }
     const remainingRows = caseIds.slice(13).map((id) =>
       `| ${id} | E${id.slice(1)} | api | PASS | logs/${id}.json |`);
@@ -1424,9 +1426,6 @@ describe("superflow-guard.sh", () => {
     await write(path.join(change, "test-report.md"), [
       "# Test Report",
       "RED failure evidence; GREEN pass evidence.",
-      "接口自动化 curl http://localhost:8080/api; HTTP 200 response assert.",
-      "数据库 SELECT checked; log ERROR checked.",
-      "表/字段 | 写入方 | 读取/过滤方 | 真实入口 | 反向状态场景 | 验证证据",
       "superflow-test-report-lint passed.",
       "Verification Result: PASS",
       "Archive Readiness: PASS",

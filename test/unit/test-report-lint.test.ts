@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { writeExecutionReceipt } from '../helpers/execution-receipt.js';
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -74,6 +75,10 @@ describe('superflow-test-report-lint.py', () => {
       fs.writeFileSync(review, JSON.stringify({
         coverage: {
           schemaVersion: 'superflow.review-coverage.v1',
+          entries: [
+            { id: 'plot-page', route: 'POST /plot-page', kind: 'browser' },
+            { id: 'port-switch', route: 'POST /port-switch', kind: 'api' },
+          ],
           cases: [
             { id: 'C1', entryId: 'plot-page', level: 'browser' },
             { id: 'C2', entryId: 'port-switch', level: 'api' },
@@ -88,11 +93,11 @@ describe('superflow-test-report-lint.py', () => {
         '# Test Report',
         '| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |',
         '|---|---|---|---|---|',
-        '| C1 | plot-page | browser | PASS | logs/C1-trace.zip |',
+        '| C1 | plot-page | browser | PASS | logs/C1.json |',
       ];
       fs.mkdirSync(path.join(dir, 'logs'));
-      fs.writeFileSync(path.join(dir, 'logs/C1-trace.zip'), 'trace');
-      fs.writeFileSync(path.join(dir, 'logs/C2.txt'), 'API assertion');
+      writeExecutionReceipt(dir, 'C1', 'plot-page', 'browser');
+      writeExecutionReceipt(dir, 'C2', 'port-switch');
       fs.writeFileSync(report, [...base, '验证结果: PASS'].join('\n'));
       await expect(execFileAsync('python3', [LINT, '--review', review, report]))
         .rejects.toMatchObject({
@@ -102,7 +107,7 @@ describe('superflow-test-report-lint.py', () => {
 
       fs.writeFileSync(report, [
         ...base,
-        '| C2 | port-switch | browser | PASS | logs/C2.txt |',
+        '| C2 | port-switch | browser | PASS | logs/C2.json |',
         '验证结果: PASS',
       ].join('\n'));
       await expect(execFileAsync('python3', [LINT, '--review', review, report]))
@@ -124,16 +129,16 @@ describe('superflow-test-report-lint.py', () => {
 
       fs.writeFileSync(report, [
         ...base,
-        '| C2 | port-switch | api | PASS | logs/C2.txt |',
+        '| C2 | port-switch | api | PASS | logs/C2.json |',
         '验证结果: PASS',
       ].join('\n'));
       await expect(execFileAsync('python3', [LINT, '--review', review, report]))
         .resolves.toBeDefined();
-      fs.rmSync(path.join(dir, 'logs/C2.txt'));
+      fs.rmSync(path.join(dir, 'logs/C2.json'));
       await expect(execFileAsync('python3', [LINT, '--review', review, report]))
         .rejects.toMatchObject({
           code: 2,
-          stdout: expect.stringContaining('用例 C2 的通过证据文件不存在'),
+          stdout: expect.stringContaining('用例 C2 的通过证据不可验证'),
         });
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
