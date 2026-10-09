@@ -78,14 +78,14 @@ if [ "$SDD_ACTIVE" -eq 0 ]; then
         if [ "$archived" != "true" ] && { [ "$phase" = "implement" ] || [ "$phase" = "verify" ]; }; then
           printf '%s\n' "$state"
         fi
-      done | head -n 1)
+      done | sed -n '1p')
   if [ -n "$ACTIVE_STATE" ]; then
     SDD_ACTIVE=1
   fi
 fi
 
-RUNTIME_CHANGED=$(printf '%s\n' "$CHANGED" | grep -E \
-  '(^|/)src/main/.*\.(java|xml|yml|yaml|properties)$|(^|/)mapper/.*\.xml$|(^|/)sql/.*\.sql$' || true)
+SQL_RUNTIME_CHANGED=$(printf '%s\n' "$CHANGED" | grep -E \
+  '(^|/)sql/.*\.sql$' || true)
 
 CODE_RUNTIME_CHANGED=$(printf '%s\n' "$CHANGED" | grep -E \
   '(^|/)src/main/.*\.(java|xml|yml|yaml|properties)$|(^|/)mapper/.*\.xml$' || true)
@@ -245,7 +245,9 @@ for report in $REPORTS; do
   fi
 done
 
-if [ -n "$RUNTIME_CHANGED" ] && [ -z "$REPORTS" ]; then
+if { [ -n "$CODE_RUNTIME_CHANGED" ] \
+  || { [ -n "$SQL_RUNTIME_CHANGED" ] && [ -n "$SDD_DOCS_CHANGED" ]; }; } \
+  && [ -z "$REPORTS" ]; then
   fail "检测到运行时代码/SQL 变更，但本次提交没有 staged 当前任务的 test-report.md"
 fi
 

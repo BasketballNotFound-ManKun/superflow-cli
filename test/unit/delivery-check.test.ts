@@ -48,6 +48,7 @@ describe("superflow delivery check", () => {
       execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
     ).rejects.toMatchObject({
       stdout: expect.stringContaining("没有 staged 当前任务的 test-report.md"),
+      stderr: "",
     });
   });
 
@@ -59,6 +60,55 @@ describe("superflow delivery check", () => {
     await expect(
       execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
     ).resolves.toMatchObject({ stdout: "" });
+  });
+
+  it("allows standalone SQL changes without an SDD task report", async () => {
+    await write(".sdd-enforced", "");
+    await write("sql/v1.2.0/v1.2.0.test5.sql", "UPDATE sys_config;\n");
+    await execFileAsync(
+      "git",
+      ["add", ".sdd-enforced", "sql/v1.2.0/v1.2.0.test5.sql"],
+      { cwd: tmp },
+    );
+
+    await expect(
+      execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
+    ).resolves.toMatchObject({
+      stdout: "SDD 交付完整性检查通过\n",
+    });
+  });
+
+  it("still requires a report for runtime code in an enforced SDD project", async () => {
+    await write(".sdd-enforced", "");
+    await execFileAsync("git", ["add", ".sdd-enforced", "src"], {
+      cwd: tmp,
+    });
+
+    await expect(
+      execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
+    ).rejects.toMatchObject({
+      stdout: expect.stringContaining("没有 staged 当前任务的 test-report.md"),
+    });
+  });
+
+  it("requires a report when SQL and active SDD docs change together", async () => {
+    await write(".sdd-enforced", "");
+    await write("sql/v1.2.0/v1.2.0.test5.sql", "UPDATE sys_config;\n");
+    await write(
+      "openspec/changes/sample/specs/example/spec.md",
+      "# Requirement\n",
+    );
+    await execFileAsync(
+      "git",
+      ["add", ".sdd-enforced", "sql", "openspec"],
+      { cwd: tmp },
+    );
+
+    await expect(
+      execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
+    ).rejects.toMatchObject({
+      stdout: expect.stringContaining("没有 staged 当前任务的 test-report.md"),
+    });
   });
 
   it("does not revalidate incomplete documents moved into archive", async () => {
