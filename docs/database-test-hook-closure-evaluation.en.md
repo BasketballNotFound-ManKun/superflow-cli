@@ -20,4 +20,6 @@ Keep historical evidence bound to its original source/entry/build/database witho
 
 Task1 complete with independent PASS/PASS. Task2 fixes completed and independently re-reviewed PASS/PASS. Task3 full regression, package installation and new patch release pending. Published 0.5.17 will not be overwritten.
 
-Final code regression: 745 tests in 103 files passed; lint/build/design gates and 16/16 strict Skill contracts with no mirror gaps passed. Task2 re-review closed P1 and both P2 findings without new issues. Package inspection found a Python cache; asset-local exclusions prevent shipping host caches. Publication and final registry installation remain pending final checks.
+Final code regression: 746 tests in 103 files passed; lint/build/design gates and 16/16 strict Skill contracts with no mirror gaps passed. Task2 re-review closed P1 and both P2 findings without new issues. Package inspection found a Python cache; asset-local exclusions prevent shipping host caches. Publication and final registry installation remain pending final checks.
+
+Whole-branch review closed staged-deletion dependency and dangling registration issues; re-review passes. Final package has 402 files without Python caches. Four bilingual dual-host updates preserve custom assets and installed positive/negative gates pass; installed lint matches the reviewed source.
