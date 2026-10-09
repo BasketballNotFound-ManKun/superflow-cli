@@ -31,6 +31,15 @@
 SuperBridge Flow is a workflow CLI for bringing OpenSpec/SDD and Superpowers
 together in real software delivery.
 
+## 0.5.18 database layers and Git gate closure
+
+- Preserve Mock logic tests while freezing separate SQL-binding, real database and HTTP-entry obligations. Required MySQL proof cannot be replaced with Mock/H2/SQLite.
+- Bind receipts to engine/version, schema, production statement and actual row observations. Retain historical evidence for its verified revision.
+- Delegate exact known legacy sdd entries to current canonical scripts after backup. Preserve unknown/custom entries and symlinks.
+- Audit effective Git Hook routes, executable state and current package content. Reject root report false PASS and tracked evidence/index mismatches, while keeping private untracked logs local.
+
+Run `superflow update --scope global --agent both`, then `superflow doctor <project>`. Unknown custom routes remain visible for owner review; filename/date is not proof of integration.
+
 ## 0.5.17 acceptance evidence fixes
 
 - Per-case PASS binds retained receipts and raw output to the service entry and current source/build. Empty files, remote links, zero execution and substituted entries no longer pass.

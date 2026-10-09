@@ -47,6 +47,15 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 - Claude Code：`~/.claude/skills/`、`~/.claude/scripts/`，并注册 `~/.claude/settings.json` hook
 - Codex：`~/.codex/skills/`、`~/.codex/hooks/`
 
+## 0.5.18 数据库分层与 Git 门禁接入
+
+- 保留 Mock 逻辑单测，分别冻结 SQL 生成/绑定、真实数据库、HTTP 入口义务；必测 MySQL 不能由 Mock/H2/SQLite 替代。
+- 凭证绑定引擎版本、schema、生产 statement 和实际行观测；历史证据按已验证源码版本保留。
+- 已确认旧 sdd 入口备份后委托当前规范脚本；未知/自定义入口和符号链接保留。
+- 核验实际 Git Hook 路由、执行权限及当前包内容；拒绝根级报告假 PASS 和 tracked 证据/index 错配，私有未跟踪日志仍可留本地。
+
+运行 `superflow update --scope global --agent both` 后，用 `superflow doctor <项目>` 核对实际接入。未知自定义路由明确交给 owner 核验，不能只看文件名或日期。
+
 ## 0.5.17 验收证据修复
 
 - 逐用例 PASS 绑定本地执行凭证、原始输出、具体服务入口及当前源码/构建；空文件、远端链接、零执行和入口替代不再通过。

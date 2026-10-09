@@ -7,3 +7,6 @@ tsconfig.json
 tmp/
 coverage/
 .vitest/
+
+**/__pycache__/
+**/*.py[cod]

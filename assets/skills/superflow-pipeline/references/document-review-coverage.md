@@ -153,3 +153,5 @@ PASS 的证据路径现在必须指向本地 `superflow.execution-receipt.v1` JS
 before 与 after 均须匹配冻结 expected。布尔成功标志不能替代快照。
 所有 JSON 观测递归保留类型：boolean 不等于 number（如 true 不能证明影响行数 1），
 数组/对象中的字段同样适用；具体业务键与快照字段由文档与独立评审决定。
+
+Git 交付路径还会对 tracked 报告依赖（receipt、原始事件、构建、源码、schema/合同）核对标准化 index 对象；仅在工作树修正不能证明待提交快照。未受版本控制的私有证据不强制提交；当前源码/构建适用性仍由独立评审判断。

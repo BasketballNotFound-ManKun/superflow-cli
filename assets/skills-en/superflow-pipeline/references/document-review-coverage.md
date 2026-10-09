@@ -174,3 +174,5 @@ retains both real query observations; both must match frozen expected. A success
 boolean cannot replace snapshots. JSON observations preserve types recursively:
 boolean differs from number (true cannot prove one affected row), including nested
 arrays/objects. Documents and independent review choose business keys and fields.
+
+Git delivery compares normalized index objects for tracked report dependencies (receipts, raw events, builds, source, schema/contracts). A working-tree-only repair does not prove the commit snapshot. Private untracked evidence is not forced into Git; independent review still determines source/build applicability.

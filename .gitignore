@@ -6,3 +6,6 @@ coverage/
 .vitest/
 .idea/
 .superflow/tasks/
+
+__pycache__/
+*.py[cod]

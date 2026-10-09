@@ -323,3 +323,7 @@ Executor 再开一轮修复格式。
 ## 逐用例运行证据边界
 
 完整 SDD 复用冻结 coverage 与 execution-receipt.v1，逐入口绑定原始命令输出、退出码、执行数、源码与构建指纹、实际运行目标及持久化前后断言。Runner/preflight/final gate 仅校验确定事实；精确 Service→Mapper statement、断言充分性与报告实施说明一致性仍由 Host 独立评审。历史 partial 不丢失，缺证据不能晋升完整交付；只采信最终一致汇总，不扫描历史关键词冒充完成。该扩展不改变三个 Agent JSON 协议或状态 owner。
+
+## 数据库验证层级与实际入口
+
+Mock 只证明隔离逻辑，SQL生成/绑定、同类型数据库集成与真实HTTP入口分别冻结并记录。涉及持久化、CAS、事务或数据驱动行为时，Agent 必须在设计/tests 与既有coverage冻结引擎版本、生产statement、schema来源、mock边界及数据断言；必要DB不可Mock/H2/SQLite替代MySQL。CLI只核验声明与运行事实，不靠关键词决定必要性。旧入口引用须由安装器委托同一规范脚本，并由doctor诊断内容/执行权限漂移；未知/自定义入口保留。历史证据按明确入口、源码与构建版本保留，不放行另一版本。托管角色、协议和状态owner不变。
