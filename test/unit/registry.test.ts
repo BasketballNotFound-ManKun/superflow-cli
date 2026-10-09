@@ -7,6 +7,7 @@ import {
   clearSddHooks,
   syncManagedHooks,
   HOOK_MAP,
+  isSuperflowManagedHook,
 } from "../../src/domains/hook.js";
 import { hookScriptsForAgent } from "../../src/domains/skill/assets.js";
 
@@ -143,6 +144,29 @@ describe("core/registry", () => {
       entry.hooks.map((hook: any) => hook.command),
     );
     for (const command of custom) expect(commands).toContain(command);
+  });
+
+  it("保留悬空旧别名的宿主注册，不把缺失目标当已知来源", () => {
+    const hooks = path.join(TMP, ".codex/hooks");
+    fs.mkdirSync(hooks, { recursive: true });
+    const file = path.join(hooks, "sdd-delivery-check.sh");
+    fs.symlinkSync(path.join(TMP, "missing-target"), file);
+    expect(isSuperflowManagedHook(file)).toBe(false);
+    fs.writeFileSync(
+      SETTINGS,
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [{ matcher: "Bash", hooks: [{ command: file }] }],
+        },
+      }),
+    );
+    syncManagedHooks(SETTINGS, hooks, ["superflow-delivery-check.sh"]);
+    const commands = JSON.parse(
+      fs.readFileSync(SETTINGS, "utf8"),
+    ).hooks.PreToolUse.flatMap((entry: any) =>
+      entry.hooks.map((hook: any) => hook.command),
+    );
+    expect(commands).toContain(file);
   });
 
   // ===== clearSddHooks 全量覆盖测试 =====

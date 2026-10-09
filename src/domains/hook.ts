@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "fs";
 import path from "path";
 import os from "node:os";
 import { ASSETS_DIR } from "../platform/assets.js";
@@ -92,7 +98,14 @@ export function isSuperflowManagedHook(command: string | undefined): boolean {
       .replaceAll("${HOME}", os.homedir())
       .replaceAll("$HOME", os.homedir())
       .replace(/^~\//, os.homedir() + "/");
-    if (existsSync(file)) {
+    let present = false;
+    try {
+      lstatSync(file);
+      present = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") return false;
+    }
+    if (present) {
       try {
         const host = normalized.includes("/.claude/") ? "claude" : "codex";
         const alias = auditLegacyScriptAliases(

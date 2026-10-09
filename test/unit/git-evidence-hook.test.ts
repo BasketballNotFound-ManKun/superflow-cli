@@ -163,6 +163,22 @@ describe("旧 Git 入口的正式提交证据门", () => {
         encoding: "utf8",
       });
       expect(complete.status, complete.stdout + complete.stderr).toBe(0);
+      const rawPath = "openspec/changes/anonymous/logs/E11.jsonl";
+      const retained = fs.readFileSync(path.join(repo, rawPath));
+      git(["rm", rawPath]);
+      fs.writeFileSync(path.join(repo, rawPath), retained);
+      fs.appendFileSync(
+        path.join(change, "test-report.md"),
+        "\nRetained deleted dependency.\n",
+      );
+      git(["add", "openspec/changes/anonymous/test-report.md"]);
+      const deleted = spawnSync("git", ["commit", "-m", "删除证据快照"], {
+        cwd: repo,
+        env: { ...process.env, HOME: dir },
+        encoding: "utf8",
+      });
+      expect(deleted.status).not.toBe(0);
+      expect(deleted.stdout + deleted.stderr).toContain("Git index");
     },
   );
 });

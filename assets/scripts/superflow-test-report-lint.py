@@ -493,7 +493,10 @@ def check_git_index_files(root: Path, files: list[Path]) -> None:
         tracked = subprocess.run(["git", "-C", str(root), "ls-files", "--error-unmatch", "--", relative],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if tracked.returncode:
-            continue
+            previous = subprocess.run(["git", "-C", str(root), "cat-file", "-e", "HEAD:" + relative],
+                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if previous.returncode:
+                continue
         indexed = subprocess.run(["git", "-C", str(root), "rev-parse", ":" + relative], capture_output=True)
         working = subprocess.run(["git", "-C", str(root), "hash-object", "--path=" + relative, "--stdin"],
                                  input=file.read_bytes(), capture_output=True)
