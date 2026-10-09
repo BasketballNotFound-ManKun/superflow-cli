@@ -96,3 +96,13 @@ Release：https://github.com/BasketballNotFound-ManKun/superflow-cli/releases/ta
 最终全量回归、发布与官方安装复验结果见 0.5.19 annotated tag 的结构化说明及交付记录。隔离包安装、双语双宿主四次更新、自定义资产保留通过；未改变资产合同。无可比成本样本，不宣称性能或 Token 收益。若夹具仍读取外部配置、审计环境未恢复或正式正反例退化，应停止发布并修复测试边界，不能降低生产断言。
 
 本次最终 `npm test`：103 文件、750 项通过、退出 0；Lint、构建、两设计门禁、严格 Skill 审计 16/16 与 0 英文镜像缺口均通过。npm pack dry-run 与实际包均 402 文件，无测试夹具或 Python 缓存。
+
+### 0.5.19 官方发布与升级回查
+
+官方 npm version/latest 均为 0.5.19，dist.shasum `b89cb202779f6c6aa169da4a8d0ed763da75f256` 与验证包一致。发布提交 `6c9a0fe` 已推送 main 与发布分支，annotated tag v0.5.19 已推送；GitHub Release 工作流 `37899929141` 成功，正文含中英文更新与验证说明。npm EOTP 经账户本人完成网页认证后发布成功；registry 处理完成后才执行安装。
+
+活动本地安装、npm 全局安装、另一个旧 Homebrew 安装均从官方 registry 更新为 0.5.19。双宿主资产与官方包经既有宿主适配后的内容一致；global doctor failed=false。活动项目按实际全局安装作用域诊断 failed=false，2 项旧 Git 引用均来源一致。显式 project scope 曾报告项目资产缺失，因为该项目使用全局安装；未向业务仓补装资产。未知旧 Claude delivery 仍为 custom/WARN，保持原有边界。
+
+安装后原失败五文件 64/64 通过。官方包真实匿名 MyBatis/MySQL/Git：两宿主 baseline=0、omitted=1、correct=0。再只读复制活动项目实际 Hook 到匿名仓，调用真实本机 HOME 的旧 Codex 委托入口，复用本轮真实数据库观测：omitted=1、correct=0。业务仓、业务数据库和原 Hook 均未修改；只清理任务自有资源。
+
+需重启宿主加载已更新的 Skill/Hook/MCP。测试隔离修正不证明生产业务语义；字段清单、真实执行身份和断言充分性仍须独立评审。

@@ -51,3 +51,11 @@ Real anonymous MyBatis/MySQL/Git replay on both hosts observed baseline exit 0, 
 Source-chain sufficiency, receipt authenticity and frozen field completeness remain semantic review responsibilities. No comparable cost baseline exists. Stop publication and repair fixture boundaries if external configuration leaks, audit environment restoration fails or real gate positive/negative cases regress; do not weaken production assertions.
 
 Final `npm test`: 103 files, 750 passing cases, exit 0. Lint, build, both design gates and strict Skill audit (16/16, no English gaps) passed. Dry-run and actual package contain 402 files, without test fixtures or Python caches.
+
+### Official 0.5.19 release and installed verification
+
+Official npm version/latest are 0.5.19; dist.shasum b89cb202779f6c6aa169da4a8d0ed763da75f256 matches the verified package. Release commit 6c9a0fe is pushed to main and the release branch, as is annotated tag v0.5.19. GitHub Release workflow 37899929141 succeeded; the bilingual body was checked. The account owner completed npm web authentication after EOTP. Installations were updated only after registry processing completed.
+
+The active local, npm global and previously stale Homebrew installations all resolve to 0.5.19 from the official registry. Both hosts' assets match package content after the existing host transformation. Global doctor and the active project's effective global-scope doctor report failed=false; both legacy Git references are current. An explicit project-scope diagnostic reported missing project assets because the project uses a global installation; no business-repository assets were installed. The unknown old Claude delivery remains custom/WARN.
+
+After installation the original five-file suite passed 64/64. Real anonymous MyBatis/MySQL/Git using the official package observed baseline=0, omitted=1, correct=0 on both hosts. Copying the actual project Hook read-only into the anonymous repository and invoking the real installed Codex legacy alias with this run's real DB observations also produced omitted=1, correct=0. No business repository/database or original Hook was modified. Restart the host to load updated Skills/Hooks/MCP; field completeness, runtime authenticity and semantic sufficiency still need independent review.
