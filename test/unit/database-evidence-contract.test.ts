@@ -34,7 +34,7 @@ function fixture() {
       {
         id: "other",
         kind: "unchangedRows",
-        expected: [{ businessId: "other", value: 3 }],
+        expected: { other: { businessId: "other", value: 3 } },
       },
     ],
   });
@@ -65,7 +65,11 @@ function receiptCheck(f: ReturnType<typeof fixture>, mutate = (_r: any) => {}) {
       statements: f.database.statements,
       assertions: f.test.databaseAssertions.map((a: any) => ({
         ...a,
-        actual: a.expected,
+        actual: structuredClone(
+          a.kind === "unchangedRows"
+            ? { before: a.expected, after: a.expected }
+            : a.expected,
+        ),
         result: "PASS",
       })),
     },
@@ -187,6 +191,63 @@ describe("数据库执行合同", () => {
       fs.writeFileSync(file, JSON.stringify(r));
     }
     expect(check).toThrow();
+  });
+  it.each(["rows", "response", "nested", "snapshot", "raw"])(
+    "严格区分 JSON boolean/number：%s",
+    (scope) => {
+      const f = fixture();
+      if (scope === "snapshot")
+        f.test.databaseAssertions[1].expected.other.value = 1;
+      if (scope === "nested")
+        f.test.databaseAssertions.push({
+          id: "nested",
+          kind: "fieldValue",
+          expected: { rows: [{ value: 1 }] },
+        });
+      const check = receiptCheck(f, (r: any) => {
+        if (scope === "rows") r.database.assertions[0].actual = true;
+        if (scope === "snapshot")
+          r.database.assertions[1].actual.after.other.value = true;
+        if (scope === "response") r.assertions[0].actual = 1;
+        if (scope === "nested")
+          r.database.assertions[2].actual.rows[0].value = true;
+      });
+      if (scope === "raw") {
+        const file = path.join(f.dir, "logs/C2.jsonl");
+        const event = JSON.parse(fs.readFileSync(file, "utf8"));
+        event.assertions[0].actual = 1;
+        const output = JSON.stringify(event) + "\n";
+        fs.writeFileSync(file, output);
+        const receiptFile = path.join(f.dir, "logs/C2.json");
+        const receipt = JSON.parse(fs.readFileSync(receiptFile, "utf8"));
+        receipt.command.sha256 = digest(output);
+        fs.writeFileSync(receiptFile, JSON.stringify(receipt));
+      }
+      expect(check).toThrow();
+    },
+  );
+  it.each(["boolean", "changed", "missing", "cross-key"])(
+    "拒绝缺失或错误 keyed 快照：%s",
+    (scope) => {
+      const f = fixture();
+      const check = receiptCheck(f, (r: any) => {
+        const a = r.database.assertions[1];
+        if (scope === "boolean") a.actual = true;
+        if (scope === "changed")
+          a.actual.after = { other: { businessId: "other", value: 4 } };
+        if (scope === "missing") delete a.actual.before;
+        if (scope === "cross-key")
+          a.actual.after = { wrong: { businessId: "other", value: 3 } };
+      });
+      expect(check).toThrow();
+    },
+  );
+  it("冻结不变断言不能只填布尔成功", () => {
+    const f = fixture();
+    f.test.databaseAssertions[1].expected = true;
+    expect(issues(f.dir, f.review).join("\n")).toContain(
+      "按业务键冻结的行快照",
+    );
   });
   it("数据库义务缺 testLayer 不能绕过验证", () => {
     const f = fixture();

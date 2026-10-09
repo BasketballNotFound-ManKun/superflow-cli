@@ -167,3 +167,10 @@ and omitted-field NULL reported PASS. Independently review these positive/negati
 examples after document generation in source-contract and e2e-environment rounds.
 Structure checks establish frozen/observed consistency; independent Agents assess
 sufficiency and the real production chain.
+
+`unchangedRows.expected` must be a nonempty row-snapshot object indexed by stable
+business-ID/round keys. `actual={before:{businessKey:rowSnapshot},after:{businessKey:rowSnapshot}}`
+retains both real query observations; both must match frozen expected. A success
+boolean cannot replace snapshots. JSON observations preserve types recursively:
+boolean differs from number (true cannot prove one affected row), including nested
+arrays/objects. Documents and independent review choose business keys and fields.

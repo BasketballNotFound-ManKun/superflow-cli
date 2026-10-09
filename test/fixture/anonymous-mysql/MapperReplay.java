@@ -113,10 +113,12 @@ public class MapperReplay {
         try (PrintWriter output = new PrintWriter(System.out)) {
             output.printf("{\"engine\":\"mysql\",\"version\":\"%s\","
                     + "\"statement\":\"AttemptMapper.complete\","
-                    + "\"affectedRows\":%d,\"unchangedRows\":%s,"
+                    + "\"affectedRows\":%d,\"unchangedRows\":{"
+                    + "\"before\":%s,\"after\":%s},"
                     + "\"businessId\":\"target\",\"round\":2,"
                     + "\"before\":null,\"after\":%s,\"status\":\"%s\"}%n",
-                    version, affected, unchanged,
+                    version, affected, isolationSnapshot(before),
+                    isolationSnapshot(after),
                     token == null ? "null" : "\"" + token + "\"",
                     passed ? "PASS" : "FAIL");
         }
@@ -124,4 +126,17 @@ public class MapperReplay {
             throw new AssertionError("Frozen token/state/isolation mismatch");
         }
     }
+
+    private static String isolationSnapshot(List<Map<String, Object>> rows) {
+        return "{\"other:2\":" + rowSnapshot(rows.get(0))
+                + ",\"target:1\":" + rowSnapshot(rows.get(1)) + "}";
+    }
+
+    private static String rowSnapshot(Map<String, Object> row) {
+        return String.format("{\"businessId\":\"%s\",\"round\":%s,"
+                + "\"state\":%s,\"verificationToken\":\"%s\"}",
+                row.get("business_id"), row.get("round_number"),
+                row.get("state"), row.get("verification_token"));
+    }
+
 }

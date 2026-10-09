@@ -58,7 +58,24 @@ for (const variant of ["correct", "omitted"]) {
   };
   const databaseAssertions = [
     { id: "rows", kind: "affectedRows", expected: 1 },
-    { id: "isolation", kind: "unchangedRows", expected: true },
+    {
+      id: "isolation",
+      kind: "unchangedRows",
+      expected: {
+        "other:2": {
+          businessId: "other",
+          round: 2,
+          state: 0,
+          verificationToken: "other-token",
+        },
+        "target:1": {
+          businessId: "target",
+          round: 1,
+          state: 2,
+          verificationToken: "old-token",
+        },
+      },
+    },
   ];
   const frozenWrite = {
     id: "token",

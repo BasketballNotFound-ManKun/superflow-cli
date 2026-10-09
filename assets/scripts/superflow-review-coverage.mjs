@@ -211,6 +211,25 @@ export function validateCoverage(root, review, issues, checkCode = true) {
         )
       )
         issues.push(`用例 ${test.id} 缺少冻结数据库数据断言`);
+
+      for (const assertion of assertions) {
+        if (assertion.kind !== "unchangedRows") continue;
+        const snapshot = assertion.expected;
+        if (
+          !snapshot ||
+          typeof snapshot !== "object" ||
+          Array.isArray(snapshot) ||
+          !Object.keys(snapshot).length ||
+          Object.values(snapshot).some(
+            (row) =>
+              !row ||
+              typeof row !== "object" ||
+              Array.isArray(row) ||
+              !Object.keys(row).length,
+          )
+        )
+          issues.push(`用例 ${test.id} unchangedRows 缺少按业务键冻结的行快照`);
+      }
       if (new Set(assertions.map((a) => a.id)).size !== assertions.length)
         issues.push(`用例 ${test.id} 数据库断言 ID 重复`);
       if (

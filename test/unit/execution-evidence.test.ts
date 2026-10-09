@@ -177,10 +177,81 @@ describe("execution receipt boundary", () => {
         expected: "expected",
       };
       review.coverage.cases[0].assertions.persistence = [expected];
+      // Synthetic validator data, not a claim of executing any business DB.
+      const schema = "CREATE TABLE record(id TEXT, external_code TEXT);\n";
+      fs.writeFileSync(path.join(dir, "schema.sql"), schema);
+      review.coverage.sources.push({
+        id: "schema",
+        role: "contract",
+        path: "schema.sql",
+        sha256: digest(schema),
+      });
+      const statements = [{ sourceRef: "S1", id: "anonymous.run" }];
+      review.coverage.sources[0].sha256 = digest(
+        fs.readFileSync(path.join(dir, "application.ts")),
+      );
+      review.coverage.entries[0].database = {
+        engine: "sqlite",
+        major: 3,
+        schemaSourceRefs: ["schema"],
+        statements,
+      };
+      const boundary = { allowed: [], forbidden: ["anonymous.run"] };
+      const frozen = [
+        { id: "rows", kind: "affectedRows", expected: 1 },
+        {
+          id: "isolated",
+          kind: "unchangedRows",
+          expected: {
+            "other:1": { businessId: "other", round: 1, value: "old" },
+          },
+        },
+      ];
+      Object.assign(review.coverage.cases[0], {
+        testLayer: "database",
+        evidenceKind: "real",
+        mockBoundary: boundary,
+        statements,
+        databaseAssertions: frozen,
+      });
+
       fs.writeFileSync(reviewFile, JSON.stringify(review));
       const receipt = JSON.parse(
         fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
       );
+
+      Object.assign(receipt, {
+        testLayer: "database",
+        mockBoundary: boundary,
+        database: {
+          engine: "sqlite",
+          major: 3,
+          statements,
+          assertions: frozen.map((a) => ({
+            ...a,
+            actual:
+              a.kind === "unchangedRows"
+                ? { before: a.expected, after: a.expected }
+                : a.expected,
+            result: "PASS",
+          })),
+        },
+      });
+      receipt.sources.push({ path: "../schema.sql", sha256: digest(schema) });
+      const fingerprint = digest(
+        receipt.sources
+          .map((source: any) => `${source.path}:${source.sha256}`)
+          .sort()
+          .join("\n"),
+      );
+      receipt.build.sourceFingerprint = fingerprint;
+      receipt.target.sourceFingerprint = fingerprint;
+      const buildFile = path.join(dir, "logs/build.jsonl");
+      const buildEvent = JSON.parse(fs.readFileSync(buildFile, "utf8"));
+      buildEvent.sourceFingerprint = fingerprint;
+      const buildOutput = JSON.stringify(buildEvent) + "\n";
+      fs.writeFileSync(buildFile, buildOutput);
+      receipt.build.command.sha256 = digest(buildOutput);
       receipt.persistence = [
         {
           ...expected,

@@ -293,6 +293,19 @@ def hashed_file(base: Path, value: str, sha256: str) -> Path:
     return file
 
 
+def json_equal(left, right) -> bool:
+    """JSON numbers are distinct from booleans, recursively at every level."""
+    if type(left) in (int, float) and type(right) in (int, float):
+        return left == right
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(json_equal(left[k], right[k]) for k in left)
+    if isinstance(left, list):
+        return len(left) == len(right) and all(json_equal(a, b) for a, b in zip(left, right))
+    return left == right
+
+
 def validate_database_receipt(receipt: dict, event: dict, case: dict,
                               entry: dict, coverage: dict, change: Path,
                               paths: set) -> None:
@@ -302,7 +315,7 @@ def validate_database_receipt(receipt: dict, event: dict, case: dict,
     if (entry.get("persistence") or case.get("assertions", {}).get("persistence")) and not database:
         raise ValueError("旧持久化 PASS 缺少数据库合同，应保留为 PARTIAL")
     for key in ("testLayer", "mockBoundary", "database"):
-        if event.get(key) != receipt.get(key):
+        if not json_equal(event.get(key), receipt.get(key)):
             raise ValueError(f"原始执行输出与凭证 {key} 不一致")
     if layer is not None and receipt.get("testLayer") != layer:
         raise ValueError("testLayer 与冻结合同不一致")
@@ -314,17 +327,17 @@ def validate_database_receipt(receipt: dict, event: dict, case: dict,
         raise ValueError("数据库义务必须使用 real 证据")
     actual = receipt.get("database", {})
     for key in ("engine", "major"):
-        if actual.get(key) != database.get(key):
+        if not json_equal(actual.get(key), database.get(key)):
             raise ValueError(f"数据库 {key} 与冻结合同不一致；替代引擎不能 PASS")
     boundary = case.get("mockBoundary")
-    if not boundary or receipt.get("mockBoundary") != boundary:
+    if not boundary or not json_equal(receipt.get("mockBoundary"), boundary):
         raise ValueError("mockBoundary 与冻结合同不一致")
     if (not isinstance(boundary.get("allowed"), list)
             or not boundary.get("forbidden")
             or set(boundary["allowed"]) & set(boundary["forbidden"])):
         raise ValueError("必测生产链不得 mock")
     statements = case.get("statements")
-    if not statements or actual.get("statements") != statements:
+    if not statements or not json_equal(actual.get("statements"), statements):
         raise ValueError("生产 SQL statement 身份与冻结用例不一致")
     source_index = {s["id"]: s for s in coverage.get("sources", [])}
     refs = database.get("schemaSourceRefs", []) + [s["sourceRef"] for s in statements]
@@ -340,9 +353,17 @@ def validate_database_receipt(receipt: dict, event: dict, case: dict,
     if not expected or not isinstance(assertions, list) or len(assertions) != len(expected):
         raise ValueError("缺少冻结数据库数据断言")
     for frozen, observed in zip(expected, assertions):
-        if (any(observed.get(k) != frozen.get(k) for k in ("id", "kind", "expected"))
-                or "actual" not in observed or observed["actual"] != frozen["expected"]
-                or observed.get("result") != "PASS"):
+        if (any(not json_equal(observed.get(k), frozen.get(k)) for k in ("id", "kind", "expected"))
+                or "actual" not in observed or observed.get("result") != "PASS"):
+            raise ValueError("数据库数据/影响行数/不变断言未达到冻结预期")
+        wanted, found = frozen["expected"], observed["actual"]
+        if frozen["kind"] == "unchangedRows":
+            if (not isinstance(wanted, dict) or not wanted
+                    or any(not isinstance(row, dict) or not row for row in wanted.values())
+                    or not isinstance(found, dict) or set(found) != {"before", "after"}
+                    or not json_equal(found["before"], wanted) or not json_equal(found["after"], wanted)):
+                raise ValueError("非目标/旧轮次缺少 keyed before/after 快照或值发生变化")
+        elif not json_equal(found, wanted):
             raise ValueError("数据库数据/影响行数/不变断言未达到冻结预期")
 
 
@@ -378,9 +399,9 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
     event = events[0]
     for key in ["caseId", "entryId", "level", "status", "executed", "assertions", "persistence",
                 "evidenceKind", "sources", "build", "target"]:
-        if event.get(key) != receipt.get(key):
+        if not json_equal(event.get(key), receipt.get(key)):
             raise ValueError(f"原始执行输出与凭证 {key} 不一致")
-    if event.get("command") != {"argv": command["argv"], "exitCode": command["exitCode"]}:
+    if not json_equal(event.get("command"), {"argv": command["argv"], "exitCode": command["exitCode"]}):
         raise ValueError("原始执行命令与凭证不一致")
     sources = receipt["sources"]
     if not isinstance(sources, list) or not sources:
@@ -420,7 +441,7 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
                 build_events.append(value)
         except ValueError:
             continue
-    if len(build_events) != 1 or build_events[0] != expected_build:
+    if len(build_events) != 1 or not json_equal(build_events[0], expected_build):
         raise ValueError("构建原始输出未关联当前源码与构建产物")
     if target.get("buildSha256") != build["sha256"]:
         raise ValueError("运行目标不是本次验证的构建产物")
@@ -437,7 +458,7 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
         raise ValueError("缺少冻结响应/状态/禁止副作用断言")
     for assertion in assertions:
         if (assertion.get("result") != "PASS" or "expected" not in assertion
-                or "actual" not in assertion or assertion["expected"] != assertion["actual"]):
+                or "actual" not in assertion or not json_equal(assertion["expected"], assertion["actual"])):
             raise ValueError("断言失败或缺少预期值/实际值")
     expected_writes = case.get("assertions", {}).get("persistence", [])
     writes = receipt.get("persistence", [])
@@ -445,12 +466,12 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
         raise ValueError("缺少持久化字段同业务 ID 的调用前后对照")
     for expected, actual in zip(expected_writes, writes):
         for key in ["id", "table", "field", "expected"]:
-            if key not in actual or actual[key] != expected[key]:
+            if key not in actual or not json_equal(actual[key], expected[key]):
                 raise ValueError("持久化断言与冻结字段/预期值不一致")
         before, after = actual["before"], actual["after"]
         if (not before.get("businessId") or before["businessId"] != after.get("businessId")
                 or "value" not in before or "value" not in after
-                or after["value"] != expected["expected"]
+                or not json_equal(after["value"], expected["expected"])
                 or (after["value"] is None and not expected.get("allowNull", False))
                 or actual.get("result") != "PASS"):
             raise ValueError("持久化值未达到预期；结构存在/全 NULL/跨业务 ID 不能替代写入")

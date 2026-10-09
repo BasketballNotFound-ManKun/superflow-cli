@@ -147,3 +147,9 @@ PASS 的证据路径现在必须指向本地 `superflow.execution-receipt.v1` JS
 反例：必要集合只有 Mock、HTTP 绕过生产 Mapper、引擎/statement/边界/来源错配、
 漏字段实际 NULL 却填 PASS。文档生成后在 source-contract 与 e2e-environment 两轮独立审查
 这些正反例；结构检查只确认冻结与观测一致，充分性和真实生产链留给独立 Agent。
+
+`unchangedRows.expected` 必须是按稳定业务 ID/轮次键索引的非空行快照对象；
+`actual={before:{业务键:行快照},after:{业务键:行快照}}` 保留两次真实查询值，
+before 与 after 均须匹配冻结 expected。布尔成功标志不能替代快照。
+所有 JSON 观测递归保留类型：boolean 不等于 number（如 true 不能证明影响行数 1），
+数组/对象中的字段同样适用；具体业务键与快照字段由文档与独立评审决定。
