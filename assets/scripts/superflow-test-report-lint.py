@@ -293,6 +293,59 @@ def hashed_file(base: Path, value: str, sha256: str) -> Path:
     return file
 
 
+def validate_database_receipt(receipt: dict, event: dict, case: dict,
+                              entry: dict, coverage: dict, change: Path,
+                              paths: set) -> None:
+    """Compare frozen database obligations, never infer SQL semantics."""
+    layer = case.get("testLayer")
+    database = entry.get("database")
+    if (entry.get("persistence") or case.get("assertions", {}).get("persistence")) and not database:
+        raise ValueError("旧持久化 PASS 缺少数据库合同，应保留为 PARTIAL")
+    for key in ("testLayer", "mockBoundary", "database"):
+        if event.get(key) != receipt.get(key):
+            raise ValueError(f"原始执行输出与凭证 {key} 不一致")
+    if layer is not None and receipt.get("testLayer") != layer:
+        raise ValueError("testLayer 与冻结合同不一致")
+    if database and layer not in {"logic", "sql-binding", "database", "http-entry"}:
+        raise ValueError("数据库义务缺少 testLayer，应保留 PARTIAL")
+    if layer not in {"database", "http-entry"} or not database:
+        return
+    if case.get("evidenceKind") != "real" or receipt.get("evidenceKind") != "real":
+        raise ValueError("数据库义务必须使用 real 证据")
+    actual = receipt.get("database", {})
+    for key in ("engine", "major"):
+        if actual.get(key) != database.get(key):
+            raise ValueError(f"数据库 {key} 与冻结合同不一致；替代引擎不能 PASS")
+    boundary = case.get("mockBoundary")
+    if not boundary or receipt.get("mockBoundary") != boundary:
+        raise ValueError("mockBoundary 与冻结合同不一致")
+    if (not isinstance(boundary.get("allowed"), list)
+            or not boundary.get("forbidden")
+            or set(boundary["allowed"]) & set(boundary["forbidden"])):
+        raise ValueError("必测生产链不得 mock")
+    statements = case.get("statements")
+    if not statements or actual.get("statements") != statements:
+        raise ValueError("生产 SQL statement 身份与冻结用例不一致")
+    source_index = {s["id"]: s for s in coverage.get("sources", [])}
+    refs = database.get("schemaSourceRefs", []) + [s["sourceRef"] for s in statements]
+    if not database.get("schemaSourceRefs"):
+        raise ValueError("数据库合同缺少 schema 来源")
+    for ref in refs:
+        source = source_index[ref]
+        source_path = hashed_file(change, source["path"], source["sha256"])
+        if source_path not in paths:
+            raise ValueError("数据库 schema/生产 SQL 来源未纳入执行源码指纹")
+    expected = case.get("databaseAssertions")
+    assertions = actual.get("assertions")
+    if not expected or not isinstance(assertions, list) or len(assertions) != len(expected):
+        raise ValueError("缺少冻结数据库数据断言")
+    for frozen, observed in zip(expected, assertions):
+        if (any(observed.get(k) != frozen.get(k) for k in ("id", "kind", "expected"))
+                or "actual" not in observed or observed["actual"] != frozen["expected"]
+                or observed.get("result") != "PASS"):
+            raise ValueError("数据库数据/影响行数/不变断言未达到冻结预期")
+
+
 def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: Path) -> None:
     receipt = json.loads(file.read_text(encoding="utf-8"))
     if receipt.get("schemaVersion") != "superflow.execution-receipt.v1":
@@ -345,6 +398,7 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
         source = source_index[ref]
         if source.get("role") == "code" and (change / source["path"]).resolve() not in paths:
             raise ValueError("执行凭证未覆盖该入口冻结的源码写入链")
+    validate_database_receipt(receipt, event, case, entry, coverage, change, paths)
     build = receipt["build"]
     target = receipt["target"]
     fingerprint = hashlib.sha256("\n".join(sorted(source_tokens)).encode()).hexdigest()

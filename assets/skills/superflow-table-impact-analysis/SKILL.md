@@ -75,3 +75,9 @@ Mark the task `Blocked` when:
 `~/.codex/hooks/superflow-test-report-lint.py` enforces this for database/status
 reports that claim pass or partial pass. A report that only says "sync
 succeeded" without consumer-path evidence is blocked.
+
+### 数据库分层证据
+
+按 [数据库合同](../superflow-pipeline/references/document-review-coverage.md#数据库分层合同)
+冻结并继承 `testLayer`、entry.database、生产 statement、mockBoundary 和数据断言。
+从表、字段、CAS与事务反向发现DB义务并声明entry.database；纯逻辑明确无持久化理由可免DB。

@@ -122,3 +122,48 @@ Freeze writes in `assertions.persistence:[{id,table,field,expected,allowNull?}]`
 Independent review checks the exact Mapper statement called by Service, every write chain, runtime identity, raw assertions and old-event/new-request isolation. Claims that implementation is complete must agree with source and runtime evidence. Hashes prove identity, not authenticity or test sufficiency. No new managed protocol/state owner is introduced; non-behavioral lightweight work does not acquire DB obligations.
 
 Raw case events also carry evidenceKind/sources/build/target and command{argv,exitCode}, exactly matching the receipt. build.command{argv,exitCode,output,sha256} retains build output with a JSON line {event:"build",buildId,sourceFingerprint,artifactSha256,argv,exitCode:0}. Independent review still verifies actual build/runtime behavior. Only the latest consistent bilingual Verification Result authorizes completion; historical records and fenced examples do not.
+
+## Database layer contract
+
+This extends existing coverage/receipt v1, with no new Skill, Hook, or state owner.
+Semantic review must declare entry `database` for persistence, field display, CAS,
+transaction, or query impacts. Pure logic may omit DB validation with an explicit
+no-persistence rationale. Do not infer risks from SQL keywords.
+
+- `case.testLayer=logic|sql-binding|database|http-entry` is separate from entry `level`.
+  Logic mocks prove isolated logic; SQL binding proves generated/bound SQL only.
+  Required cases must include a `database` or `http-entry` case with `evidenceKind=real`;
+  auxiliary logic/SQL-binding cases do not need database connections.
+- `entry.database={engine,major,schemaSourceRefs,statements:[{sourceRef,id}]}` freezes
+  the real engine, major version, schema sources, and exact production statements.
+  H2/SQLite cannot replace MySQL. Schema and Mapper XML use existing sources and
+  receipt fingerprints; anonymous SQLite replay validates only the harness.
+- Freeze database-case `statements:[{sourceRef,id}]`,
+  `mockBoundary={allowed:[external clients],forbidden:[required Service/Mapper]}`,
+  and `databaseAssertions:[{id,kind,expected}]`. The contract defines observation kinds:
+  writes include `affectedRows` and `unchangedRows`; the latter freezes actual snapshots
+  of non-target records and previous rounds. Agents freeze assertions for other risks;
+  scripts do not infer business semantics.
+- Receipt and original case event repeat `testLayer`, `mockBoundary`, and
+  `database={engine,major,statements,assertions:[{id,kind,expected,actual,result}]}`.
+  Retain raw command/build/entry/source-version bindings. Database actual values must
+  match frozen expectations. Field writes retain `assertions.persistence` and
+  same-business-ID before/after/expected. Mock arguments, NULL, field keys, or affected
+  rows alone cannot establish persistence.
+- An `http-entry` carrying DB obligations must traverse real HTTP → production
+  Service/Mapper → same-engine DB and check response, persistence, and isolation.
+  Direct Mapper replay cannot claim HTTP or browser acceptance.
+- Legacy nonpersistent contracts stay compatible. Legacy persistent PASS without
+  the new contract remains PARTIAL. Missing required DB environments are PARTIAL/BLOCKED
+  with reasons; green auxiliary mocks/SQL binding cannot promote full PASS.
+  Historical evidence bound to a fixed entry, source/build version, and DB engine
+  remains valid for that version. Current source changes require new evidence; never
+  reclassify historical real tests as unexecuted or reuse them for a changed version.
+
+Positive examples: auxiliary logic/SQL binding plus production XML/MySQL data assertions;
+explicit no-persistence rationale for pure logic. Negative examples: mock-only required
+sets, HTTP bypassing production Mapper, engine/statement/boundary/source mismatch,
+and omitted-field NULL reported PASS. Independently review these positive/negative
+examples after document generation in source-contract and e2e-environment rounds.
+Structure checks establish frozen/observed consistency; independent Agents assess
+sufficiency and the real production chain.

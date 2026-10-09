@@ -156,3 +156,9 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
 Do not continue to `$superflow-implement` until the design guard passes. The next
 phase may generate prompts, but this phase must not skip any required SDD
 contract document or replace API/DB/tests with Superpowers prose.
+
+### Database layer evidence
+
+Freeze and inherit `testLayer`, entry.database, production statements, mockBoundary,
+and data assertions from the [database contract](../superflow-pipeline/references/document-review-coverage.md#database-layer-contract).
+Resolve schema sources, engine major, production Service/Mapper boundaries, affected rows, and non-target/previous-round isolation assertions.

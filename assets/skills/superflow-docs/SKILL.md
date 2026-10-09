@@ -489,3 +489,9 @@ technical design before prompt splitting or coding orchestration.
 
 
 逐用例 PASS 必须提供可重放本地执行凭证；冻结服务/入口、源码写入链与持久化前后值断言。沿用 pipeline/references/document-review-coverage.md 的 execution-receipt.v1 合同，旧证据保留 PARTIAL；独立评审核对精确 Mapper statement 与原始输出，完整交付运行当前安装的 lint --require-complete。哈希不等同防伪或业务充分性。
+
+### 数据库分层证据
+
+按 [数据库合同](../superflow-pipeline/references/document-review-coverage.md#数据库分层合同)
+冻结并继承 `testLayer`、entry.database、生产 statement、mockBoundary 和数据断言。
+生成文档后用必要DB仅Mock反例和真实生产SQL正例审查；辅助层不强迫DB。

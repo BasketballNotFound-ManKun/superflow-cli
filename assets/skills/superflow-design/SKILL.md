@@ -169,3 +169,9 @@ Impact` and prove writers, readers, filters, derived sync paths, consumers,
 Do not continue to `$superflow-implement` until the design guard passes. The next
 phase may generate prompts, but this phase must not skip any required SDD
 contract document or replace API/DB/tests with Superpowers prose.
+
+### 数据库分层证据
+
+按 [数据库合同](../superflow-pipeline/references/document-review-coverage.md#数据库分层合同)
+冻结并继承 `testLayer`、entry.database、生产 statement、mockBoundary 和数据断言。
+确定 schema 来源、引擎主版本、生产 Service/Mapper 边界、影响行数和非目标/旧轮次隔离断言。

@@ -127,6 +127,32 @@ export function validateCoverage(root, review, issues, checkCode = true) {
       issues.push(`入口 ${entry.id} 缺少角色、实际路由或入口类型`);
     }
     refs(entry.sourceRefs, "code", `入口 ${entry.id}`);
+    const database = entry.database;
+    if (list(entry.persistence).length && !database)
+      issues.push(
+        `入口 ${entry.id} 持久化影响缺少数据库合同；旧证据保留 PARTIAL`,
+      );
+    if (database !== undefined) {
+      if (
+        !nonempty(database?.engine) ||
+        !Number.isInteger(database?.major) ||
+        database.major < 1
+      )
+        issues.push(`入口 ${entry.id} 缺少数据库 engine/major`);
+      refs(database?.schemaSourceRefs, null, `入口 ${entry.id} 数据库 schema`);
+      const statements = list(database?.statements);
+      if (
+        !statements.length ||
+        statements.some(
+          (item) =>
+            !nonempty(item?.id) || sources.get(item.sourceRef)?.role !== "code",
+        )
+      )
+        issues.push(`入口 ${entry.id} 缺少生产 SQL statement 与源码引用`);
+      const identities = statements.map((item) => JSON.stringify(item));
+      if (new Set(identities).size !== identities.length)
+        issues.push(`入口 ${entry.id} 生产 SQL statement 重复`);
+    }
   }
   for (const test of cases.values()) {
     const entry = entries.get(test.entryId);
@@ -143,6 +169,58 @@ export function validateCoverage(root, review, issues, checkCode = true) {
       !["real", "controlled-simulation", "unit"].includes(test.evidenceKind)
     )
       issues.push(`用例 ${test.id} 的 evidenceKind 无效`);
+
+    const layer = test.testLayer;
+    const realDatabase = ["database", "http-entry"].includes(layer);
+    if (
+      layer !== undefined &&
+      !["logic", "sql-binding", "database", "http-entry"].includes(layer)
+    )
+      issues.push(`用例 ${test.id} 的 testLayer 无效`);
+    if (realDatabase && entry?.database) {
+      if (test.evidenceKind !== "real")
+        issues.push(`用例 ${test.id} 数据库验证必须使用 real 证据`);
+      const boundary = test.mockBoundary;
+      if (
+        !boundary ||
+        !Array.isArray(boundary.allowed) ||
+        !Array.isArray(boundary.forbidden) ||
+        boundary.forbidden.length === 0 ||
+        [...boundary.allowed, ...boundary.forbidden].some(
+          (v) => !nonempty(v),
+        ) ||
+        boundary.allowed.some((v) => boundary.forbidden.includes(v))
+      )
+        issues.push(`用例 ${test.id} 缺少明确且不冲突的 mockBoundary`);
+      const statements = list(test.statements);
+      if (
+        !statements.length ||
+        statements.some(
+          (item) =>
+            !list(entry.database.statements).some(
+              (v) => v.id === item?.id && v.sourceRef === item?.sourceRef,
+            ),
+        )
+      )
+        issues.push(`用例 ${test.id} 缺少入口冻结的生产 SQL statement`);
+      const assertions = list(test.databaseAssertions);
+      if (
+        !assertions.length ||
+        assertions.some(
+          (a) => !nonempty(a?.id) || !nonempty(a?.kind) || !("expected" in a),
+        )
+      )
+        issues.push(`用例 ${test.id} 缺少冻结数据库数据断言`);
+      if (new Set(assertions.map((a) => a.id)).size !== assertions.length)
+        issues.push(`用例 ${test.id} 数据库断言 ID 重复`);
+      if (
+        list(entry.persistence).length &&
+        ["affectedRows", "unchangedRows"].some(
+          (kind) => !assertions.some((a) => a.kind === kind),
+        )
+      )
+        issues.push(`用例 ${test.id} 缺少影响行数/非目标与旧轮次不变断言`);
+    }
     const writes = test.assertions?.persistence ?? [];
     if (
       !Array.isArray(writes) ||
@@ -162,7 +240,9 @@ export function validateCoverage(root, review, issues, checkCode = true) {
       const ids = new Set(writes.map((write) => write.id));
       if (ids.size !== writes.length)
         issues.push(`用例 ${test.id} 持久化断言 ID 重复`);
-      for (const field of entry?.persistence ?? []) {
+      for (const field of ["logic", "sql-binding"].includes(layer)
+        ? []
+        : (entry?.persistence ?? [])) {
         if (
           !writes.some(
             (write) =>
@@ -207,6 +287,39 @@ export function validateCoverage(root, review, issues, checkCode = true) {
         ))
     ) {
       issues.push(`${key} 缺少对应真实入口的验收用例`);
+    }
+
+    if (
+      decision.disposition !== "EXCLUDED" &&
+      entries.get(decision.entryId)?.database &&
+      !list(decision.caseIds).some(
+        (id) =>
+          ["database", "http-entry"].includes(cases.get(id)?.testLayer) &&
+          cases.get(id)?.evidenceKind === "real",
+      )
+    )
+      issues.push(`${key} 缺少必要真实数据库用例；Mock/sql-binding 不能替代`);
+
+    const database = entries.get(decision.entryId)?.database;
+    if (decision.disposition !== "EXCLUDED" && database) {
+      const executed = list(decision.caseIds).flatMap((id) => {
+        const test = cases.get(id);
+        return ["database", "http-entry"].includes(test?.testLayer) &&
+          test?.evidenceKind === "real"
+          ? list(test.statements)
+          : [];
+      });
+      if (
+        list(database.statements).some(
+          (statement) =>
+            !executed.some(
+              (item) =>
+                item.id === statement.id &&
+                item.sourceRef === statement.sourceRef,
+            ),
+        )
+      )
+        issues.push(`${key} 生产 SQL 未被必要数据库用例覆盖`);
     }
     if (
       decision.disposition === "EXCLUDED" &&

@@ -113,3 +113,37 @@ PASS 的证据路径现在必须指向本地 `superflow.execution-receipt.v1` JS
 独立评审必须检查实际 Service 调用的精确 Mapper statement 和所有写入链、运行目标、原始断言及旧通知/新申请隔离；报告的“实现已补齐”必须与源码和运行证据一致。哈希和结构不保证日志真实或断言充分，不能当作防伪签名。该扩展不增加托管协议或状态 owner；纯文档/非行为轻量任务不强加 DB 验收。
 
 原始用例事件还必须携带 evidenceKind/sources/build/target 和 command{argv,exitCode}，与凭证完全一致。build.command{argv,exitCode,output,sha256} 引用构建原始日志，其中包含 JSON 行 {event:"build",buildId,sourceFingerprint,artifactSha256,argv,exitCode:0}；日志与实际构建/运行仍由独立评审核验。最终汇总仅取最后一个中英文一致的“验证结果/Verification Result”，历史记录与代码块示例不用于晋升。
+
+## 数据库分层合同
+
+本节扩展已有 coverage/receipt v1，不增加 Skill、Hook 或状态 owner。
+语义评审发现持久化、字段展示、CAS、事务或查询语义影响时，必须在相应入口声明
+`database`；纯逻辑任务明确无持久化影响的理由后可免数据库验证。不能靠 SQL 关键词猜风险。
+
+- `case.testLayer` 为 `logic|sql-binding|database|http-entry`，与真实入口 `level` 分开。
+  logic 可 Mock 隔离逻辑；sql-binding 只证明 SQL 生成/绑定。必要 case 集合必须至少包含
+  一个 `database` 或 `http-entry` 且 `evidenceKind=real` 的用例；辅助层不强迫连接数据库。
+- `entry.database={engine,major,schemaSourceRefs,statements:[{sourceRef,id}]}` 冻结实际引擎、
+  主版本、schema 来源和精确生产 statement。MySQL 不得被 H2/SQLite 替代。
+  schema 与 Mapper XML 引用既有 sources，纳入 receipt 源码指纹；匿名 SQLite 仅验证 harness。
+- 数据库用例冻结 `statements:[{sourceRef,id}]`、
+  `mockBoundary={allowed:[外部客户端],forbidden:[必测Service/Mapper]}` 及
+  `databaseAssertions:[{id,kind,expected}]`。`kind` 是合同定义的观测类别：
+  写入包括 `affectedRows` 和 `unchangedRows`，后者必须冻结非目标记录和旧轮次实际快照；
+  其他风险由 Agent 按需求冻结断言，不由脚本推测业务规则。
+- receipt 和原始用例事件回填同一 `testLayer`、`mockBoundary`、
+  `database={engine,major,statements,assertions:[{id,kind,expected,actual,result}]}`。
+  保留原始命令、构建、入口与源码版本绑定；数据库 assertions 实际值必须等于冻结预期。
+  字段写入继续使用 `assertions.persistence` 与同业务 ID 的 before/after/expected，
+  不能用 Mock 参数、NULL、字段键或影响行数独自证明写入。
+- `http-entry` 若承担 DB 义务，必须走真实 HTTP → 生产 Service/Mapper → 同类型 DB，
+  同时执行返回、持久化和隔离断言；直接 Mapper 回放不能冒充 HTTP 或 browser 验收。
+- 旧非持久化合同保持兼容；旧持久化 PASS 缺新合同保留 PARTIAL。必要 DB 环境不可用时
+  记录 PARTIAL/BLOCKED 和原因，不把辅助 Mock/sql-binding 绿灯晋升为完整 PASS。
+  历史证据绑定固定入口、源码/构建版本和 DB 引擎时仍有效；当前源码改动需要新证据，
+  不得把历史版实际测试误说成没测试，也不能把旧结果用于当前新版本。
+
+正例：逻辑与 SQL 绑定辅助用例 + 真实生产 XML/MySQL 数据断言；纯逻辑有明确无持久化影响理由。
+反例：必要集合只有 Mock、HTTP 绕过生产 Mapper、引擎/statement/边界/来源错配、
+漏字段实际 NULL 却填 PASS。文档生成后在 source-contract 与 e2e-environment 两轮独立审查
+这些正反例；结构检查只确认冻结与观测一致，充分性和真实生产链留给独立 Agent。

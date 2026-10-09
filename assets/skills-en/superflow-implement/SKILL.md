@@ -137,3 +137,9 @@ execution, DB/log checks, hook output, and test-report updates.
 
 
 Per-case PASS requires retained local execution receipts. Freeze service/entry, source write chains and before/after persistence assertions using pipeline/references/document-review-coverage.md and execution-receipt.v1. Keep legacy evidence PARTIAL. Independent review checks the exact Mapper statement and raw output; full delivery runs the current installation's lint --require-complete. Hashes do not prove authenticity or business sufficiency.
+
+### Database layer evidence
+
+Freeze and inherit `testLayer`, entry.database, production statements, mockBoundary,
+and data assertions from the [database contract](../superflow-pipeline/references/document-review-coverage.md#database-layer-contract).
+Execute frozen layers/assertions; missing DB environments are PARTIAL/BLOCKED. Do not substitute another engine or mocks.
