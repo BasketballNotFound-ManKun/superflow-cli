@@ -51,7 +51,7 @@ case 冻结 mockBoundary（隔离外部客户端可允许；必测 Mapper/Servic
 
 - Task 1: complete（独立复审两项结论 PASS）
 - Task 2: complete（定向复审 PASS/PASS）
-- Task 3: pending
+- Task 3: complete
 
 ## 基线、回归与关切记录
 
@@ -65,6 +65,20 @@ case 冻结 mockBoundary（隔离外部客户端可允许；必测 Mapper/Servic
 
 历史结果仅对其固定源码、入口、数据库与构建成立；当前另一个任务的新代码未由旧结果覆盖。保留历史证据不等于自动给新提交PASS。没有可比成本样本，未宣称效率/Token普遍改善。
 
-最终代码回归：103文件746项全部通过；Lint、构建、两设计门禁、严格Skill审计16/16与0镜像缺口通过。Task2定向复审关闭P1与两P2，未发现新增问题。打包发现Python缓存，已在资产目录排除，不能把本机缓存带入公开包。发布及本机正式升级待最终回查。
+最终代码回归：103文件746项全部通过；Lint、构建、两设计门禁、严格Skill审计16/16与0镜像缺口通过。Task2定向复审关闭P1与两P2，未发现新增问题。打包发现Python缓存，已在资产目录排除，不能把本机缓存带入公开包。发布与本机正式升级已回查。
 
 整分支复审发现并关闭暂存删除依赖与悬空入口注册两项跨模块问题，定向复审PASS。最终包402文件，未带Python缓存；Codex/Claude×中英文4次重复安装保留自定义资产，安装版本正反例通过，lint与已审查源一致。
+
+## 最终发布与实际接入结果（2026-10-09）
+
+0.5.18已真实发布，官方version/latest一致，包摘要与最终测试包一致。main及annotated tag v0.5.18已推送；GitHub Release工作流37896142881成功，中英文正文已核对。官方registry的本机两个既有安装与全局资产均更新到0.5.18。
+
+活动项目实际Git Hook只读核验：2项旧Codex引用，2项当前委托且来源一致；doctor无失败项。将同一Git Hook原文复制到一次性匿名Git仓，调用本机实际全局旧路径，复用同版本有效MySQL观测：漏字段伪PASS提交退出1，完整SQL写入提交退出0；业务仓原Hook未改。
+
+一个旧CLAUDE delivery未命中已知摘要，保留且WARN；任何项目若实际引用未知旧入口将doctor FAIL。这是保留未知资产的设计边界，不宣称其自动迁移。仅任务自有MySQL容器清理，未操作业务数据库；临时发布网络适配未进入公开产物。
+
+npm：https://www.npmjs.com/package/@chenmk/superflow/v/0.5.18
+
+Release：https://github.com/BasketballNotFound-ManKun/superflow-cli/releases/tag/v0.5.18
+
+重启Host加载更新资产；语义充分性、生产链和历史证据适用性仍由独立Agent负责。

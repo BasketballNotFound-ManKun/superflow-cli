@@ -18,8 +18,22 @@ Keep historical evidence bound to its original source/entry/build/database witho
 
 ## Delivery status
 
-Task1 complete with independent PASS/PASS. Task2 fixes completed and independently re-reviewed PASS/PASS. Task3 full regression, package installation and new patch release pending. Published 0.5.17 will not be overwritten.
+Task1 complete with independent PASS/PASS. Task2 fixes completed and independently re-reviewed PASS/PASS. Task3 full regression, package installation and patch release complete. Published 0.5.17 will not be overwritten.
 
-Final code regression: 746 tests in 103 files passed; lint/build/design gates and 16/16 strict Skill contracts with no mirror gaps passed. Task2 re-review closed P1 and both P2 findings without new issues. Package inspection found a Python cache; asset-local exclusions prevent shipping host caches. Publication and final registry installation remain pending final checks.
+Final code regression: 746 tests in 103 files passed; lint/build/design gates and 16/16 strict Skill contracts with no mirror gaps passed. Task2 re-review closed P1 and both P2 findings without new issues. Package inspection found a Python cache; asset-local exclusions prevent shipping host caches. Publication and registry installation are verified below.
 
 Whole-branch review closed staged-deletion dependency and dangling registration issues; re-review passes. Final package has 402 files without Python caches. Four bilingual dual-host updates preserve custom assets and installed positive/negative gates pass; installed lint matches the reviewed source.
+
+## Final release and actual integration — 2026-10-09
+
+0.5.18 is published; official version/latest and tested tarball digest match. main and annotated v0.5.18 are pushed. GitHub Release workflow 37896142881 succeeded and its bilingual body was checked. Both existing local installations and global assets were refreshed from the official registry to 0.5.18.
+
+The active project Git Hook was read-only audited: both old Codex references delegate to current matching scripts; doctor has no failures. Copying that exact hook text into an anonymous disposable Git repository and invoking actual global legacy paths reused the same valid MySQL observations: omitted-field forged PASS commit exits1; complete write commit exits0. The original business hook remains untouched.
+
+One CLAUDE legacy delivery is not an approved snapshot; it is preserved with WARN. Projects actually referencing unknown routes receive doctor FAIL, not an automatic-migration claim. Only task-owned database containers were cleaned, with no business DB access. Temporary publish transport was excluded from public artifacts.
+
+npm: https://www.npmjs.com/package/@chenmk/superflow/v/0.5.18
+
+Release: https://github.com/BasketballNotFound-ManKun/superflow-cli/releases/tag/v0.5.18
+
+Restart hosts to load assets. Semantic sufficiency, actual production chains and historical applicability remain independent-review responsibilities.
