@@ -4,6 +4,11 @@ import path from "node:path";
 import os from "node:os";
 import { auditProjectGitHook } from "../../src/domains/hook-migration.js";
 import { execFileSync, spawnSync } from "node:child_process";
+import {
+  fixtureProcessEnv,
+  withFixtureProcessEnv,
+} from "../helpers/fixture-process-env.js";
+
 const installer = path.resolve("assets/scripts/install-sql-pre-commit.sh");
 const paths: string[] = [];
 afterEach(() => {
@@ -20,8 +25,9 @@ describe("已有 Git 安装入口不覆盖用户代码", () => {
       paths.push(dir);
       const repo = path.join(dir, "repo");
       fs.mkdirSync(repo);
+      const env = fixtureProcessEnv(dir);
       const git = (args: string[]) =>
-        execFileSync("git", args, { cwd: repo, stdio: "pipe" });
+        execFileSync("git", args, { cwd: repo, env, stdio: "pipe" });
       git(["init"]);
       git(["config", "core.hooksPath", ".company-hooks"]);
       const scripts = path.join(
@@ -41,20 +47,24 @@ describe("已有 Git 安装入口不覆盖用户代码", () => {
       const run = () =>
         spawnSync("sh", [installer, "--agent", host], {
           cwd: repo,
-          env: { ...process.env, HOME: dir },
+          env,
           encoding: "utf8",
         });
       expect(run().status).toBe(0);
       const hook = path.join(repo, ".company-hooks/pre-commit");
       const bytes = fs.readFileSync(hook, "utf8");
-      const audit = auditProjectGitHook(repo, dir);
+      const audit = withFixtureProcessEnv(env, () =>
+        auditProjectGitHook(repo, dir),
+      );
       expect(audit.references).toHaveLength(2);
       expect(audit.references.some((ref) => !ref.current)).toBe(true); // synthetic gates are deliberately not package bytes
 
       expect(bytes).toContain("superflow-sql-sync-hook.py");
       expect(bytes).toContain("superflow-delivery-check.sh");
       fs.chmodSync(hook, 0o644);
-      expect(auditProjectGitHook(repo, dir).error).toContain("执行权限");
+      expect(
+        withFixtureProcessEnv(env, () => auditProjectGitHook(repo, dir)).error,
+      ).toContain("执行权限");
       expect(run().status).toBe(0);
       expect(fs.statSync(hook).mode & 0o111).not.toBe(0);
       expect(fs.readFileSync(hook, "utf8")).toBe(bytes);

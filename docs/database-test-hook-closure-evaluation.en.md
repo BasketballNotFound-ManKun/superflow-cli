@@ -37,3 +37,17 @@ npm: https://www.npmjs.com/package/@chenmk/superflow/v/0.5.18
 Release: https://github.com/BasketballNotFound-ManKun/superflow-cli/releases/tag/v0.5.18
 
 Restart hosts to load assets. Semantic sufficiency, actual production chains and historical applicability remain independent-review responsibilities.
+
+## 0.5.19 regression fixture isolation — 2026-10-09
+
+The responsibility is test host adaptation. The 0.5.18 Git helper omitted the fixture HOME during setup, staging and the legacy baseline commit. Its pre-commit resolved the real host's current gate and correctly rejected the synthetic legacy exit-0 baseline. With locked dependencies installed, the original five-file suite reproduced 59 passes/1 failure. This was not a production gate bypass; the historical 746-test result applies only to its historical environment.
+
+Reuse the existing Git evidence and installation fixtures with a test-only environment helper: clear inherited Git repository/index/config overrides, isolate HOME/XDG, disable system/global Git configuration, and use the same environment throughout. Synchronous in-process audits also scope and restore that environment in finally. The independent MySQL replay now isolates all Git setup, staging and commits. No production gates, Skills, Hooks, state or migration ownership changed.
+
+The hypothesis is independence from real host installations and Git configuration. Both hosts cover current blocking assets, unknown custom failure scripts and absent installations, with hooksPath/config-count/repository/index pollution. Independent review caught the audit omission; after repair the externally polluted eight-test suite passed. The original five files now pass 64 cases, retaining rejection and successful complete-evidence assertions.
+
+Real anonymous MyBatis/MySQL/Git replay on both hosts observed baseline exit 0, omitted-field false-PASS exit 1 and correct production-shaped SQL exit 0. Mock results do not establish persistence. Only disposable anonymous resources were used. Package installation, bilingual dual-host repeated updates and custom-asset preservation passed. Final full-suite/release/official-install verification is recorded in the structured 0.5.19 annotated tag and delivery evidence.
+
+Source-chain sufficiency, receipt authenticity and frozen field completeness remain semantic review responsibilities. No comparable cost baseline exists. Stop publication and repair fixture boundaries if external configuration leaks, audit environment restoration fails or real gate positive/negative cases regress; do not weaken production assertions.
+
+Final `npm test`: 103 files, 750 passing cases, exit 0. Lint, build, both design gates and strict Skill audit (16/16, no English gaps) passed. Dry-run and actual package contain 402 files, without test fixtures or Python caches.

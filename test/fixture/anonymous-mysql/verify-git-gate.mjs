@@ -29,10 +29,22 @@ fs.cpSync(
   path.join(root, "assets/scripts"),
   { recursive: true },
 );
+// Git setup, staging and commits share the same isolated environment.
+const gitEnv = { ...process.env };
+for (const key of Object.keys(gitEnv)) {
+  if (key.startsWith("GIT_")) delete gitEnv[key];
+}
+Object.assign(gitEnv, {
+  HOME: path.join(root, "git-home"),
+  XDG_CONFIG_HOME: path.join(root, "git-home/.config"),
+  GIT_CONFIG_NOSYSTEM: "1",
+  GIT_CONFIG_GLOBAL: os.devNull,
+});
 const execute = (argv, options = {}) =>
   spawnSync(argv[0], argv.slice(1), {
     cwd: root,
     encoding: "utf8",
+    ...(argv[0] === "git" ? { env: gitEnv } : {}),
     ...options,
   });
 const checked = (argv, options) => {
@@ -86,7 +98,11 @@ for (const host of ["codex", "claude"]) {
     `.${host}`,
     host === "codex" ? "hooks" : "scripts",
   );
-  const env = { ...process.env, HOME: home };
+  const env = {
+    ...gitEnv,
+    HOME: home,
+    XDG_CONFIG_HOME: path.join(home, ".config"),
+  };
   fs.writeFileSync(
     path.join(root, ".git/hooks/pre-commit"),
     `#!/bin/sh\nGATE="$HOME/.${host}/${host === "codex" ? "hooks" : "scripts"}/sdd-delivery-check.sh"\nif [ -x "$GATE" ]; then "$GATE" --check-staged "$(pwd)" || exit $?; fi\n`,
