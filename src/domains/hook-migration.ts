@@ -242,28 +242,30 @@ export function auditProjectGitHook(
     .readFileSync(file, "utf8")
     .replaceAll("${HOME}", homeRoot)
     .replaceAll("$HOME", homeRoot)
-    .replaceAll("~/", homeRoot + "/");
+    .replaceAll("~/", homeRoot + "/")
+    .replaceAll("$(git rev-parse --show-toplevel)", root);
   const references: GitHookAudit["references"] = [];
   for (const host of ["codex", "claude"] as const) {
-    const scriptsDir = path.join(
-      homeRoot,
-      host === "codex" ? ".codex/hooks" : ".claude/scripts",
-    );
-    const aliases = auditLegacyScriptAliases(assetsDir, scriptsDir, host);
-    const names = new Set([
-      ...Object.keys(getManifest().legacyScriptAliases ?? {}),
-      ...Object.values(getManifest().legacyScriptAliases ?? {}).map(
-        (value) => value.target,
-      ),
-    ]);
-    for (const script of names) {
-      const target = path.join(scriptsDir, script);
-      if (!text.includes(target)) continue;
-      const alias = aliases.find((value) => value.alias === script);
-      const current = alias
-        ? alias.status === "delegated" && alias.targetCurrent && alias.executable
-        : scriptMatchesPackage(assetsDir, scriptsDir, script, host);
-      references.push({ host, script, path: target, current });
+    const relative = host === "codex" ? ".codex/hooks" : ".claude/scripts";
+    const directories = new Set([path.join(homeRoot, relative), path.join(root, relative)]);
+    for (const scriptsDir of directories) {
+      const aliases = auditLegacyScriptAliases(assetsDir, scriptsDir, host);
+      const names = new Set([
+        ...Object.keys(getManifest().legacyScriptAliases ?? {}),
+        ...Object.values(getManifest().legacyScriptAliases ?? {}).map(value => value.target),
+      ]);
+      const generated = text.includes('# Superflow managed Git evidence gate v1')
+        && text.includes(`SCRIPTS="${scriptsDir}"`)
+        && /"\$SCRIPTS\/\$name" --check-staged/.test(text);
+      const loopNames = text.match(/^for name in ([^;\r\n]+); do/m)?.[1].trim().split(/\s+/) ?? [];
+      for (const script of names) {
+        const target = path.join(scriptsDir, script);
+        if (!text.includes(target) && !(generated && loopNames.includes(script))) continue;
+        const alias = aliases.find(value => value.alias === script);
+        const current = alias ? alias.status === 'delegated' && alias.targetCurrent && alias.executable
+          : scriptMatchesPackage(assetsDir, scriptsDir, script, host);
+        references.push({ host, script, path: target, current });
+      }
     }
   }
   if (references.length && process.platform !== "win32" && !(fs.lstatSync(file).mode & 0o111))

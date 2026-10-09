@@ -284,7 +284,7 @@ if [ -n "$P_DIRS" ]; then
         check_no_open_placeholders "$REPO_ROOT/$rel_report"
         check_has_closeout_status "$REPO_ROOT/$rel_report"
         if [ -x "$LINT" ]; then
-          lint_args=(--repo-root "$REPO_ROOT")
+          lint_args=(--repo-root "$REPO_ROOT" --git-index-root "$REPO_ROOT")
           if [ -f "$REPO_ROOT/$p_dir/tests.md" ]; then
             lint_args+=(--tests "$REPO_ROOT/$p_dir/tests.md")
           fi
@@ -338,12 +338,23 @@ fi
 ROOT_REPORTS=$(printf '%s\n' "$REPORTS" | grep -E \
   '(^|/)openspec/changes/[^/]+/test-report\.md$|(^|/)doc/openspec/changes/[^/]+/test-report\.md$' || true)
 
+# Evidence/contract-only commits still refer to their existing root report.
+AFFECTED_ROOT_DIRS=$(printf '%s\n' "$ACTIVE_SDD_CHANGED" | sed -nE   's#^((doc/)?openspec/changes/[^/]+)/.*#\1#p' | sort -u)
+for change_root in $AFFECTED_ROOT_DIRS; do
+  case "$change_root" in */archive) continue ;; esac
+  if [ -f "$REPO_ROOT/$change_root/test-report.md" ]; then
+    ROOT_REPORTS="$ROOT_REPORTS
+$change_root/test-report.md"
+  fi
+done
+ROOT_REPORTS=$(printf '%s\n' "$ROOT_REPORTS" | sed '/^$/d' | sort -u)
+
 if [ -n "$ROOT_REPORTS" ] && [ ! -x "$LINT" ]; then
   fail "同安装目录缺少当前 report lint，请执行 superflow update"
 fi
 if [ -n "$ROOT_REPORTS" ] && [ -x "$LINT" ]; then
   for report in $ROOT_REPORTS; do
-    root_lint_args=(--repo-root "$REPO_ROOT")
+    root_lint_args=(--repo-root "$REPO_ROOT" --git-index-root "$REPO_ROOT")
     if [ -z "$CODE_RUNTIME_CHANGED" ] && [ ! -f "$REPO_ROOT/${report%/test-report.md}/.sdd/reviews/document-review.json" ] && is_blocked_doc_freeze_report "$REPO_ROOT/$report"; then
       root_lint_args+=(--warn-only)
     fi

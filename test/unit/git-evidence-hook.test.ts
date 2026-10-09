@@ -68,6 +68,8 @@ describe("旧 Git 入口的正式提交证据门", () => {
           },
         },
       });
+      git(["add", "."]);
+      git(["commit", "-m", "旧入口基线"]);
       await deployScripts(
         ["superflow-delivery-check.sh", "superflow-test-report-lint.py"],
         path.join(ROOT, "assets/scripts"),
@@ -142,6 +144,11 @@ describe("旧 Git 入口的正式提交证据门", () => {
         change,
         "complete",
       ]);
+      fs.appendFileSync(
+        path.join(change, "test-report.md"),
+        "\nNew verification summary.\n",
+      );
+      git(["add", "openspec/changes/anonymous/test-report.md"]);
       const staleIndex = spawnSync("git", ["commit", "-m", "快照错配提交"], {
         cwd: repo,
         env: { ...process.env, HOME: dir },

@@ -477,7 +477,47 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
             raise ValueError("持久化值未达到预期；结构存在/全 NULL/跨业务 ID 不能替代写入")
 
 
-def lint_case_evidence(report_path: Path, report_text: str, review_path: Path) -> list[Issue]:
+def check_git_index_files(root: Path, files: list[Path]) -> None:
+    """Compare version-controlled dependencies with the actual commit snapshot.
+
+    Untracked/ignored local evidence may remain private. This does not require
+    publishing logs, and does not replace review of source/build applicability.
+    """
+    root = root.resolve()
+    for file in set(files):
+        file = file.resolve()
+        try:
+            relative = file.relative_to(root).as_posix()
+        except ValueError:
+            continue
+        tracked = subprocess.run(["git", "-C", str(root), "ls-files", "--error-unmatch", "--", relative],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if tracked.returncode:
+            continue
+        indexed = subprocess.run(["git", "-C", str(root), "rev-parse", ":" + relative], capture_output=True)
+        working = subprocess.run(["git", "-C", str(root), "hash-object", "--path=" + relative, "--stdin"],
+                                 input=file.read_bytes(), capture_output=True)
+        if indexed.returncode or working.returncode or indexed.stdout.strip() != working.stdout.strip():
+            raise ValueError(f"Git index 与报告依赖工作树不一致：{relative}；请暂存已验证快照")
+
+
+def check_receipt_index(file: Path, report: Path, review: Path, root: Path) -> None:
+    receipt = json.loads(file.read_text())
+    dependencies = [file, report, review]
+    command = receipt["command"]
+    build = receipt["build"]
+    dependencies.extend((file.parent / value).resolve() for value in
+                        [command["output"], build["artifact"], build["command"]["output"]])
+    dependencies.extend((file.parent / source["path"]).resolve() for source in receipt["sources"])
+    coverage = json.loads(review.read_text())["coverage"]
+    dependencies.extend((report.parent / source["path"]).resolve() for source in coverage.get("sources", []))
+    tests = infer_tests_path(report)
+    if tests is not None:
+        dependencies.append(tests)
+    check_git_index_files(root, dependencies)
+
+
+def lint_case_evidence(report_path: Path, report_text: str, review_path: Path, index_root: Path | None = None) -> list[Issue]:
     """Check the frozen R/E/C index against per-case execution receipts."""
     issues: list[Issue] = []
     try:
@@ -533,6 +573,8 @@ def lint_case_evidence(report_path: Path, report_text: str, review_path: Path) -
             try:
                 evidence_file = verified_file(report_path.parent, evidence.split("#", 1)[0])
                 validate_execution_receipt(evidence_file, case or {}, coverage, report_path.parent)
+                if index_root is not None:
+                    check_receipt_index(evidence_file, report_path, review_path, index_root)
             except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
                 issues.append(Issue("FAIL", report_path, 0, f"用例 {case_id} 的通过证据不可验证：{error}"))
         if result != "PASS" and final_report_result(report_text) == "PASS":
@@ -558,7 +600,7 @@ def infer_tests_path(report: Path) -> Path | None:
 
 
 def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None,
-                review_path: Path | None = None) -> list[Issue]:
+                review_path: Path | None = None, index_root: Path | None = None) -> list[Issue]:
     issues: list[Issue] = []
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
@@ -575,7 +617,7 @@ def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None,
     if full and review_path is None:
         issues.append(Issue("FAIL", path, 0, "完整 SDD 缺少冻结入口评审凭证，不能以旧关键词报告交付"))
     if review_path is not None:
-        issues.extend(lint_case_evidence(path, text, review_path))
+        issues.extend(lint_case_evidence(path, text, review_path, index_root))
     else:
         issues.extend(lint_against_tests_contract(path, text, tests_path or infer_tests_path(path)))
 
@@ -697,6 +739,7 @@ def main() -> int:
     parser.add_argument("--tests", default="")
     parser.add_argument("--review", default="")
     parser.add_argument("--repo-root", default="")
+    parser.add_argument("--git-index-root", default="")
     parser.add_argument("--require-complete", action="store_true")
     parser.add_argument("--warn-only", action="store_true")
     args = parser.parse_args()
@@ -712,7 +755,7 @@ def main() -> int:
         if tests_path is not None and not tests_path.exists():
             all_issues.append(Issue("FAIL", path, 0, f"显式指定的 tests.md 不存在：{tests_path}"))
         review_path = Path(args.review).resolve() if args.review else None
-        all_issues.extend(lint_report(path, repo, tests_path, review_path))
+        all_issues.extend(lint_report(path, repo, tests_path, review_path, Path(args.git_index_root) if args.git_index_root else None))
         if args.require_complete:
             text = path.read_text(encoding="utf-8")
             if final_report_result(text) != "PASS":

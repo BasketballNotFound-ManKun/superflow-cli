@@ -149,7 +149,14 @@ export function auditLegacyScriptAliases(
     ([alias, definition]) => {
       const file = path.join(scriptsDir, alias);
       let status: LegacyAliasFinding["status"] = "missing";
-      if (existsSync(file)) {
+      let entryExists = false;
+      try {
+        lstatSync(file);
+        entryExists = true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      if (entryExists) {
         status =
           lstatSync(file).isSymbolicLink() || !lstatSync(file).isFile()
             ? "custom"

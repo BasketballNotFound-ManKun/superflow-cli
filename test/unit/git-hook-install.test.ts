@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { auditProjectGitHook } from "../../src/domains/hook-migration.js";
 import { execFileSync, spawnSync } from "node:child_process";
 const installer = path.resolve("assets/scripts/install-sql-pre-commit.sh");
 const paths: string[] = [];
@@ -46,9 +47,14 @@ describe("已有 Git 安装入口不覆盖用户代码", () => {
       expect(run().status).toBe(0);
       const hook = path.join(repo, ".company-hooks/pre-commit");
       const bytes = fs.readFileSync(hook, "utf8");
+      const audit = auditProjectGitHook(repo, dir);
+      expect(audit.references).toHaveLength(2);
+      expect(audit.references.some((ref) => !ref.current)).toBe(true); // synthetic gates are deliberately not package bytes
+
       expect(bytes).toContain("superflow-sql-sync-hook.py");
       expect(bytes).toContain("superflow-delivery-check.sh");
       fs.chmodSync(hook, 0o644);
+      expect(auditProjectGitHook(repo, dir).error).toContain("执行权限");
       expect(run().status).toBe(0);
       expect(fs.statSync(hook).mode & 0o111).not.toBe(0);
       expect(fs.readFileSync(hook, "utf8")).toBe(bytes);

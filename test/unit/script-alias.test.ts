@@ -65,11 +65,21 @@ describe("唯一安装owner的受管理旧入口", () => {
         .filter((name) => name.includes(".superflow-migrate-")),
     ).toEqual(backups);
   });
-  it.each(["custom", "symlink", "modified-wrapper"])(
+  it.each(["custom", "symlink", "dangling", "modified-wrapper"])(
     "保留%s入口并给诊断",
     async (kind) => {
       const alias = path.join(scripts, "sdd-delivery-check.sh");
-      if (kind === "symlink") {
+      if (kind === "dangling") {
+        fs.symlinkSync(path.join(dir, "missing-target"), alias);
+        await deployScripts(["superflow-delivery-check.sh"], assets, scripts, {
+          skipExisting: true,
+        });
+        expect(fs.lstatSync(alias).isSymbolicLink()).toBe(true);
+        expect(
+          auditLegacyScriptAliases(assets, scripts, "codex")[0].status,
+        ).toBe("custom");
+        return;
+      } else if (kind === "symlink") {
         const external = path.join(dir, "external");
         fs.writeFileSync(external, legacy);
         fs.symlinkSync(external, alias);
