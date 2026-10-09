@@ -26,7 +26,7 @@
 3. [x] 扩展 lint 及原始事件校验，修正正式路径来源。
 4. [x] 完成持久化、两入口、模拟等级及正式命令集成回放。
 5. [x] 独立评审、全量测试、构建、Lint、双语 Skill 审计与安装烟测。
-6. [ ] patch 发布、registry/Release 回查及本机资产升级。
+6. [x] patch 发布、registry/Release 回查及本机资产升级。
 
 ## 评价口径与回滚
 
@@ -48,3 +48,19 @@
 - npm `whoami` 两次 E401；真实发布状态以最后 registry 回查为准，不能把本机 0.5.17 当成已经公开发布。
 
 评价结论：确定性误放行得到修复；开放式代码语义、字段清单完整性、真实目标身份和断言充分性继续依赖独立评审。没有建立成本对照，不声称节约 Token 或通用业务正确性。
+
+## 2026-10-09 最终发布闭环
+
+以上认证错误为历史阶段记录；最终发布已完成。
+
+- 官方 npm `version/latest` 均为 `0.5.17`；`dist.shasum=d40e5811d0a300382b7162e5df057d62e7231702`，与通过验收的最终包一致。
+- 发布提交 `e7bbf78` 已集成并推送 main；annotated tag `v0.5.17` 已推送。GitHub Release 工作流 `37869911932` 成功，Release 正文已核对中英文更新及验证说明。
+- 两个既有 CLI 安装均从官方 registry 更新；活动 CLI 与资产状态版本均为 `0.5.17`。Codex/Claude MCP 已配置，doctor 无失败项。
+- 官方安装版本重新执行匿名双入口回放：漏写用例在 Codex/Claude 两侧退出 1，完整写入用例两侧退出 0；两宿主 lint 与最终包来源一致。严格 Skill 审计 16/16、0 英文镜像缺口；发布说明门禁通过。
+- 原项目无关 HTML 修改保留；临时发布网络适配仅作用于发布进程，未进入源码/npm 包。
+
+npm：https://www.npmjs.com/package/@chenmk/superflow/v/0.5.17
+
+Release：https://github.com/BasketballNotFound-ManKun/superflow-cli/releases/tag/v0.5.17
+
+需要重启宿主会话加载新的 Skill/Hook/MCP；代码语义与证据充分性仍由独立评审承担。
