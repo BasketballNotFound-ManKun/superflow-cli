@@ -90,7 +90,11 @@ describe("core/registry", () => {
   });
 
   it("SessionEnd hook 使用 Codex 支持的 3 秒上限", () => {
-    registerHook(SETTINGS, "superflow-loop-end-hook.sh", "/home/test/.codex/hooks/superflow-loop-end-hook.sh");
+    registerHook(
+      SETTINGS,
+      "superflow-loop-end-hook.sh",
+      "/home/test/.codex/hooks/superflow-loop-end-hook.sh",
+    );
     const result = JSON.parse(fs.readFileSync(SETTINGS, "utf-8"));
     expect(result.hooks.SessionEnd[0].hooks[0].timeout).toBe(3);
   });
@@ -111,6 +115,34 @@ describe("core/registry", () => {
     registerHook(SETTINGS, "superflow-enforce-hook.sh", "/x.sh");
     const backups = fs.readdirSync(TMP).filter((f) => f.includes("sdd-backup"));
     expect(backups.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("同步受管Hook时保留未知同前缀与自定义参数调用", () => {
+    const custom = [
+      "~/.codex/hooks/sdd-private-check.sh",
+      "~/.codex/hooks/superflow-company.sh",
+      "~/.codex/hooks/sdd-delivery-check.sh --company",
+    ];
+    fs.writeFileSync(
+      SETTINGS,
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [
+            {
+              matcher: "Bash",
+              hooks: custom.map((command) => ({ type: "command", command })),
+            },
+          ],
+        },
+      }),
+    );
+    syncManagedHooks(SETTINGS, "/tmp/hooks", ["superflow-delivery-check.sh"]);
+    const commands = JSON.parse(
+      fs.readFileSync(SETTINGS, "utf8"),
+    ).hooks.PreToolUse.flatMap((entry: any) =>
+      entry.hooks.map((hook: any) => hook.command),
+    );
+    for (const command of custom) expect(commands).toContain(command);
   });
 
   // ===== clearSddHooks 全量覆盖测试 =====
@@ -259,7 +291,9 @@ describe("core/registry", () => {
         const command = path.join("/home/test", ".claude", "scripts", script);
         registerHook(SETTINGS, script, command);
         if (script === "superflow-sql-sync-hook.py") {
-          registerHook(SETTINGS, script, command, { matcherOverride: "Bash|Shell|exec_command" });
+          registerHook(SETTINGS, script, command, {
+            matcherOverride: "Bash|Shell|exec_command",
+          });
         }
       }
     };

@@ -1,44 +1,59 @@
 #!/bin/sh
+# Install the existing SQL and evidence gates; retain unknown/custom Git hooks.
+set -eu
 
-set -e
-
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
-if [ -z "$REPO_ROOT" ]; then
-    echo "当前目录不是 Git 仓库，无法安装 SQL pre-commit"
-    exit 1
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+case "$SCRIPT_DIR" in */.claude/scripts) AGENT=claude ;; *) AGENT=codex ;; esac
+if [ "$#" -gt 0 ]; then
+    [ "$#" -eq 2 ] && [ "$1" = "--agent" ] || {
+        echo "Usage: install-sql-pre-commit.sh [--agent codex|claude]" >&2
+        exit 2
+    }
+    AGENT="$2"
 fi
-
-HOOK_DIR="$REPO_ROOT/.git/hooks"
-HOOK_FILE="$HOOK_DIR/pre-commit"
-SQL_HOOK="$HOME/.codex/hooks/superflow-sql-sync-hook.py"
-
-mkdir -p "$HOOK_DIR"
-
-if [ -f "$HOOK_FILE" ] && ! grep -q "superflow-sql-sync-hook.py" "$HOOK_FILE"; then
-    BACKUP_FILE="$HOOK_FILE.backup.$(date +%Y%m%d%H%M%S)"
-    cp "$HOOK_FILE" "$BACKUP_FILE"
-    {
-        printf "\n"
-        printf "# SDD SQL style check\n"
-        printf "SQL_HOOK=\"\\$HOME/.codex/hooks/superflow-sql-sync-hook.py\"\n"
-        printf "if [ -x \"\\$SQL_HOOK\" ]; then\n"
-        printf "    \"\\$SQL_HOOK\" --check-staged\n"
-        printf "fi\n"
-    } >> "$HOOK_FILE"
-    chmod +x "$HOOK_FILE"
-    echo "已追加 SQL pre-commit，并备份原 hook: $BACKUP_FILE"
-    exit 0
+case "$AGENT" in codex) SUBDIR=hooks ;; claude) SUBDIR=scripts ;; *) exit 2 ;; esac
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    echo "Not a Git repository / 当前目录不是 Git 仓库" >&2
+    exit 2
+}
+HOOK_PATH=$(git -C "$REPO_ROOT" rev-parse --git-path hooks/pre-commit)
+case "$HOOK_PATH" in /*) HOOK_FILE="$HOOK_PATH" ;; *) HOOK_FILE="$REPO_ROOT/$HOOK_PATH" ;; esac
+if [ "$SCRIPT_DIR" = "$REPO_ROOT/.$AGENT/$SUBDIR" ]; then
+    SCRIPTS="$SCRIPT_DIR"
+    EXPRESSION='$(git rev-parse --show-toplevel)'"/.$AGENT/$SUBDIR"
+else
+    SCRIPTS="$HOME/.$AGENT/$SUBDIR"
+    EXPRESSION='$HOME'"/.$AGENT/$SUBDIR"
 fi
-
-cat > "$HOOK_FILE" <<'EOF'
+for name in superflow-sql-sync-hook.py superflow-delivery-check.sh superflow-test-report-lint.py; do
+    [ -x "$SCRIPTS/$name" ] || {
+        echo "Missing current gate: $name; run superflow update / 请先更新规范门禁" >&2
+        exit 2
+    }
+done
+[ ! -L "$HOOK_FILE" ] || { echo "Retain custom symlink / 保留自定义符号链接" >&2; exit 2; }
+mkdir -p "$(dirname "$HOOK_FILE")"
+TEMPORARY=$(mktemp "${HOOK_FILE}.superflow-XXXXXX")
+trap 'rm -f "$TEMPORARY"' EXIT HUP INT TERM
+cat > "$TEMPORARY" <<HOOK
 #!/bin/sh
-
-SQL_HOOK="$HOME/.codex/hooks/superflow-sql-sync-hook.py"
-
-if [ -x "$SQL_HOOK" ]; then
-    "$SQL_HOOK" --check-staged
+# Superflow managed Git evidence gate v1
+SCRIPTS="$EXPRESSION"
+for name in superflow-sql-sync-hook.py superflow-delivery-check.sh; do
+    [ -x "\$SCRIPTS/\$name" ] || { echo "Missing Superflow gate; run superflow update" >&2; exit 2; }
+    "\$SCRIPTS/\$name" --check-staged "\$(pwd)" || exit \$?
+done
+HOOK
+if [ -f "$HOOK_FILE" ]; then
+    if cmp -s "$HOOK_FILE" "$TEMPORARY"; then
+        chmod +x "$HOOK_FILE"
+        echo "Git gate already current / Git 门禁已接入"
+        exit 0
+    fi
+    echo "Existing custom/legacy pre-commit retained / 已保留现有自定义或旧 pre-commit" >&2
+    echo "Run superflow hook-audit for source diagnostics / 请先核对现有入口来源" >&2
+    exit 2
 fi
-EOF
-
-chmod +x "$HOOK_FILE"
-echo "已安装 SQL pre-commit: $HOOK_FILE"
+chmod +x "$TEMPORARY"
+mv "$TEMPORARY" "$HOOK_FILE"
+echo "Installed Git gate / 已安装 Git 门禁: $HOOK_FILE"

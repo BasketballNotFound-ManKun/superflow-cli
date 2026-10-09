@@ -9,6 +9,10 @@
 
 set -u
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LINT="$SCRIPT_DIR/superflow-test-report-lint.py"
+INTEGRATION="$SCRIPT_DIR/superflow-verify-integration.sh"
+
 MODE="${1:-}"
 
 read_json_field() {
@@ -108,6 +112,18 @@ if [ "$SDD_ACTIVE" -eq 0 ] && [ -z "$SDD_DOCS_CHANGED" ]; then
 fi
 
 FAILED=0
+UNSTAGED="$(git -C "$REPO_ROOT" diff --name-only)"
+INDEX_MISMATCH=0
+while IFS= read -r staged_path; do
+  [ -n "$staged_path" ] || continue
+  if printf '%s\n' "$UNSTAGED" | grep -Fxq "$staged_path"; then
+    echo "FAIL [$staged_path] 工作树与 Git index 内容不同，证据不能证明待提交快照"
+    INDEX_MISMATCH=1
+  fi
+done <<STAGED_PATHS
+$ACTIVE_SDD_CHANGED
+STAGED_PATHS
+[ "$INDEX_MISMATCH" -eq 0 ] || exit 2
 
 fail() {
   echo "FAIL $1"
@@ -200,6 +216,24 @@ is_blocked_doc_freeze_report() {
     return 1
   fi
 
+  local final_result
+  final_result="$(python3 - "$LINT" "$file" <<'PYFINAL'
+import runpy, sys
+from pathlib import Path
+module = runpy.run_path(sys.argv[1])
+text = Path(sys.argv[2]).read_text()
+lines = text.splitlines()
+header = next((i for i, line in enumerate(lines) if module["CASE_EVIDENCE_HEADER"].fullmatch(line.strip())), None)
+active_pass = False
+if header is not None:
+    for line in lines[header + 2:]:
+        if not line.startswith("|"): break
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) == 5 and cells[3].upper() == "PASS": active_pass = True
+print("CASE_PASS" if active_pass else module["final_report_result"](text))
+PYFINAL
+)" || return 1
+  case "$final_result" in PASS|CONFLICT|CASE_PASS) return 1 ;; esac
   grep -Eiq 'Blocked|阻塞' "$file" \
     && grep -Eiq 'SDD 文档|文档阶段|范围收口|范围冻结|任务冻结|不包含代码实现|没有 Java 实现变更|未进入实现|当前报告记录可交付边界' "$file"
 }
@@ -249,12 +283,12 @@ if [ -n "$P_DIRS" ]; then
         ok "[$rel_report] 已 staged"
         check_no_open_placeholders "$REPO_ROOT/$rel_report"
         check_has_closeout_status "$REPO_ROOT/$rel_report"
-        if [ -x "$HOME/.codex/hooks/superflow-test-report-lint.py" ]; then
+        if [ -x "$LINT" ]; then
           lint_args=(--repo-root "$REPO_ROOT")
           if [ -f "$REPO_ROOT/$p_dir/tests.md" ]; then
             lint_args+=(--tests "$REPO_ROOT/$p_dir/tests.md")
           fi
-          "$HOME/.codex/hooks/superflow-test-report-lint.py" \
+          "$LINT" \
             "${lint_args[@]}" "$REPO_ROOT/$rel_report"
           if [ $? -ne 0 ]; then
             FAILED=1
@@ -283,18 +317,18 @@ fi
 VERIFY_REPORTS=$(printf '%s\n' "$REPORTS" | grep -E \
   '(^|/)embedded-changes/p[0-9][^/]*/test-report\.md$' || true)
 
-if [ -n "$VERIFY_REPORTS" ] && [ -x "$HOME/.codex/hooks/superflow-verify-integration.sh" ]; then
-  VERIFY_ARGS=""
+if [ -n "$VERIFY_REPORTS" ] && [ -x "$INTEGRATION" ]; then
+  VERIFY_ARGS=()
   for report in $VERIFY_REPORTS; do
     abs_report="$REPO_ROOT/$report"
     if is_blocked_doc_freeze_report "$abs_report" && [ -z "$CODE_RUNTIME_CHANGED" ]; then
       ok "[$report] 为 SDD 文档冻结 Blocked 报告，跳过真实集成验收脚本"
       continue
     fi
-    VERIFY_ARGS="$VERIFY_ARGS $abs_report"
+    VERIFY_ARGS+=("$abs_report")
   done
-  if [ -n "$VERIFY_ARGS" ]; then
-    "$HOME/.codex/hooks/superflow-verify-integration.sh" $VERIFY_ARGS
+  if [ "${#VERIFY_ARGS[@]}" -gt 0 ]; then
+    "$INTEGRATION" "${VERIFY_ARGS[@]}"
     if [ $? -ne 0 ]; then
       FAILED=1
     fi
@@ -304,14 +338,20 @@ fi
 ROOT_REPORTS=$(printf '%s\n' "$REPORTS" | grep -E \
   '(^|/)openspec/changes/[^/]+/test-report\.md$|(^|/)doc/openspec/changes/[^/]+/test-report\.md$' || true)
 
-if [ -n "$ROOT_REPORTS" ] && [ -x "$HOME/.codex/hooks/superflow-test-report-lint.py" ]; then
+if [ -n "$ROOT_REPORTS" ] && [ ! -x "$LINT" ]; then
+  fail "同安装目录缺少当前 report lint，请执行 superflow update"
+fi
+if [ -n "$ROOT_REPORTS" ] && [ -x "$LINT" ]; then
   for report in $ROOT_REPORTS; do
-    root_lint_args=(--warn-only --repo-root "$REPO_ROOT")
+    root_lint_args=(--repo-root "$REPO_ROOT")
+    if [ -z "$CODE_RUNTIME_CHANGED" ] && [ ! -f "$REPO_ROOT/${report%/test-report.md}/.sdd/reviews/document-review.json" ] && is_blocked_doc_freeze_report "$REPO_ROOT/$report"; then
+      root_lint_args+=(--warn-only)
+    fi
     root_tests="${report%/test-report.md}/tests.md"
     if [ -f "$REPO_ROOT/$root_tests" ]; then
       root_lint_args+=(--tests "$REPO_ROOT/$root_tests")
     fi
-    "$HOME/.codex/hooks/superflow-test-report-lint.py" \
+    "$LINT" \
       "${root_lint_args[@]}" "$REPO_ROOT/$report"
     if [ $? -ne 0 ]; then
       FAILED=1

@@ -86,5 +86,34 @@
     "codex": [
       "codex-auto-backup-hook.sh"
     ]
+  },
+  "legacyScriptAliases": {
+    "sdd-delivery-check.sh": {
+      "target": "superflow-delivery-check.sh",
+      "knownHashes": [
+        "e536d7f745dc864efe28549831d2367a6e966f68cad299a7eaf1090794531a2f",
+        "8c44bb6f9f7f00590661663b94f75b879f5de88cdb85e22419b68dce9e308f77"
+      ]
+    },
+    "sdd-test-report-lint.py": {
+      "target": "superflow-test-report-lint.py",
+      "knownHashes": [
+        "34f1fa898042277c7ff78af71806346f8ffc208202b12a97ce5ca363ca0aeeaf"
+      ]
+    },
+    "sdd-verify-integration.sh": {
+      "target": "superflow-verify-integration.sh",
+      "knownHashes": [
+        "5ef4f28456aa7f722c7de4a59f8d82e9908433bbc5e90651eb65d1241bd1f1b5",
+        "b6520e2fe3e6980fdef8cbb0af5fb301a69a390593545137c38a8c5ea2a8c888"
+      ]
+    },
+    "sdd-sql-sync-hook.py": {
+      "target": "superflow-sql-sync-hook.py",
+      "knownHashes": [
+        "f12c036291a8048649d03aefd9be17fe9205d17d149d456ce9c8128b62dc96fb",
+        "d128efa960c86dc642d06cd454f5704eb8906c5628c4e2a92ba41278f92a8b5b"
+      ]
+    }
   }
 }

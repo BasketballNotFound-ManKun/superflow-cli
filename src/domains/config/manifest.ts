@@ -1,7 +1,11 @@
-import manifestJson from '../../../assets/manifest.json' with { type: 'json' };
-import type { Agent } from '../../types.js';
+import manifestJson from "../../../assets/manifest.json" with { type: "json" };
+import type { Agent } from "../../types.js";
 
 export interface SddManifest {
+  legacyScriptAliases?: Record<
+    string,
+    { target: string; knownHashes: string[] }
+  >;
   version: string;
   agents: Agent[];
   skills: string[];

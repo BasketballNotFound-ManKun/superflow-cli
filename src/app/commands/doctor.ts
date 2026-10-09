@@ -24,7 +24,9 @@ import {
   REQUIRED_CODEX_SUPERPOWER_SKILLS,
 } from '../../domains/deps.js';
 import { resolveMcpServerPath } from './mcp.js';
-import { auditGlobalHooks, auditProjectHooks } from '../../domains/hook-migration.js';
+import { ASSETS_DIR } from '../../platform/assets.js';
+import { auditLegacyScriptAliases, scriptMatchesPackage } from '../../domains/skill/scripts.js';
+import { auditProjectGitHook, auditGlobalHooks, auditProjectHooks } from '../../domains/hook-migration.js';
 
 type DoctorStatus = 'pass' | 'warn' | 'fail';
 type DoctorScope = InstallScope | 'auto';
@@ -176,6 +178,30 @@ export async function collectDoctor(options: {
     });
   }
 
+  const gitAudit = auditProjectGitHook(projectPath);
+  const staleReferences = gitAudit.references.filter(
+    (reference) => !reference.current,
+  );
+  checks.push({
+    check: "hooks:git-pre-commit",
+    status: gitAudit.error || staleReferences.length ? "fail" : "pass",
+    message:
+      gitAudit.error ??
+      managedText(
+        language,
+        `Git pre-commit 管理脚本引用 ${gitAudit.references.length} 项，来源不一致 ${staleReferences.length} 项`,
+        `Git pre-commit has ${gitAudit.references.length} managed reference(s), ${staleReferences.length} mismatched source(s)`,
+      ),
+    ...(gitAudit.error || staleReferences.length
+      ? {
+          remediation: managedText(
+            language,
+            "运行 superflow update --scope global --agent both；未知或自定义 Git Hook 保留并人工核验，不能仅以文件存在认定接入",
+            "Run superflow update --scope global --agent both; retain and review custom Git hooks, file existence does not establish integration",
+          ),
+        }
+      : {}),
+  });
   checks.push(await executableCheck('superflow', language, run));
   checks.push(await executableCheck('openspec', language, run));
   checks.push(...collectOpenSpecProjectChecks(projectPath, language));
@@ -250,15 +276,56 @@ export async function collectDoctor(options: {
     });
 
     for (const script of scriptsForAgent(agent)) {
-      const scriptPath = path.join(platform.scriptsDir, script);
-      checks.push({
-        check: `script:${agent}:${currentScope}:${script}`,
-        status: existsSync(scriptPath) ? 'pass' : 'fail',
-        message: scriptPath,
-      });
-    }
+        const scriptPath = path.join(platform.scriptsDir, script);
+        checks.push({
+          check: `script:${agent}:${currentScope}:${script}`,
+          status: scriptMatchesPackage(
+            path.join(ASSETS_DIR, "scripts"),
+            platform.scriptsDir,
+            script,
+            agent,
+          )
+            ? "pass"
+            : "fail",
+          message: scriptPath,
+          remediation: managedText(
+            language,
+            "脚本需与当前 CLI 包内容一致；运行 superflow update",
+            "Scripts must match the current CLI package; run superflow update",
+          ),
+        });
+      }
 
-    const hookScripts = hookScriptsForAgent(agent);
+      for (const alias of auditLegacyScriptAliases(
+        path.join(ASSETS_DIR, "scripts"),
+        platform.scriptsDir,
+        agent,
+      )) {
+        checks.push({
+          check: `script-alias:${agent}:${currentScope}:${alias.alias}`,
+          status:
+            alias.status === "custom"
+              ? "warn"
+              : alias.status === "delegated" && alias.targetCurrent && alias.executable
+                ? "pass"
+                : "fail",
+          message: managedText(
+            language,
+            `旧兼容入口 ${alias.alias}: ${alias.status}，规范目标一致=${alias.targetCurrent}，入口可执行=${alias.executable}`,
+            `Legacy entry ${alias.alias}: ${alias.status}; canonical target current=${alias.targetCurrent}; executable=${alias.executable}`,
+          ),
+          ...(alias.status !== "delegated" || !alias.targetCurrent || !alias.executable
+            ? {
+                remediation: managedText(
+                  language,
+                  "运行 superflow update；来源未知的自定义入口保留并人工核验",
+                  "Run superflow update; retain and review unknown/custom entries",
+                ),
+              }
+            : {}),
+        });
+      }
+      const hookScripts = hookScriptsForAgent(agent);
     if (hookScripts.length === 0) {
       checks.push({
         check: `hooks:${agent}:${currentScope}`,

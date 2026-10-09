@@ -30,6 +30,11 @@ export interface CliHelpText {
   cleanupRetentionOption: string;
   updateDescription: string;
   doctorDescription: string;
+  hookMigrateDescription: string;
+  hookAuditDescription: string;
+  hookApplyOption: string;
+  hookPathOption: string;
+  hookScopeOption: string;
   uninstallDescription: string;
   dryRun: string;
   agentOption: string;
@@ -108,14 +113,24 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     quickSeamOption: "Existing file exposing the test seam",
     quickActiveSddOption: "A related SDD change owns this behavior",
     quickSpecOption: "Validate a Quick Spec",
-    quickApproveOption: "Approve the current draft Quick Spec after user confirmation",
+    quickApproveOption:
+      "Approve the current draft Quick Spec after user confirmation",
     cleanupDescription:
       "Apply deterministic retention to stopped managed-task process artifacts",
     cleanupProjectOption: "Project directory that owns the managed task",
     cleanupRetentionOption: "Retention policy: full | compact | none",
     updateDescription:
       "Update installed SuperBridge Flow skills, scripts, and hooks",
-    doctorDescription: "Diagnose SuperBridge Flow installation health",
+    doctorDescription:
+      "Diagnose installation content and effective Git Hook sources",
+    hookMigrateDescription:
+      "Migrate owned legacy Hook entries safely; preserve custom hooks",
+    hookAuditDescription:
+      "Read-only audit of Host/Git Hook references and script provenance",
+    hookApplyOption:
+      "Back up owned legacy entries and delegate to canonical gates",
+    hookPathOption: "Project directory whose effective Git Hook is audited",
+    hookScopeOption: "Audit/migration scope: project | global",
     uninstallDescription:
       "Uninstall skills, scripts, and hooks managed by SuperBridge Flow",
     dryRun: "Print the plan without writing files",
@@ -138,8 +153,10 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     noScanOption: "Skip project context scaffolding and scan hints",
     forceOption: "Overwrite existing docs/sdd-context files",
     noHooksUpdateOption: "Skip hook re-registration",
-    withPackageOption: "Update CLI, OpenSpec, Superpowers and host assets together",
-    withDependenciesOption: "Update OpenSpec/Superpowers and host assets without reinstalling the CLI",
+    withPackageOption:
+      "Update CLI, OpenSpec, Superpowers and host assets together",
+    withDependenciesOption:
+      "Update OpenSpec/Superpowers and host assets without reinstalling the CLI",
     uninstallForceOption: "Skip confirmation prompt",
     withDepsOption:
       "Also uninstall OpenSpec, Superpowers, and Understand dependencies",
@@ -219,7 +236,12 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     cleanupProjectOption: "托管任务所属项目目录",
     cleanupRetentionOption: "留存策略：full | compact | none",
     updateDescription: "更新已安装的 SuperBridge Flow skills、scripts 和 hooks",
-    doctorDescription: "诊断 SuperBridge Flow 安装健康",
+    doctorDescription: "诊断安装内容与实际 Git Hook 来源",
+    hookMigrateDescription: "安全迁移已确认受管的旧 Hook 入口，保留自定义 Hook",
+    hookAuditDescription: "只读核验宿主/Git Hook 引用及脚本来源",
+    hookApplyOption: "备份受管旧入口并委托规范门禁",
+    hookPathOption: "待核验实际 Git Hook 的项目目录",
+    hookScopeOption: "审计/迁移作用域：project | global",
     uninstallDescription: "卸载 SuperBridge Flow 管理的技能、脚本和 hook 注册",
     dryRun: "只打印计划不执行",
     agentOption: "安装/校验目标：claude | codex | both",
@@ -239,7 +261,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     forceOption: "覆盖现有 docs/sdd-context 文件",
     noHooksUpdateOption: "跳过 hook 重新注册",
     withPackageOption: "统一更新 CLI、OpenSpec、Superpowers 和宿主资产",
-    withDependenciesOption: "更新 OpenSpec、Superpowers 和宿主资产，不重装 CLI 包",
+    withDependenciesOption:
+      "更新 OpenSpec、Superpowers 和宿主资产，不重装 CLI 包",
     uninstallForceOption: "跳过确认提示",
     withDepsOption: "同时卸载 OpenSpec、Superpowers、Understand 依赖",
     managedOption:

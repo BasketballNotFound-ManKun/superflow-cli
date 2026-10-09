@@ -1,5 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
+import os from "node:os";
+import { ASSETS_DIR } from "../platform/assets.js";
+import { getManifest } from "./config/manifest.js";
+import { auditLegacyScriptAliases } from "./skill/scripts.js";
 
 export interface HookMapEntry {
   event: string;
@@ -39,7 +43,10 @@ export const HOOK_MAP: Record<string, HookMapEntry> = {
   "superflow-loop-observer.py": { event: "PostToolUse" },
   "superflow-loop-failure-hook.sh": { event: "PostToolUseFailure" },
   "superflow-loop-end-hook.sh": { event: "SessionEnd" },
-  "superflow-doc-placement-hook.py": { event: "PreToolUse", matcher: "Edit|Write|MultiEdit|apply_patch" },
+  "superflow-doc-placement-hook.py": {
+    event: "PreToolUse",
+    matcher: "Edit|Write|MultiEdit|apply_patch",
+  },
   "superflow-delivery-check.sh": { event: "PreToolUse", matcher: "Bash" },
   "superflow-integration-evidence-hook.sh": {
     event: "PreToolUse",
@@ -62,22 +69,44 @@ export type HookPlatform = "claude" | "codex";
  * - auto-backup-hook.sh：路径含 /scripts/ 或 /hooks/ 下的备份 hook
  * 覆盖 `~` 路径和绝对路径两种写法。
  */
-function isSuperflowManagedHook(command: string | undefined): boolean {
+export function isSuperflowManagedHook(command: string | undefined): boolean {
   if (!command) return false;
-  return (
-    command.includes("/scripts/superflow-") ||
-    command.includes("/hooks/superflow-") ||
-    command.includes("/scripts/sdd-") ||
-    command.includes("/hooks/sdd-") ||
-    command.includes("/scripts/claude-auto-backup-hook.sh") ||
-    command.includes("/scripts/claude-auto-backup-hook") ||
-    command.includes("/hooks/claude-auto-backup-hook.sh") ||
-    command.includes("/hooks/claude-auto-backup-hook") ||
-    command.includes("/scripts/codex-auto-backup-hook.sh") ||
-    command.includes("/scripts/codex-auto-backup-hook") ||
-    command.includes("/hooks/codex-auto-backup-hook.sh") ||
-    command.includes("/hooks/codex-auto-backup-hook")
+  // Full known command only: similar names or custom flags retain their owner.
+  const match =
+    /^(?:(?:bash|sh|python3?|node)\s+)?(?:"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s"'|;&]+))$/.exec(
+      command.trim(),
+    );
+  if (!match) return false;
+  const rawPath = match[1] || match[2] || match[3];
+  const normalized = rawPath.replaceAll("\\", "/");
+  const name = normalized.match(/\/(?:scripts|hooks)\/([^/]+)$/)?.[1];
+  const names = new Set(
+    Object.keys(HOOK_MAP).flatMap((value) => [
+      value,
+      value.replace(/^superflow-/, "sdd-"),
+    ]),
   );
+  if (!name || !names.has(name)) return false;
+  if (getManifest().legacyScriptAliases?.[name]) {
+    const file = rawPath
+      .replaceAll("${HOME}", os.homedir())
+      .replaceAll("$HOME", os.homedir())
+      .replace(/^~\//, os.homedir() + "/");
+    if (existsSync(file)) {
+      try {
+        const host = normalized.includes("/.claude/") ? "claude" : "codex";
+        const alias = auditLegacyScriptAliases(
+          path.join(ASSETS_DIR, "scripts"),
+          path.dirname(file),
+          host,
+        ).find((value) => value.alias === name);
+        if (alias?.status === "custom") return false;
+      } catch {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 /**
@@ -188,7 +217,7 @@ export function registerHook(
     // Codex clamps SessionEnd/Interrupt hooks to 3 seconds. Writing the
     // supported value avoids a warning on every new session and makes the
     // installed contract match the host's actual limit.
-    const timeout = finalEvent === "SessionEnd" ? 3 : options.timeout ?? 120;
+    const timeout = finalEvent === "SessionEnd" ? 3 : (options.timeout ?? 120);
     const entry: Record<string, unknown> = {
       hooks: [
         {
@@ -213,13 +242,14 @@ export function syncManagedHooks(
   scriptNames: string[],
 ): { changed: boolean; removed: number; registered: number } {
   const original = existsSync(settingsFile)
-    ? readFileSync(settingsFile, "utf8") : "{}";
+    ? readFileSync(settingsFile, "utf8")
+    : "{}";
   const settings = JSON.parse(original);
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
     throw new Error(`Invalid hook settings: ${settingsFile}`);
   }
-  const hooks = settings.hooks && typeof settings.hooks === "object"
-    ? settings.hooks : {};
+  const hooks =
+    settings.hooks && typeof settings.hooks === "object" ? settings.hooks : {};
   let removed = 0;
   for (const event of Object.keys(hooks)) {
     if (!Array.isArray(hooks[event])) continue;
@@ -240,13 +270,24 @@ export function syncManagedHooks(
     const map = HOOK_MAP[script];
     if (!map) throw new Error(`Unknown hook script: ${script}`);
     const command = path.join(scriptsDir, script);
-    const matchers = script === "superflow-sql-sync-hook.py"
-      ? [map.matcher, "Bash|Shell|exec_command"] : [map.matcher];
+    const matchers =
+      script === "superflow-sql-sync-hook.py"
+        ? [map.matcher, "Bash|Shell|exec_command"]
+        : [map.matcher];
     for (const matcher of matchers) {
       const entry: Record<string, unknown> = {
-        hooks: [{ type: "command", command,
-          timeout: map.event === "SessionEnd" ? 3
-            : script === "superflow-dependency-update-hook.sh" ? 300 : 120 }],
+        hooks: [
+          {
+            type: "command",
+            command,
+            timeout:
+              map.event === "SessionEnd"
+                ? 3
+                : script === "superflow-dependency-update-hook.sh"
+                  ? 300
+                  : 120,
+          },
+        ],
       };
       if (matcher !== undefined) entry.matcher = matcher;
       (hooks[map.event] ??= []).push(entry);
@@ -255,7 +296,8 @@ export function syncManagedHooks(
   }
   settings.hooks = hooks;
   const next = JSON.stringify(settings, null, 2);
-  if (original.trim() === next.trim()) return { changed: false, removed, registered };
+  if (original.trim() === next.trim())
+    return { changed: false, removed, registered };
   mkdirSync(path.dirname(settingsFile), { recursive: true });
   if (existsSync(settingsFile)) {
     writeFileSync(`${settingsFile}.sdd-backup-${Date.now()}`, original);

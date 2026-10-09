@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { HOOK_MAP } from "./hook.js";
+import { HOOK_MAP, isSuperflowManagedHook } from "./hook.js";
+import { execFileSync } from "node:child_process";
+import { ASSETS_DIR } from "../platform/assets.js";
+import { getManifest } from "./config/manifest.js";
+import { auditLegacyScriptAliases, scriptMatchesPackage } from "./skill/scripts.js";
 
 export type HookHost = "codex" | "claude";
 export type HookClassification = "legacy-ake" | "legacy-superflow" | "custom";
@@ -49,9 +53,8 @@ function hasAkeProvenance(root: string): boolean {
 
 function classify(command: string, provenance: boolean): Pick<HookFinding, "classification" | "reason"> {
   const normalized = command.replaceAll("\\", "/");
-  if (/(^|\/)superflow-[^\s/'";|]+\.(sh|py|mjs|js)(?=\s|$|['";|])/.test(normalized) ||
-      /(^|\/)sdd-[^\s/'";|]+\.(sh|py|mjs|js)(?=\s|$|['";|])/.test(normalized)) {
-    return { classification: "legacy-superflow", reason: "命中 Superflow/SDD 管理脚本名" };
+  if (isSuperflowManagedHook(command)) {
+    return { classification: "legacy-superflow", reason: "命中已知 Superflow/SDD 受管完整命令" };
   }
   const match = normalized.match(/(?:^|\s)(?:bash|sh|python3?|node)\s+scripts\/hooks\/([^\s/'";|]+)/);
   if (provenance && match && LEGACY_AKE_NAMES.has(match[1])) {
@@ -129,7 +132,7 @@ function hasGlobalReplacement(host: HookHost): boolean {
     !name.startsWith(host === "codex" ? "claude-auto-" : "codex-auto-"));
   return expected.every((name) => commands.some((command) =>
     typeof command === "string" && command.endsWith(`/${name}`) &&
-    fs.existsSync(command)));
+    fs.existsSync(command) && scriptMatchesPackage(path.join(ASSETS_DIR, "scripts"), path.dirname(command), name, host)));
 }
 
 export function migrateProjectHooks(
@@ -189,4 +192,81 @@ function writeMigrationConfig(file: string, data: any): string {
     throw error;
   }
   return backup;
+}
+
+export interface GitHookAudit {
+  file: string | null;
+  references: Array<{
+    host: HookHost;
+    script: string;
+    path: string;
+    current: boolean;
+  }>;
+  error?: string;
+}
+
+// Resolve the effective Git hook, including worktrees and core.hooksPath. This
+// audits reference identity only; it does not claim shell control-flow validity.
+export function auditProjectGitHook(
+  root: string,
+  homeRoot = os.homedir(),
+  assetsDir = path.join(ASSETS_DIR, "scripts"),
+): GitHookAudit {
+  let file: string;
+  try {
+    const env = { ...process.env };
+    for (const key of [
+      "GIT_DIR",
+      "GIT_COMMON_DIR",
+      "GIT_WORK_TREE",
+      "GIT_INDEX_FILE",
+    ])
+      delete env[key];
+    const relative = execFileSync(
+      "git",
+      ["-C", root, "rev-parse", "--git-path", "hooks/pre-commit"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], env },
+    ).trim();
+    file = path.resolve(root, relative);
+  } catch {
+    return { file: null, references: [] };
+  }
+  if (!fs.existsSync(file)) return { file, references: [] };
+  if (fs.lstatSync(file).isSymbolicLink() || !fs.lstatSync(file).isFile())
+    return {
+      file,
+      references: [],
+      error: "Git pre-commit 是自定义符号链接或非普通文件；保留并人工核验",
+    };
+  const text = fs
+    .readFileSync(file, "utf8")
+    .replaceAll("${HOME}", homeRoot)
+    .replaceAll("$HOME", homeRoot)
+    .replaceAll("~/", homeRoot + "/");
+  const references: GitHookAudit["references"] = [];
+  for (const host of ["codex", "claude"] as const) {
+    const scriptsDir = path.join(
+      homeRoot,
+      host === "codex" ? ".codex/hooks" : ".claude/scripts",
+    );
+    const aliases = auditLegacyScriptAliases(assetsDir, scriptsDir, host);
+    const names = new Set([
+      ...Object.keys(getManifest().legacyScriptAliases ?? {}),
+      ...Object.values(getManifest().legacyScriptAliases ?? {}).map(
+        (value) => value.target,
+      ),
+    ]);
+    for (const script of names) {
+      const target = path.join(scriptsDir, script);
+      if (!text.includes(target)) continue;
+      const alias = aliases.find((value) => value.alias === script);
+      const current = alias
+        ? alias.status === "delegated" && alias.targetCurrent && alias.executable
+        : scriptMatchesPackage(assetsDir, scriptsDir, script, host);
+      references.push({ host, script, path: target, current });
+    }
+  }
+  if (references.length && process.platform !== "win32" && !(fs.lstatSync(file).mode & 0o111))
+    return { file, references, error: "Git pre-commit 无执行权限，Git 不会执行已登记的门禁" };
+  return { file, references };
 }

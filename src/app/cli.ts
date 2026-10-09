@@ -402,12 +402,12 @@ program
 
 program
   .command("hook-migrate")
-  .description("Audit or migrate known legacy Hook registrations safely")
-  .option("--path <path>", "Project path")
-  .option("--scope <scope>", "project | global", "project")
-  .option("--agent <agent>", "codex | claude | both", "both")
-  .option("--apply", "Back up and remove only known legacy managed Hooks")
-  .option("--json", "Output JSON")
+  .description(helpText.hookMigrateDescription)
+  .option("--path <path>", helpText.hookPathOption)
+  .option("--scope <scope>", helpText.hookScopeOption, "project")
+  .option("--agent <agent>", helpText.agentOption, "both")
+  .option("--apply", helpText.hookApplyOption)
+  .option("--json", helpText.jsonOption)
   .action(async (options) => {
     const { hookMigrateCommand } = await import("./commands/hook-migrate.js");
     hookMigrateCommand(options);
@@ -415,11 +415,11 @@ program
 
 program
   .command("hook-audit")
-  .description("Read-only audit of global and project Hook conflicts")
-  .option("--path <path>", "Project path")
-  .option("--scope <scope>", "project | global", "project")
-  .option("--agent <agent>", "codex | claude | both", "both")
-  .option("--json", "Output JSON")
+  .description(helpText.hookAuditDescription)
+  .option("--path <path>", helpText.hookPathOption)
+  .option("--scope <scope>", helpText.hookScopeOption, "project")
+  .option("--agent <agent>", helpText.agentOption, "both")
+  .option("--json", helpText.jsonOption)
   .action(async (options) => {
     const { hookMigrateCommand } = await import("./commands/hook-migrate.js");
     hookMigrateCommand({ ...options, apply: false });
