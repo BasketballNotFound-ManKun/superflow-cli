@@ -24,6 +24,13 @@ describe("managed work skill", () => {
     expect(zh).toContain("不调用 status、不读取完整事件、不重启 Executor");
     expect(zh).toContain("Claude Executor 长会话默认提前自动压缩");
     expect(zh).toContain("执行前必须阅读 `references/managed-work.md`");
+    const zhRules = fs.readFileSync(
+      path.join("assets", "skills", "superflow-pipeline", "references", "managed-work.md"),
+      "utf-8",
+    );
+    expect(zhRules).toContain("mandatoryEngineeringRules");
+    expect(zhRules).toContain("不扫描个人配置目录");
+    expect(zhRules).toContain("不要只传技能名");
     expect(en).not.toContain("--supervisor-execution");
     expect(en).toContain("--supervisor current");
     expect(en).toContain("--executor peer");
@@ -32,5 +39,12 @@ describe("managed work skill", () => {
     expect(en).toContain("Read `references/managed-work.md` before dispatch");
     expect(en).toContain("240-second Host-compatible transport window");
     expect(en).toContain("Claude Executor long sessions use early auto-compaction");
+    const enRules = fs.readFileSync(
+      path.join("assets", "skills-en", "superflow-pipeline", "references", "managed-work.md"),
+      "utf-8",
+    );
+    expect(enRules).toContain("mandatoryEngineeringRules");
+    expect(enRules).toContain("Do not scan personal configuration directories");
+    expect(enRules).toContain("pass skill names alone");
   });
 });

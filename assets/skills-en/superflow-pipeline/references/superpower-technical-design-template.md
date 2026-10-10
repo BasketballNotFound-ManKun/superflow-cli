@@ -45,6 +45,21 @@ that can be derived safely, and do not add async compensation or caching when a
 single synchronous transaction closes the contract. Every retained item must
 explain why a simpler option fails; remove it when there is no evidence.
 
+## Data Scale And Processing Cost
+
+Complete this for data-intensive paths such as large or growing collections,
+batch processing, import/export, aggregation, repeated scans, or fan-out. Record
+current/expected scale, the growth boundary, work and primary CPU/memory/I/O or
+round-trip cost per request/job, alternatives and trade-offs, and representative
+evidence validating the selected approach. Match evidence to risk: source/query
+analysis or representative functional cases can suffice for small changes; a
+performance benchmark is not mandatory. If there is no meaningful data-volume
+sensitivity, mark this not applicable with a brief reason.
+
+| Data path | Current/expected scale and growth boundary | Work and primary cost | Trade-offs | Validation evidence |
+| --------- | ------------------------------------------ | --------------------- | ---------- | ------------------- |
+| `<path or reason not applicable>` | `<cardinality/rate/window>` | `<records per request/job, scans/allocations/round trips>` | `<choice and rejected options>` | `<query plan/source anchor/representative case/benchmark>` |
+
 ## Architecture Boundary And Call Direction
 
 Use this whenever the change crosses repositories, services, SDKs, MQ,

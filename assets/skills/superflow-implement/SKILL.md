@@ -145,6 +145,17 @@ Before implementation phase can exit:
   compare the new hash. A stale or mismatched hash blocks coding and delivery.
   The prompt must also require `.sdd/state.yaml` phase evidence and
   `superflow-guard.sh <change-dir> implement` before moving to verification.
+  Identify applicable project rules through the frozen handoff and task-relevant
+  skills through the Host's normal skill discovery. The Host must read applicable
+  skill content and pass the relevant rule statements through the existing
+  `mandatoryEngineeringRules` input; do not pass skill names alone or scan
+  personal configuration directories. The Executor and Reviewer receive the
+  same frozen statements. Require both to read applicable project rule files
+  completely before acting. Do not copy personal rules into project artifacts.
+- Data-intensive work must carry the technical design's data scale, growth
+  boundary, processing-cost trade-offs, and validation evidence into the prompt.
+  Keep this conditional and proportional to risk; simple work does not acquire
+  a mandatory benchmark.
 - Every implementation prompt must include a "状态机执行决策" section. It must
   record `build_mode`, `isolation`, `tdd_mode`, `review_mode`,
   `subagent_dispatch` when applicable, `implementation_prompt`, and the derived

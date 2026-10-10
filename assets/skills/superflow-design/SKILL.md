@@ -44,6 +44,13 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
 
 1. Read `.sdd/handoff/sdd-context.md` plus original `api.md`, `design.md`,
    `tasks.md`, and `tests.md`.
+   Read applicable project rules and use the Host's normal skill discovery for
+   relevant skills referenced by those rules or applicable to the task. Read
+   each complete skill file and its relevant references before designing.
+   Do not scan personal skill directories, record personal absolute paths, or
+   copy user-level rule/skill text into project artifacts. Apply the discovered
+   content when designing; freeze only task-relevant constraints through the
+   existing `mandatoryEngineeringRules` handoff for implementation and review.
 2. If the change has any schema, index, constraint, seed-data, or historical
    migration impact, verify `release-sql.md` before source-level HOW design:
    - front matter sets `database_change: true`, an exact `target_sql_path`,
@@ -77,7 +84,14 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
    when they satisfy the contract. Remove speculative extension points,
    duplicate DTO/API layers, derivable persistence, premature caches, and
    async compensation without measured need. Record the retained and removed
-   counts; unresolved simpler alternatives keep the design blocked.
+   counts; unresolved simpler alternatives keep the design blocked. For
+   data-intensive paths (large or growing collections, batch processing,
+   imports/exports, aggregation, repeated scans, or fan-out), also record
+   current/expected scale and growth boundary, work and primary cost per
+   request/job, alternatives considered, and evidence validating the choice.
+   Match evidence to risk: source/query analysis or representative functional
+   cases may suffice; do not require benchmarks for small tasks. Mark this not
+   applicable with a brief reason when data volume is not material.
 7. For cross-repository, service-to-service, SDK, MQ, scheduler, device,
    callback, third-party, mini-program, gateway, or adapter changes, include
    `Architecture Boundary And Call Direction`. Prove owner module, call

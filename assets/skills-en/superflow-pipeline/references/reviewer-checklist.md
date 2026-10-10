@@ -1,5 +1,15 @@
 # Reviewer Checklist
 
+## Data Scale And Processing Cost
+
+- For data-intensive paths, are current/expected data scale and growth
+  boundaries explicit?
+- Is per-request/job work and primary CPU, memory, I/O, or round-trip cost
+  assessed, with alternatives and risk-proportionate validation evidence?
+- If not applicable, is the lack of meaningful data-volume sensitivity
+  explained? Do not block simple work solely because a performance benchmark is
+  absent.
+
 - Does the implementation match api.md, design.md, and tests.md?
 - Are all required files present and cross-linked?
 - Is handoff_hash current and repeated in prompts/report?

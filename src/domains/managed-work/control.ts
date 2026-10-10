@@ -77,6 +77,7 @@ export interface StartManagedTaskInput {
   supervisorAgent?: ManagedAgent;
   executorAgent?: ManagedAgent;
   language?: Language;
+  /** Host supplies applicable rule content after reading its normal sources. */
   mandatoryEngineeringRules?: string[];
   externalModelDataDisclosureApproved?: boolean;
   externalModelDataDisclosureApprovedBy?: string;

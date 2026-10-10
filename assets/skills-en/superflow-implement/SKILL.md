@@ -49,6 +49,15 @@ Every implementation prompt must include these sections:
   review checklist, traceability, and technical design.
 - Context drift and state inheritance: clickable handoff link, handoff_hash,
   current phase, and refresh rules.
+- Applicable project rules selected in the frozen handoff and task-relevant
+  skills found through the Host's normal skill discovery. The Host reads the
+  relevant skill content and passes applicable rule statements through the
+  existing `mandatoryEngineeringRules` input. Names alone are insufficient;
+  do not scan personal configuration directories or copy personal rules into
+  project artifacts. Executor and Reviewer receive the same frozen statements.
+- Data-intensive work carries technical-design scale, growth, processing-cost
+  trade-offs, and validation evidence. Keep proportional to risk; simple work
+  does not require a performance benchmark.
 - Superpowers technical design inheritance: source-level HOW, TDD entry points,
   team roles, reviewer/tester checkpoints, risky assumptions, and forbidden
   improvisation.

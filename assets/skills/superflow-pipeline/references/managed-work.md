@@ -26,6 +26,12 @@ Host 启动前必须按资料成熟度分流：只写文档时停在 Coding Read
 改变实现方向的 API、数据、并发、跨仓或 owner 决策，先返回澄清/文档流程，不让 Runner
 正则或 Executor 临场设计替代 Host 判断。
 
+Host 启动前还须使用当前宿主已有的规则/技能发现能力，读取适用的用户级工程规范和技能
+正文及相关 references；不扫描个人配置目录。把适用于本任务的规则语句通过现有
+`mandatoryEngineeringRules` 输入冻结，使 Executor 与独立 Reviewer 收到相同内容；同时
+沿用 context manifest 传递适用项目规则文件的路径与哈希。不要只传技能名。若 Host 无法
+读取规范内容，或执行/评审所需的规则来源不可读，明确报告缺失项并阻塞相关工作，不得猜测。
+
 已安装 MCP 时，当前主 Agent 必须优先通过 `superflow_managed_*` 工具提交、等待、补充要求
 和提交评审。MCP 是主 Agent 与本地状态机的通道，不是第三个模型；托管只有当前 Host
 直接评审这一种模式，避免嵌套 Supervisor CLI 重复消耗上下文、Token 和评审时间。

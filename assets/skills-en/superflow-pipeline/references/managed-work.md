@@ -32,6 +32,16 @@ direction-changing API, data, concurrency, cross-repository, or owner choice,
 return to clarification/documents instead of letting Runner regexes or Executor
 improvisation replace Host judgment.
 
+Before start, the Host also uses its existing host-native rule/skill discovery
+to read applicable user-level engineering rules and skill bodies plus relevant
+references. Do not scan personal configuration directories. Freeze the rule
+statements relevant to this task through the existing `mandatoryEngineeringRules`
+input so Executor and independent Reviewer receive the same content. Continue to
+pass selected project rule paths and hashes through the context manifest; do not
+pass skill names alone. If required content cannot be read or a required source
+is inaccessible to execution/review, report the missing item and block affected
+work instead of guessing.
+
 When MCP is installed, the current host must prefer the `superflow_managed_*`
 tools for submission, waiting, user guidance, and review submission. MCP is a
 channel to the local state machine rather than a third model. Direct host review

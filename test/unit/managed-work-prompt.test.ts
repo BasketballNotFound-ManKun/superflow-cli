@@ -60,6 +60,9 @@ describe("managed work prompt snapshot", () => {
       request: "Implement the task",
       projectRoot: root,
       language: "en",
+      mandatoryEngineeringRules: [
+        "Host-read task rule: use the repository's shared query path.",
+      ],
     });
     const state = initManagedRunState(contract);
 
@@ -77,6 +80,16 @@ describe("managed work prompt snapshot", () => {
     expect(executor).toContain("Default verification level for this task: task-level real acceptance");
     expect(executor).toContain("Verification has three levels");
     expect(executor).toContain("does not rerun the helper's non-owner");
+    expect(executor).toContain(
+      "Host-read task rule: use the repository's shared query path.",
+    );
+    expect(reviewer).toContain(
+      "Host-read task rule: use the repository's shared query path.",
+    );
+    expect(executor).toContain("Do not scan personal configuration directories");
+    expect(reviewer).toContain("Do not scan personal configuration directories");
+    expect(executor).toContain("obvious data-volume or cost risk");
+    expect(reviewer).toContain("identify data-volume or processing-cost risks");
     expect(executor).toContain(
       "Never run `git init` for diff, preflight, or delivery",
     );
@@ -100,6 +113,7 @@ describe("managed work prompt snapshot", () => {
       request: "继续实现",
       projectRoot: root,
       language: "zh",
+      mandatoryEngineeringRules: ["Host 已读后的任务约束：复用统一读取链。"],
     });
     const state = initManagedRunState(contract);
     state.executorInvocations = 2;
@@ -137,6 +151,9 @@ describe("managed work prompt snapshot", () => {
     expect(executor).toContain("cleanup 删除 nonce/运行目录后仍须存在");
     expect(executor).toContain("不得硬编码个人绝对路径");
     expect(executor).toContain("docs/managed-work-design-principles.md");
+    expect(executor).toContain("Host 已读后的任务约束：复用统一读取链。");
+    expect(executor).toContain("不要扫描个人配置目录");
+    expect(executor).toContain("数据规模、增长边界、处理成本");
     expect(executor).toContain("禁止为 diff、预检或交付执行 `git init`");
     const reviewer = buildReviewPrompt(contract, state);
     expect(reviewer).toContain("必须区分三段状态");
@@ -151,6 +168,10 @@ describe("managed work prompt snapshot", () => {
     expect(reviewer).toContain("按三级验证模型评审");
     expect(reviewer).toContain("运行临时目录删除后仍实际存在");
     expect(reviewer).toContain("docs/managed-work-design-principles.md");
+    expect(reviewer).toContain("Host 已读后的任务约束：复用统一读取链。");
+    expect(reviewer).toContain("mandatoryEngineeringRules");
+    expect(reviewer).toContain("不要扫描个人配置目录");
+    expect(reviewer).toContain("数据量或处理成本风险");
   });
 
   it("places missing SDD deliverables in a short checklist before execution", () => {

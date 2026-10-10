@@ -94,18 +94,20 @@ export function buildExecutorPrompt(
     "",
     ...(contract.mandatoryEngineeringRules?.length
       ? [
-          "### Host 冻结的强制工程规则",
+          "### Host 冻结的适用工程规则",
           ...contract.mandatoryEngineeringRules.map((rule) => `- ${rule}`),
           "",
         ]
       : []),
-    "- 开始前读取项目级 CLAUDE.md 与当前文件类型适用的 `.claude/rules`，并遵守项目规范。",
+    "- 开始前完整读取 handoff/context manifest 中选中的项目级 AGENTS.md、CLAUDE.md 和适用规则文件；不要只看文件名或摘要。",
+    "- Host 提交的用户级/技能规范通过 mandatoryEngineeringRules 传递；不要扫描个人配置目录，也不要只依据技能名称猜规则。",
     ...(handoffPath
       ? [
           "- 开始执行前必须完整读取本轮压缩交接包；旧会话记忆与交接包冲突时，以交接包和当前工作区为准。",
         ]
       : []),
     "- 编码前先搜索现有模块、公共方法、组件、测试和依赖，优先复用。",
+    "- 继承冻结设计中已定义的数据规模、增长边界、处理成本、方案取舍和验证证据。若从源码/差异发现设计遗漏了明显的数据量或成本风险，报告给 Host 补齐并重新冻结合同；不要自行发明技术方案。验证按风险匹配，简单任务不强制性能基准。",
     "- 若本任务修改 Superflow CLI 自身，开始前必须完整读取项目根目录下 `docs/superflow-cli-design-principles.md` 和 `docs/superflow-cli-evaluation-framework.md`；涉及托管时再读取 `docs/managed-work-design-principles.md` 和 `docs/managed-agent-protocol.md`。交付前逐项核对全局纲领、统一评价记录和专项强制回归清单。",
     ...(contract.taskPrompt
       ? [
@@ -198,6 +200,15 @@ export function buildReviewPrompt(
     "",
     "## 检查要求",
     "",
+    ...(contract.mandatoryEngineeringRules?.length
+      ? [
+          "### Host 冻结的强制工程规则（与执行者相同）",
+          ...contract.mandatoryEngineeringRules.map((rule) => `- ${rule}`),
+          "",
+        ]
+      : []),
+    "- 完整读取 handoff/context manifest 中选中的项目级 AGENTS.md、CLAUDE.md 和适用规则文件；同时应用 Host 冻结的 mandatoryEngineeringRules。不要扫描个人配置目录、凭技能名猜规范，或在项目产物复制个人规则。",
+    "- 结合源码/差异判断是否存在数据量或处理成本风险；若冻结设计漏项，报告给 Host 补齐并重新冻结合同，再据此评审。检查规模/增长边界、处理成本、方案取舍和相称证据；不得对简单任务一律要求性能基准，也不得自行设计方案。",
     "- 独立检查用户目标、修改范围、代码差异和命令证据。",
     ...(factsPath
       ? [
@@ -314,18 +325,20 @@ function buildExecutorPromptEnglish(
     "",
     ...(contract.mandatoryEngineeringRules?.length
       ? [
-          "### Mandatory engineering rules frozen by the host",
+          "### Applicable engineering rules frozen by the Host",
           ...contract.mandatoryEngineeringRules.map((rule) => `- ${rule}`),
           "",
         ]
       : []),
-    "- Read the project-level CLAUDE.md and applicable `.claude/rules` before starting, and follow the project conventions.",
+    "- Before starting, read the selected project-level AGENTS.md, CLAUDE.md, and applicable rule files in the handoff/context manifest in full; do not rely on filenames or summaries alone.",
+    "- User-level/skill constraints supplied by the Host are frozen through mandatoryEngineeringRules. Do not scan personal configuration directories or infer rules from skill names alone.",
     ...(handoffPath
       ? [
           "- Read the complete condensed handoff before execution. When old session memory conflicts with the handoff or workspace, trust the handoff and current workspace.",
         ]
       : []),
     "- Before coding, search existing modules, shared methods, components, tests, and dependencies; prefer reuse.",
+    "- Inherit data scale, growth boundary, processing cost, trade-offs, and validation evidence from the frozen design. If source/diff review reveals an obvious data-volume or cost risk missing from the design, report it to the Host to complete and refreeze the contract; do not invent a technical solution. Match validation to risk; simple tasks do not require a performance benchmark.",
     "- If this task changes Superflow CLI itself, first read `docs/superflow-cli-design-principles.en.md` and `docs/superflow-cli-evaluation-framework.en.md` completely. Managed-work changes also read `docs/managed-work-design-principles.en.md` and `docs/managed-agent-protocol.en.md`. Before delivery, complete the global principles, evaluation record, and specialized mandatory checklist.",
     ...(contract.taskPrompt
       ? [
@@ -553,6 +566,15 @@ function buildReviewPromptEnglish(
     "",
     "## Review requirements",
     "",
+    ...(contract.mandatoryEngineeringRules?.length
+      ? [
+          "### Host-frozen mandatory engineering rules (same as the Executor)",
+          ...contract.mandatoryEngineeringRules.map((rule) => `- ${rule}`),
+          "",
+        ]
+      : []),
+    "- Read the selected project-level AGENTS.md, CLAUDE.md, and applicable rule files from the handoff/context manifest in full, and apply the Host-frozen mandatoryEngineeringRules. Do not scan personal configuration directories, infer rules from skill names, or copy personal rules into project artifacts.",
+    "- Use the source/diff to identify data-volume or processing-cost risks. If the frozen design omits an obvious risk, report it to the Host to complete and refreeze the contract before review. Check scale/growth boundaries, processing cost, trade-offs, and proportionate evidence; do not require benchmarks for simple tasks or invent the technical solution.",
     "- Independently inspect the user goal, change scope, code diff, and command evidence.",
     ...(factsPath
       ? [

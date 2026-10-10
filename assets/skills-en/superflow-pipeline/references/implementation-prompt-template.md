@@ -13,6 +13,28 @@ If requirements, design, API, SQL, test contracts or task content change, rerun
 superflow-handoff.sh --refresh. Task checkbox progress and test-report updates
 do not invalidate the frozen contract hash.
 
+### Project Rules, Host Rules, And Applicable Skills
+
+- Read selected project rule files from the existing handoff/context manifest.
+  The Host uses its normal skill discovery to identify and read task-relevant
+  skills, then freezes the actually applicable rule statements in the existing
+  `mandatoryEngineeringRules` input. Do not pass skill names alone or manually
+  scan personal configuration directories.
+- The Executor and independent Reviewer receive the same frozen rules; both
+  must read applicable project rule files completely. If a source is inaccessible
+  or a required rule was not frozen, report the concrete blocker instead of
+  guessing or weakening it.
+- Pass only constraints relevant to the task. Do not copy personal rules or
+  entire skills into project artifacts.
+
+### Data Scale And Processing Cost
+
+For data-intensive paths only, carry forward the technical design's current and
+expected scale, growth boundary, work and primary cost per request/job, design
+trade-offs, and validation evidence. Scale validation to risk; query/source
+analysis or a representative functional case can suffice for small tasks, with
+no blanket performance benchmark. This adds no burden to non-data-intensive work.
+
 ## Contract Boundary
 
 OpenSpec/SDD is canonical for requirements, API, DB, SQL, tests, and acceptance.

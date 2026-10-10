@@ -425,6 +425,8 @@ describe("managed work runner", () => {
       "utf-8",
     );
     expect(handoff).toContain("机器交接协议");
+    expect(handoff).toContain("所有新增代码每行不得超过 80 字符");
+    expect(handoff).toContain("Host 强制规则");
     expect(handoff).toContain("Runner 会根据 tasks.md");
     expect(handoff).toContain("- 1.1: 1.1 [local_required] 完成本地实现");
     expect(handoff).not.toContain("- 1.6: 1.6 [environment_required]");
@@ -444,10 +446,14 @@ describe("managed work runner", () => {
     ) as {
       protocolVersion: string;
       messageType: string;
+      executionHints: { mandatoryEngineeringRules: string[] };
       tasks: { checkedLocalTaskIds: string[] };
     };
     expect(machineHandoff.protocolVersion).toBe("superflow.handoff.v2");
     expect(machineHandoff.messageType).toBe("executor_handoff");
+    expect(machineHandoff.executionHints.mandatoryEngineeringRules).toContain(
+      "所有新增代码每行不得超过 80 字符",
+    );
     expect(machineHandoff.tasks.checkedLocalTaskIds).toContain("1.1");
     const output = execFileSync(
       process.execPath,

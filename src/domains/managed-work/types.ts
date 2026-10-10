@@ -174,6 +174,10 @@ export interface ManagedTaskContract {
   language?: Language;
   objective: string;
   doneCriteria: string[];
+  /**
+   * Host-read, task-applicable rule statements frozen for both executor and
+   * reviewer. This is content, not skill names or a request to scan user dirs.
+   */
   mandatoryEngineeringRules?: string[];
   taskPrompt: ManagedTaskPrompt | null;
   supervisorAgent: ManagedAgent;
