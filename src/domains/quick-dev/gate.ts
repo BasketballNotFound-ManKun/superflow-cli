@@ -51,7 +51,6 @@ export function evaluateQuickGate(input: QuickGateInput): QuickGateResult {
       .test(file))) {
     reasons.push("改动路径触及数据库、公共入口或构建配置");
   }
-  if (input.changedFiles.length > 3) reasons.push("改动文件超过单一小任务范围");
   const verdict = reasons.length === 0 ? "QUICK" : "STOP";
   return {
     verdict,

@@ -27,13 +27,35 @@ describe("quick development gate", () => {
     expect(result.reasons).toContain(reason);
   });
 
-  it("stops when more than one task scope is changed", () => {
+  it("accepts one local behavior change spanning source, tests and translations", () => {
     const result = evaluateQuickGate({
-      request: "修复输入校验",
+      request: "修复现有邮箱格式校验及其错误提示",
+      changedFiles: [
+        "src/validation/email.ts",
+        "src/validation/email-message.ts",
+        "src/validation/locales/zh.ts",
+        "src/validation/locales/en.ts",
+        "test/validation/email.test.ts",
+      ],
+      testSeam: "test/validation/email.test.ts",
+    });
+    expect(result.verdict).toBe("QUICK");
+    expect(result.reasons).toEqual([]);
+  });
+
+  it.each([
+    ["新增公共接口", "公共接口或 API 契约"],
+    ["调整数据库迁移", "数据库或持久化"],
+    ["调整权限校验", "安全或权限"],
+    ["修复跨模块行为", "跨模块或跨服务"],
+  ])("still stops multi-file high-risk work: %s", (request, reason) => {
+    const result = evaluateQuickGate({
+      request,
       changedFiles: ["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts"],
-      testSeam: "src/a.test.ts",
+      testSeam: "test/a.test.ts",
     });
     expect(result.verdict).toBe("STOP");
+    expect(result.reasons).toContain(reason);
   });
 
   it("requires the Quick Spec shape and accepts a ready draft", () => {
