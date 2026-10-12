@@ -3,6 +3,12 @@ name: superflow-pipeline
 description: Use when a user asks for the SuperBridge Flow, SDD, OpenSpec, requirements clarification, contract docs, design docs, implementation prompts, verification, archive, or which SuperBridge Flow phase to run.
 ---
 
+## Canonical test guidance entry
+
+Read [test-guide.md](references/test-guide.md) for test documentation, implementation
+preparation, or delivery review. Documents freeze required signals; implementation
+inherits and review verifies. Mock examples cannot override canonical DB contracts.
+
 # SuperBridge Flow Pipeline
 
 When maintaining Superflow CLI itself, first read repository-root

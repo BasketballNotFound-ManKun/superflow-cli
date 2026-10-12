@@ -1,5 +1,10 @@
 # 分批 Implementation Prompt 模板
 
+验证方案只继承 tests.md，并先读 [test-guide.md](test-guide.md)。模板中的启动、
+接口、DB 和团队 checklist 按已冻结的适用项执行，不适用项给出源码依据；缺失必测
+环境保持阻塞。当前构建与健康实例一致时复用；新代码/配置必须加载后才可验证。
+独立核验原始证据，失效或合同要求的路径由实施方重跑，不能由角色切换触发重复环境。
+
 ## 模板结构
 
 每份 implementation prompt 必须包含以下全部章节。缺失任何一节都可能导致 agent 偏离设计。
@@ -347,7 +352,7 @@ curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt \
 
 本批次涉及接口、CRUD、Mapper/XML、数据库字段或配置驱动行为时，必须同时满足：
 
-1. **Prompt 完成定义**：编译、单测、应用新进程启动、真实 curl/API 调用、
+1. **Prompt 完成定义**：编译、单测、当前待测构建的应用启动/身份核验、真实 curl/API 调用、
    数据库查询、日志检查、test-report 回填全部完成。
 2. **Hook 过程拦截**：`.sdd-enforced` 和 `.db-verified` 保持激活，直到
    集成验收脚本通过；运行时代码提交必须同步提交 test-report 证据。

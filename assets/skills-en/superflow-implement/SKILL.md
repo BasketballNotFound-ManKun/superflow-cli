@@ -5,6 +5,13 @@ description: Use when SDD/OpenSpec contract docs and Superpowers technical desig
 
 # SuperFlow Implement
 
+## Verification contract inheritance
+
+Before generating prompts, read the [test guide](../superflow-pipeline/references/test-guide.md).
+Inherit frozen tests.md cases, commands, actual backends, and assertions; require
+implementers to check them before editing, execute them, and record results. Missing
+signals or real-environment obligations return to superflow-docs, not a second plan.
+
 ## Role
 
 This phase turns frozen contracts and source-level technical design into safe

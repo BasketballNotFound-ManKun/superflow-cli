@@ -79,7 +79,7 @@ Order 1:N OrderItem
 
 | 外部依赖 | 实际能力 | Mock 方式 | 替代验证方式 |
 |----------|----------|-----------|-------------|
-| 支付网关 | 真实支付 | Spring MockBean | 固定返回 success |
+| 支付网关 | 真实支付 | 合同允许隔离 PaymentClient | 真实 Service/Mapper 落库断言；不证明实际扣款 |
 | 短信服务 | 真实发送 | WireMock | 验证调用次数 |
 | 设备回调 | 硬件触发 | 本地模拟 HTTP 服务 | 手动调接口模拟 |
 
@@ -88,7 +88,7 @@ Order 1:N OrderItem
 ## 7. 部署架构
 
 ```
-开发环境：本地 IDEA + H2/MySQL
+开发环境：本地 IDE + design/tests 冻结的生产同类型数据库引擎及兼容版本
 测试环境：Docker Compose（MySQL + Redis + App）
 生产环境：K8s / 物理机
 ```
@@ -117,3 +117,5 @@ ENTRYPOINT ["java", "-jar", "/app.jar"]
 | 日志 | SLF4J + Logback，结构化日志 |
 | 监控 | Actuator + 自定义指标 |
 | 异常 | 全局异常处理器，统一错误码 |
+
+测试信号按 [test-guide.md](test-guide.md)冻结；Mock 边界按 [mock-strategy-guide.md](mock-strategy-guide.md)声明，真实数据库不可用替代引擎关闭。

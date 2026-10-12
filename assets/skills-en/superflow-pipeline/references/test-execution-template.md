@@ -1,5 +1,10 @@
 # Test Execution Template
 
+Read [test-guide.md](test-guide.md) first and inherit frozen tests.md / Quick Spec
+signals. Fill applicable cases; give source reasons for inapplicable fields and
+BLOCKED/PARTIAL for unavailable required environments. Existing coverage/receipts
+check facts; template examples never redesign tests or reduce frozen gates.
+
 Use the environment frozen in tests.md; do not substitute local containers or
 mocks for an explicitly required shared development environment. When the user
 requires every endpoint to be exercised, freeze an endpoint/role/scenario matrix,

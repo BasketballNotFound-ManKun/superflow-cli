@@ -1,5 +1,9 @@
 # 测试执行与结果记录模板
 
+先读 [test-guide.md](test-guide.md)，继承 tests.md / Quick Spec 已冻结的验证信号。
+下列模板按适用用例填写，不适用项写源码依据；必测项缺环境记录 BLOCKED/PARTIAL。
+沿既有 coverage/receipt 核对事实，不用模板示例新建测试策略或降低冻结门禁。
+
 记录测试的执行环境、执行过程和结果，作为交付物的一部分。
 
 运行验收必须使用 tests.md 冻结的环境，不能擅自以本地容器或 Mock 替代共享开发环境。
@@ -21,7 +25,7 @@
 | 执行人 | ____ |
 | 操作系统 | Linux / macOS / Windows |
 | JDK 版本 | 17 |
-| 数据库 | MySQL 8.0 / H2 |
+| 数据库 | tests.md 冻结的引擎/主版本（如 MySQL 8.0） |
 | Spring Profile | dev / test / cmk |
 | 应用端口 | 9527 |
 | 上下文路径 | / |
@@ -195,9 +199,9 @@ HTTP 200、字段非空、mock-only、DB-only、`BUILD SUCCESS`、`Tests are ski
 - 验证时间：
 ```
 
-## 任务完成 Checklist（全部满足才能标记完成）
+## 任务完成 Checklist（冻结的适用项全部满足）
 
-以下 checklist 用于判定一个实现任务是否真正完成。每完成一项勾选一项，**全部勾选后才能标记任务完成**。
+先按 tests.md 的用例和信号确定适用项；全部必测项成立才能完成。纯函数不要求应用、登录或数据库；完整 SDD 的真实入口义务不得删减。独立核验复用有效原始证据，只有失效或合同明确要求的路径才重跑。
 
 ### 开发阶段（Worker 执行）
 - [ ] 已从 tests.md 提取本批次用例 ID、自动化命令和断言
@@ -208,11 +212,11 @@ HTTP 200、字段非空、mock-only、DB-only、`BUILD SUCCESS`、`Tests are ski
 - [ ] 代码自审通过（无 CRITICAL/HIGH 问题，检查空指针/异常/事务/日志）
 - [ ] 编译通过（`mvn clean compile -DskipTests` BUILD SUCCESS）
 - [ ] 已执行同一命令确认 GREEN，并回填通过证据
-- [ ] 旧进程已停止（`pkill` + 端口确认无占用）
-- [ ] 应用已重新启动（`mvn spring-boot:run` 或 `./gradlew bootRun`）
-- [ ] 进程已验证（PID 存在、启动时间接近当前时间、端口绑定正确）
+- [ ] 需重启时仅通过 owner 校验的清理入口停止本任务进程，确认端口释放
+- [ ] 已启动当前待测构建，或核验健康实例的构建/配置未变后复用
+- [ ] 进程已验证（PID/启动指纹、当前构建与端口绑定正确）
 - [ ] 健康检查通过（`curl /actuator/health` 返回 UP）
-- [ ] 日志确认是本次启动（时间戳匹配当前时间）
+- [ ] 日志与本次验证的实例/构建身份一致
 
 ### 接口测试阶段（Worker 逐项执行）
 - [ ] Token 已获取（完整的 `/captcha/image` + `/login` 流程，token 非空）
@@ -239,15 +243,15 @@ HTTP 200、字段非空、mock-only、DB-only、`BUILD SUCCESS`、`Tests are ski
 - [ ] 包含：进程验证证据（PID、启动时间、端口）
 
 ### 独立验证阶段（Tester 执行）
-- [ ] Tester 独立执行全部用例（不参考 Worker 报告）
+- [ ] Tester 独立核对全部必测用例与原始证据，重跑失效或合同指定路径
 - [ ] Tester 客观报告通过/失败
 
 ### Leader 验证阶段（Leader 执行）
-- [ ] Leader 抽查至少 30% 关键用例
-- [ ] Leader 确认进程是新启动的
+- [ ] Leader 按合同与风险检查关键用例和未关闭 finding
+- [ ] Leader 确认运行实例对应当前待测构建/配置
 - [ ] Leader 确认接口有真实调用证据
 
-**以上 checklist 全部勾选后，才能标记任务完成。**
+**冻结的全部适用项通过、无必测阻塞后，才能标记任务完成。**
 
 ## 质量红线
 
@@ -260,6 +264,6 @@ HTTP 200、字段非空、mock-only、DB-only、`BUILD SUCCESS`、`Tests are ski
 - 不允许用测试 Controller、mock endpoint、绕过鉴权端点证明真实外部入口已通过
 - 不允许把泛化外部失败当作通过，除非需求明确要求该失败结果
 - 不允许只检查主仓数据库结构就关闭跨仓共享表任务；必须覆盖全部消费仓实体/Mapper/SQL
-- **不允许"编译成功 + 单元测试通过"就标记任务完成，必须完成上述 checklist 全部项**
+- **不允许"编译成功 + 单元测试通过"就标记任务完成，必须完成冻结的全部适用验证项**
 
 执行凭证格式与持久化前后对照遵循 [document-review-coverage.md](document-review-coverage.md)，不要另建格式；历史局部结论保留，以最后一个中英文一致的验证结果为最终汇总。

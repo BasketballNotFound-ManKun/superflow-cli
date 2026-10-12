@@ -63,3 +63,11 @@
 - DB/log evidence
 - Hook output
 - Blocked or skipped cases with reasons
+
+## tests.md: frozen verification signals
+
+Select applicable signals using [test-guide.md](test-guide.md), keeping project level numbers.
+Table: `Change/risk | Case ID | Signal | Actual environment/backend | Command | Assertion | Evidence path | Inapplicability reason/blocker`.
+Database layers inherit only `testLayer` / `mockBoundary` from
+[document-review-coverage.md](document-review-coverage.md). Reuse project scenario
+regression assets for critical business flows and bug reproductions.

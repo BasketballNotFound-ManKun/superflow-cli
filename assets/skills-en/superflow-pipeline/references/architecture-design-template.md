@@ -18,3 +18,6 @@ Use this when designing a new module or a cross-service change.
 
 Do not justify a design only because code can call another module. Prove that the
 call direction matches ownership and the existing architecture contract.
+
+Freeze signals using [test-guide.md](test-guide.md) and declare isolation using
+[mock-strategy-guide.md](mock-strategy-guide.md); substitute engines cannot close required real DB proof.

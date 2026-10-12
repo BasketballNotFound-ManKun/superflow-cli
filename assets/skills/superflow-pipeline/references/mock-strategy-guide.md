@@ -1,86 +1,40 @@
 # Mock 策略与边界声明指南
 
-比赛/项目中涉及外部接口、设备回调、第三方服务时，必须明确 Mock 策略并在交付物中声明。
+## 适用与事实源
 
-## 何时需要 Mock
+设计隔离测试或报告替代证据时读取；选择验证信号先读 [test-guide.md](test-guide.md)。
+数据库分层、mockBoundary 和执行凭证只继承
+[document-review-coverage.md](document-review-coverage.md#数据库分层合同)。
+本指南说明可隔离范围，不授权降低 tests.md 已冻结的真实环境验收。
 
-| 场景 | 是否 Mock | 说明 |
-|------|-----------|------|
-| 外部 HTTP API（支付、短信、地图） | ✅ 必须 | 避免真实调用产生费用或副作用 |
-| 设备回调（门禁、摄像头、传感器） | ✅ 必须 | 无真实硬件环境 |
-| 数据库（无测试环境） | ✅ 可选 | 可用 H2 / Docker MySQL |
-| 消息队列 | ✅ 可选 | 可用内存队列替代 |
-| 缓存（Redis） | ✅ 可选 | 可用 Caffeine / 本地缓存 |
-| 文件存储（OSS） | ✅ 可选 | 可用本地文件系统 |
+| 场景 | 可隔离的范围 | 能证明什么 / 仍需验证什么 |
+|---|---|---|
+| 纯逻辑单测 | 被测逻辑之外的数据访问/HTTP/MQ依赖 | 分支、参数与失败处理；不能证明真实 SQL 或落库 |
+| 必测持久化/事务/CAS | mockBoundary.allowed 的外部客户端 | 生产 Service/Mapper 不得 mock；实际同引擎数据库与生产 statement 必须执行 |
+| 外部支付/短信/设备 | 合同允许的客户端、沙箱或模拟消息 | 局部处理；真实外部能力必须另有沙箱/真实入口证据，缺环境记阻塞 |
+| MQ/Redis/OSS | 纯逻辑测试的接口边界 | 内存队列、本地缓存/文件不能关闭真实协议、锁、持久化或外部链路要求 |
 
-## Mock 方式选择
+真实同引擎 Docker/Testcontainers 数据库不是 Mock。冻结环境允许时复用；共享环境要求
+不能擅自替换。H2/SQLite 不能替代 MySQL 的方言、锁、事务或落库语义；缺库时保留
+逻辑局部证据，必测数据库项 BLOCKED/PARTIAL。
 
-| 方式 | 适用场景 | 实现手段 | 验证能力 |
-|------|----------|----------|----------|
-| `@MockBean` | Spring Boot 单元/集成测试 | Mockito | 验证调用次数、参数 |
-| `WireMock` | HTTP 外部服务 | 独立 Mock 服务器 | 验证请求格式、返回预设响应 |
-| 本地模拟服务 | 设备回调、Webhook | 单独启动的 HTTP 服务 | 手动触发回调 |
-| 接口假实现 | 无测试框架时 | 接口的硬编码实现 | 固定返回 |
-| H2 内存数据库 | 无 MySQL 环境 | `spring.datasource.url=jdbc:h2:mem` | 标准 SQL 验证 |
+## 声明与报告
 
-## Mock 边界声明模板
+每个隔离边界写入现有 tests.md / test-report.md：实际能力、替换对象、mockBoundary、
+假设、可证明范围、仍未验证范围、真实验证命令/阻塞原因及证据路径。
+分开记录 `Mock 验证`、`测试端点验证`、`真实入口验证`。辅助逻辑 case 可通过，
+但 mock-only 不能关闭同一入口的必要数据库或真实链路 case。
 
-每个使用 Mock 的外部依赖必须在交付文档中填写下表：
+## 示例：隔离支付客户端，验证真实落库
 
-```markdown
-## Mock 声明
-
-### 外部依赖 1：<名称>
-
-| 项目 | 说明 |
-|------|------|
-| 实际能力 | ____（如：真实支付扣款） |
-| Mock 方式 | ____（如：@MockBean + 固定返回 success） |
-| Mock 范围 | ____（哪些接口/方法被 Mock） |
-| 假设条件 | ____（如：假设支付网关永远返回成功） |
-| 替代验证 | ____（如何验证代码逻辑正确，如：检查数据库状态变化） |
-| 恢复真实 | ____（如何切回真实服务，如：去掉 @MockBean 注解） |
-```
-
-## 示例：门禁设备回调 Mock
-
-```markdown
-### 外部依赖：人行门禁设备
-
-| 项目 | 说明 |
-|------|------|
-| 实际能力 | 真实硬件设备，刷卡/人脸识别后主动回调服务器 |
-| Mock 方式 | 本地启动模拟 HTTP 服务（Python Flask / Node.js） |
-| Mock 范围 | `/device/callback` 接口接收回调 |
-| 假设条件 | 假设设备回调的报文格式与真实设备一致 |
-| 替代验证 | 手动 POST 模拟回调报文，验证服务器处理逻辑（记录通行日志、开门指令） |
-| 恢复真实 | 将回调地址指向真实设备网关 |
-```
-
-## 示例：支付接口 Mock
-
-```java
-// 测试中使用 @MockBean
-@MockBean
-private PaymentClient paymentClient;
-
-@BeforeEach
-void setUp() {
-    when(paymentClient.charge(any()))
-        .thenReturn(PaymentResult.success("mock-trade-no"));
-}
-
-// 验证替代方式：检查订单状态是否变为 PAID
-@Test
-void shouldUpdateOrderStatusWhenPaymentSuccess() {
-    // 执行支付流程
-    // 断言：数据库订单状态 = PAID（不依赖真实支付）
-}
-```
+当合同允许隔离 PaymentClient 时，用固定成功响应驱动**真实**业务 Service 和 Mapper，
+在已冻结的 MySQL 上按订单 ID 检查 before/after、金额与状态，并核验必要副作用。
+这个用例证明业务处理与落库，不证明支付网关实际扣款；后者单独验证或记录阻塞。
+纯 Service 单测可 mock Mapper，但只能报告逻辑结果，不得称为数据库集成通过。
 
 ## 禁止事项
 
-1. ❌ Mock 后不声明假设条件
-2. ❌ Mock 范围过大（把整个 Service 层都 Mock 掉）
-3. ❌ 无替代验证方式（Mock 后不知道代码对不对）
-4. ❌ 生产代码中残留 Mock 逻辑
+- mock 被测主体，或在必测数据库 case 中 mock 生产 Service/Mapper。
+- 用固定成功、调用次数、HTTP 200、影响行数非零代替业务/数据库值断言。
+- 混合替代证据和真实证据，或把未执行/跳过用例计入完整通过。
+- 为赶交付静默更换冻结后端、放宽断言，或在生产代码保留 Mock。

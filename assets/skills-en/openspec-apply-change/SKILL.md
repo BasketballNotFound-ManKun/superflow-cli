@@ -11,6 +11,14 @@ metadata:
 
 Implement tasks from an OpenSpec change.
 
+## Superflow implementation verification entry
+
+Within the Superflow workflow, before the first task read the
+[test guide](../superflow-pipeline/references/test-guide.md) and frozen tests.md/project
+tests. Execute inherited RED/GREEN and required real verification per task; mark
+complete only with evidence. Missing contracts return to superflow-docs; missing
+environments remain blocked. Plain OpenSpec work follows project verification rules.
+
 **Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
 
 **Steps**

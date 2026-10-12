@@ -5,6 +5,12 @@ description: Use when confirmed OpenSpec artifacts need SDD contract docs such a
 
 # SDD Docs
 
+## 测试方案入口
+
+写 tests.md 前读取[测试指南](../superflow-pipeline/references/test-guide.md)，先复用项目测试与环境，
+把受影响行为映射到验证信号，在本阶段冻结用例、实际后端、mockBoundary、命令和断言。
+实现阶段只继承；不能把必要数据库验证留到编码时临场决定。
+
 完整文档交付必须读取并执行
 [需求×真实入口评审](../superflow-pipeline/references/document-review-coverage.md)：
 扩展现有三轮评审凭证，逐项核对原始需求、真实调用分支、EXCLUDED/VERIFY_EXISTING

@@ -59,3 +59,56 @@ Official npm version/latest are 0.5.19; dist.shasum b89cb202779f6c6aa169da4a8d0e
 The active local, npm global and previously stale Homebrew installations all resolve to 0.5.19 from the official registry. Both hosts' assets match package content after the existing host transformation. Global doctor and the active project's effective global-scope doctor report failed=false; both legacy Git references are current. An explicit project-scope diagnostic reported missing project assets because the project uses a global installation; no business-repository assets were installed. The unknown old Claude delivery remains custom/WARN.
 
 After installation the original five-file suite passed 64/64. Real anonymous MyBatis/MySQL/Git using the official package observed baseline=0, omitted=1, correct=0 on both hosts. Copying the actual project Hook read-only into the anonymous repository and invoking the real installed Codex legacy alias with this run's real DB observations also produced omitted=1, correct=0. No business repository/database or original Hook was modified. Restart the host to load updated Skills/Hooks/MCP; field completeness, runtime authenticity and semantic sufficiency still need independent review.
+
+## ECC convergence of test guidance (2026-10-12, baseline 0.5.21)
+
+Evidence: the Chinese Mock guide allowed H2 for missing database environments;
+execution/architecture examples retained substitute engines; Quick Dev referenced
+an undistributed ake verification-loop; test guides differed by language. Initial
+contract/installation regressions failed 8 of 20 cases. Read-only A/B/C probes also
+found unconditional restarts/full reruns conflicting with evidence inheritance.
+
+Ownership: document contracts, skill routing, and installation assets. CLI/Hook/
+Runner decisions, the three JSON protocols, and state transitions remain intact.
+Reuse test-guide for signal selection, document-review-coverage for database
+machine contracts, tests/Quick Spec for task freeze, receipts/lint for deterministic
+facts, and deploySkill for installation. No new skill, hook, test framework,
+memory directory, or long-lived state was needed.
+
+Hypothesis: load one guide before document generation and implementation, and
+remove contradictory examples to reduce missing required database cases and
+unrelated reruns. Preserve frozen real-entry/database obligations and independent
+semantic review. Adapt ake's early signal selection, response/state/side-effect
+assertions, project-local scenario regression, unique subjects, and environment
+configuration reuse. Do not import ake level numbers, mandatory Java dependencies,
+automatic shared-data seeds, or unconditional full reruns.
+
+Examples: A is MySQL Mapper persistence with no shared DB but an available
+same-engine container; execute production statements and same-ID DB assertions,
+never close DB acceptance with Mock/H2. B is a pure-function Quick task: reuse its
+seam without DB/application or ake skills. C changes report formatting only:
+check contracts and historical applicability without unrelated real-chain reruns.
+All three updated-guide probes passed; downstream applicability/rerun findings
+were repaired at their exact source locations.
+
+Results: full regression passed 103 files / 765 tests; after final template repairs
+the affected 20 tests passed again. Lint, build, global/managed design gates,
+strict skill audit 16/16 and zero English mirror gaps passed. Codex/Claude × both
+languages each used real deploySkill for two installation rounds, replacing old
+guidance, resolving the shared entry, and preserving neighboring custom skills.
+npm pack dry-run includes both-language test guides. Six managed local Codex
+skills were synchronized using the same deployment primitive and compared with
+source; unknown files/custom drift were zero before mutation and a temporary
+backup was retained. Both-host source mirrors remain available; local Claude/
+agents skills and business databases were not modified under the Codex boundary.
+
+Conclusion: demonstrated guidance conflicts and installed remnants within scope
+are resolved. No private business scenario was run: document probes are not
+persistence proof. No comparable time/token sample supports general cost or
+success-rate claims. No npm version upgrade/release was performed: public 0.5.21
+still contains old assets and reinstalling it overwrites local source guidance.
+New sessions should reload synchronized skills. Existing frozen tasks must have
+contract repairs reviewed by the document owner rather than silently changed.
+Rollback if required DB/real-entry acceptance weakens, pure logic acquires false
+environment requirements, valid history is mechanically rejected, mirrors drift,
+or user assets are overwritten. Repair the owner without relaxing runtime gates.

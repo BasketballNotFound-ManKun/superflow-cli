@@ -11,6 +11,13 @@ metadata:
 
 Implement tasks from an OpenSpec change.
 
+## Superflow 实施验证入口
+
+在 Superflow 工作流中，实施首个任务前读取
+[测试指南](../superflow-pipeline/references/test-guide.md)，加载已冻结的 tests.md 与项目测试。
+逐任务按既有用例执行 RED/GREEN 与必要真实验证，证据成立才勾选完成；缺合同回
+superflow-docs，缺环境记录阻塞。普通 OpenSpec 使用项目自己的验证规则。
+
 **Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
 
 **Steps**

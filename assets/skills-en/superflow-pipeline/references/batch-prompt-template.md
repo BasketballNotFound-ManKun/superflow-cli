@@ -1,5 +1,12 @@
 # Batch Prompt Template
 
+Inherit verification only from tests.md and read [test-guide.md](test-guide.md).
+Apply startup, API, DB, and team checklists to frozen applicable cases; give source
+reasons for inapplicability, keeping missing required environments blocked. Reuse
+healthy instances matching the tested build; load new code/configuration before
+verification. Independently inspect raw evidence; implementers rerun invalidated
+or contract-required paths, not every environment merely because roles changed.
+
 ## Header
 
 - Batch: P{n} - {name}

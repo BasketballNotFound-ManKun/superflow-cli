@@ -1,5 +1,10 @@
 # 实现编排指南：多 Agent 协作开发
 
+验证方案只继承 tests.md，并先读 [test-guide.md](test-guide.md)。模板中的启动、
+接口、DB 和团队 checklist 按已冻结的适用项执行，不适用项给出源码依据；缺失必测
+环境保持阻塞。当前构建与健康实例一致时复用；新代码/配置必须加载后才可验证。
+独立核验原始证据，失效或合同要求的路径由实施方重跑，不能由角色切换触发重复环境。
+
 > **分批实现优先**：对复杂需求，编排前必须先按 [分批实现拆分指南](batch-split-guide.md) 拆分为 P0 → P1 → P2 → P3 → P4 批次。每批独立编排、独立验收，通过后才能开始下一批。
 
 ## 编排决策
@@ -51,12 +56,12 @@ Group 4: 独立模块（Bug 6, 7, 11）
 - 创建 TaskList，按依赖拓扑排序
 - 将任务分配给 Worker Agent
 - 监控进度，处理阻塞任务
-- **亲自执行集成测试和回归测试（不依赖 Worker 报告）**
+- **独立审查集成/回归原始证据与源码，要求实施方补齐失效或缺失验证**
 - 汇总质量报告
 
 **必须遵守**：
 - **不要直接编码**，只负责协调和集成验证
-- **不信任 Worker 的测试报告**，必须亲自验证至少 30% 的关键用例
+- **不信任 Worker 的测试报告**，按冻结合同与风险独立核验关键用例的源码和原始证据
 - **必须执行进程验证**，确认测试的是新代码而非旧进程
 
 ### 角色 2：Worker（执行 Agent）
@@ -78,19 +83,19 @@ Group 4: 独立模块（Bug 6, 7, 11）
 
 **职责**：
 - **独立于 Worker**，接收 Leader 分配的测试任务
-- 按 tests.md 的用例独立执行测试（不依赖 Worker 的自测报告）
+- 按 tests.md 独立核验用例覆盖、源码与原始证据，不只转述 Worker 结论
 - 验证接口、数据库、日志，输出客观测试结果
 - 发现失败时，向 Leader 报告失败现象，不直接向 Worker 反馈
 
 **必须遵守**：
 - **与 Worker 完全分离**：Worker 负责开发，Tester 负责验证，不能是同一人
-- **独立验证**：不参考 Worker 的测试报告，从头执行测试
+- **独立验证**：核验实际源码和原始证据，失效或合同指定路径由实施方重跑
 - **客观报告**：如实报告失败，不替 Worker 找理由（"可能环境问题"、"应该没改这块"）
-- **覆盖全部用例**：必须执行 tests.md 中所有标注 [自动化] 的用例，不能抽样
+- **覆盖全部用例**：必须核对全部必测自动化用例的有效执行证据，不用抽样替代完整覆盖
 
 **Tester 的测试流程**：
 ```
-接收测试任务 → 读取 tests.md → 独立执行测试
+接收测试任务 → 读取 tests.md → 独立核验源码与原始证据 → 必要时要求实施方重跑
     → 通过：向 Leader 报告"测试通过，证据如下..."
     → 失败：向 Leader 报告"测试失败，现象如下..."
 ```
@@ -148,12 +153,12 @@ Group 4: 独立模块（Bug 6, 7, 11）
 | 1 | 代码已修改 | Worker | git diff 确认 |
 | 2 | 代码自审通过 | Worker | 已执行 review，无 CRITICAL/HIGH |
 | 3 | 编译通过 | Worker | clean compile 无 ERROR |
-| 4 | 应用已重新启动 | Worker | 进程验证通过（新进程、新时间戳） |
+| 4 | 应用匹配当前待测构建 | Worker | 构建/配置与 owner 指纹核验，必要时重启 |
 | 5 | **接口已真实调用** | **Worker** | **逐项执行 L3 checklist，记录 curl + 响应** |
 | 6 | **数据库已验证** | **Worker** | **SHOW CREATE TABLE / SELECT 确认数据状态** |
 | 7 | **日志已检查** | **Worker** | **grep ERROR 无 ERROR** |
 | 8 | test-report 已回填 | Worker | 包含 curl、响应、DB、日志证据 |
-| 9 | **独立 Tester 测试通过** | **Tester** | **Tester 独立执行全部用例，客观报告** |
+| 9 | **独立 Tester 测试通过** | **Tester** | **Tester 独立核验全部必测用例，重跑失效或合同指定路径，客观报告** |
 | 10 | Leader 已独立验证 | Leader | Leader 亲自验证或抽查 |
 | 11 | build→verify 最终代码评审通过 | Leader/Reviewer | 使用 `requesting-code-review`，确认无 CRITICAL/HIGH 遗留 |
 
@@ -199,7 +204,7 @@ Group 4: 独立模块（Bug 6, 7, 11）
    - 不能依赖增量编译
 
 3. **启动前先停止旧进程（只停自己的，不碰别人的）**
-   - `pkill -f "spring-boot:run"` 或 `pkill -f "GradleDaemon"`
+   - 执行 tests.md 冻结的 owner 校验与清理入口，仅停止本任务实例；拒绝身份不匹配资源
    - **启动前必须检查端口占用**：`lsof -i :{port}` 或 `netstat -tlnp | grep {port}`
    - **如果端口被其他 agent 占用**：自己换一个端口启动，不得关闭其他进程
    - 确认端口释放后再启动
@@ -259,14 +264,14 @@ Worker 流程：
          └──────────────── 编译/启动失败，修复后重新编译 ───┘
 
 Tester 流程（Worker 启动后）：
-[接收任务] → 读取 tests.md → 独立执行测试 → 数据库验证 → 日志检查 → [报告：测试通过/失败]
+[接收任务] → 读取 tests.md → 独立核验源码与原始证据 → 必要时要求实施方重跑 → 数据库验证 → 日志检查 → [报告：测试通过/失败]
                  ↑                                              |
                  └──────── 测试失败，报告 Leader ────────────────┘
 ```
 
 **关键分离原则**：
 - Worker 不报告"测试通过"，只报告"应用已启动，可供测试"
-- Tester 独立执行测试，不参考 Worker 的自测结果
+- Tester 独立核验源码与原始证据，不转述 Worker 的自测结论
 - Tester 的测试报告直接发给 Leader，不发给 Worker
 - Leader 根据 Tester 报告判断任务是否完成
 
@@ -303,85 +308,22 @@ Worker 可能看到端口监听就误以为应用启动成功，但实际上：
 
 #### 验证步骤
 
-**步骤 1：停止所有旧进程**
-```bash
-pkill -f "spring-boot:run" 2>/dev/null || true
-pkill -f "GradleDaemon" 2>/dev/null || true
-sleep 2
-```
-
-**步骤 2：确认端口已释放**
-```bash
-# 应该无输出，如果有输出说明旧进程还在
-netstat -tlnp 2>/dev/null | grep {port} || ss -tlnp | grep {port}
-```
-
-**步骤 3：清理并重新编译**
-```bash
-# Maven
-mvn clean compile -DskipTests
-
-# Gradle
-./gradlew clean compileJava -x test
-```
-
-**步骤 4：启动应用**
-```bash
-# Maven
-nohup mvn spring-boot:run -Dspring-boot.run.profiles={profile} > app.log 2>&1 &
-
-# Gradle
-nohup ./gradlew bootRun --args='--spring.profiles.active={profile}' > app.log 2>&1 &
-
-echo $! > /tmp/app.pid  # 记录 PID
-```
-
-**步骤 5：等待并确认是新进程**
-```bash
-sleep 15  # 等待启动
-
-# 获取监听端口的 PID
-NEW_PID=$(cat /tmp/app.pid)
-
-# 检查进程存在且启动时间接近当前时间
-ps -o pid,lstart,cmd -p $NEW_PID
-
-# 检查端口绑定的是否是这个 PID
-netstat -tlnp | grep {port}
-```
-
-**步骤 6：检查日志确认本次启动**
-```bash
-tail -30 app.log
-# 日志中必须有本次启动的时间戳
-# 如果看到几天前的日志或旧时间戳，说明是旧进程！必须停止重来！
-```
-
-**步骤 7：验证加载的是新代码**
-```bash
-# Gradle
-ls -la build/classes/java/main/{修改的类路径}.class
-
-# Maven
-ls -la target/classes/{修改的类路径}.class
-
-# 时间戳应该在本次编译时间附近（5分钟内）
-```
-
-**步骤 8：健康检查**
-```bash
-curl -s http://localhost:{port}{context-path}/actuator/health | grep UP
-# 必须返回 UP，否则启动失败
-```
+1. 将当前源码/构建、配置和冻结环境与运行实例身份核对；一致且健康时复用。
+2. 需加载新代码或配置时，由实施方执行 tests.md 的单命令验收入口，复用既有
+   owner helper，先核验 owner 再清理旧实例；不停止其他任务或 IDE 的进程。
+3. 按冻结命令构建、启动并通过就绪条件；保存 PID/启动指纹、构建与配置身份、端口、
+   健康检查和日志。单独的文件时间戳、端口监听或 sleep 结束不能证明新代码已加载。
+4. 执行真实受影响入口和业务/DB/副作用断言，失败时保留日志并运行 owner 清理。
+5. 独立评审读取对应原始证据；仅报告格式整改不重复启动、查库和全链路运行。
 
 ### Phase 4：集成验证（Leader 执行）
 
 所有 Worker 完成后：
 
 1. **合并检查**：确认没有同一文件的冲突修改
-2. **Leader 亲自执行全量编译**：使用正确的构建工具命令
-3. **Leader 亲自执行进程验证**：按 Phase 3 步骤执行
-4. **Leader 亲自执行回归测试**：
+2. **Leader 核验构建证据**：确认当前源码对应正确构建命令与成功输出
+3. **Leader 核验进程证据**：按 Phase 3 核对 owner、构建、配置与实例身份
+4. **Leader 核验回归结果，要求实施方补齐失效或合同指定的路径**：
    ```
    start → aiRecognize → confirm → finish
    ```
@@ -411,11 +353,11 @@ curl -s http://localhost:{port}{context-path}/actuator/health | grep UP
 #### 门禁 2：启动门禁
 - **执行**：按构建工具命令矩阵正确启动应用
 - **通过标准**：
-  1. 进程是新启动的（非旧进程）——通过进程验证确认
+  1. 运行实例匹配当前待测构建、配置与 owner——通过指纹和证据确认
   2. 健康检查返回 UP：`curl http://localhost:{port}{context-path}/actuator/health`
-  3. 日志中出现本次启动时间戳
+  3. 日志与本次验证的实例/构建身份一致
 - **验证人**：Worker 执行并报告 PID，Leader 独立验证
-- **禁止**：看到端口监听就报告 UP，必须验证是新进程
+- **禁止**：看到端口监听就报告 UP，必须验证实例身份与当前待测构建一致
 
 #### 门禁 3：接口测试门禁
 - **执行**：按 tests.md 逐个执行 curl 命令
@@ -443,19 +385,19 @@ curl -s http://localhost:{port}{context-path}/actuator/health | grep UP
 #### 门禁 7：全链路回归门禁
 - **执行**：按 tests.md 的 end-to-end 场景完整执行一遍
 - **通过标准**：全流程通过，无异常
-- **验证人**：Leader 必须亲自执行
+- **验证人**：实施方执行，Leader 独立核验原始结果
 
 #### 门禁未通过的处理
 
 1. **Worker 执行时门禁未通过**：
    - 不得报告任务完成
-   - 必须修复问题并重新执行全部门禁
+   - 必须修复问题后重跑受影响、证据失效或合同指定的门禁，核验其余历史证据仍适用
    - 若无法修复，立即上报 Leader
 
 2. **Leader 验证时门禁未通过**：
    - 标记 Worker 任务为"未完成"
    - 要求 Worker 重新执行
-   - 连续 2 次未通过，Leader 亲自介入修复
+   - 连续 2 次未通过，Leader 汇总根因与 finding，由实施方修复
 
 ---
 
@@ -513,7 +455,7 @@ curl -s http://localhost:{port}{context-path}/actuator/health | grep UP
 - 测试范围: tests.md 中 Bug 5 的全部用例
 - 应用状态: Worker 已启动，PID: 12345，健康检查: UP
 - 测试要求:
-  1. 独立执行全部用例，不参考 Worker 的自测结果
+  1. 独立核验全部必测用例的源码与原始证据，不转述 Worker 结论；仅重跑失效或合同指定路径
   2. 覆盖接口测试、数据库验证、日志检查
   3. 如实报告失败，不替 Worker 找理由
 - 报告对象: 直接回复 Leader，不发给 Worker
@@ -543,27 +485,27 @@ curl -s http://localhost:{port}{context-path}/actuator/health | grep UP
 
 1. **禁止编译成功就交付**
    - ❌ 错误："代码已修改，编译通过，任务完成"
-   - ✅ 正确："代码已修改，编译通过，应用已启动，独立 Tester 验证通过，任务完成"
+   - ✅ 正确："代码已修改，编译通过，冻结的全部适用信号已有原始证据，独立核验通过，任务完成"
 
 2. **禁止 Worker 自测自报"完成"**
    - ❌ 错误：Worker 自己测自己报"测试通过，任务完成"
    - ✅ 正确：Worker 只报告"开发完成，应用已启动"，等待独立 Tester 验证
 
-3. **禁止 Tester 参考 Worker 的自测结果**
+3. **禁止 Tester 只转述 Worker 的自测结论**
    - ❌ 错误：Tester 看了 Worker 的报告后"差不多就行"
-   - ✅ 正确：Tester 独立从头执行全部用例，不参考 Worker 报告
+   - ✅ 正确：Tester 独立检查原始证据与源码适用性，失效或合同指定路径由实施方重跑
 
 4. **禁止复用旧进程测试新代码**
    - ❌ 错误：端口已有监听，直接 curl 测试
-   - ✅ 正确：先停止旧进程，重新编译启动，确认是新进程后再测试
+   - ✅ 正确：先核验实例与待测构建/配置一致；需加载新代码时通过 owner 清理入口重启再验证
 
-5. **禁止仅做代码层面验证**
+5. **禁止仅做代码层面验证来关闭必测真实入口**
    - ❌ 错误：grep 代码确认修复逻辑正确，未实际调接口
-   - ✅ 正确：必须实际调接口验证运行时行为
+   - ✅ 正确：必须按冻结用例实际驱动所需入口验证运行时行为；纯函数执行其测试 seam
 
 6. **禁止信任 Worker/Tester 报告而不自己验证**
    - ❌ 错误：Worker 说"测试通过"或 Tester 说"都过了"，Leader 直接相信
-   - ✅ 正确：Leader 必须独立执行关键验证（至少抽查 30% 的测试用例）
+   - ✅ 正确：Leader 必须按风险独立核验关键用例原始证据与源码，必要时要求实施方重跑
 
 7. **禁止跳过 clean 直接编译**
    - ❌ 错误：`mvn compile`（无 clean）

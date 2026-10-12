@@ -5,6 +5,12 @@ description: SDD 实现阶段，基于已完成的 SDD 文档生成分批 implem
 
 # SDD Implement
 
+## 验证合同继承
+
+生成 Prompt 前读取[测试指南](../superflow-pipeline/references/test-guide.md)，将 tests.md 的
+用例、命令、实际后端和断言逐项继承，并要求实施方开工前核对、逐项执行与回填。
+缺少信号或真实环境义务时返回 superflow-docs；本阶段不创建另一套测试策略。
+
 Use `$openspec-apply-change` as the primary path for implementing tasks from an
 OpenSpec change. Use this skill only after SDD docs exist and the user needs
 extra SDD-specific prompt splitting, P0/P1/P2 handoff, CR/Px follow-up prompts,

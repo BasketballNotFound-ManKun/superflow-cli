@@ -1,5 +1,10 @@
 # Quality Gate Checklist
 
+Check frozen signals and applicability using [test-guide.md](test-guide.md).
+Missing required environments remain blocked; inapplicability cannot remove frozen
+gates. Reuse healthy instances matching the tested build; independently inspect
+raw evidence and have implementers rerun invalidated or contract-required paths.
+
 ## Documentation Gate
 
 - Requirements processed feature by feature and frozen.

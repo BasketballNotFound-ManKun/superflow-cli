@@ -5,6 +5,14 @@ description: Use when an OpenSpec/SDD change is ready for verification, real evi
 
 # SDD Verify
 
+## Verification signal review
+
+Read the [test guide](../superflow-pipeline/references/test-guide.md). Compare current
+changes, frozen cases, and actual execution counts; distinguish logic, database,
+and real-entry conclusions. Judge historical applicability before requesting
+affected reruns. Report formatting alone does not force full-chain reruns. Reviewers
+inspect raw output and source read-only.
+
 Before semantic code review, run `superflow review-coverage --json` (or pass
 `--base <ref>` for a branch review). Use its included/excluded inventory and
 path-specific rules to account for every changed file. Review related Java

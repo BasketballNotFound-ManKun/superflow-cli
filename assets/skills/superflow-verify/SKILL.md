@@ -5,6 +5,12 @@ description: Use when an SDD/OpenSpec change is ready for verification, test-rep
 
 # SDD Verify
 
+## 验证信号复核
+
+读取[测试指南](../superflow-pipeline/references/test-guide.md)，核对当前差异、冻结用例及
+实际执行数；区分逻辑、数据库和真实入口结论。先判断历史证据是否失效，再要求实施方
+重跑受影响验证；仅报告格式变更不自动重跑全链路。评审方只读核验原始输出与源码。
+
 Before semantic code review, run `superflow review-coverage --json` (or pass
 `--base <ref>` for a branch review). Use its included/excluded inventory and
 path-specific rules to account for every changed file. Review related Java

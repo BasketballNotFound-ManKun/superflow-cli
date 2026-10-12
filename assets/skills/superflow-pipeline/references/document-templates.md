@@ -133,3 +133,10 @@
 - **自动化**: [自动化] / [需手工]
 - **关联**: spec.md Requirement N → Scenario X
 ```
+
+## tests.md：验证信号冻结
+
+按 [test-guide.md](test-guide.md)选择项目适用信号，使用已有测试层级编号。
+表头：`改动/风险 | 用例 ID | 验证信号 | 实际环境/后端 | 命令 | 断言 | 证据位置 | 不适用依据/阻塞`。
+数据库分层只继承 [document-review-coverage.md](document-review-coverage.md) 的
+`testLayer` / `mockBoundary`；关键业务主流程和 Bug 复现优先复用项目场景回归资产。

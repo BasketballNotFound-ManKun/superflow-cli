@@ -5,6 +5,13 @@ description: Use when confirmed requirements or OpenSpec artifacts need SDD cont
 
 # SDD Docs
 
+## Test plan entry
+
+Before writing tests.md, read the [test guide](../superflow-pipeline/references/test-guide.md).
+Reuse project tests and environments, map affected behavior to signals, and freeze
+cases, actual backends, mockBoundary, commands, and assertions here. Implementation
+inherits the plan; required database verification is not an implementation-time choice.
+
 For full document delivery, read and apply
 [requirement × real-entry review](../superflow-pipeline/references/document-review-coverage.md).
 Extend the existing three-round receipt with original-source, real-caller,

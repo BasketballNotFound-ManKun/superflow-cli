@@ -28,15 +28,18 @@ user explicitly chooses that workflow.
 
 Write and show the current disk version at
 `.sdd/tasks/<YYYY-MM-DD>-<slug>/spec.md` with Intent / Non-goals, current and
-target behavior, confirmed test seam, ordered implementation steps, Given /
+target behavior, confirmed test seam, applicable signals/commands/assertions/evidence paths from
+the [test guide](../superflow-pipeline/references/test-guide.md), ordered implementation steps, Given /
 When / Then acceptance, risks, escalation conditions, deferred work, baseline
 commit, and exact file scope.
 
 Do not edit runtime code before approval. After explicit approval of the current
 disk version, run `superflow quick "<request>" --path <files...> --seam <existing-file> --spec <spec> --approve`.
 The CLI binds the approval to the current content digest. If Intent, Non-goals, or Acceptance
-Criteria change, return to `draft` and obtain approval again. Use TDD and
-verification-loop RED/GREEN signals, then close with `superflow review-coverage`
+Criteria change, return to `draft` and obtain approval again. Read the [test guide](../superflow-pipeline/references/test-guide.md), verify applicable
+signals, commands, assertions, and evidence paths are already frozen in the approved
+Quick Spec (repair omissions and reapprove before edits), then
+run TDD RED/GREEN and close with `superflow review-coverage`
 and `superflow eval` evidence.
 
 Quick work creates no OpenSpec checkpoint and never commits, pushes, or releases.

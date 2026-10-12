@@ -3,6 +3,11 @@ name: superflow-pipeline
 description: SDD 总入口和路由技能。Use when the user says sdd, SDD 流程, OpenSpec 文档, 需求澄清, 生成 spec/design/tasks/tests, 生成任务 prompt, 进入开发, or asks which SDD/OpenSpec phase to use. Routes OpenSpec documents to openspec-propose, source-level technical design to superflow-design, implementation to openspec-apply-change, and uses SDD skills for quality gates, handoff, prompt splitting, and validation.
 ---
 
+## 测试指导唯一入口
+
+生成测试文档、准备实施或核验交付时，读取 [test-guide.md](references/test-guide.md)。
+文档阶段冻结必要信号；实施继承，评审核验。Mock 边界和示例不得覆盖规范数据库合同。
+
 # SDD Spec Pipeline
 
 This is the lightweight SDD router. Do not load the whole SDD process when a smaller phase skill is enough.
@@ -1045,7 +1050,7 @@ starter、connector 或任何被当前项目引用的外部项目时，必须把
 实现 prompt，必须同时落下三层门禁：
 
 1. **Prompt 完成定义**：明确"单元测试通过不等于完成"，任务完成必须包含
-   应用新进程启动、真实 curl/API 调用、数据库查询、日志检查和 test-report
+   当前待测构建的应用启动/身份核验、真实 curl/API 调用、数据库查询、日志检查和 test-report
    证据回填。
 2. **Hook 过程拦截**：启用 `.sdd-enforced` / `.db-verified`，禁止跳过
    worktree、数据库前置核查和版本总 SQL 收口；运行时代码提交前必须有
