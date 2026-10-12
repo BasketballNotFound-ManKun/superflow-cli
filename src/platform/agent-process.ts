@@ -11,6 +11,7 @@ import type {
   UnresumableSessionFailureReason,
   ManagedReasoningEffort,
 } from "../domains/managed-work/types.js";
+import { isCreditableTransientProviderFailure } from "../domains/managed-work/failure.js";
 import { managedText } from "../domains/managed-work/i18n.js";
 import type { Language } from "../types.js";
 import { resolveExecutableShim } from "./executable.js";
@@ -159,6 +160,7 @@ async function runAgentProcess<T>(
     let finished = false;
     let telemetry = initialTelemetry();
     let usage = emptyUsage();
+    const retryCircuit = createClaudeRetryCircuit();
     invocation.onTelemetry?.(telemetry);
     invocation.onProcess?.(child.pid ?? null);
 
@@ -233,7 +235,16 @@ async function runAgentProcess<T>(
           usage = updateAgentUsage(usage, event);
           invocation.onTelemetry?.(telemetry);
         }
-        if (invocation.agent === "claude" && shouldStopClaudeRetry(event)) {
+        const discoveredSession = extractSessionId(event);
+        if (!sessionId && discoveredSession) {
+          sessionId = discoveredSession;
+          invocation.onSession?.(discoveredSession);
+        }
+        if (
+          invocation.agent === "claude" &&
+          (!discoveredSession || discoveredSession === sessionId) &&
+          retryCircuit(event)
+        ) {
           stopChild(child.pid);
           finishError(
             new Error(
@@ -245,11 +256,6 @@ async function runAgentProcess<T>(
             ),
           );
           return;
-        }
-        const discoveredSession = extractSessionId(event);
-        if (!sessionId && discoveredSession) {
-          sessionId = discoveredSession;
-          invocation.onSession?.(discoveredSession);
         }
         const progress = extractProgress(event);
         if (progress) invocation.onProgress?.(progress);
@@ -802,21 +808,57 @@ function claudeAllowedTools(role: AgentInvocation["role"]): string[] {
   ];
 }
 
+// Claude api_retry exposes a monotonically increasing attempt within a retry
+// sequence. Duplicate delivery is not another physical provider attempt. This
+// deliberately does not accept Codex app-server Guardian events: exec --json
+// does not expose their status, review identity, or turn identity.
+function createClaudeRetryCircuit() {
+  let consecutive = 0;
+  let lastAttempt = 0;
+  let reset = false;
+  return (event: Record<string, unknown> | null): boolean => {
+    if (!event) return false;
+    if (
+      event.type === "assistant" ||
+      event.type === "result" ||
+      (event.type === "system" &&
+        event.subtype === "api_retry" &&
+        !isTransientClaudeRetry(event))
+    ) {
+      consecutive = 0;
+      lastAttempt = 0;
+      reset = true;
+      return false;
+    }
+    if (!isTransientClaudeRetry(event)) return false;
+    const attempt = event.attempt as number;
+    if (attempt <= lastAttempt) return false;
+    consecutive += lastAttempt === 0 && reset ? 1 : attempt - lastAttempt;
+    lastAttempt = attempt;
+    return consecutive >= 3;
+  };
+}
+
 export function shouldStopClaudeRetry(
+  event: Record<string, unknown> | null,
+): boolean {
+  return isTransientClaudeRetry(event) && (event!.attempt as number) >= 3;
+}
+
+function isTransientClaudeRetry(
   event: Record<string, unknown> | null,
 ): boolean {
   if (
     event?.type !== "system" ||
     event.subtype !== "api_retry" ||
     typeof event.attempt !== "number" ||
-    event.attempt < 3
-  ) {
+    !Number.isInteger(event.attempt) ||
+    event.attempt < 1
+  )
     return false;
-  }
-  const detail = `${String(event.error_status ?? "")} ${String(event.error ?? "")}`;
-  return /\b(?:429|529)\b|overloaded|rate.?limit|访问量过大|暂时.*限流/i.test(
-    detail,
-  );
+  const status = numberValue(event.error_status);
+  const detail = `${status ?? ""} ${String(event.error ?? "")}`;
+  return isCreditableTransientProviderFailure(detail);
 }
 
 function extractStructuredOutput<T>(

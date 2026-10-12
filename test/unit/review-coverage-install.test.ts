@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { deploySkill } from "../../src/domains/skill/deploy.js";
 import { deployScripts } from "../../src/domains/skill/scripts.js";
 import { prepareCoverage } from "../helpers/review-coverage.js";
+import { fixtureProcessEnv } from "../helpers/fixture-process-env.js";
 
 const ROOT = path.resolve(__dirname, "../..");
 let temporary: string;
@@ -114,7 +115,7 @@ describe("review coverage installation closure", () => {
           ],
           {
             encoding: "utf8",
-            env: { ...process.env, HOME: temporary },
+            env: fixtureProcessEnv(temporary),
           },
         );
       expect(run().status).toBe(0);

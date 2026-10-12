@@ -21,6 +21,11 @@ created the base OpenSpec artifacts. This skill is an SDD contract-doc wrapper;
 it must not replace the installed OpenSpec skills for core artifact generation
 and must not generate implementation prompts.
 
+需要跨轮复用对命令/目录/调用环境敏感的检查时，本阶段按
+[executionContext 合同](../superflow-pipeline/references/document-review-coverage.md#声明式执行上下文与证据复用)
+冻结 argv、相对 cwd 和已选非秘密环境项；历史未绑定证据不自动升级为新上下文完整通过。
+
+
 ## OpenSpec First
 
 For new OpenSpec document generation, invoke `$openspec-propose` first. The

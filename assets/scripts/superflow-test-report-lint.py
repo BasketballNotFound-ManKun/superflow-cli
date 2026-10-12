@@ -16,6 +16,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import ntpath
+import os
 import re
 import subprocess
 import sys
@@ -262,13 +264,87 @@ def lint_against_tests_contract(report_path: Path, report_text: str, tests_path:
     return issues
 
 
+def fence_container_line(line: str) -> tuple[str, list]:
+    prefixes = []
+    text = line
+    while True:
+        quote = re.match(r"^ {0,3}> ?", text)
+        item = re.match(r"^ {0,3}(?:[-+*]|\d{1,9}[.)]) +", text)
+        prefix = quote or item
+        if prefix is None:
+            return text, prefixes
+        prefixes.append("quote" if quote else len(prefix[0]))
+        text = text[len(prefix[0]):]
+
+
+def closing_fence_line(line: str, prefixes: list) -> str | None:
+    text = line
+    for prefix in prefixes:
+        pattern = r"^ {0,3}> ?" if prefix == "quote" else r"^ {%d}" % prefix
+        match = re.match(pattern, text)
+        if match is None:
+            return None
+        text = text[len(match[0]):]
+    return text
+
+
+def markdown_body_lines(text: str) -> tuple[list[str], bool]:
+    """Structural report content only; preserve original line positions."""
+    fence = None
+    prefixes = []
+    unsupported_tab = False
+    result = []
+    for line in text.splitlines():
+        if fence is not None:
+            candidate = closing_fence_line(line, prefixes)
+            marker = None if candidate is None else re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", candidate)
+            if (marker and marker[1][0] == fence[0]
+                    and len(marker[1]) >= len(fence)
+                    and not marker[2].strip(" \t")):
+                fence = None
+            result.append("")
+            continue
+        possible_container = re.match(r"^((?:[ \t]*>[ \t]*|[ \t]*(?:[-+*]|\d{1,9}[.)])[ \t]+)+)(`{3,}|~{3,})", line)
+        if possible_container and "\t" in possible_container[1]:
+            unsupported_tab = True
+        candidate, next_prefixes = fence_container_line(line)
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", candidate)
+        if marker and (marker[1][0] == "~" or "`" not in marker[2]):
+            fence = marker[1]
+            prefixes = next_prefixes
+            result.append("")
+        else:
+            result.append(line)
+    return result, unsupported_tab or (fence is not None and bool(prefixes))
+
+
 def final_report_result(text: str) -> str:
     # Only the latest explicit summary per language is authoritative. Historical
     # notes and fenced examples do not invalidate the final execution ledger.
-    text = re.sub(r"```.*?```", "", text, flags=re.S)
+    return report_summary_result(text, {"验证结果": "zh", "验证结论": "zh",
+                                        "Verification Result": "en"},
+                                 {"通过": "PASS", "失败": "FAIL"})
+
+
+def archive_readiness_result(text: str) -> str:
+    return report_summary_result(text, {"归档就绪": "zh", "Archive Readiness": "en"},
+                                 {"READY": "PASS", "通过": "PASS",
+                                  "就绪": "PASS", "失败": "FAIL"})
+
+
+def report_summary_result(text: str, labels: dict[str, str], aliases: dict[str, str]) -> str:
+    lines, ambiguous = markdown_body_lines(text)
+    if ambiguous:
+        return "INVALID"
+    text = "\n".join(lines)
+    pattern = "|".join(re.escape(label) for label in labels)
+    label_keys = {label.lower(): key for label, key in labels.items()}
     results = {}
-    for match in re.finditer(r"^(验证结果|Verification Result)\s*[:：]\s*([A-Z_]+)\s*$", text, re.I | re.M):
-        results[match[1].lower()] = match[2].upper()
+    for match in re.finditer(rf"^({pattern})[ \t]*[:：][ \t]*([^\r\n]*)$", text, re.I | re.M):
+        value = match[2].strip().upper()
+        # MISSING denotes an absent summary, never an explicit unknown status.
+        value = "UNKNOWN" if not value or value == "MISSING" else value
+        results[label_keys[match[1].lower()]] = aliases.get(value, value)
     if len(set(results.values())) > 1:
         return "CONFLICT"
     return next(iter(results.values()), "MISSING")
@@ -367,6 +443,48 @@ def validate_database_receipt(receipt: dict, event: dict, case: dict,
             raise ValueError("数据库数据/影响行数/不变断言未达到冻结预期")
 
 
+EXECUTION_ENV_KEYS = frozenset([
+    "PATH", "PATHEXT", "NODE_ENV", "NODE_OPTIONS", "LANG", "LC_ALL", "TZ", "JAVA_HOME",
+])
+
+
+def validate_execution_context(receipt: dict, event: dict, case: dict, change: Path) -> None:
+    """Optional frozen bindings strengthen reuse without rewriting legacy proof."""
+    if "executionContext" not in case:
+        # Legacy extra metadata is retained, but never proves declared-context reuse.
+        return
+    binding = case["executionContext"]
+    if (not isinstance(binding, dict)
+            or set(binding) != {"argv", "cwd", "environmentKeys"}
+            or not isinstance(binding["argv"], list) or not binding["argv"]
+            or any(not isinstance(arg, str) or not arg.strip() for arg in binding["argv"])
+            or not isinstance(binding["cwd"], str) or not binding["cwd"].strip()
+            or Path(binding["cwd"]).is_absolute() or ntpath.isabs(binding["cwd"])
+            or bool(ntpath.splitdrive(binding["cwd"])[0])):
+        raise ValueError("executionContext 需要冻结 argv、相对 cwd 和 environmentKeys")
+    keys = binding["environmentKeys"]
+    if (not isinstance(keys, list)
+            or any(not isinstance(key, str) or key not in EXECUTION_ENV_KEYS for key in keys)
+            or len(set(keys)) != len(keys)):
+        raise ValueError("executionContext 环境项必须是受支持且不重复的非秘密运行配置")
+    context = receipt.get("executionContext")
+    if (not isinstance(context, dict) or set(context) != {"cwd", "environmentSha256"}
+            or not json_equal(event.get("executionContext"), context)):
+        raise ValueError("原始执行输出与凭证 executionContext 不一致或缺失")
+    if not json_equal(receipt["command"]["argv"], binding["argv"]):
+        raise ValueError("执行命令与冻结 executionContext.argv 不一致")
+    cwd = (change / binding["cwd"]).resolve()
+    if (not cwd.is_dir() or not isinstance(context["cwd"], str)
+            or context["cwd"] != str(cwd)):
+        raise ValueError("执行工作目录与冻结 executionContext.cwd 不一致")
+    expected = {
+        key: hashlib.sha256(json.dumps(os.environ.get(key), ensure_ascii=False).encode()).hexdigest()
+        for key in keys
+    }
+    if not json_equal(context["environmentSha256"], expected):
+        raise ValueError("绑定运行环境已变化或观测缺失；旧结果不能用于当前完整通过")
+
+
 def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: Path) -> None:
     receipt = json.loads(file.read_text(encoding="utf-8"))
     if receipt.get("schemaVersion") != "superflow.execution-receipt.v1":
@@ -403,6 +521,7 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
             raise ValueError(f"原始执行输出与凭证 {key} 不一致")
     if not json_equal(event.get("command"), {"argv": command["argv"], "exitCode": command["exitCode"]}):
         raise ValueError("原始执行命令与凭证不一致")
+    validate_execution_context(receipt, event, case, change)
     sources = receipt["sources"]
     if not isinstance(sources, list) or not sources:
         raise ValueError("缺少当前源码/构建指纹")
@@ -541,7 +660,9 @@ def lint_case_evidence(report_path: Path, report_text: str, review_path: Path, i
     }
     if final_report_result(report_text) == "CONFLICT":
         issues.append(Issue("FAIL", report_path, 0, "中英文最终验证结果冲突"))
-    lines = report_text.splitlines()
+    lines, ambiguous = markdown_body_lines(report_text)
+    if ambiguous:
+        return [Issue("FAIL", report_path, 0, "列表/引用代码块结构无法确定；用空格缩进并明确闭合后再核验，不能沿用早期 PASS")]
     header_at = next(
         (i for i, line in enumerate(lines) if CASE_EVIDENCE_HEADER.fullmatch(line.strip())),
         None,

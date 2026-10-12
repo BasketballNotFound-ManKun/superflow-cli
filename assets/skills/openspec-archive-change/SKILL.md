@@ -1,6 +1,6 @@
 ---
 name: openspec-archive-change
-description: Archive a completed change in the experimental workflow. Use when the user wants to finalize and archive a change after implementation is complete.
+description: Use when the user wants to archive a completed pure OpenSpec change without .sdd/state.yaml.
 license: MIT
 compatibility: Requires openspec CLI.
 metadata:
@@ -12,6 +12,18 @@ metadata:
 Archive a completed change in the experimental workflow.
 
 **Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+
+## SDD 归档分流（先执行）
+
+先确定目标 change 目录；目标不明确时沿下方选择步骤确认，再检查该目录的
+`.sdd/state.yaml`。文件存在时立即加载 `$superflow-archive` 并停止本技能的后续步骤。
+验证未通过或任务未完成时，按该技能返回验证/实施；不能退回本技能继续归档。
+SDD 变更不能使用下方的未完成任务确认、`Archive without syncing` 或 `mv` 捷径；
+归档门禁、确认、OpenSpec 合并和 state 收口均由 `superflow-archive` 持有。
+已搬迁的 SDD 目录也使用该 owner 的精确归档路径恢复流程。
+
+只有目标目录没有 `.sdd/state.yaml` 时，才执行下方纯 OpenSpec 流程。
+这属于 Agent 语义路由；命令 Hook 不是操作系统级拦截，不能假定它会阻止任意 `mv`。
 
 **Steps**
 

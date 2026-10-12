@@ -94,9 +94,13 @@ import { redactManagedLog, redactManagedValue } from "./redaction.js";
 import { classifyUnresumableSessionFailure } from "../../platform/agent-process.js";
 import {
   classifyManagedFailure,
+  isPermanentProviderFailure,
+  isCreditableTransientProviderFailure,
   ManagedEnvironmentPreparationError,
   ManagedWorkspaceClaimError,
 } from "./failure.js";
+
+export { isPermanentProviderFailure } from "./failure.js";
 
 export async function runManagedTask(
   projectRoot: string,
@@ -957,7 +961,7 @@ async function executeWorker(
   );
   state.consecutiveTransientProviderFailures = 0;
   state = closeActiveTime(state, started);
-  state.executorUsage = mergeAgentUsage(state.executorUsage, result.usage);
+  state.executorUsage = mergeAgentUsage(state, result.usage);
   state.runtimeTelemetry = result.telemetry ?? state.runtimeTelemetry ?? null;
   state.runningAgentPid = null;
   state.executorSession = {
@@ -2365,31 +2369,45 @@ function executorOutputTokenUnits(state: ManagedRunState): number | null {
 }
 
 function mergeAgentUsage(
-  current: ManagedRunState["executorUsage"],
+  state: ManagedRunState,
   next: AgentInvocationResult<unknown>["usage"],
 ): ManagedRunState["executorUsage"] {
-  if (!next) return current;
+  const current = state.executorUsage;
+  // Invocation count distinguishes initial unobserved fields from a missing
+  // historical measurement. Once a total is incomplete it stays unknown.
+  const hasPriorInvocation = state.executorInvocations > 1;
   return {
-    inputTokens: sumNullable(current?.inputTokens, next.inputTokens),
-    outputTokens: sumNullable(current?.outputTokens, next.outputTokens),
+    inputTokens: sumNullable(
+      current?.inputTokens,
+      next?.inputTokens,
+      hasPriorInvocation,
+    ),
+    outputTokens: sumNullable(
+      current?.outputTokens,
+      next?.outputTokens,
+      hasPriorInvocation,
+    ),
     cacheReadTokens: sumNullable(
       current?.cacheReadTokens,
-      next.cacheReadTokens,
+      next?.cacheReadTokens,
+      hasPriorInvocation,
     ),
     cacheWriteTokens: sumNullable(
       current?.cacheWriteTokens,
-      next.cacheWriteTokens,
+      next?.cacheWriteTokens,
+      hasPriorInvocation,
     ),
-    costUsd: sumNullable(current?.costUsd, next.costUsd),
+    costUsd: sumNullable(current?.costUsd, next?.costUsd, hasPriorInvocation),
   };
 }
 
 function sumNullable(
   left: number | null | undefined,
   right: number | null | undefined,
+  hasPriorInvocation: boolean,
 ): number | null {
-  if (left == null) return right ?? null;
-  if (right == null) return null;
+  if (!hasPriorInvocation && left == null) return right ?? null;
+  if (left == null || right == null) return null;
   return left + right;
 }
 
@@ -2402,18 +2420,34 @@ async function invokeWithFailureEvidence<T>(
   try {
     return await invoker.invoke<T>(agentInvocation);
   } catch (error) {
-    const raw = error as Error & { stdout?: unknown; stderr?: unknown };
+    const raw = error as Error & {
+      stdout?: unknown;
+      stderr?: unknown;
+      usage?: AgentInvocationResult<unknown>["usage"];
+      telemetry?: AgentInvocationResult<unknown>["telemetry"];
+    };
     const stdout = typeof raw.stdout === "string" ? raw.stdout : "";
     const stderr = typeof raw.stderr === "string" ? raw.stderr : "";
     const logs =
       stdout || stderr
         ? writeInvocationLogs(state, prefix, stdout, stderr)
         : [];
+    // One rejection belongs to one physical invocation. Streaming callbacks
+    // only update telemetry; they never add cumulative usage snapshots.
+    state.executorUsage = mergeAgentUsage(state, raw.usage ?? {
+      inputTokens: null,
+      outputTokens: null,
+      cacheReadTokens: null,
+      cacheWriteTokens: null,
+      costUsd: null,
+    });
+    state.runtimeTelemetry = raw.telemetry ?? state.runtimeTelemetry ?? null;
+    saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "executor.invocation_failed",
       actor: agentInvocation.agent,
       role: "executor",
-      summary: raw.message,
+      summary: `${raw.message}; invocation=${prefix}; usage=${JSON.stringify(raw.usage ?? null)}`,
       evidencePaths: logs,
     });
     throw error;
@@ -3629,16 +3663,11 @@ function registryRunId(
 }
 
 function isConnectivityFailure(message: string): boolean {
-  return /(network|socket|unable to connect|connection (?:refused|reset|closed)|server_error|timed?\s*out|rate.?limit|overloaded|busy|\b(?:429|503|529)\b|\bECONN[A-Z]*\b|网络|无法连接|连接被拒绝|限流|繁忙)/i.test(
+  return /(network|socket|unable to connect|connection (?:refused|reset|closed)|server_error|timed?\s*out|rate.?limit|concurrent[ _-]+requests?[ _-]+limit|overloaded|busy|\b(?:429|503|529)\b|\bECONN[A-Z]*\b|网络|无法连接|连接被拒绝|限流|繁忙)/i.test(
     message,
   );
 }
 
-export function isPermanentProviderFailure(message: string): boolean {
-  return /(token plan|用量上限|套餐|quota.?exhaust|insufficient.?quota|error.?code\s*2056|\b2056\b|billing|payment required|auth[_ ]?unavailable\s*:|账号池没有可用账号)/i.test(
-    message,
-  );
-}
 
 function recordExecutorConnectivityFailure(
   contract: ManagedTaskContract,
@@ -3681,18 +3710,6 @@ function recordExecutorConnectivityFailure(
   };
 }
 
-function isCreditableTransientProviderFailure(message: string): boolean {
-  if (
-    /(token plan|用量上限|套餐|quota.?exhaust|insufficient.?quota|error.?code\s*2056|\b2056\b)/i.test(
-      message,
-    )
-  ) {
-    return false;
-  }
-  return /(\b429\b|\b529\b|rate.?limit|overloaded|访问量过大|暂时.*限流|temporar(?:y|ily).*(?:busy|unavailable)|connection (?:refused|reset|closed)|unable to connect|socket hang up|\bECONN[A-Z]*\b|连接(?:被拒绝|重置|关闭)|无法连接)/i.test(
-    message,
-  );
-}
 
 async function acquireProjectLocks(
   contract: ManagedTaskContract,

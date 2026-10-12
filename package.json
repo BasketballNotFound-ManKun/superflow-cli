@@ -1,6 +1,6 @@
 {
   "name": "@chenmk/superflow",
-  "version": "0.5.21",
+  "version": "0.5.22",
   "description": "SuperBridge Flow workflow CLI for Claude Code and Codex",
   "license": "MIT",
   "type": "module",
@@ -49,6 +49,7 @@
     "pretest": "npm run check:design-principles && npm run check:managed-design",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify:changed": "node scripts/verify-changed.mjs",
     "lint": "eslint src/ test/",
     "format": "prettier --write src/ test/"
   },

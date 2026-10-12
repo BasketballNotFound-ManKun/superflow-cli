@@ -183,3 +183,5 @@ superflow uninstall --agent claude --force
 
 This removes SuperBridge Flow managed assets only. It does not remove unrelated
 agent configuration.
+
+`--agent` limits both current-scope and registered-project refreshes; selecting Codex does not add Claude. `--scope` selects the current entry scope. Existing registered projects still refresh the selected platforms at their recorded scope; the update plan lists every target.

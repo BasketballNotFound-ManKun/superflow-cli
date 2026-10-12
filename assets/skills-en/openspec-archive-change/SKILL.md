@@ -1,6 +1,6 @@
 ---
 name: openspec-archive-change
-description: Archive a completed change in the experimental workflow. Use when the user wants to finalize and archive a change after implementation is complete.
+description: Use when the user wants to archive a completed pure OpenSpec change without .sdd/state.yaml.
 license: MIT
 compatibility: Requires openspec CLI.
 metadata:
@@ -12,6 +12,22 @@ metadata:
 Archive a completed change in the experimental workflow.
 
 **Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+
+## SDD Archive Routing (Run First)
+
+Resolve the target change directory; if ambiguous, use the selection step below
+to confirm it, then check that directory for `.sdd/state.yaml`. When it exists,
+immediately load `$superflow-archive` and stop the remaining steps in this skill.
+If verification has not passed or tasks remain incomplete, follow that skill back
+to verification/implementation; do not fall back to this skill to archive.
+SDD changes cannot use the incomplete-task confirmation, `Archive without syncing`,
+or `mv` shortcuts below. `superflow-archive` owns readiness, confirmation, OpenSpec
+merging, and state closeout. Moved SDD directories use that owner's recovery flow
+with the explicit archive path.
+
+Run the pure OpenSpec workflow below only when the target has no `.sdd/state.yaml`.
+This is Agent semantic routing; the command Hook is not an operating-system-level
+interceptor and must not be assumed to block arbitrary `mv` commands.
 
 **Steps**
 

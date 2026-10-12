@@ -8,6 +8,36 @@ import { writeExecutionReceipt } from "../helpers/execution-receipt.js";
 
 const root = path.resolve(__dirname, "../..");
 const dirs: string[] = [];
+describe("声明式执行上下文合同", () => {
+  it.each([
+    "valid",
+    "argv",
+    "absolute-cwd",
+    "windows-cwd",
+    "secret-key",
+    "duplicate-key",
+    "null",
+  ])("核验冻结形状：%s", (kind) => {
+    const f = fixture();
+    f.test.executionContext = {
+      argv: ["node", "verify.mjs"],
+      cwd: ".",
+      environmentKeys: ["NODE_ENV"],
+    };
+    if (kind === "argv") f.test.executionContext.argv = [];
+    if (kind === "absolute-cwd") f.test.executionContext.cwd = f.dir;
+    if (kind === "windows-cwd") f.test.executionContext.cwd = "C:/outside";
+    if (kind === "secret-key")
+      f.test.executionContext.environmentKeys = ["DB_PASSWORD"];
+    if (kind === "duplicate-key")
+      f.test.executionContext.environmentKeys = ["NODE_ENV", "NODE_ENV"];
+    if (kind === "null") f.test.executionContext = null;
+    const result = issues(f.dir, f.review).filter((issue) =>
+      issue.includes("executionContext"),
+    );
+    expect(result.length > 0).toBe(kind !== "valid");
+  });
+});
 function fixture() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-db-contract-"));
   dirs.push(dir);

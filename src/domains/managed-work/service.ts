@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   statSync,
 } from "fs";
@@ -22,7 +23,11 @@ import {
 import { notifyManagedTask } from "./notifications.js";
 import { acquireManagedLock } from "./lock.js";
 import { randomUUID } from "crypto";
-import { isProcessAlive } from "../../platform/process-liveness.js";
+import {
+  isProcessAlive,
+  readProcessIdentity,
+  type ProcessIdentity,
+} from "../../platform/process-liveness.js";
 import { managedText } from "./i18n.js";
 import type { Language } from "../../types.js";
 import { stopProcessTree } from "../../platform/process-tree.js";
@@ -33,6 +38,10 @@ export interface ManagedServiceState {
   startedAt: string;
   cliPath: string;
   runtimeFingerprint?: string;
+  processIdentity?: ProcessIdentity;
+  startupToken?: string;
+  readyAt?: string;
+  stoppedAt?: string;
 }
 
 export async function runManagedService(
@@ -40,20 +49,27 @@ export async function runManagedService(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<void> {
   const serviceFile = managedServicePath(env);
+  const processIdentity = readProcessIdentity(process.pid);
+  if (!processIdentity) throw serviceIdentityError(process.pid);
+  await awaitServiceStartupAuthorization(processIdentity, env);
   const serviceLock = acquireManagedLock(
     path.join(managedHome(env), "managed", "service.lock"),
     randomUUID(),
   );
-  writeJsonAtomic(serviceFile, {
-    pid: process.pid,
-    startedAt: new Date().toISOString(),
-    cliPath: process.argv[1],
-    runtimeFingerprint: runtimeFingerprintForCli(process.argv[1]),
-  } satisfies ManagedServiceState);
-
-  const invoker = new LocalAgentInvoker();
   const pollMilliseconds = options.pollMilliseconds ?? 2_000;
   try {
+    const invoker = new LocalAgentInvoker();
+    writeJsonAtomic(serviceFile, {
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      cliPath: process.argv[1],
+      runtimeFingerprint: runtimeFingerprintForCli(process.argv[1]),
+      processIdentity,
+      readyAt: new Date().toISOString(),
+      ...(env.SUPERFLOW_SERVICE_STARTUP_TOKEN
+        ? { startupToken: env.SUPERFLOW_SERVICE_STARTUP_TOKEN }
+        : {}),
+    } satisfies ManagedServiceState);
     do {
       const registry = loadRegistry(env);
       const runnable = registry.tasks.find((entry) => isRunnable(entry));
@@ -82,14 +98,17 @@ export async function runManagedService(
       if (!options.once) await delay(pollMilliseconds);
     } while (!options.once);
   } finally {
-    const current = readServiceState(env);
-    if (current?.pid === process.pid) {
-      writeJsonAtomic(serviceFile, {
-        ...current,
-        stoppedAt: new Date().toISOString(),
-      });
+    try {
+      const current = readServiceState(env);
+      if (current?.pid === process.pid) {
+        writeJsonAtomic(serviceFile, {
+          ...current,
+          stoppedAt: new Date().toISOString(),
+        });
+      }
+    } finally {
+      serviceLock.release();
     }
-    serviceLock.release();
   }
 }
 
@@ -116,7 +135,7 @@ function recordServiceFailure(
   mkdirSync(path.dirname(file), { recursive: true });
   appendFileSync(
     file,
-      `${JSON.stringify({ taskId, timestamp: new Date().toISOString(), message, failure })}\n`,
+    `${JSON.stringify({ taskId, timestamp: new Date().toISOString(), message, failure })}\n`,
     "utf-8",
   );
   notifyManagedTask(
@@ -143,6 +162,10 @@ export function ensureManagedService(
   const resolvedCliPath = path.resolve(cliPath);
   const runtimeFingerprint = runtimeFingerprintForCli(resolvedCliPath);
   if (current && isProcessAlive(current.pid)) {
+    assertServiceIdentity(current, language);
+    if (!current.readyAt || current.stoppedAt) {
+      throw serviceStartupError(current.pid, language);
+    }
     if (
       current.cliPath === resolvedCliPath &&
       current.runtimeFingerprint === runtimeFingerprint
@@ -152,10 +175,11 @@ export function ensureManagedService(
     stopOutdatedManagedService(current, env, language);
   }
 
+  const startupToken = randomUUID();
   const child = spawn(process.execPath, [resolvedCliPath, "managed-service"], {
     detached: process.platform !== "win32",
     stdio: "ignore",
-    env,
+    env: { ...env, SUPERFLOW_SERVICE_STARTUP_TOKEN: startupToken },
     shell: false,
   });
   if (!child.pid) {
@@ -168,28 +192,143 @@ export function ensureManagedService(
     );
   }
   child.unref();
+  const processIdentity = readProcessIdentity(child.pid);
   const state: ManagedServiceState = {
     pid: child.pid,
     startedAt: new Date().toISOString(),
     cliPath: resolvedCliPath,
     runtimeFingerprint,
+    ...(processIdentity ? { processIdentity } : {}),
+    startupToken,
   };
-  return state;
+  if (!processIdentity) {
+    // Preserve the only known PID before failing the startup handshake. A retry
+    // must not create another child while this unverified process is alive.
+    try {
+      writeJsonAtomic(managedServicePath(env), state);
+    } finally {
+      // This is the ChildProcess handle returned by our own spawn, not a PID
+      // obtained from persisted state. Startup is gated, so it owns no work yet.
+      child.kill("SIGTERM");
+    }
+    throw serviceIdentityError(child.pid, language);
+  }
+  try {
+    writeJsonAtomic(managedServicePath(env), state);
+    return awaitServiceReady(state, env, language);
+  } catch (error) {
+    child.kill("SIGTERM");
+    throw error;
+  }
+}
+
+function awaitServiceReady(
+  expected: ManagedServiceState,
+  env: NodeJS.ProcessEnv,
+  language?: Language,
+): ManagedServiceState {
+  const deadline = Date.now() + 5000;
+  do {
+    const current = readServiceState(env);
+    const live = readProcessIdentity(expected.pid);
+    if (
+      !live ||
+      live.startedAt !== expected.processIdentity?.startedAt ||
+      live.command !== expected.processIdentity?.command
+    )
+      break;
+    if (
+      current?.pid === expected.pid &&
+      current.startupToken === expected.startupToken &&
+      current.processIdentity?.startedAt === live.startedAt &&
+      current.processIdentity?.command === live.command &&
+      current.runtimeFingerprint === expected.runtimeFingerprint &&
+      current.readyAt &&
+      !current.stoppedAt
+    )
+      return current;
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+  } while (Date.now() < deadline);
+  throw serviceStartupError(expected.pid, language);
+}
+
+function serviceStartupError(pid: number, language?: Language): Error {
+  return new Error(
+    managedText(
+      language,
+      `Superflow 后台服务启动握手未完成（PID ${pid}）；未创建任务。请检查服务入口和 service.lock；确认失败进程已退出后重试。`,
+      `The Superflow service startup handshake did not complete (PID ${pid}); no task was created. Inspect the service entry point and service.lock, then retry after the failed process exits.`,
+    ),
+  );
+}
+
+async function awaitServiceStartupAuthorization(
+  identity: ProcessIdentity,
+  env: NodeJS.ProcessEnv,
+): Promise<void> {
+  const token = env.SUPERFLOW_SERVICE_STARTUP_TOKEN;
+  if (!token) return;
+  const deadline = Date.now() + 3000;
+  do {
+    const current = readServiceState(env);
+    if (
+      current?.pid === process.pid &&
+      current.startupToken === token &&
+      current.processIdentity?.startedAt === identity.startedAt &&
+      current.processIdentity?.command === identity.command
+    )
+      return;
+    await delay(50);
+  } while (Date.now() < deadline);
+  throw new Error(
+    managedText(
+      undefined,
+      "Superflow 后台服务启动握手未获父进程确认，拒绝领取任务；请重启 Host 后重试。",
+      "The parent did not authorize the Superflow service startup handshake; refusing to claim tasks. Restart the Host and retry.",
+    ),
+  );
 }
 
 export function runtimeFingerprintForCli(cliPath: string): string {
   const resolved = realpathSync(path.resolve(cliPath));
   const files = runtimeJavaScriptDependencies(resolved);
+  const packageRoot = runtimePackageRoot(resolved);
+  if (packageRoot) {
+    files.push(path.join(packageRoot, "package.json"));
+    collectRuntimeAssets(path.join(packageRoot, "assets"), files);
+  }
   return createHash("sha256")
     .update(
       files
-        .map(
-          (file) =>
-            `${file}\n${readFileSync(file).toString("base64")}`,
-        )
+        .sort()
+        .map((file) => `${file}\n${readFileSync(file).toString("base64")}`)
         .join("\n"),
     )
     .digest("hex");
+}
+
+function runtimePackageRoot(entryFile: string): string | null {
+  const root = path.resolve(path.dirname(entryFile), "../..");
+  const relative = path.relative(root, entryFile).replaceAll("\\", "/");
+  if (!["dist/app/cli.js", "dist/mcp/server.js"].includes(relative))
+    return null;
+  try {
+    const pkg = JSON.parse(
+      readFileSync(path.join(root, "package.json"), "utf8"),
+    );
+    return pkg?.name === "@chenmk/superflow" ? root : null;
+  } catch {
+    return null;
+  }
+}
+
+function collectRuntimeAssets(directory: string, files: string[]): void {
+  if (!existsSync(directory)) return;
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) collectRuntimeAssets(file, files);
+    else if (entry.isFile() || entry.isSymbolicLink()) files.push(file);
+  }
 }
 
 function runtimeJavaScriptDependencies(entryFile: string): string[] {
@@ -230,6 +369,7 @@ function stopOutdatedManagedService(
       ),
     );
   }
+  assertServiceIdentity(current, language);
   stopProcessTree(current.pid);
   const deadline = Date.now() + 2_000;
   while (isProcessAlive(current.pid) && Date.now() < deadline) {
@@ -246,6 +386,34 @@ function stopOutdatedManagedService(
   }
 }
 
+function assertServiceIdentity(
+  current: ManagedServiceState,
+  language?: Language,
+): void {
+  const recorded = current.processIdentity;
+  const live = readProcessIdentity(current.pid);
+  if (
+    !recorded ||
+    !live ||
+    !recorded.startedAt ||
+    !recorded.command ||
+    recorded.startedAt !== live.startedAt ||
+    recorded.command !== live.command
+  ) {
+    throw serviceIdentityError(current.pid, language);
+  }
+}
+
+function serviceIdentityError(pid: number, language?: Language): Error {
+  return new Error(
+    managedText(
+      language,
+      `无法核验 Superflow 后台进程身份（PID ${pid}）；拒绝复用、停止或并行启动。请先核对该 PID 的命令和启动时间并确认任务已停，再由用户停止已确认的旧服务，最后重启 Host 并恢复任务。`,
+      `Cannot verify the Superflow background process identity (PID ${pid}); refusing reuse, termination, or parallel startup. First inspect this PID's command and creation time and confirm tasks are stopped; then have the user stop the verified old service, restart the Host, and resume the task.`,
+    ),
+  );
+}
+
 export function readServiceState(
   env: NodeJS.ProcessEnv = process.env,
 ): ManagedServiceState | null {
@@ -258,7 +426,12 @@ export function readServiceState(
   }
 }
 
-function isRunnable(entry: { taskId: string; projectRoot: string; status: string; updatedAt: string }): boolean {
+function isRunnable(entry: {
+  taskId: string;
+  projectRoot: string;
+  status: string;
+  updatedAt: string;
+}): boolean {
   if (isHumanDirectedTask(entry)) return false;
   const { status, updatedAt } = entry;
   if (status === "queued" || status === "running") return true;
@@ -271,7 +444,10 @@ function isHumanDirectedTask(entry: {
   projectRoot: string;
 }): boolean {
   try {
-    return loadManagedTask(entry.projectRoot, entry.taskId).executionMode === "human_directed";
+    return (
+      loadManagedTask(entry.projectRoot, entry.taskId).executionMode ===
+      "human_directed"
+    );
   } catch {
     return false;
   }

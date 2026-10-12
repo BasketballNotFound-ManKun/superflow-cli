@@ -8,7 +8,7 @@ import { writeExecutionReceipt } from "../helpers/execution-receipt.js";
 
 const lint = path.resolve("assets/scripts/superflow-test-report-lint.py");
 let dir: string;
-function run() {
+function run(environment: NodeJS.ProcessEnv = {}, complete = false) {
   try {
     return {
       code: 0,
@@ -16,11 +16,12 @@ function run() {
         "python3",
         [
           lint,
+          ...(complete ? ["--require-complete"] : []),
           "--review",
           path.join(dir, "review.json"),
           path.join(dir, "report.md"),
         ],
-        { encoding: "utf8" },
+        { encoding: "utf8", env: { ...process.env, ...environment } },
       ),
     };
   } catch (error: any) {
@@ -71,6 +72,143 @@ beforeEach(() => {
 });
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 describe("execution receipt boundary", () => {
+  it.each([
+    ["-\t```markdown", "    ```"],
+    ["1.\t~~~markdown", "    ~~~"],
+    [">\t```markdown", "> ```"],
+  ])("does not promote unsupported tab container %s", (open, close) => {
+    fs.appendFileSync(
+      path.join(dir, "report.md"),
+      `\n${open}\n\texample\n${close}\n验证结果: PASS\n`,
+    );
+    expect(run({}, true).code).toBe(2);
+  });
+  it.each([
+    ["list", "- ```markdown", "  ", "  ```"],
+    ["nested", "  - - ~~~~markdown", "      ", "      ~~~~"],
+    ["quote", "> ```markdown", "> ", "> ```"],
+    ["quoted-list", "> - ```markdown", ">   ", ">   ```"],
+  ])(
+    "keeps real final FAIL after %s container",
+    (_name, open, prefix, close) => {
+      const report = path.join(dir, "report.md");
+      fs.appendFileSync(
+        report,
+        `\n${open}\n${prefix}验证结果: PASS\n${close}\n验证结果: FAIL\n`,
+      );
+      expect(run({}, true).code).toBe(2);
+    },
+  );
+  it("does not promote an unclosed ambiguous container", () => {
+    fs.appendFileSync(
+      path.join(dir, "report.md"),
+      "\n- ```markdown\n  example\n验证结果: FAIL\n",
+    );
+    expect(run({}, true).code).toBe(2);
+  });
+  it("requires repair for an unclosed container even after an earlier PASS", () => {
+    fs.appendFileSync(
+      path.join(dir, "report.md"),
+      "\n- ```markdown\n  example\n",
+    );
+    expect(run({}, true).code).toBe(2);
+  });
+  it("does not close a root fence with list-like code content", () => {
+    const report = path.join(dir, "report.md");
+    fs.appendFileSync(
+      report,
+      "\n```markdown\n- ```\n验证结果: FAIL\n```\n验证结果: PASS\n",
+    );
+    expect(run({}, true).code).toBe(0);
+  });
+  function bindExecutionContext() {
+    const reviewFile = path.join(dir, "review.json");
+    const review = JSON.parse(fs.readFileSync(reviewFile, "utf8"));
+    review.coverage.cases[0].executionContext = {
+      argv: ["node", "application.ts"],
+      cwd: ".",
+      environmentKeys: ["NODE_ENV"],
+    };
+    fs.writeFileSync(reviewFile, JSON.stringify(review));
+    const receipt = JSON.parse(
+      fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
+    );
+    receipt.executionContext = {
+      cwd: fs.realpathSync(dir),
+      environmentSha256: {
+        NODE_ENV: digest(JSON.stringify(process.env.NODE_ENV ?? null)),
+      },
+    };
+    const outputFile = path.join(dir, "logs/C1.jsonl");
+    const event = JSON.parse(fs.readFileSync(outputFile, "utf8"));
+    event.executionContext = receipt.executionContext;
+    const output = JSON.stringify(event) + "\n";
+    fs.writeFileSync(outputFile, output);
+    receipt.command.sha256 = digest(output);
+    save(receipt);
+    return receipt;
+  }
+  it("preserves legacy extra context without claiming declared binding", () => {
+    const receipt = JSON.parse(
+      fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
+    );
+    receipt.executionContext = { legacyNote: "not frozen" };
+    save(receipt);
+    expect(run().code).toBe(0);
+  });
+  it("matches declared command, working directory and selected environment", () => {
+    bindExecutionContext();
+    expect(run().code).toBe(0);
+    expect(run({ SUPERFLOW_TEST_INCIDENTAL: "changed" }).code).toBe(0);
+  });
+  it("rejects changed bound environment without exposing its value", () => {
+    bindExecutionContext();
+    const result = run({ NODE_ENV: "different-context" });
+    expect(result.code).toBe(2);
+    expect(result.output).not.toContain("different-context");
+  });
+  it.each(["argv", "cwd", "missing", "raw-event", "secret-key"])(
+    "rejects execution context drift: %s",
+    (kind) => {
+      const receipt = bindExecutionContext();
+      const reviewFile = path.join(dir, "review.json");
+      if (kind === "argv" || kind === "secret-key") {
+        const review = JSON.parse(fs.readFileSync(reviewFile, "utf8"));
+        const context = review.coverage.cases[0].executionContext;
+        if (kind === "argv") context.argv = ["node", "different.ts"];
+        else context.environmentKeys = ["DB_PASSWORD"];
+        fs.writeFileSync(reviewFile, JSON.stringify(review));
+      } else {
+        if (kind === "cwd")
+          receipt.executionContext.cwd = path.join(dir, "other");
+        if (kind === "missing") delete receipt.executionContext;
+        if (kind === "raw-event")
+          receipt.executionContext.environmentSha256.NODE_ENV = digest("fake");
+        save(receipt);
+      }
+      expect(run().code).toBe(2);
+    },
+  );
+  it.each(["~~~", "````"])(
+    "ignores fenced summaries and example ledgers: %s",
+    (marker) => {
+      const report = path.join(dir, "report.md");
+      const original = fs.readFileSync(report, "utf8");
+      const example = `${marker}markdown\n\`\`\`\n${original.replace("logs/C1.json", "missing.json")}Verification Result: FAIL\n${marker}\n`;
+      fs.writeFileSync(report, example + original);
+      expect(run().code).toBe(0);
+    },
+  );
+  it("does not accept an execution ledger only present in a code block", () => {
+    const report = path.join(dir, "report.md");
+    fs.writeFileSync(
+      report,
+      "```markdown\n" +
+        fs.readFileSync(report, "utf8") +
+        "```\n验证结果: PASS\n",
+    );
+    expect(run().code).toBe(2);
+  });
   it("accepts retained raw execution and current source", () =>
     expect(run().code).toBe(0));
   it.each(["", "{}", "API assertion", "https://example.invalid/proof"])(

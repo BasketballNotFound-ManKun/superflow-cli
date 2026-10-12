@@ -21,11 +21,15 @@
       "triggers": [
         "archive completed change"
       ],
-      "excludes": [],
+      "excludes": [
+        "change directory contains .sdd/state.yaml; SDD lifecycle closeout belongs to superflow-archive"
+      ],
       "outputs": [
         "archive result"
       ],
-      "neighbors": []
+      "neighbors": [
+        "superflow-archive"
+      ]
     },
     {
       "name": "openspec-explore",

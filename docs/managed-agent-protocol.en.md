@@ -429,3 +429,11 @@ Full SDD reuses frozen coverage and execution-receipt.v1 to bind each entry to r
 ## Database verification layers and actual entries
 
 Mock proves isolated logic only. Freeze and record SQL generation/binding, same-engine database integration and actual HTTP entry evidence separately. For persistence/CAS/transactions/data-driven behavior, the Agent freezes engine/version, production statement, schema provenance, mock boundaries and observations in design/tests and existing coverage. Required MySQL proof cannot be replaced with Mock/H2/SQLite. CLI compares declarations with runtime facts; it does not infer necessity from keywords. Installer delegates owned legacy entries to canonical scripts; doctor diagnoses content/executable drift and preserves unknown/custom entries. Keep historical evidence bound to its entry/source/build without authorizing another revision. Managed roles, protocols and state ownership are unchanged.
+
+### MCP runtime build diagnostics
+
+`superflow_managed_runtime` adds optional `buildCommit` to the existing runtime identity: a full build commit or `null` (unknown), captured at startup. It neither reads caller workspace HEAD nor rewrites startup identity after metadata replacement. This field diagnoses provenance only; it proves neither execution, sufficiency, nor supply-chain authenticity. Content fingerprints still decide staleness. Handoff, Executor Delivery, and Host Review JSON protocols remain unchanged.
+
+### Background-service identity and startup handshake
+
+`service.json` optionally adds `processIdentity` (OS creation time and command) for existing service-owner checks before reuse or termination. Legacy live processes missing identity are neither adopted nor stopped automatically. Automatic startup uses a one-time token between parent identity verification and child task claiming, preserving diagnostic facts on failure. This internal constraint changes neither Handoff, Executor Delivery, Host Review, nor Task/Run contracts.

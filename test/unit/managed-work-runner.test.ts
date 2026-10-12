@@ -15,6 +15,7 @@ import {
 import { appendManagedHumanMessage } from "../../src/domains/managed-work/human-messages.js";
 import {
   isExternalPendingTask,
+  isPermanentProviderFailure,
   runManagedTask,
   writeManagedLogParts,
 } from "../../src/domains/managed-work/runner.js";
@@ -45,6 +46,275 @@ afterEach(() => {
 });
 
 describe("managed work runner", () => {
+  it.each([
+    "HTTP 403: usage limit reached for the 5-hour window",
+    "Failed to refresh access token: HTTP 403: You have reached your usage limit",
+    "403 Forbidden: weekly usage limit exceeded; rate limit",
+  ])(
+    "stops explicit provider usage quota without credits: %s",
+    async (message) => {
+      const fixture = createFixture("engineering");
+      const invoker = new FakeInvoker([new Error(message)]);
+      const state = await runManagedTask(
+        fixture.root,
+        fixture.contract.taskId,
+        invoker,
+        fixture.env,
+      );
+      expect(state.status).toBe("waiting_for_provider_change");
+      expect(state.executorInvocationCredits ?? 0).toBe(0);
+      expect(state.executorInvocations).toBe(1);
+    },
+  );
+
+  it.each([
+    "HTTP 403: invalid access token",
+    "HTTP 403: concurrent request limit reached",
+    "HTTP 403 Forbidden",
+    "HTTP 403: configured usage limit is 100",
+    "/tmp/403/fixture limit",
+    "request403 forbidden limit",
+  ])(
+    "does not confuse ordinary denial or capacity with quota: %s",
+    (message) => {
+      expect(isPermanentProviderFailure(message)).toBe(false);
+    },
+  );
+
+  it("credits temporary concurrent capacity separately from quota", async () => {
+    const fixture = createFixture("engineering");
+    const state = await runManagedTask(
+      fixture.root,
+      fixture.contract.taskId,
+      new FakeInvoker([
+        new Error("HTTP 403: concurrent request limit reached"),
+      ]),
+      fixture.env,
+    );
+    expect(state.status).toBe("waiting_for_connectivity");
+    expect(state.executorInvocationCredits).toBe(1);
+  });
+
+  it.each([
+    "maximum number of turns",
+    "HTTP 403: usage limit exceeded",
+    "Agent invocation timed out",
+    "Agent invocation cancelled",
+    "Internal retry circuit opened",
+  ])(
+    "accounts one physical failed usage with unknown fields: %s",
+    async (message) => {
+      const fixture = createFixture("engineering");
+      const usage = {
+        inputTokens: null,
+        outputTokens: 17,
+        cacheReadTokens: null,
+        cacheWriteTokens: null,
+        costUsd: null,
+      };
+      let lateInvocation: AgentInvocation | undefined;
+      const invoker: AgentInvoker = {
+        invoke: async <T>(
+          invocation: AgentInvocation,
+        ): Promise<AgentInvocationResult<T>> => {
+          lateInvocation = invocation;
+          throw new AgentInvocationFailure(
+            message,
+            "DB_PASSWORD=fixture-secret",
+            "",
+            sessionFor("executor"),
+            usage,
+          );
+        },
+      };
+      const state = await runManagedTask(
+        fixture.root,
+        fixture.contract.taskId,
+        invoker,
+        fixture.env,
+      );
+      expect(state.executorUsage).toEqual(usage);
+      lateInvocation?.onTelemetry?.({
+        phase: "model_waiting",
+        model: null,
+        reasoningEffort: null,
+        tools: [],
+        toolUses: [],
+        plugins: [],
+        lastOutputAt: new Date().toISOString(),
+        lastProgressAt: new Date().toISOString(),
+        lastProgressReason: "late",
+        permissionDenials: 0,
+      });
+      const persisted = loadManagedRun(
+        fixture.root,
+        fixture.contract.taskId,
+        state.runId,
+      );
+      expect(persisted.executorUsage).toEqual(usage);
+      const events = readManagedEvents(state).filter(
+        (event) => event.eventType === "executor.invocation_failed",
+      );
+      expect(events).toHaveLength(1);
+      const logs = events[0].evidencePaths
+        .map((file) => fs.readFileSync(file, "utf-8"))
+        .join("");
+      expect(logs).not.toContain("fixture-secret");
+    },
+  );
+
+  it("keeps totals unknown when a later failed invocation omits usage", async () => {
+    const fixture = createFixture("engineering");
+    fixture.state.executorUsage = {
+      inputTokens: 100,
+      outputTokens: 17,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      costUsd: 0.01,
+    };
+    saveManagedRun(fixture.state);
+    const state = await runManagedTask(
+      fixture.root,
+      fixture.contract.taskId,
+      new FakeInvoker([new Error("HTTP 403: usage limit exceeded")]),
+      fixture.env,
+    );
+    expect(state.executorUsage).toEqual({
+      inputTokens: null,
+      outputTokens: null,
+      cacheReadTokens: null,
+      cacheWriteTokens: null,
+      costUsd: null,
+    });
+  });
+
+  it("never revives a cumulative unknown after known unknown known failures", async () => {
+    const fixture = createFixture("engineering");
+    const known = {
+      inputTokens: 100,
+      outputTokens: 17,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      costUsd: 0.01,
+    };
+    const usages = [known, undefined, known];
+    for (const usage of usages) {
+      const state = await runManagedTask(
+        fixture.root,
+        fixture.contract.taskId,
+        new FakeInvoker([
+          new AgentInvocationFailure(
+            "connection reset",
+            "",
+            "",
+            sessionFor("executor"),
+            usage,
+          ),
+        ]),
+        fixture.env,
+      );
+      if (state.executorInvocations === 1)
+        expect(state.executorUsage).toEqual(known);
+      else
+        expect(state.executorUsage).toEqual({
+          inputTokens: null,
+          outputTokens: null,
+          cacheReadTokens: null,
+          cacheWriteTokens: null,
+          costUsd: null,
+        });
+    }
+  });
+
+  it("keeps unknown history when a later successful invocation reports usage", async () => {
+    const fixture = createFixture("engineering");
+    await runManagedTask(
+      fixture.root,
+      fixture.contract.taskId,
+      new FakeInvoker([
+        new AgentInvocationFailure(
+          "connection reset",
+          "",
+          "",
+          sessionFor("executor"),
+        ),
+      ]),
+      fixture.env,
+    );
+    const next = new FakeInvoker([
+      executorReady("complete after unknown failure"),
+    ]);
+    const invoke = next.invoke.bind(next);
+    next.invoke = async <T>(invocation: AgentInvocation) => ({
+      ...(await invoke<T>(invocation)),
+      usage: {
+        inputTokens: 100,
+        outputTokens: 17,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        costUsd: 0.01,
+      },
+    });
+    const state = await runManagedTask(
+      fixture.root,
+      fixture.contract.taskId,
+      next,
+      fixture.env,
+    );
+    expect(state.executorUsage).toEqual({
+      inputTokens: null,
+      outputTokens: null,
+      cacheReadTokens: null,
+      cacheWriteTokens: null,
+      costUsd: null,
+    });
+  });
+
+  it("accounts failed invocation usage before a queued retry checks budget", async () => {
+    const fixture = createFixture("engineering");
+    const usage = {
+      inputTokens: 100,
+      outputTokens: 2_000_000,
+      cacheReadTokens: null,
+      cacheWriteTokens: null,
+      costUsd: null,
+    };
+    const invoker = new FakeInvoker([
+      new AgentInvocationFailure(
+        "connection reset",
+        "DB_PASSWORD=fixture-secret",
+        "",
+        sessionFor("executor"),
+        usage,
+      ),
+    ]);
+    const failed = await runManagedTask(
+      fixture.root,
+      fixture.contract.taskId,
+      invoker,
+      fixture.env,
+    );
+    expect(failed.executorUsage).toEqual(usage);
+    const events = readManagedEvents(failed).filter(
+      (event) => event.eventType === "executor.invocation_failed",
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0].summary).toContain("executor-1-failed");
+    expect(events[0].summary).toContain('"outputTokens":2000000');
+    const resumed = new FakeInvoker([
+      executorReady("budget should stop before invocation"),
+    ]);
+    const stopped = await runManagedTask(
+      fixture.root,
+      fixture.contract.taskId,
+      resumed,
+      fixture.env,
+    );
+    expect(stopped.executorInvocations).toBe(1);
+    expect(stopped.executorUsage).toEqual(usage);
+    expect(resumed.invocations).toHaveLength(0);
+  });
+
   it("preserves blocked environment logs and does not restart the executor", async () => {
     const fixture = createFixture("engineering");
     fs.writeFileSync(path.join(fixture.root, "pom.xml"),

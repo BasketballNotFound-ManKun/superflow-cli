@@ -16,6 +16,11 @@ OpenSpec change. Use this skill only after SDD docs exist and the user needs
 extra SDD-specific prompt splitting, P0/P1/P2 handoff, CR/Px follow-up prompts,
 review checklists, validation plans, or test-report updates.
 
+Prompt 只继承已冻结的 executionContext；执行入口生成实际 cwd 与选中环境摘要，
+与原始事件/receipt 对账，不能由 Agent 手填预期观测。缺字段或环境错配回文档 owner
+或执行必要重跑，不改变原始成功记录。
+
+
 ## Preconditions
 
 - `proposal.md`, `api.md`, `design.md`, `tasks.md`, `tests.md`,

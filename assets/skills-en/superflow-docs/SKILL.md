@@ -23,6 +23,12 @@ created the base OpenSpec artifacts. This skill is an SDD contract-doc wrapper;
 it must not replace the installed OpenSpec skills for core artifact generation
 and must not generate implementation prompts.
 
+For cross-round checks sensitive to commands/directories/invocation environment,
+freeze argv, relative cwd, and selected non-secret keys under the
+[executionContext contract](../superflow-pipeline/references/document-review-coverage.md#declared-execution-context-and-evidence-reuse).
+Historical unbound proof does not automatically satisfy new-context completeness.
+
+
 ## OpenSpec First
 
 For new OpenSpec document generation, invoke `$openspec-propose` first. The

@@ -126,4 +126,83 @@ describe("superflow delivery check", () => {
       execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
     ).resolves.toMatchObject({ stdout: "SDD 交付完整性检查通过\n" });
   });
+
+  it.each([
+    "```text\nTODO: 填写真实执行结果\n```\n",
+    "```markdown\n| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |\n" +
+      "|---|---|---|---|---|\n| C1 | E1 | api | PASS | example.json |\n```\n",
+  ])("keeps fenced examples out of blocked document closeout: %s", async (example) => {
+    await write(
+      "openspec/changes/sample/embedded-changes/p01-doc/test-report.md",
+      "验证结果: BLOCKED\nBlocked: SDD 文档范围冻结，未进入实现，外部权限不可得。\n" +
+        example,
+    );
+    await execFileAsync("git", ["add", "openspec"], { cwd: tmp });
+    await expect(
+      execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
+    ).resolves.toMatchObject({
+      stdout: expect.stringContaining("SDD 交付完整性检查通过"),
+    });
+  });
+
+  it("still rejects real body placeholders in blocked document closeout", async () => {
+    await write(
+      "openspec/changes/sample/embedded-changes/p01-doc/test-report.md",
+      "验证结果: BLOCKED\nBlocked: SDD 文档范围冻结，未进入实现。\nTODO: 回填结果\n",
+    );
+    await execFileAsync("git", ["add", "openspec"], { cwd: tmp });
+    await expect(
+      execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
+    ).rejects.toMatchObject({
+      code: 2,
+      stdout: expect.stringContaining("交付占位"),
+    });
+  });
+
+  it("does not exempt real PASS cases as blocked document-only work", async () => {
+    await write(
+      "openspec/changes/sample/embedded-changes/p01-doc/test-report.md",
+      "验证结果: BLOCKED\nBlocked: SDD 文档范围冻结，未进入实现。\n" +
+        "| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |\n" +
+        "|---|---|---|---|---|\n| C1 | E1 | api | PASS | actual.json |\n",
+    );
+    await execFileAsync("git", ["add", "openspec"], { cwd: tmp });
+    await expect(
+      execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
+    ).rejects.toMatchObject({
+      code: 2,
+      stdout: expect.stringContaining("完整交付要求最终验证结果 PASS"),
+    });
+  });
+
+  it.each(["FAIL", "失败", "UNKNOWN", "未知", "MISSING"])(
+    "does not exempt a final %s using historical Blocked wording",
+    async (result) => {
+      await write(
+        "openspec/changes/sample/embedded-changes/p01-doc/test-report.md",
+        "验证结果: BLOCKED\nBlocked: SDD 文档范围冻结，未进入实现。\n" +
+          `验证结果: ${result}\n`,
+      );
+      await execFileAsync("git", ["add", "openspec"], { cwd: tmp });
+      await expect(
+        execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
+      ).rejects.toMatchObject({
+        code: 2,
+        stdout: expect.stringContaining("完整交付要求最终验证结果 PASS"),
+      });
+    },
+  );
+
+  it("preserves a legacy document freeze report without a final summary", async () => {
+    await write(
+      "openspec/changes/sample/embedded-changes/p01-doc/test-report.md",
+      "Blocked: SDD 文档范围冻结，未进入实现，外部权限不可得。\n",
+    );
+    await execFileAsync("git", ["add", "openspec"], { cwd: tmp });
+    await expect(
+      execFileAsync("bash", [DELIVERY, "--check-staged", tmp]),
+    ).resolves.toMatchObject({
+      stdout: expect.stringContaining("SDD 交付完整性检查通过"),
+    });
+  });
 });

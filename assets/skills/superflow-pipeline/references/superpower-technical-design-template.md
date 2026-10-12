@@ -45,6 +45,23 @@ canonical_sources:
 - If this document conflicts with canonical sources, stop and return to
   `$superflow-docs`; do not let implementation prompts carry the conflict forward.
 
+## Directory Changes / 目录范围
+
+逐项列出 Created / Modified / Deleted / Not created 的模块和关键文件，说明职责与复用依据。
+可用树或列表，但路径不能只列名称：标明各项动作、owner 与原因；无变更类别明确写 None。
+Not created 记录已考虑但不新增的模块、工具、缓存、状态或平行入口及拒绝理由。
+纯实现内 helper/方法调整仍回填实际清单，不自动扩大业务范围；已确认模块内且不改变合同
+的实现细节不重开需求确认，若需更新冻结 HOW 则由文档 owner 刷新交接并走既有复审。
+新增职责、跨模块依赖、允许路径范围或验收义务变化时先回澄清/文档确认，不能以普通 helper
+名义扩展。运行保护、源覆盖与已有确认规则保持适用；目录清单不成为另一套状态。
+
+| Action | Module/file | Owner and responsibility | Reuse/evidence or rejection reason |
+|---|---|---|---|
+| Created | None / `<path>` | | |
+| Modified | None / `<path>` | | |
+| Deleted | None / `<path>` | | |
+| Not created | None / `<candidate>` | | |
+
 ## Source-Level HOW
 
 | Requirement/Scenario | Code anchor     | Current behavior | Target HOW                | Files/methods | Risk   |

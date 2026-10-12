@@ -12,6 +12,12 @@ Inherit frozen tests.md cases, commands, actual backends, and assertions; requir
 implementers to check them before editing, execute them, and record results. Missing
 signals or real-environment obligations return to superflow-docs, not a second plan.
 
+Prompts inherit frozen executionContext only. Execution entries generate actual
+cwd/selected environment hashes for raw-event/receipt checks; Agents do not fill
+expected observations. Missing bindings or changed contexts return to the document
+owner or affected reruns without rewriting historical successful records.
+
+
 ## Role
 
 This phase turns frozen contracts and source-level technical design into safe

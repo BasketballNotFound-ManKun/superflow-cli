@@ -11,6 +11,35 @@ const ROOT = path.resolve(__dirname, '../..');
 const LINT = path.join(ROOT, 'assets', 'scripts', 'superflow-test-report-lint.py');
 
 describe('superflow-test-report-lint.py', () => {
+  it.each([
+    ['验证结果: 通过\n', 0],
+    ['Verification Result: PASS\n验证结果: 通过\n', 0],
+    ['验证结果: PASS\n验证结果: 失败\n', 2],
+    ['验证结果: PASS\n验证结果: 未知\n', 2],
+    ['Verification Result: PASS\n验证结果: 失败\n', 2],
+    ['验证结论: 通过\n', 0],
+    ['验证结果: FAIL\n验证结论: 通过\n', 0],
+    ['验证结论: FAIL\n验证结果: 通过\n', 0],
+    ['验证结果: PASS\n验证结论: 失败\n', 2],
+    ['Verification Result: PASS\n验证结论: 失败\n', 2],
+  ])('normalizes final summary aliases without resurrecting early PASS: %s', async (summary, code) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-lint-'));
+    try {
+      const report = path.join(dir, 'test-report.md');
+      fs.writeFileSync(report, String(summary));
+      const command = execFileAsync('python3', [LINT, '--require-complete', report]);
+      if (code === 0) {
+        await expect(command).resolves.toMatchObject({
+          stdout: expect.stringContaining('证据一致性检查通过'),
+        });
+      } else {
+        await expect(command).rejects.toMatchObject({ code });
+      }
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('阻塞真实外部联调用例被 mock-only 报告冒充完成', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-lint-'));
     const tests = path.join(dir, 'tests.md');

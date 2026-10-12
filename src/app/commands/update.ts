@@ -255,6 +255,7 @@ export function resolveUpdateTargetsFromState(
   const merged = [...base];
   for (const project of managed) {
     for (const agent of project.agents) {
+      if (!agents.includes(agent)) continue;
       const key = `${agent}|project|${project.root}`;
       if (seen.has(key)) continue;
       seen.add(key);

@@ -106,3 +106,5 @@ statements, written fields, schema, and same-ID before/after values; do not blin
 add transaction annotations or replace Mapper methods. Run the same path and
 affected regression after repair. Design changes first repair canonical contracts.
 Do not skip failures, weaken assertions, or hide blockers.
+
+For cross-round checks sensitive to commands/directories/invocation environments, freeze executionContext under [declared context](document-review-coverage.md#declared-execution-context-and-evidence-reuse). Keep historical proof without calling unbound records complete under a new context.

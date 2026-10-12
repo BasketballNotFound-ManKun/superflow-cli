@@ -702,3 +702,33 @@ not implementation chat history. Host verifies, falsifies, deduplicates, and
 submits all findings together, owning the verdict. Subagents own neither state,
 applications/databases, nor final review, and launch no nested supervisor. The
 three existing JSON protocols are unchanged.
+
+## Boundaries for adopted Comet improvements
+
+Markdown report markers come from body text; fenced examples cannot forge findings,
+Concerns, or final results. Declared executionContext reuses coverage/receipt: the
+document owner freezes necessary commands, relative directories, and non-secret
+invocation keys; existing scripts compare observations with current context.
+Undeclared historical proof keeps its boundary. Hashes/declarations do not prove
+execution or sufficiency, which remain Host judgments. Changed verification helps
+repository iteration only; unknown/shared impact falls back to full checks without
+reducing final framework/release gates. Existing state ownership recovers remaining
+steps for explicit archived targets, without new Git authority or parallel state.
+
+## Boundaries for adopted Multica improvements
+
+Explicit usage-limit reached/exceeded/exhausted errors are permanent provider failures and take precedence over transient congestion; a plain 403 does not imply exhausted quota. Failed physical invocations persist observed usage and telemetry through existing evidence. Unknown usage must not become a complete total after later known observations. Existing budget and recovery owners remain unchanged.
+
+Claude api_retry attempts are deduplicated. Three consecutive transient attempts stop the process while preserving failure evidence. Actual assistant/result or non-transient errors reset the sequence; other sessions are excluded. Heartbeats and duplicate logs are not actual progress. Current Codex exec --json lacks Guardian reviewId, riskLevel, status, and turnId; app-server interruption and excludeTurns cannot be copied into that transport.
+
+MCP captures build provenance at startup for diagnosis. A full commit requires a clean build at the matching Git root; missing, malformed, dirty, or non-Git provenance is unknown. The existing content fingerprint remains the sole stale-runtime owner. Runtime cwd HEAD cannot substitute for startup provenance.
+
+Tests isolate HOME, USERPROFILE, APPDATA, LOCALAPPDATA, and XDG with per-key restoration. Preserve parent TMP/TEMP and existing Superflow configuration and use dedicated task paths. Simulated platform variables are not Windows machine validation. The three Agent JSON protocols and managed state ownership remain compatible.
+
+## Global chain review and upgrade boundaries
+
+Report conclusions, placeholders, and archive readiness come from Markdown body text. Delivery and archive gates reuse canonical lint parsing; example PASS cannot override current FAIL. Raw execution logs and test counts remain raw evidence. Targets with `.sdd/state.yaml` route through Superflow archive; pure OpenSpec shortcuts own no SDD state and cannot bypass its existing gate.
+
+Runtime fingerprints cover current package metadata and the canonical assets closure. Script/Skill-only updates invalidate old MCP/services; build provenance remains diagnostic. Service reuse and termination compare persisted OS creation time and command identity, rechecking immediately before signaling. Legacy live services without identity, reused PIDs, and unobservable identity fail closed without killing unknown processes. Failed startup must not let a new service claim tasks before its one-time handshake; the existing service owner retains control without a new Task/Run state machine or Agent protocol.
+
+For a legacy live service without identity, users inspect the process and tasks, stop the confirmed old service, then restart the Host and resume. Host restart alone does not guarantee detached-service exit. Selected update platforms apply to registered projects, dependencies, and MCP; project inventories must not silently add another host.

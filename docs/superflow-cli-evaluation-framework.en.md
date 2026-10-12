@@ -103,3 +103,37 @@ operator must first fix version, task complexity, Host/Executor, and environment
 Do not mix models, task profiles, or versions and call the result a cost trend.
 
 With insufficient samples, label the result an observation, not a general claim.
+
+## Change-scoped maintenance verification
+
+During Superflow repository iteration, inspect a deterministic plan with
+`npm run --silent verify:changed -- --base <ref> --plan --json`, then omit --plan to execute.
+`--language zh|en` / SUPERFLOW_LANG selects output. --full explicitly retains npm
+test. Unknown/shared source, installation, package metadata, and Agent-rule changes
+fall back to full checks with reasons. Only verified isolated leaves have narrow
+mappings; similar names do not establish test ownership. This repository helper
+never decides business sufficiency or replaces final full/build/install/release
+checks. Plan mode executes nothing; failures retain exit codes and detailed logs
+use stderr for structured output.
+
+## Multica mechanism adoption verification (2026-10-12)
+
+Evidence: quota can be obscured by token-refresh/403 messages; failed calls lose usage; unknown cumulative values revive; duplicate retry events pollute sequences; HOME-only isolation misses Windows profiles; version numbers cannot identify startup builds. The preceding Comet baseline passed 855 tests across 104 files.
+
+Hypothesis: extend existing failure classification, invocation evidence, process supervision, fixture environment, and build finalization without adding Skills, Hooks, or state machines. Independent review found adapter/Runner classification inconsistency; the fix shares the existing failure owner and tests permanent usage limits against temporary concurrency limits.
+
+Representative cases: 403 usage limits receive no credit or automatic retry; failed physical calls contribute usage once; known→unknown→known and unknown→success remain unknown; duplicate attempts, foreign sessions, policy rejection, and late same-chunk success; clean/dirty/nested/non-Git provenance; outer environment restoration and preserved TMP/TEMP. New regression cases were observed failing before passing. Fixture verification uses neither external models nor business databases.
+
+Limits: these checks establish mechanism and installation behavior, not provider reliability, development success rates, or Windows machine compatibility. Codex app-server Guardian and excludeTurns are not copied. Revert affected changes if classification credits, usage duplication, unknown revival, environment leakage, false provenance, or changed stale gating appear; retain failure evidence and rerun representative cases and final full gates after repair.
+
+Final result: all 908 tests across 106 files passed, together with full type checking, ESLint, design/managed gates, and strict Skill Registry audit (16/16, zero English mirror gaps). Independent five-axis review found and closed two classification issues. The 404-file npm package installed into a temporary consumer; a real MCP process verified unknown startup provenance, immutable startup identity across metadata replacement, and rejection after installed-code change. No Windows machine, external model, or business database validation was performed. No commit, release, or global npm CLI replacement was made. Log: `/tmp/superflow-multica-verification-final.log`.
+
+## 0.5.22 global chain review
+
+Baseline: 908 tests across 106 files after Multica adoption. Isolated reproduction found delivery falsely rejecting fenced TODO/CASE_PASS, archive accepting example PASS over body FAIL, pure OpenSpec entry bypassing SDD closeout, selected-agent refresh expanding to another host, asset-only updates escaping MCP staleness, and reused service PIDs exposing unrelated processes to termination. Owners are canonical lint/archive gates, Skill Registry routing, update-target resolution, and runtime service management.
+
+Hypothesis: share body facts, clarify SDD routing, filter selected platforms, and complete fingerprint closure and OS-identity/startup checks without parallel Skills, Hooks, or Task/Run state machines. Positive/negative cases include real body TODO/FAIL, fenced examples, BLOCKED document freezes, moved archive recovery, single/both-agent updates, asset replacement, valid service reuse, legacy unknown identity, reused PIDs, and failed startup identity observation. New regressions were observed RED before GREEN; fixtures prove neither external-model compliance nor Windows machine behavior.
+
+Revert affected owner changes if body FAIL is admitted, valid closeout is rejected, platform writes expand, stale detection is lost, an unverified process is stopped, failed startup claims tasks, or extra calls are introduced. Retain raw evidence, repair, and rerun representative positive/negative cases and full release gates.
+
+Final stable-source result: all 968 tests across 107 files passed, with type checking, ESLint, global/managed design gates, and strict Skill audit. Independent five-axis review reproduced and closed bidirectional readiness, Chinese closeout compatibility, and historical Blocked exemption issues. Owned real Node fixtures cover valid readiness, abnormal exit, and live-lock conflict. Full log: `/tmp/superflow-0.5.22-verification-final.log`. Build, package, and release-artifact evidence is recorded in the 0.5.22 annotated tag release.

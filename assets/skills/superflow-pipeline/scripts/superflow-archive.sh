@@ -29,7 +29,8 @@ resolve_doc_path() {
     printf '%s\n' "$CHANGE_DIR/$value"
     return 0
   fi
-  if [[ -f "$value" ]]; then
+  if [[ "$value" == /* && -f "$value" ]]; then
+    [[ ! -L "$value" ]] || die "symbolic document link rejected: $value"
     printf '%s\n' "$value"
     return 0
   fi
@@ -47,11 +48,13 @@ annotate_frontmatter() {
   local tmp
 
   [[ -f "$file" ]] || return 0
+  [[ ! -L "$file" ]] || die "symbolic document link rejected: $file"
   tmp="$(mktemp)"
   chmod 600 "$tmp"
 
   if head -1 "$file" | grep -q '^---'; then
     awk -v archive="$archive_name" -v status_field="$status_field" '
+      closed { print; next }
       /^archived-with:/ { next }
       status_field != "" && /^status:/ { next }
       NR == 1 && /^---/ { print; next }
@@ -59,6 +62,7 @@ annotate_frontmatter() {
         print "archived-with: " archive
         if (status_field != "") print "status: " status_field
         print
+        closed = 1
         next
       }
       { print }
@@ -129,13 +133,45 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE="$SCRIPT_DIR/superflow-state.sh"
 GUARD="$SCRIPT_DIR/superflow-guard.sh"
 VALIDATE="$SCRIPT_DIR/superflow-yaml-validate.sh"
-CHANGE_DIR="$(cd "$CHANGE_DIR" && pwd)"
+[[ ! -L "${CHANGE_DIR%/}" ]] || die "canonical change directory required; symbolic link rejected"
+CHANGE_DIR="$(cd "$CHANGE_DIR" && pwd -L)"
+for component in "$CHANGE_DIR" "$(dirname "$CHANGE_DIR")" "$(dirname "$(dirname "$CHANGE_DIR")")" "$(dirname "$(dirname "$(dirname "$CHANGE_DIR")")")"; do
+  [[ ! -L "$component" ]] || die "canonical directory required; symbolic link rejected: $component"
+done
+CHANGE_DIR="$(cd "$CHANGE_DIR" && pwd -P)"
 CHANGE_NAME="$(basename "$CHANGE_DIR")"
-PROJECT_ROOT="$(cd "$CHANGE_DIR/../../.." && pwd)"
+IS_MOVED=false
+IS_STANDARD=false
+case "$CHANGE_DIR" in
+  */openspec/changes/archive/*)
+    [[ "$(basename "$(dirname "$CHANGE_DIR")")" == archive ]] || die "canonical archive directory required"
+    PROJECT_ROOT="$(cd "$CHANGE_DIR/../../../.." && pwd -P)"
+    IS_MOVED=true
+    ;;
+  */openspec/changes/*)
+    [[ "$(basename "$(dirname "$CHANGE_DIR")")" == changes ]] || die "canonical change directory required"
+    IS_STANDARD=true
+    PROJECT_ROOT="$(cd "$CHANGE_DIR/../../.." && pwd -P)"
+    ;;
+  *) PROJECT_ROOT="$(cd "$CHANGE_DIR/../../.." && pwd -P)" ;;
+esac
+for component in "$PROJECT_ROOT/openspec" "$PROJECT_ROOT/openspec/changes" "$PROJECT_ROOT/openspec/changes/archive"; do
+  [[ ! -L "$component" ]] || die "canonical directory required; symbolic link rejected: $component"
+done
 ARCHIVE_ROOT="$PROJECT_ROOT/openspec/changes/archive"
 ARCHIVE_NAME="$CHANGE_NAME"
 
 "$VALIDATE" "$CHANGE_DIR"
+if [[ "$IS_STANDARD" == true && ( "$(field_value archived)" == true || "$(field_value phase)" == done ) ]]; then
+  die "active standard directory has archived state: $CHANGE_DIR; confirm the physical archive location first. If this was state-only closeout, repair through the existing state owner: SUPERFLOW_FORCE_PHASE=1 $STATE set '$CHANGE_DIR' phase archive; $STATE set '$CHANGE_DIR' archived false; then rerun --apply with OpenSpec available"
+fi
+if [[ "$IS_STANDARD" == true ]] && ! command -v openspec >/dev/null 2>&1; then
+  die "OpenSpec is required for standard change directory: $CHANGE_DIR; install/restore openspec, then rerun this command"
+fi
+if [[ "$(field_value archived)" == true && "$(field_value phase)" == done ]]; then
+  printf 'already archived: %s; no changes required\n' "$CHANGE_DIR"
+  exit 0
+fi
 "$GUARD" "$CHANGE_DIR" archive
 
 printf 'Archive summary:\n'
@@ -148,7 +184,11 @@ if [[ "$CHANGE_DIR" == "$PROJECT_ROOT/openspec/changes/$CHANGE_NAME" ]] && comma
   printf '%s\n' "- openspec_archive: openspec archive $CHANGE_NAME --yes"
   ARCHIVE_NAME="$(date -u '+%Y-%m-%d')-$CHANGE_NAME"
 else
-  printf '%s\n' "- openspec_archive: unavailable; fallback to state-only archive"
+  if [[ "$IS_MOVED" == true ]]; then
+    printf '%s\n' "- openspec_archive: already moved; recover remaining closeout"
+  else
+    printf '%s\n' "- openspec_archive: unavailable; fallback to state-only archive"
+  fi
 fi
 
 if [[ "$MODE" == "--dry-run" ]]; then
@@ -159,13 +199,20 @@ fi
 
 if [[ "$CHANGE_DIR" == "$PROJECT_ROOT/openspec/changes/$CHANGE_NAME" ]] && command -v openspec >/dev/null 2>&1; then
   (cd "$PROJECT_ROOT" && openspec archive "$CHANGE_NAME" --yes)
-  archived_dir=""
-  if [[ -d "$ARCHIVE_ROOT/$CHANGE_NAME" ]]; then
-    archived_dir="$ARCHIVE_ROOT/$CHANGE_NAME"
-  else
-    archived_dir="$(find "$ARCHIVE_ROOT" -maxdepth 1 -mindepth 1 -type d -name "*-$CHANGE_NAME" 2>/dev/null | head -1 || true)"
+  candidates=()
+  if [[ -d "$ARCHIVE_ROOT" ]]; then
+    for candidate in "$ARCHIVE_ROOT"/*; do
+      [[ -d "$candidate" ]] || continue
+      candidate_name="$(basename "$candidate")"
+      if [[ "$candidate_name" == "$CHANGE_NAME" || "$candidate_name" == *-"$CHANGE_NAME" ]]; then
+        [[ ! -L "$candidate" ]] || die "canonical archive directory required; symbolic link rejected"
+        candidates+=("$candidate")
+      fi
+    done
   fi
-  [[ -n "$archived_dir" && -d "$archived_dir" ]] || die "openspec archive completed but archive dir was not found"
+  [[ "${#candidates[@]}" -gt 0 ]] || die "openspec archive completed but archive dir was not found; supply explicit archive path"
+  [[ "${#candidates[@]}" -eq 1 ]] || die "multiple archive targets found; supply explicit archive path"
+  archived_dir="${candidates[0]}"
   ARCHIVE_NAME="$(basename "$archived_dir")"
   CHANGE_DIR="$(cd "$archived_dir" && pwd)"
   annotate_archive_docs "$ARCHIVE_NAME"

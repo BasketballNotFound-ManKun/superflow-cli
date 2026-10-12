@@ -170,6 +170,40 @@ export function validateCoverage(root, review, issues, checkCode = true) {
     )
       issues.push(`用例 ${test.id} 的 evidenceKind 无效`);
 
+    if (Object.hasOwn(test, "executionContext")) {
+      const context = test.executionContext;
+      const environmentKeys = context?.environmentKeys;
+      const supported = [
+        "PATH",
+        "PATHEXT",
+        "NODE_ENV",
+        "NODE_OPTIONS",
+        "LANG",
+        "LC_ALL",
+        "TZ",
+        "JAVA_HOME",
+      ];
+      if (
+        !context ||
+        typeof context !== "object" ||
+        Array.isArray(context) ||
+        Object.keys(context).sort().join(",") !== "argv,cwd,environmentKeys" ||
+        !Array.isArray(context.argv) ||
+        !context.argv.length ||
+        context.argv.some((arg) => !nonempty(arg)) ||
+        !nonempty(context.cwd) ||
+        path.isAbsolute(context.cwd) ||
+        path.win32.isAbsolute(context.cwd) ||
+        /^[A-Za-z]:/.test(context.cwd) ||
+        !Array.isArray(environmentKeys) ||
+        environmentKeys.some((key) => !supported.includes(key)) ||
+        new Set(environmentKeys).size !== environmentKeys.length
+      )
+        issues.push(
+          `用例 ${test.id} 的 executionContext 必须冻结 argv、相对 cwd 与受支持的非秘密 environmentKeys`,
+        );
+    }
+
     const layer = test.testLayer;
     const realDatabase = ["database", "http-entry"].includes(layer);
     if (

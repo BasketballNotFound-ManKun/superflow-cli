@@ -161,3 +161,5 @@ owning risk, dispatch, or final conclusions.
 - Are mock-only results clearly labeled?
 - Did workers stay inside allowed file boundaries?
 - Did hooks and guard scripts pass?
+
+Use spaces and explicit closure for report container fences. Tab-delimited list/quote fences currently fail structural verification: normalize report formatting without using an earlier DONE/PASS to bypass it. Preserve tabs in original execution logs; do not rewrite evidence for formatting.

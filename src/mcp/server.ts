@@ -228,7 +228,7 @@ export function createSuperflowMcpServer(
     {
       title: "读取 Superflow MCP 运行时 / Read MCP runtime",
       description:
-        "返回当前 MCP 进程的版本、启动时间和运行时指纹，并判断本地安装是否已变化。Returns the MCP process version, start time, runtime fingerprint, and whether the installed runtime changed after startup.",
+        "返回当前 MCP 进程的版本、启动时间、构建来源（未知为 null）和运行时指纹，并判断本地安装是否已变化。Returns the MCP process version, start time, build provenance (null when unknown), runtime fingerprint, and whether the installed runtime changed after startup.",
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,

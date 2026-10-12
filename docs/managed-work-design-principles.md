@@ -526,3 +526,30 @@ Mock 只证明隔离逻辑，SQL生成/绑定、同类型数据库集成与真�
 独立视角只接收必要 diff、合同、规则与证据的隔离包，不继承实现聊天历史；
 Host 对所有 finding 核实、证伪、去重并一次汇总，持有最终结论。子代理不持有
 状态、应用/数据库或最终评审结果，不启动嵌套监督；已有三个 JSON 协议不变。
+
+## Comet 改进的承接边界
+
+Markdown 报告的结构标记只取正文，代码块示例不能伪造 finding、Concerns 或最终结果。
+声明式 executionContext 复用现有 coverage/receipt：文档 owner 冻结必要命令、相对目录和
+非秘密调用环境项，既有脚本核对实际观测与当前上下文；未声明历史证据保留原边界。
+哈希和声明不证明真实执行或业务充分性，仍由 Host 判断。仓库差异验证仅辅助维护迭代，
+未知/shared 影响保守执行全量，最终框架与发布检查不降级。收口由既有 state owner 恢复
+已明确的归档目标剩余步骤，不增加 Git 授权或另建状态机。
+
+## Multica 改进的承接边界
+
+明确 usage-limit reached/exceeded/exhausted 属于永久供应商故障，优先于临时限流；普通 403 不据此推断额度耗尽。失败物理调用也将观测到的 usage 与 telemetry 写入现有运行证据；未知用量不能在后续已知调用后恢复成完整累计值。沿用既有预算与恢复 owner，不另建记账状态机。
+
+Claude 的 api_retry 按 attempt 去重，连续临时重试达到三次后停止进程并保留失败证据；实际 assistant/result 或非临时错误重置序列，其他 session 不参与。心跳与重复日志不算实际进展。当前 Codex 使用 exec --json，该协议没有 Guardian 的 reviewId、riskLevel、status 或 turnId，不能照搬 app-server 熔断或 excludeTurns。
+
+MCP 启动捕获构建来源用于诊断；完整 commit 仅来自干净且根目录匹配的构建，缺失、损坏、脏工作区或非 Git 来源标未知。现有内容指纹仍是运行时过期判定的唯一 owner，运行时当前 Git HEAD 不可冒充启动来源。
+
+测试同时隔离 HOME、USERPROFILE、APPDATA、LOCALAPPDATA、XDG，并按键恢复环境；保留宿主 TMP/TEMP 和既有 Superflow 配置，任务目录使用专用路径。模拟平台变量不等于 Windows 实机验证。三个 Agent JSON 协议与托管状态 owner 保持兼容。
+
+## 全局链路复核与升级边界
+
+报告结论、占位与归档就绪仅采信 Markdown 正文；交付与归档门禁共同复用规范 lint 的正文解析，示例 PASS 不得覆盖当前 FAIL。原始执行日志与测试数量仍按原始证据核验。已有 `.sdd/state.yaml` 的目标统一路由 Superflow 归档，纯 OpenSpec 快捷步骤不拥有 SDD 状态，也不能绕过既有归档 gate。
+
+安装指纹覆盖当前包元数据和规范 assets 闭包；纯脚本/Skill 更新也使旧 MCP/服务失效，构建来源元数据仍只作诊断。后台服务复用与停止必须核对落盘 OS 创建时间和命令身份，并在发送停止信号前重新核验；缺身份的历史活服务、PID 复用或无法观测均失败关闭，不能自动杀未知进程。启动失败不允许新服务先领取任务；一次性握手仍由现有 service owner 管理，不新增 Task/Run 状态机或 Agent 协议。
+
+历史活服务缺身份时，需要用户先核对进程与任务，停止已确认的旧服务后再重启 Host 恢复；单独重启 Host 不保证 detached 后台服务退出。更新所选平台必须贯穿登记项目、依赖与 MCP 刷新，不得由项目清单暗中扩大到另一宿主。

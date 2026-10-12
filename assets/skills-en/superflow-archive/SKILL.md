@@ -40,6 +40,26 @@ do not mark archived until the user confirms final closeout.
    ~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <change-dir> --apply
    ```
 
+## Recovery after archive relocation
+
+If OpenSpec moved the directory but annotation/state closeout failed, preserve
+artifacts and raw errors. Identify the exact `openspec/changes/archive/<archive-name>`
+from this archive's output or actual operation record. Never guess a historical
+same-name directory or repeat archive from the missing old path. Use the helper:
+
+```bash
+~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <explicit-archived-dir> --dry-run
+# Check summary, original authorization, and remaining work; do not expand permission
+~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <explicit-archived-dir> --apply
+```
+
+Moved directories resume only remaining annotations and the original state
+transition, retaining validate/guard. Correct done + archived state returns
+read-only idempotently. Nonstandard tasks keep the existing state-only fallback.
+Check actual state.yaml, technical/design/plan annotations, and output; missing
+or conflicting facts remain blocked. No automatic commit/push/merge, repeated
+OpenSpec merge, or second closeout state machine.
+
 ## Rules
 
 - Do not archive if verification failed or is only partially verified unless

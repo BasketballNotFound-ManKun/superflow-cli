@@ -18,6 +18,11 @@ and Mapper XML files together when they share a bundle. Do not treat this
 mechanical inventory as a correctness verdict: findings still need source
 anchors, a fresh reading of the affected call path, and independent judgment.
 
+复用检查存在 executionContext 声明时，独立核对当前命令、cwd、已选环境、源码、
+构建和入口；调用环境与冻结要求不同时不能沿用 PASS。未声明旧证据保留原边界，
+不以 JSON 存在或哈希一致代替执行真实性/业务充分性。
+
+
 ## 五维与独立评审入口
 
 代码质量评审必须读取[统一 Reviewer 清单](../superflow-pipeline/references/reviewer-checklist.md)，

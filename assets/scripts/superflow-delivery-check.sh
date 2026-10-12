@@ -139,14 +139,31 @@ has_staged_file() {
   printf '%s\n' "$CHANGED" | grep -Fxq "$path"
 }
 
+read_report_body() {
+  python3 - "$LINT" "$1" <<'PYBODY'
+import runpy, sys
+from pathlib import Path
+module = runpy.run_path(sys.argv[1])
+lines, ambiguous = module["markdown_body_lines"](Path(sys.argv[2]).read_text())
+if ambiguous:
+    raise SystemExit("report Markdown body is ambiguous")
+print("\n".join(lines))
+PYBODY
+}
+
 check_no_open_placeholders() {
   local file="$1"
+  local body
   if [ ! -f "$file" ]; then
     fail "[$file] 文件不存在"
     return
   fi
 
-  if grep -Eiq '待执行|待补充|后续补测|后续测试|TODO|测试报告待更新|验证待回填' "$file"; then
+  if ! body="$(read_report_body "$file")"; then
+    fail "[$file] 无法确定报告正文，不能沿用交付结论"
+    return
+  fi
+  if printf '%s\n' "$body" | grep -Eiq '待执行|待补充|后续补测|后续测试|TODO|测试报告待更新|验证待回填'; then
     fail "[$file] 仍包含待执行/待补充/TODO 类交付占位"
   else
     ok "[$file] 未发现明显交付占位"
@@ -155,7 +172,12 @@ check_no_open_placeholders() {
 
 check_has_closeout_status() {
   local file="$1"
-  if grep -Eiq 'Real integration passed|Partially verified|Partial real entry|Blocked|真实入口|真实接口|验证闭环|阻塞|部分验证' "$file"; then
+  local body
+  if ! body="$(read_report_body "$file")"; then
+    fail "[$file] 无法确定报告正文，不能沿用交付结论"
+    return
+  fi
+  if printf '%s\n' "$body" | grep -Eiq 'Real integration passed|Partially verified|Partial real entry|Blocked|真实入口|真实接口|验证闭环|阻塞|部分验证'; then
     ok "[$file] 包含交付结论"
   else
     fail "[$file] 缺少 Real integration passed / Partially verified / Blocked 等交付结论"
@@ -222,7 +244,10 @@ import runpy, sys
 from pathlib import Path
 module = runpy.run_path(sys.argv[1])
 text = Path(sys.argv[2]).read_text()
-lines = text.splitlines()
+lines, ambiguous = module["markdown_body_lines"](text)
+if ambiguous:
+    print("INVALID")
+    raise SystemExit
 header = next((i for i, line in enumerate(lines) if module["CASE_EVIDENCE_HEADER"].fullmatch(line.strip())), None)
 active_pass = False
 if header is not None:
@@ -233,9 +258,14 @@ if header is not None:
 print("CASE_PASS" if active_pass else module["final_report_result"](text))
 PYFINAL
 )" || return 1
-  case "$final_result" in PASS|CONFLICT|CASE_PASS) return 1 ;; esac
-  grep -Eiq 'Blocked|阻塞' "$file" \
-    && grep -Eiq 'SDD 文档|文档阶段|范围收口|范围冻结|任务冻结|不包含代码实现|没有 Java 实现变更|未进入实现|当前报告记录可交付边界' "$file"
+  case "$final_result" in
+    BLOCKED|MISSING) ;;
+    *) return 1 ;;
+  esac
+  local body
+  body="$(read_report_body "$file")" || return 1
+  printf '%s\n' "$body" | grep -Eiq 'Blocked|阻塞' \
+    && printf '%s\n' "$body" | grep -Eiq 'SDD 文档|文档阶段|范围收口|范围冻结|任务冻结|不包含代码实现|没有 Java 实现变更|未进入实现|当前报告记录可交付边界'
 }
 
 DOC_FREEZE_ALLOWED=0

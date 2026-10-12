@@ -83,3 +83,19 @@ function remediation(
   };
   return messages[reason][zh ? 0 : 1];
 }
+
+export function isPermanentProviderFailure(message: string): boolean {
+  return /(?:usage[ _-]+limit[ _-]+(?:has[ _-]+been[ _-]+)?(?:reached|exceeded|exhausted)|(?:reached|exceeded)[^\n]{0,40}usage[ _-]+limit|token[ _-]+plan|credit[ _-]+balance[^\n]{0,40}(?:exhausted|depleted|insufficient)|insufficient[ _-]+credit[ _-]+balance|用量上限|套餐|quota.?exhaust|insufficient.?quota|error.?code\s*2056|\b2056\b|billing|payment required|auth[_ ]?unavailable\s*:|账号池没有可用账号)/i.test(
+    message,
+  );
+}
+
+
+export function isCreditableTransientProviderFailure(message: string): boolean {
+  if (isPermanentProviderFailure(message)) {
+    return false;
+  }
+  return /(\b429\b|\b529\b|rate.?limit|concurrent[ _-]+requests?[ _-]+limit|overloaded|访问量过大|暂时.*限流|temporar(?:y|ily).*(?:busy|unavailable)|connection (?:refused|reset|closed)|unable to connect|socket hang up|\bECONN[A-Z]*\b|连接(?:被拒绝|重置|关闭)|无法连接)/i.test(
+    message,
+  );
+}

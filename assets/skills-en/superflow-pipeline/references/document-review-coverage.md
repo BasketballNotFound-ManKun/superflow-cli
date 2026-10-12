@@ -176,3 +176,35 @@ boolean differs from number (true cannot prove one affected row), including nest
 arrays/objects. Documents and independent review choose business keys and fields.
 
 Git delivery compares normalized index objects for tracked report dependencies (receipts, raw events, builds, source, schema/contracts). A working-tree-only repair does not prove the commit snapshot. Private untracked evidence is not forced into Git; independent review still determines source/build applicability.
+
+## Declared execution context and evidence reuse
+
+Reuse coverage/receipt v1. When reusing checks sensitive to commands, working
+directories, or invocation environments, the document owner freezes tests.md and
+its case `executionContext={argv:[arguments],cwd:directory relative to change,environmentKeys:[names]}`.
+argv is nonempty and explicit; cwd is relative without drive prefixes or absolute
+paths. Task permissions and source/contracts still define read scope: cwd grants
+no additional access. Implementers cannot redesign this contract.
+
+Supported keys are PATH, PATHEXT, NODE_ENV, NODE_OPTIONS, LANG, LC_ALL, TZ, JAVA_HOME.
+Select only keys affecting this verification command. Passwords, tokens, account
+credentials, and full environments never enter contracts/receipts. Use project
+verification entries with runtime authentication; never put secrets in argv/docs.
+Absent and empty differ: each digest is UTF-8 SHA-256(JSON.stringify(string or null)).
+Receipts and raw events record
+`executionContext={cwd:actual canonical absolute directory,environmentSha256:{selectedName:digest}}`.
+Actual execution entries generate observations, not Agents filling expected values.
+
+Existing lint compares actual command.argv with frozen argv, receipt/event context,
+cwd with the frozen directory relative to the current change, and selected hashes
+with its current invocation environment. Run lint in the tests.md invocation
+context. Unselected environment changes do not invalidate proof; selected keys,
+commands, directories, source, builds, or targets changing prevent old proof from
+closing current complete PASS. This does not prove remote-service startup
+environments: engines, production chains, and sufficiency need independent review.
+
+Historical contracts without the field retain existing source/build/entry checks
+and their conclusions, without claiming this new context verification. Declared
+contracts with missing/malformed/mismatched observations need evidence, not editing
+old observations to expectations. Contract changes return to the document owner
+for renewed review rather than weakening execution checks.

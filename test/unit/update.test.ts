@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { initState } from '../../src/domains/state.js';
 import {
   buildPackageUpdateArgs,
   buildOpenSpecUpdateArgs,
@@ -12,6 +13,7 @@ import {
   formatDependencyUpdateCommands,
   formatPackageUpdateCommand,
   resolveUpdateLanguage,
+  resolveUpdateTargetsFromState,
   skillsRootForLanguage,
   persistUpdateLanguage,
 } from '../../src/app/commands/update.js';
@@ -32,6 +34,33 @@ describe('commands/update', () => {
     expect(plan.scripts.names).toContain('superflow-hook-guard.sh');
     expect(plan.hooks.names).toContain('codex-auto-backup-hook.sh');
     expect(plan.mcp).toEqual({ enabled: true, agents: ['codex'] });
+  });
+
+  it('keeps registered-project refresh within the selected agent boundary', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-update-agent-'));
+    try {
+      const state = initState('0.5.21', 'codex');
+      state.managedProjects = { projects: [{
+        root, agents: ['codex', 'claude'], scope: 'project',
+        hooks: [], registeredAt: '2026-10-12',
+      }] };
+      const selected = resolveUpdateTargetsFromState(root, ['codex'], 'global', state);
+      expect(selected).toEqual([
+        { agent: 'codex', scope: 'global', projectPath: root },
+        { agent: 'codex', scope: 'project', projectPath: root },
+      ]);
+      const plan = createUpdatePlan(
+        [...new Set(selected.map(target => target.agent))],
+        'global', root, true, selected,
+      );
+      expect(plan.mcp.agents).toEqual(['codex']);
+      expect(plan.packageUpdate.commands.some(command => command.startsWith('claude ')))
+        .toBe(false);
+      expect(resolveUpdateTargetsFromState(root, ['codex', 'claude'], 'global', state))
+        .toHaveLength(4);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('preserves the installed English language during update', () => {

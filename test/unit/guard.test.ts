@@ -1492,6 +1492,70 @@ describe("superflow-guard.sh", () => {
     });
   });
 
+  it.each([GUARD, EN_GUARD].flatMap((guard) => [
+    "example", "final", "readiness", "aliases", "unknown", "equivalent", "legacy",
+  ].map((scope) => [guard, scope])))(
+    "uses final body closeout results before archive: %s (%s)",
+    async (guard, scope) => {
+      const change = path.join(tmp, "custom/tasks/closeout");
+      await write(path.join(change, "tasks.md"), "- [x] 已完成\n");
+      const report = path.join(change, "test-report.md");
+      await write(report, "Verification Result: PASS\nArchive Readiness: PASS\n");
+      await execFileAsync("bash", [STATE, "init", change, "hotfix", "archive"]);
+      for (const [key, value] of [
+        ["verify_result", "pass"],
+        ["verification_report", "test-report.md"],
+        ["branch_status", "handled"],
+        ["verified_at", "2026-10-12T00:00:00Z"],
+      ]) {
+        await execFileAsync("bash", [STATE, "set", change, key, value]);
+      }
+      await expect(execFileAsync("bash", [guard, change, "archive"]))
+        .resolves.toMatchObject({ stdout: expect.stringContaining("guard passed") });
+      const failures: Record<string, string[]> = {
+        example: [
+          "验证结果: FAIL\n归档就绪: FAIL\n```text\n验证结果: PASS\n归档就绪: PASS\n```\n",
+        ],
+        final: [
+          "验证结果: PASS\n归档就绪: PASS\n验证结果: FAIL\n归档就绪: FAIL\n",
+          "Verification Result: PASS\nArchive Readiness: PASS\n验证结果: FAIL\n归档就绪: FAIL\n",
+        ],
+        readiness: [
+          "Verification Result: PASS\nArchive Readiness: PASS\nArchive Readiness: FAIL\n",
+          "Verification Result: PASS\nArchive Readiness: PASS\n归档就绪: FAIL\n",
+        ],
+        aliases: [
+          "验证结果: PASS\n归档就绪: PASS\n验证结果: 失败\n",
+          "Verification Result: PASS\nArchive Readiness: PASS\n归档就绪: 失败\n",
+        ],
+        unknown: [
+          "验证结果: PASS\n归档就绪: PASS\n验证结果: 未知\n",
+          "Verification Result: PASS\nArchive Readiness: PASS\nArchive Readiness: 未知\n",
+        ],
+        equivalent: [],
+        legacy: [],
+      };
+      for (const text of failures[scope]) {
+        await write(report, text);
+        await expect(execFileAsync("bash", [guard, change, "archive"]))
+          .rejects.toMatchObject({ code: 1 });
+      }
+      const passes = scope === "readiness" ? [
+        "Verification Result: PASS\nArchive Readiness: READY\n",
+      ] : scope === "equivalent" ? [
+        "验证结果: 通过\n归档就绪: 就绪\n",
+        "Verification Result: PASS\n验证结果: 通过\nArchive Readiness: READY\n归档就绪: 就绪\n",
+      ] : scope === "legacy" ? [
+        "验证结论: 通过\n归档就绪: 就绪\n",
+      ] : [];
+      for (const text of passes) {
+        await write(report, text);
+        await expect(execFileAsync("bash", [guard, change, "archive"]))
+          .resolves.toMatchObject({ stdout: expect.stringContaining("guard passed") });
+      }
+    },
+  );
+
   it("requires test-environment fingerprint for full verification", async () => {
     const change = await makeCrossServiceChange();
     await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");

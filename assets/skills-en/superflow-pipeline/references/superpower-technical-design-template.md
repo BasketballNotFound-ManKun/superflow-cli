@@ -28,6 +28,27 @@ canonical_sources:
 - If this document conflicts with canonical sources, stop and return to
   `$superflow-docs`; do not let implementation prompts carry the conflict forward.
 
+## Directory Changes
+
+List Created / Modified / Deleted / Not created modules and key files, with
+responsibility and reuse evidence. Trees or lists are fine; annotate action,
+owner, and reason rather than names alone. Use None for empty categories.
+Not created records considered modules/helpers/caches/state/parallel entries and
+why they were rejected. Record implementation-local helper/method edits without
+automatically expanding business scope. Details within confirmed modules that
+preserve contracts need no new requirement confirmation; frozen HOW repairs still
+return to the document owner for handoff refresh and existing review. New owners,
+cross-module dependencies, allowed path scope, or acceptance obligations return
+to clarification/docs before coding. Runtime protections, source coverage, and
+existing approval rules remain; this inventory creates no parallel state.
+
+| Action | Module/file | Owner and responsibility | Reuse/evidence or rejection reason |
+|---|---|---|---|
+| Created | None / `<path>` | | |
+| Modified | None / `<path>` | | |
+| Deleted | None / `<path>` | | |
+| Not created | None / `<candidate>` | | |
+
 ## Source-Level HOW
 
 | Requirement/Scenario | Code anchor | Current behavior | Target HOW | Files/methods | Risk |

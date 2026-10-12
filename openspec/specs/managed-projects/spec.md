@@ -35,12 +35,17 @@ uninstall MUST 遍历 `managedProjects`，逐项目清理其受管资产并从�
 
 ### Requirement: 遍历同步
 
-update MUST 遍历 `managedProjects`，将各项目的脚本与 hooks 同步到当前版本；单个项目同步失败 MUST NOT 阻断其他项目，失败项在结束时汇总输出。
+update MUST 遍历 `managedProjects`，仅将 `--agent` 所选平台的各项目脚本与 hooks 同步到当前版本；单个项目同步失败 MUST NOT 阻断其他项目，失败项在结束时汇总输出。
 
 #### Scenario: 多项目同步
 
 - **WHEN** update 运行且清单含项目 P1、P2
 - **THEN** P1、P2 的受管脚本与 hooks 均被同步到当前版本
+
+#### Scenario: 显式平台边界
+
+- **WHEN** 登记项目包含 Codex 与 Claude，update 明确选择 `--agent codex`
+- **THEN** 当前作用域与登记项目只同步 Codex，MCP 与依赖刷新不扩展为 Claude
 
 #### Scenario: 单项目失败不阻断
 

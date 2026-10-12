@@ -20,6 +20,12 @@ and Mapper XML files together when they share a bundle. Do not treat this
 mechanical inventory as a correctness verdict: findings still need source
 anchors, a fresh reading of the affected call path, and independent judgment.
 
+For declared executionContext reuse, independently check current command, cwd,
+selected environment, source, build, and entry. Changed invocation context cannot
+reuse PASS. Legacy unbound evidence retains its boundary; JSON presence/hash
+identity does not prove actual execution or business sufficiency.
+
+
 ## Five-axis and independent review entry
 
 Read the [canonical Reviewer checklist](../superflow-pipeline/references/reviewer-checklist.md)

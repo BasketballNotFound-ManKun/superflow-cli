@@ -327,3 +327,11 @@ Executor 再开一轮修复格式。
 ## 数据库验证层级与实际入口
 
 Mock 只证明隔离逻辑，SQL生成/绑定、同类型数据库集成与真实HTTP入口分别冻结并记录。涉及持久化、CAS、事务或数据驱动行为时，Agent 必须在设计/tests 与既有coverage冻结引擎版本、生产statement、schema来源、mock边界及数据断言；必要DB不可Mock/H2/SQLite替代MySQL。CLI只核验声明与运行事实，不靠关键词决定必要性。旧入口引用须由安装器委托同一规范脚本，并由doctor诊断内容/执行权限漂移；未知/自定义入口保留。历史证据按明确入口、源码与构建版本保留，不放行另一版本。托管角色、协议和状态owner不变。
+
+### MCP 运行时构建诊断
+
+`superflow_managed_runtime` 在现有运行时身份中追加可选 `buildCommit`：完整构建 commit 或 `null`（未知）。启动时捕获；不读取调用方工作区 HEAD，也不随安装元数据替换改写已启动身份。此字段只供来源诊断，不证明执行、充分性或供应链真实性；内容指纹仍裁决过期。Handoff、Executor Delivery 和 Host Review 三个 JSON 协议不变。
+
+### 后台服务身份与启动握手
+
+`service.json` 可选追加 `processIdentity`（OS 创建时间、命令），供既有服务 owner 在复用与停止前核验；历史缺字段的活进程不自动收编或停止。自动启动使用一次性 token 在父身份核验与子进程领取任务之间握手，启动失败保留可诊断事实。此内部启动约束不改变 Handoff、Executor Delivery、Host Review 或 Task/Run 合同。

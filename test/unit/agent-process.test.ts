@@ -1,9 +1,16 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
+import spawn from "cross-spawn";
+
+vi.mock("cross-spawn", () => ({ default: vi.fn() }));
 import * as agentProcess from "../../src/platform/agent-process.js";
 import {
+  AgentInvocationFailure,
+  LocalAgentInvoker,
   agentProcessInput,
   buildAgentEnvironment,
   buildAgentCommand,
@@ -317,6 +324,211 @@ describe("agent process command", () => {
     ).toBe(false);
   });
 
+  it.each(["usage limit reached", "usage limit exceeded", "usage limit exhausted",
+    "usage limit has been reached", "payment required", "用量上限", "套餐"])(
+    "does not turn permanent provider failure %s into a temporary circuit", reason => {
+      expect(shouldStopClaudeRetry({ type: "system", subtype: "api_retry",
+        attempt: 3, error_status: 429, error: reason })).toBe(false);
+    },
+  );
+
+  it.each(["concurrent request limit reached", "concurrent requests limit reached"])(
+    "stops a confirmed temporary 403 concurrency failure %s", reason => {
+      expect(shouldStopClaudeRetry({ type: "system", subtype: "api_retry",
+        attempt: 3, error_status: 403, error: reason })).toBe(true);
+    },
+  );
+
+  it.each(["credit balance exhausted", "insufficient credit balance", "token_plan exhausted"])(
+    "keeps %s permanent after sharing the provider classifier", reason => {
+      expect(shouldStopClaudeRetry({ type: "system", subtype: "api_retry",
+        attempt: 3, error_status: 429, error: reason })).toBe(false);
+    },
+  );
+
+  it("does not treat a temporary concurrency quota as billing exhaustion", () => {
+    expect(shouldStopClaudeRetry({ type: "system", subtype: "api_retry",
+      attempt: 3, error_status: 429,
+      error: "concurrent request quota temporarily rate limited" })).toBe(true);
+  });
+
+  it("does not classify permanent quota as a transient Claude retry", () => {
+    expect(
+      shouldStopClaudeRetry({
+        type: "system",
+        subtype: "api_retry",
+        attempt: 3,
+        error_status: 429,
+        error: "insufficient_quota: billing limit reached",
+      }),
+    ).toBe(false);
+  });
+
+  it("breaks a live retry stream while preserving usage and rejecting late success", async () => {
+    const child = fakeChild();
+    vi.mocked(spawn).mockReturnValue(child as ReturnType<typeof spawn>);
+    const invocation = fixture("claude", "executor");
+    const progress = vi.fn();
+    const telemetry = vi.fn();
+    invocation.onProgress = progress;
+    invocation.onTelemetry = telemetry;
+    const pending = new LocalAgentInvoker()
+      .invoke(invocation)
+      .catch((error) => error);
+    const session = "00000000-0000-4000-8000-000000000001";
+    emit(child, { type: "system", subtype: "init", session_id: session });
+    emit(child, {
+      type: "assistant",
+      usage: { input_tokens: 120, output_tokens: 12 },
+    });
+    child.stderr.write("original diagnostic");
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      emit(child, {
+        type: "system",
+        subtype: "api_retry",
+        attempt,
+        error_status: 429,
+        error: "rate limited",
+        session_id: session,
+      });
+    }
+    const error = await pending;
+    expect(error).toBeInstanceOf(AgentInvocationFailure);
+    expect(error.usage).toMatchObject({ inputTokens: 120, outputTokens: 12 });
+    expect(error.sessionId).toBe(session);
+    expect(error.stderr).toContain("original diagnostic");
+    expect(error.stdout).toContain('"attempt":3');
+    expect(error.telemetry).toBeDefined();
+    const count = telemetry.mock.calls.length;
+    const progressCount = progress.mock.calls.length;
+    emit(child, {
+      type: "result",
+      structured_output: { status: "ready_for_review" },
+      usage: { output_tokens: 999 },
+    });
+    child.emit("close", 0);
+    expect(telemetry).toHaveBeenCalledTimes(count);
+    expect(progress).toHaveBeenCalledTimes(progressCount);
+    expect(error.usage.outputTokens).toBe(12);
+  });
+
+  it("preserves a live permanent usage-limit failure for the Runner", async () => {
+    const child = fakeChild();
+    vi.mocked(spawn).mockReturnValue(child as ReturnType<typeof spawn>);
+    const invocation = fixture("claude", "executor");
+    const pending = new LocalAgentInvoker().invoke(invocation).catch(error => error);
+    emit(child, { type: "system", subtype: "api_retry", attempt: 3,
+      error_status: 429, error: "usage limit reached" });
+    child.emit("close", 1);
+    const error = await pending;
+    expect(error).toBeInstanceOf(AgentInvocationFailure);
+    expect(error.message).toContain("usage limit reached");
+    expect(error.message).not.toContain("连续出现 3 次临时");
+  });
+
+  it("keeps the session on the first circuit event and never processes later lines in the chunk", async () => {
+    const child = fakeChild();
+    vi.mocked(spawn).mockReturnValue(child as ReturnType<typeof spawn>);
+    const invocation = fixture("claude", "executor");
+    const progress = vi.fn();
+    invocation.onProgress = progress;
+    const pending = new LocalAgentInvoker()
+      .invoke(invocation)
+      .catch((error) => error);
+    for (let index = 0; index < 100; index++) {
+      emit(child, { type: "stream_event", event: { type: "ping" } });
+    }
+    const session = "00000000-0000-4000-8000-000000000001";
+    const lines =
+      [
+        {
+          type: "system",
+          subtype: "api_retry",
+          attempt: 3,
+          error_status: 529,
+          session_id: session,
+          usage: { output_tokens: 17 },
+        },
+        { type: "assistant", text: "late success" },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n") + "\n";
+    child.stdout.write(lines.slice(0, 20));
+    child.stdout.write(lines.slice(20));
+    child.emit("close", 0);
+    const error = await pending;
+    expect(error).toBeInstanceOf(AgentInvocationFailure);
+    expect(error.sessionId).toBe(session);
+    expect(error.usage.outputTokens).toBe(17);
+    expect(error.stdout).toContain("late success");
+    expect(progress).not.toHaveBeenCalledWith("late success");
+  });
+
+  it.each(["policy", "success"])(
+    "resets retry sequence after %s and ignores duplicate attempts",
+    async (reason) => {
+      const child = fakeChild();
+      vi.mocked(spawn).mockReturnValue(child as ReturnType<typeof spawn>);
+      const invocation = fixture("claude", "executor");
+      const pending = new LocalAgentInvoker()
+        .invoke(invocation)
+        .catch((error) => error);
+      const session = "00000000-0000-4000-8000-000000000001";
+      emit(child, { type: "system", subtype: "init", session_id: session });
+      const retry = (attempt: number) =>
+        emit(child, {
+          type: "system",
+          subtype: "api_retry",
+          attempt,
+          error_status: 429,
+        });
+      retry(1);
+      retry(2);
+      if (reason === "policy") {
+        emit(child, {
+          type: "system",
+          subtype: "api_retry",
+          attempt: 3,
+          error_status: 403,
+          error: "permission denied",
+        });
+      } else {
+        emit(child, { type: "assistant", message: { content: [] } });
+      }
+      retry(3);
+      retry(3);
+      retry(4);
+      emit(child, { type: "result", structured_output: { ok: true } });
+      child.emit("close", 0);
+      expect(await pending).toMatchObject({ output: { ok: true } });
+    },
+  );
+
+  it("ignores a retry from another Claude session", async () => {
+    const child = fakeChild();
+    vi.mocked(spawn).mockReturnValue(child as ReturnType<typeof spawn>);
+    const invocation = fixture("claude", "executor");
+    const session = "00000000-0000-4000-8000-000000000001";
+    invocation.sessionId = session;
+    const pending = new LocalAgentInvoker()
+      .invoke(invocation)
+      .catch((error) => error);
+    emit(child, {
+      type: "system",
+      subtype: "api_retry",
+      attempt: 3,
+      error_status: 429,
+      session_id: "00000000-0000-4000-8000-000000000002",
+    });
+    emit(child, {
+      type: "result",
+      session_id: session,
+      structured_output: { ok: true },
+    });
+    child.emit("close", 0);
+    expect(await pending).toMatchObject({ output: { ok: true } });
+  });
+
   it("records permission denials for orchestration circuit breaking", () => {
     const telemetry = updateTelemetry(initialTelemetry(), {
       type: "result",
@@ -445,4 +657,19 @@ function fixture(
     sessionId: null,
     timeout: { warningMs: 1_000, stalledMs: 2_000, hardMs: 3_000 },
   };
+}
+
+function fakeChild() {
+  return Object.assign(new EventEmitter(), {
+    stdin: new PassThrough(),
+    stdout: new PassThrough(),
+    stderr: new PassThrough(),
+  });
+}
+
+function emit(
+  child: ReturnType<typeof fakeChild>,
+  event: Record<string, unknown>,
+) {
+  child.stdout.write(`${JSON.stringify(event)}\n`);
 }

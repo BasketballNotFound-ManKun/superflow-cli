@@ -84,3 +84,34 @@ Host 必须独立评审源码、设计一致性和测试证据。自动建议必
 不同任务档位或不同版本后宣称成本趋势。
 
 样本不足时明确写“观察”，不得写成普遍结论。
+
+## 按差异选择维护验证
+
+Superflow 仓库迭代可运行 `npm run --silent verify:changed -- --base <ref> --plan --json` 查看
+确定性计划，再去掉 --plan 执行；`--language zh|en` / SUPERFLOW_LANG 控制输出。
+`--full` 显式保留完整 npm test；未知/共享源码、安装、包元数据与 Agent 规则影响自动
+回退全量并说明理由。只有已验证的隔离叶节点使用窄映射，不凭相似文件名猜测试 owner。
+这是本仓维护助手，不决定业务测试充分性，也不替代最终全量、构建、安装和发布检查。
+计划模式不执行检查，实际检查失败保留退出码，结构化输出的详细日志走 stderr。
+
+## Multica 机制吸收验证（2026-10-12）
+
+问题证据：额度错误可能被刷新 token/403 外观遮蔽；失败调用遗漏用量；累计未知值可在后续调用复活；Claude 临时重试序列混入重复事件；测试只隔离 HOME 无法约束 Windows profile；版本号不能说明启动构建来源。基线为本轮之前 Comet 验证的 104 文件、855 项通过。
+
+变更假设：扩展既有错误分类、调用证据、进程监督、fixture 环境和构建末步，可以改善这些确定性事实而无需新增 Skill、Hook 或状态机。独立复审发现 adapter 与 Runner 分类串层不一致，已要求统一既有 failure owner，覆盖永久 usage-limit 与暂时 concurrent-limit 正反例。
+
+代表实例：403 usage-limit 不抵扣、不自动重试；失败物理调用计一次用量；known→unknown→known 与 unknown→success 保持累计未知；重复 attempt、跨 session、政策拒绝及同 chunk 迟到成功；干净/脏/嵌套/非 Git 构建来源；外层环境恢复和 TMP/TEMP 保留。新回归先观察失败再通过，不用真实业务数据库或外部模型调用替代 fixture 验证。
+
+结论边界：本轮证明机制和安装行为，不证明真实供应商稳定性、研发成功率或 Windows 实机兼容性；未复制 Codex app-server Guardian 或 excludeTurns。若分类错误抵扣、重复用量、未知复活、环境泄漏、构建来源冒认或 stale gate 改变，应撤回对应实现并保留原始失败证据，修复后重跑代表案例及最终全量门禁。
+
+最终结果：106 个测试文件、908 项全部通过；完整编译检查、ESLint、设计与托管门禁、Skill Registry 严格审计通过（16/16，英文镜像缺口 0）。独立五维复审发现并关闭两项分类问题。npm 包含 404 文件，临时 consumer 安装成功；真实 MCP 进程验证启动来源未知、元数据替换不改启动身份、安装代码变更拒绝旧进程。未做 Windows 实机、真实外部模型或业务数据库验证；没有提交、发布或替换全局 npm CLI。日志：`/tmp/superflow-multica-verification-final.log`。
+
+## 0.5.22 全局链路复核
+
+基线为 Multica 吸收后的 106 文件、908 项测试。隔离复现发现：代码块 TODO/CASE_PASS 在 delivery 中误拒，正文 FAIL 被归档示例 PASS 掩盖，原生 OpenSpec 入口可绕过 SDD 收口；单平台更新被登记项目扩大为另一宿主；MCP 纯资产更新不失效、后台 PID 复用可误杀。责任分别落在规范 lint/既有归档门禁、Skill Registry 路由、更新目标解析及运行时服务 owner。
+
+假设：共享正文事实源、明确 SDD 入口边界、过滤所选平台、补齐指纹闭包与 OS 身份/启动握手，可以关闭这些断点而不增加平行 Skill、Hook 或 Task/Run 状态机。代表性正反例包含真实正文 TODO/FAIL、代码块示例、BLOCKED 文档冻结、已移动归档恢复、单/双平台更新、纯资产替换、合法服务复用、历史未知身份、PID 复用与启动身份观测失败。新增回归先 RED 后 GREEN；外部模型服从率和 Windows 实机不由这些 fixture 证明。
+
+回滚条件：误放正文 FAIL、误拒合法关闭、扩大平台写入、失去旧 MCP 过期检测、停止未核验进程、启动失败后领取任务或新增调用浪费。出现时撤回对应 owner 的改动并保留原始证据，修复后重跑关联正反例和发布完整门禁。
+
+最终稳定源码结果：107 个测试文件、968 项全部通过；编译检查、ESLint、全局/托管设计门禁及严格 Skill 审计通过。独立五维复审复现并关闭双向启动确认、中文关闭兼容、历史 Blocked 豁免问题；实际自建 Node 进程覆盖合法 ready、异常退出和活锁冲突。完整日志：`/tmp/superflow-0.5.22-verification-final.log`。构建、打包和发布产物以 0.5.22 annotated tag 的发布记录为准。

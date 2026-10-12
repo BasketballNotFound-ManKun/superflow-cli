@@ -235,16 +235,33 @@ verification_report_path() {
 
 require_closeout_markers() {
   local report="${1:-$CHANGE_DIR/test-report.md}"
+  local lint output
   if [[ ! -f "$report" ]]; then
     issues+=("verification report path does not exist: $report")
     return 0
   fi
-  if ! grep -Eiq '(Verification Result|验证结果|验证结论)[[:space:]:：|*-]*(PASS|通过)' "$report"; then
-    issues+=("verification result PASS marker not found in verification report")
-  fi
-  if ! grep -Eiq '(Archive Readiness|归档就绪)[[:space:]:：|*-]*(PASS|READY|通过|就绪)' "$report"; then
-    issues+=("archive readiness PASS marker not found in verification report")
-  fi
+  for lint in \
+    "${SUPERFLOW_REPORT_LINT:-$SCRIPT_DIR/../../../scripts/superflow-test-report-lint.py}" \
+    "$SCRIPT_DIR/../../../hooks/superflow-test-report-lint.py"; do
+    [[ -f "$lint" ]] || continue
+    if ! output="$(python3 - "$lint" "$report" <<'PYCLOSEOUT'
+import runpy, sys
+from pathlib import Path
+module = runpy.run_path(sys.argv[1])
+text = Path(sys.argv[2]).read_text()
+if module["final_report_result"](text) != "PASS":
+    print("verification result PASS marker not found in verification report")
+if module["archive_readiness_result"](text) != "PASS":
+    print("archive readiness PASS marker not found in verification report")
+PYCLOSEOUT
+)"; then
+      issues+=("verification report closeout parser failed")
+    elif [[ -n "$output" ]]; then
+      issues+=("$output")
+    fi
+    return
+  done
+  issues+=("superflow-test-report-lint.py not found for closeout guard")
 }
 
 require_branch_handled() {

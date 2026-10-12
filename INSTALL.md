@@ -741,3 +741,5 @@ Claude Code：
 
 恢复时 SDD 会读取 `superflow status`、`.sdd/state.yaml` 和 `.sdd/handoff/`
 上下文包来判断当前 phase，用户不需要手动列出这些步骤。
+
+`--agent` 同时限定当前作用域与已登记项目的刷新平台；选择 Codex 不会扩展为 Claude。`--scope` 决定当前入口的安装范围，既有受管项目仍按登记范围刷新所选平台，更新计划列出全部目标。

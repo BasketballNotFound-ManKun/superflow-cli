@@ -39,6 +39,23 @@ do not mark archived until the user confirms final closeout.
    ~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <change-dir> --apply
    ```
 
+## 归档搬迁后的恢复
+
+OpenSpec 已移动目录但文档标注或 state 收口失败时，保留现场与原始错误。
+根据本次 archive 输出或实际操作记录确认精确 `openspec/changes/archive/<archive-name>`；
+不能凭同名选择旧日期目录，也不对失效的原路径重复归档。明确目标后运行原 helper：
+
+```bash
+~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <explicit-archived-dir> --dry-run
+# 核对摘要、原授权与当前未完成步骤后继续；不扩大原归档授权
+~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <explicit-archived-dir> --apply
+```
+
+已移动目录只恢复剩余标注与原 state transition，仍需 validate/guard；done + archived 状态
+正确时只读幂等返回。非标准任务目录保留既有 state-only fallback。
+检查实际 `.sdd/state.yaml`、技术详设/设计/计划标注和输出；缺失或冲突记录阻塞。
+此恢复不自动 commit/push/merge，不重做已完成 OpenSpec 合并，不创建第二套收口状态机。
+
 ## Rules
 
 - Do not archive if verification failed or is only partially verified unless
