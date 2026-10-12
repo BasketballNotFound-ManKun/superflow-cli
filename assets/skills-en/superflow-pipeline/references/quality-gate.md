@@ -1,5 +1,9 @@
 # Quality Gate Checklist
 
+For code-quality review read [reviewer-checklist.md](reviewer-checklist.md):
+select depth from actual impact, use isolated independent views, and have the
+main Agent verify and merge findings. Templates do not redefine risk or agent counts.
+
 Check frozen signals and applicability using [test-guide.md](test-guide.md).
 Missing required environments remain blocked; inapplicability cannot remove frozen
 gates. Reuse healthy instances matching the tested build; independently inspect

@@ -41,3 +41,79 @@ the existing report lint. Focused regression ran both guards with matching resul
 Rollback if valid full-workflow verification is blocked, a Quick path is forced
 into full review, or installed Codex/Claude guards diverge. Keep the injected
 failure evidence; do not weaken the per-case lint to obtain a passing result.
+
+## ECC adoption of five-axis and independent code review (2026-10-12)
+
+Baseline: 0.5.21 / 146b2cd. The user's ake review example led to inspection of
+path/file-count risk tiers directly driving verify depth, scattered axis checks,
+and missing isolated-bundle/merge recipes. Read-only A/B/C probes confirmed that
+a read-only Mapper could receive high while atomic claims in an ordinary file
+could receive low; implementation chat does not provide a fresh perspective.
+New regressions first failed 9 checks: hint metadata 2, bilingual managed entries
+2, four installation combinations 4, bilingual help 1. Expectations were not
+weakened to hide the baseline.
+
+Ownership: existing review-coverage supplies deterministic inventories/path hints;
+reviewer-checklist owns axes, semantic depth, isolation, and finding verification;
+superflow-verify routes. The main Agent/Host owns actual risk, complete coverage,
+and the verdict. Bare diffs create no SDD state; full SDD retains frozen delivery.
+Managed prompts reference the same guide through packaged ASSETS_DIR. The three
+Agent JSON protocols, budgets, transitions, and Runner ownership are unchanged.
+No new skill/hook/durable state/model polling, fixed agent/model counts, severity
+system, or requirements-review entry was added.
+
+Hypothesis: explicit path-hint + requiresSemanticAssessment metadata and existing
+entries requiring source-backed depth, isolated necessary context, and per-axis
+coverage prevent mechanical hints or green self-reports from replacing semantic
+judgment. Unknown risk needs evidence. Permissions, raw proof, valid history, and
+existing report-anchor gates remain; strings/counts never judge axis sufficiency.
+
+Examples/results: A is a parameterized read-only Mapper filter with verified
+unchanged contract/schema/write path and checked consumers: record hint high vs
+actual medium with reasons. B adds atomic claims/shared writes to one ordinary
+file: actual high cannot be lowered by hint low. C replaces green claims with
+exact diff, contracts, selected rules, and necessary raw evidence paths; the main
+Agent verifies, falsifies, and merges by cause/impact. All updated probes passed.
+A fresh fork_turns=none reviewer then checked the exact isolated bundle: hashes
+matched for 22 changed files excluding the user's prior HTML; all five axes were
+CHECKED, with no material findings. Tests excluded by the mechanical inventory
+were still examined. The main Agent verified the diff and accepted this conclusion.
+
+Verification: full regression passed 103 files / 774 tests; final affected five
+files passed 33 tests. Lint, build, global/managed design gates, strict skill audit
+16/16, and zero English mirror gaps passed. Compiled CLI bilingual help/text and
+compatible JSON smoke passed: tier/reasons remain, hint fields are additive.
+Four-state/anchor checks were not relaxed. Independence, depth, and axis quality
+remain main-Agent semantic checks.
+
+The actual 402-file npm package installed 97 production dependencies into an
+isolated consumer, disabling postinstall to avoid real-host mutation. Installed
+CLI and bilingual Host prompts resolved readable in-package guide paths.
+Packaged deploySkill then tested Codex/Claude × both languages for two rounds,
+using the one axis entry and preserving neighboring custom skills. Source
+installation uses the same four-combination regression. Local Codex pipeline /
+verify assets were synchronized via the existing primitive; all 39 files matched
+source. Unknown files/custom drift were zero before mutation, with a temporary
+backup retained. Local Claude/agents skills were not read or changed.
+
+Managed charter audit: only Host semantic guidance is clarified. Executor runtime/
+cleanup and Runner state remain separate. Existing protocol Schema, history /
+negative protection, promotion, provider recovery, stages/preflight, MCP wait, and
+single-delivery regressions all passed in the full suite. No business API/DB/test
+strategy entered managed prompts; owner helpers and disaster certification were
+not changed.
+
+Conclusion: observed depth/axis/isolation recipe gaps are closed within scope,
+not proof that every business defect will be found. Model tokens/cost were
+unavailable, with no comparable task sample supporting general efficiency or
+success-rate claims. No version upgrade/npm release occurred. Only local
+skill assets were synchronized; new CLI hints and managed prompts still require
+formal installation of a new runtime. Reload skills in new sessions and restart
+Host/MCP under existing fingerprint gates after release installation; the old npm
+runtime was not represented as updated.
+
+Rollback if path hints again determine semantic depth, known high risk is lowered
+by small diffs, bundles exceed permission or inherit implementation chat, missing
+axes promote complete review, subagents replace Host or mutate state/environment,
+or mirrors/installed assets drift. Repair the proper owner without relaxing
+protocol or raw-evidence gates.

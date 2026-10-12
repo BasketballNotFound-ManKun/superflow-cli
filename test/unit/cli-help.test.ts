@@ -60,4 +60,12 @@ describe('core/cli-help', () => {
     expect(text.dryRun).toContain('只打印');
     expect(text.agentOption).toContain('目标');
   });
+  it('labels review risk as a hint in both help languages', () => {
+    expect(cliText('zh')).toMatchObject({
+      reviewCoverageDescription: expect.stringContaining('风险提示'),
+    });
+    expect(cliText('en')).toMatchObject({
+      reviewCoverageDescription: expect.stringContaining('risk hints'),
+    });
+  });
 });

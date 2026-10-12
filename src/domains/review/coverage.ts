@@ -16,7 +16,12 @@ export interface ReviewCoverage {
   coverage: { total: number; included: number; excluded: number };
   files: ReviewFile[];
   bundles: Record<string, string[]>;
-  risk: { tier: "low" | "medium" | "high"; reasons: string[] };
+  risk: {
+    tier: "low" | "medium" | "high";
+    reasons: string[];
+    basis: "path-hint";
+    requiresSemanticAssessment: true;
+  };
   errors: string[];
 }
 
@@ -82,19 +87,31 @@ export function resolveReviewCoverage(
     Object.entries(bundles).filter(([, paths]) => paths.length > 1),
   );
   return {
-    coverage: { total: changedFiles.length, included, excluded: changedFiles.length - included },
+    coverage: {
+      total: changedFiles.length,
+      included,
+      excluded: changedFiles.length - included,
+    },
     files,
     bundles: realBundles,
-    risk: classifyRisk(files),
+    risk: {
+      ...classifyRisk(files),
+      basis: "path-hint",
+      requiresSemanticAssessment: true,
+    },
     errors,
   };
 }
 
-function classifyRisk(files: ReviewFile[]): ReviewCoverage["risk"] {
+// Paths identify review targets; the Host judges actual impact from source.
+function classifyRisk(
+  files: ReviewFile[],
+): Pick<ReviewCoverage["risk"], "tier" | "reasons"> {
   const included = files.filter((file) => file.included);
   const highPaths = included.filter((file) =>
-    /(?:^|\/)(?:sql|migration|migrations|security|auth)(?:\/|$)|Mapper\.xml$|(?:^|\/)[^/]*Controller\.java$/i
-      .test(file.path),
+    /(?:^|\/)(?:sql|migration|migrations|security|auth)(?:\/|$)|Mapper\.xml$|(?:^|\/)[^/]*Controller\.java$/i.test(
+      file.path,
+    ),
   );
   if (highPaths.length > 0) {
     return {

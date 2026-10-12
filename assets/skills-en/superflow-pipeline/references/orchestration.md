@@ -1,5 +1,9 @@
 # Workflow Orchestration
 
+For code-quality review read [reviewer-checklist.md](reviewer-checklist.md):
+select depth from actual impact, use isolated independent views, and have the
+main Agent verify and merge findings. Templates do not redefine risk or agent counts.
+
 Inherit verification only from tests.md and read [test-guide.md](test-guide.md).
 Apply startup, API, DB, and team checklists to frozen applicable cases; give source
 reasons for inapplicability, keeping missing required environments blocked. Reuse

@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { ASSETS_DIR } from "../../platform/assets.js";
 import { resolveReviewCoverage, type ReviewRule } from "../../domains/review/coverage.js";
 import { auditReviewReport } from "../../domains/review/report.js";
+import { resolveCliLanguage } from "../../domains/config/cli-help.js";
 
 export interface ReviewCoverageOptions {
   base?: string;
@@ -27,13 +28,17 @@ export function reviewCoverageCommand(options: ReviewCoverageOptions = {}): void
     : undefined;
   if (options.json) console.log(JSON.stringify({ ...result, ...(report ? { report } : {}) }, null, 2));
   else {
+    const english = resolveCliLanguage() === "en";
     console.log(
-      `Review coverage: ${result.coverage.included}/${result.coverage.total} included, ` +
-      `${result.coverage.excluded} excluded | risk ${result.risk.tier}`,
+      english
+        ? `Review coverage: ${result.coverage.included}/${result.coverage.total} included, ` +
+          `${result.coverage.excluded} excluded | path risk hint ${result.risk.tier}; Host impact assessment required`
+        : `评审覆盖：${result.coverage.included}/${result.coverage.total} 纳入，` +
+          `${result.coverage.excluded} 排除 | 路径风险提示 ${result.risk.tier}；实际影响由 Host 判断`,
     );
     for (const file of result.files) {
       console.log(
-        `- ${file.path}: ${file.included ? file.rules.join("; ") || "generic review" : file.reason}`,
+        `- ${file.path}: ${file.included ? file.rules.join("; ") || (english ? "generic review" : "通用五维评审") : file.reason}`,
       );
     }
     for (const [bundle, paths] of Object.entries(result.bundles)) {

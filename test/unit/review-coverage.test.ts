@@ -10,6 +10,17 @@ const rules: ReviewRule[] = [
 ];
 
 describe("deterministic review coverage", () => {
+  it.each([
+    ["src/OrderMapper.xml", "high"],
+    ["src/AllocationService.ts", "low"],
+  ])("%s 的路径提示不代替实际影响评审", (file, tier) => {
+    const result = resolveReviewCoverage([file], rules);
+    expect(result.risk).toMatchObject({
+      tier,
+      basis: "path-hint",
+      requiresSemanticAssessment: true,
+    });
+  });
   it("assigns path rules and bundles related Java/XML files", () => {
     const result = resolveReviewCoverage(
       [
@@ -26,8 +37,9 @@ describe("deterministic review coverage", () => {
       "src/OrderMapper.java",
       "src/OrderMapper.xml",
     ]);
-    expect(result.files.find((file) => file.path.endsWith("OrderMapper.xml"))?.rules)
-      .toEqual(["MyBatis parameters"]);
+    expect(
+      result.files.find((file) => file.path.endsWith("OrderMapper.xml"))?.rules,
+    ).toEqual(["MyBatis parameters"]);
     expect(result.risk.tier).toBe("high");
   });
 
@@ -45,8 +57,16 @@ describe("deterministic review coverage", () => {
     const result = resolveReviewCoverage(
       ["src/OrderMapper.xml"],
       [
-        { path: "**/*Mapper.xml", rule: "Project Mapper rule", source: "project" },
-        { path: "**/*Mapper.xml", rule: "System Mapper rule", source: "system" },
+        {
+          path: "**/*Mapper.xml",
+          rule: "Project Mapper rule",
+          source: "project",
+        },
+        {
+          path: "**/*Mapper.xml",
+          rule: "System Mapper rule",
+          source: "system",
+        },
       ],
     );
 

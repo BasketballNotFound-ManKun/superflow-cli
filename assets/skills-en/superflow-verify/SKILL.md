@@ -1,6 +1,6 @@
 ---
 name: superflow-verify
-description: Use when an OpenSpec/SDD change is ready for verification, real evidence collection, test-report closure, code review, branch handling, or retry decisions after implementation.
+description: Use when reviewing code changes or verifying an SDD/OpenSpec implementation, test evidence, branch/worktree handling, or retry decisions.
 ---
 
 # SDD Verify
@@ -20,16 +20,22 @@ and Mapper XML files together when they share a bundle. Do not treat this
 mechanical inventory as a correctness verdict: findings still need source
 anchors, a fresh reading of the affected call path, and independent judgment.
 
-Use the reported risk tier to choose review depth: low may be reviewed inline;
-medium requires an independent view; high requires focused coverage of the
-named high-impact paths in addition to the ordinary Host review. Every
-reviewer report starts with `DONE`, `DONE_WITH_CONCERNS`, `BLOCKED`, or
-`NEEDS_CONTEXT`. Run `superflow review-coverage --report <file> --json` to
-validate that marker and every `file:line` finding anchor. `BLOCKED` and
-`NEEDS_CONTEXT` require more evidence before triage; `DONE_WITH_CONCERNS`
-requires Host investigation of each concern before deciding. Re-read each
-anchor and attempt to disprove the finding before assigning severity. Keep
-unverifiable claims separate rather than giving them a guessed severity.
+## Five-axis and independent review entry
+
+Read the [canonical Reviewer checklist](../superflow-pipeline/references/reviewer-checklist.md)
+for code-quality review. Follow its actual-impact depth selection, isolated bundle,
+axis coverage, finding falsification, and merging. `review-coverage` risk.tier is a
+path hint, not the actual depth: print both tiers with evidence. Ordinary code
+review enters here without creating SDD state; existing frozen contracts still
+require conformity checks. The main Agent owns the verdict, reviewers contribute
+read-only independent views, and Runner does not judge semantic risk.
+
+Use the existing four-state report with `superflow review-coverage --report <file> --json`
+for markers/anchors. It does not prove axis sufficiency: inspect raw proof yourself.
+BLOCKED/NEEDS_CONTEXT needs evidence; investigate every DONE_WITH_CONCERNS concern
+before deciding. Use isolated native subagents for medium+ when supported, adding
+focused views by independent high-risk clusters without fixed counts or models.
+Report unavailable independent review honestly.
 
 ## Review response discipline
 
@@ -71,7 +77,11 @@ revert that simplification. Keep simplification in a separate commit from the
 feature, and stop if it reaches files outside the original change. This is a
 readability pass, not a second code review or a license for unrelated cleanup.
 
-## Entry Check
+## Entry Check (SDD only)
+
+Ordinary code review returns its reviewed findings after the five-axis workflow.
+The phase state, test-delivery, branch, and archive steps below apply only to an
+associated SDD/OpenSpec delivery; do not create state for a bare diff review.
 
 Run:
 

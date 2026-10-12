@@ -118,7 +118,7 @@ Group 4: 独立模块（Bug 6, 7, 11）
 - 对 Worker 提交的代码进行 review
 - 检查编码规范、安全漏洞、性能问题
 - 验证是否符合 design.md 的设计方案
-- 使用 `code-review-java` skill 进行评审
+- 读取 [统一五维 Reviewer 清单](reviewer-checklist.md)，通过 `superflow-verify` 进行评审
 
 **必须遵守**：
 - **Worker 必须在测试前先自审代码**，不能等全部编码完成再补审
@@ -279,7 +279,7 @@ Tester 流程（Worker 启动后）：
 1. 读取修改后的文件，逐行检查
 2. 对照 design.md 检查是否按设计实现
 3. 检查：空指针风险、异常处理、事务边界、日志规范
-4. 使用 `code-review-java` skill 进行正式评审
+4. 读取 [统一五维 Reviewer 清单](reviewer-checklist.md)，通过 `superflow-verify` 进行正式评审
 5. **自审未通过不得进入编译环节**
 
 **Worker-1** 执行 Group A：
@@ -378,7 +378,7 @@ Worker 可能看到端口监听就误以为应用启动成功，但实际上：
 - **验证人**：Worker + Leader 都必须检查
 
 #### 门禁 6：代码评审门禁
-- **执行**：使用 `code-review-java` skill
+- **执行**：读取 [统一五维 Reviewer 清单](reviewer-checklist.md)，通过 `superflow-verify`
 - **通过标准**：无 CRITICAL / HIGH 级别问题
 - **验证人**：Reviewer 或 Leader
 

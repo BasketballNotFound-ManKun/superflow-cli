@@ -221,10 +221,12 @@
       "name": "superflow-verify",
       "owner": "verify",
       "triggers": [
-        "verify implementation"
+        "verify implementation",
+        "review code changes"
       ],
       "excludes": [
-        "implementation or environment execution; assess evidence read-only"
+        "implementation or environment execution; assess evidence read-only",
+        "requirement or test strategy redesign; inherit frozen contracts"
       ],
       "outputs": [
         "verification report"

@@ -22,6 +22,31 @@ afterEach(() => {
 });
 
 describe("managed work prompt snapshot", () => {
+  it.each(["zh", "en"] as const)(
+    "%s 托管评审继承同一五维规范且最终 owner 为 Host",
+    (language) => {
+      const root = fs.mkdtempSync(
+        path.join(os.tmpdir(), "managed-review-guide-"),
+      );
+      roots.push(root);
+      const contract = createManagedTaskContract({
+        request: "Review the implementation",
+        projectRoot: root,
+        language,
+      });
+      const prompt = buildReviewPrompt(contract, initManagedRunState(contract));
+      const guide = path.resolve(
+        __dirname,
+        "../../assets",
+        language === "en" ? "skills-en" : "skills",
+        "superflow-pipeline/references/reviewer-checklist.md",
+      );
+      expect(prompt).toContain(guide);
+      expect(fs.existsSync(guide)).toBe(true);
+      expect(prompt).toContain(language === "en" ? "Host owns" : "Host 持有");
+      expect(prompt).toContain(language === "en" ? "isolated" : "隔离");
+    },
+  );
   it("freezes the implementation prompt and detects later tampering", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-prompt-"));
     roots.push(root);
@@ -73,11 +98,11 @@ describe("managed work prompt snapshot", () => {
     expect(executor).toContain(
       "Return blocked whenever locally actionable blockers remain",
     );
-    expect(executor).toContain(
-      "repository-owned one-command acceptance entry",
-    );
+    expect(executor).toContain("repository-owned one-command acceptance entry");
     expect(executor).toContain("one representative setup/verification failure");
-    expect(executor).toContain("Default verification level for this task: task-level real acceptance");
+    expect(executor).toContain(
+      "Default verification level for this task: task-level real acceptance",
+    );
     expect(executor).toContain("Verification has three levels");
     expect(executor).toContain("does not rerun the helper's non-owner");
     expect(executor).toContain(
@@ -86,8 +111,12 @@ describe("managed work prompt snapshot", () => {
     expect(reviewer).toContain(
       "Host-read task rule: use the repository's shared query path.",
     );
-    expect(executor).toContain("Do not scan personal configuration directories");
-    expect(reviewer).toContain("Do not scan personal configuration directories");
+    expect(executor).toContain(
+      "Do not scan personal configuration directories",
+    );
+    expect(reviewer).toContain(
+      "Do not scan personal configuration directories",
+    );
     expect(executor).toContain("obvious data-volume or cost risk");
     expect(reviewer).toContain("identify data-volume or processing-cost risks");
     expect(executor).toContain(
@@ -200,7 +229,9 @@ describe("managed work prompt snapshot", () => {
   });
 
   it("scopes repair verification to evidence invalidated by findings", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-prompt-scope-"));
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "managed-prompt-scope-"),
+    );
     roots.push(root);
     const contract = createManagedTaskContract({
       request: "更新说明文字",

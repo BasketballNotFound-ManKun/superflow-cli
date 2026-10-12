@@ -1,6 +1,6 @@
 ---
 name: superflow-verify
-description: Use when an SDD/OpenSpec change is ready for verification, test-report closure, code review, branch/worktree handling, or retry decisions after implementation.
+description: Use when reviewing code changes or verifying an SDD/OpenSpec implementation, test evidence, branch/worktree handling, or retry decisions.
 ---
 
 # SDD Verify
@@ -18,16 +18,18 @@ and Mapper XML files together when they share a bundle. Do not treat this
 mechanical inventory as a correctness verdict: findings still need source
 anchors, a fresh reading of the affected call path, and independent judgment.
 
-Use the reported risk tier to choose review depth: low may be reviewed inline;
-medium requires an independent view; high requires focused coverage of the
-named high-impact paths in addition to the ordinary Host review. Every
-reviewer report starts with `DONE`, `DONE_WITH_CONCERNS`, `BLOCKED`, or
-`NEEDS_CONTEXT`. Run `superflow review-coverage --report <file> --json` to
-validate that marker and every `file:line` finding anchor. `BLOCKED` and
-`NEEDS_CONTEXT` require more evidence before triage; `DONE_WITH_CONCERNS`
-requires Host investigation of each concern before deciding. Re-read each
-anchor and attempt to disprove the finding before assigning severity. Keep
-unverifiable claims separate rather than giving them a guessed severity.
+## 五维与独立评审入口
+
+代码质量评审必须读取[统一 Reviewer 清单](../superflow-pipeline/references/reviewer-checklist.md)，
+按其中的实际影响分档、隔离包、五维覆盖、finding 证伪与合并步骤执行。
+`review-coverage` 的 risk.tier 是路径提示，不能直接决定实际深度；打印提示与实际档位及依据。
+普通代码评审可以直接进入此入口，不要求先创建 SDD 状态；有冻结合同则同时核验符合度。
+主 Agent 持有最终判断，Reviewer 只提供只读独立视角，Runner 不裁决语义风险。
+
+沿现有四状态报告执行 `superflow review-coverage --report <file> --json`，检查标记与锚点。
+它不证明五维充分性；主 Agent 仍须逐项核验原始证据。BLOCKED/NEEDS_CONTEXT 先补证据，
+DONE_WITH_CONCERNS 先调查全部 concern，再决定。原生子代理支持时，中档以上以隔离上下文
+派发；高档按独立风险簇追加专项视角，不固定代理数或模型。无法独立评审时如实记录缺口。
 
 ## 评审回应纪律
 
@@ -61,7 +63,10 @@ revert that simplification. Keep simplification in a separate commit from the
 feature, and stop if it reaches files outside the original change. This is a
 readability pass, not a second code review or a license for unrelated cleanup.
 
-## Entry Check
+## Entry Check (SDD only)
+
+普通代码评审完成上述五维/独立核验后直接返回评审结论；以下阶段状态、
+测试交付、分支和归档步骤仅适用于关联的 SDD/OpenSpec 交付，不为裸 diff 新建状态。
 
 Run:
 

@@ -82,10 +82,20 @@ export interface CliHelpText {
   managedAdditionalExecutorInvocationsOption: string;
   checkDescription: string;
   checkLevelOption: string;
+  reviewCoverageDescription: string;
+  reviewBaseOption: string;
+  reviewPathOption: string;
+  reviewReportOption: string;
 }
 
 const CLI_TEXT: Record<Language, CliHelpText> = {
   en: {
+    reviewCoverageDescription:
+      "Enumerate changed files, resolve path rules, and emit risk hints for Host impact assessment",
+    reviewBaseOption: "Review changes since a Git reference",
+    reviewPathOption: "Review explicit files",
+    reviewReportOption:
+      "Audit report markers and anchors; Host judges five-axis sufficiency",
     programDescription:
       "SuperBridge Flow - SDD/TDD and managed-work workflow CLI",
     initDescription: "Install and configure SuperBridge Flow",
@@ -207,6 +217,11 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     checkLevelOption: "Check level: files | docs | coding-ready",
   },
   zh: {
+    reviewCoverageDescription:
+      "枚举改动文件、解析路径规则并提供风险提示；实际影响由 Host 判断",
+    reviewBaseOption: "评审相对 Git 引用的改动",
+    reviewPathOption: "评审指定文件",
+    reviewReportOption: "核验报告状态与锚点；五维充分性由 Host 判断",
     programDescription: "SuperBridge Flow - SDD/TDD 与双 Agent 托管工作流 CLI",
     initDescription:
       "一站式安装 SuperBridge Flow（detect / deps / skills / scripts / hooks / 项目扫描）",

@@ -691,3 +691,14 @@ Full SDD reuses frozen coverage and execution-receipt.v1 to bind each entry to r
 ## Database verification layers and actual entries
 
 Mock proves isolated logic only. Freeze and record SQL generation/binding, same-engine database integration and actual HTTP entry evidence separately. For persistence/CAS/transactions/data-driven behavior, the Agent freezes engine/version, production statement, schema provenance, mock boundaries and observations in design/tests and existing coverage. Required MySQL proof cannot be replaced with Mock/H2/SQLite. CLI compares declarations with runtime facts; it does not infer necessity from keywords. Installer delegates owned legacy entries to canonical scripts; doctor diagnoses content/executable drift and preserves unknown/custom entries. Keep historical evidence bound to its entry/source/build without authorizing another revision. Managed roles, protocols and state ownership are unchanged.
+
+## Five-axis and independent code review
+
+Code-quality review references the bundled reviewer-checklist.md. Agents inspect
+security, performance, correctness, maintainability, and architecture against
+actual changes; path/size hints never determine actual risk. Independent views
+receive only necessary diff, contracts, rules, and evidence in an isolated bundle,
+not implementation chat history. Host verifies, falsifies, deduplicates, and
+submits all findings together, owning the verdict. Subagents own neither state,
+applications/databases, nor final review, and launch no nested supervisor. The
+three existing JSON protocols are unchanged.
