@@ -279,16 +279,16 @@ if [ -d "$CODEX_HOME/skills" ]; then
   done
 fi
 
-if [ -d "$BACKUP_ROOT/superflow-pipeline" ] && command -v zip >/dev/null 2>&1; then
-  if [ ! -f "$BACKUP_ROOT/superflow-pipeline.skill" ] ||
-    ! (cd "$CONFIG_REPO" && git diff --quiet -- codex-setup/superflow-pipeline); then
-    tmp_skill="${BACKUP_ROOT}/superflow-pipeline.skill.tmp.$$"
+if [ -d "$BACKUP_ROOT/superflow" ] && command -v zip >/dev/null 2>&1; then
+  if [ ! -f "$BACKUP_ROOT/superflow.skill" ] ||
+    ! (cd "$CONFIG_REPO" && git diff --quiet -- codex-setup/superflow); then
+    tmp_skill="${BACKUP_ROOT}/superflow.skill.tmp.$$"
     (
-      cd "$BACKUP_ROOT/superflow-pipeline" &&
+      cd "$BACKUP_ROOT/superflow" &&
         zip -r -0 "$tmp_skill" references agents SKILL.md >/dev/null
     )
-    if ! cmp -s "$tmp_skill" "$BACKUP_ROOT/superflow-pipeline.skill"; then
-      mv "$tmp_skill" "$BACKUP_ROOT/superflow-pipeline.skill"
+    if ! cmp -s "$tmp_skill" "$BACKUP_ROOT/superflow.skill"; then
+      mv "$tmp_skill" "$BACKUP_ROOT/superflow.skill"
     else
       rm -f "$tmp_skill"
     fi
@@ -314,7 +314,7 @@ STAGE_PATHS=(
   "codex-setup/codex配置/rules"
   "codex-setup/codex配置/memories"
   "codex-setup/setup-codex-config.sh"
-  "codex-setup/superflow-pipeline.skill"
+  "codex-setup/superflow.skill"
 )
 
 if [ -d "$CODEX_HOME/skills" ]; then

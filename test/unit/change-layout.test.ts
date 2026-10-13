@@ -11,10 +11,10 @@ function read(relativePath: string): string {
 describe("canonical OpenSpec change layout", () => {
   it("keeps versioned changes in one flat physical directory", () => {
     const assets = [
-      "assets/skills/openspec-propose/SKILL.md",
-      "assets/skills-en/openspec-propose/SKILL.md",
-      "assets/skills/superflow-pipeline/SKILL.md",
-      "assets/skills-en/superflow-pipeline/SKILL.md",
+      "assets/skills/superflow-propose/SKILL.md",
+      "assets/skills-en/superflow-propose/SKILL.md",
+      "assets/skills/superflow/SKILL.md",
+      "assets/skills-en/superflow/SKILL.md",
     ].map(read);
 
     for (const content of assets) {

@@ -46,7 +46,7 @@ SUPERFLOW_LANG=en superflow init
 2. Install OpenSpec CLI.
 3. Run native `openspec init <project> --tools ... --profile custom`.
 4. Install Superpowers for selected Claude Code/Codex agents.
-5. Try understand-anything and api-doc-changelog.
+5. Try understand-anything; API change annotation is deployed with the core skills.
 6. Deploy SuperBridge Flow/OpenSpec skills.
 7. Register hooks and rules.
 8. Scaffold `docs/sdd-context/`.
@@ -101,13 +101,13 @@ is best-effort.
 In Codex:
 
 ```text
-Use $superflow-pipeline to analyze this requirement and drive the full workflow.
+Use $superflow to analyze this requirement and drive the full workflow.
 ```
 
 In Claude Code:
 
 ```text
-/superflow-pipeline
+/superflow
 ```
 
 The workflow phases are:

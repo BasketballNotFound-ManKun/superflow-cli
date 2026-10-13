@@ -45,10 +45,10 @@ describe("superflow requirement review skill", () => {
 
   it("blocks full docs without a closed requirement review", () => {
     const guard = read(
-      "assets/skills/superflow-pipeline/scripts/superflow-guard.sh",
+      "assets/skills/superflow/scripts/superflow-guard.sh",
     );
     const englishGuard = read(
-      "assets/skills-en/superflow-pipeline/scripts/superflow-guard.sh",
+      "assets/skills-en/superflow/scripts/superflow-guard.sh",
     );
 
     for (const content of [guard, englishGuard]) {

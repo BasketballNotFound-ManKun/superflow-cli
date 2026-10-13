@@ -1,7 +1,11 @@
 ---
 name: superflow-archive
-description: Use when an OpenSpec/SDD change has passed verification and needs explicit archive confirmation, lifecycle closeout, archived state recording, or recovery from archive.
+description: Archive completed changes using SDD lifecycle gates or the pure OpenSpec procedure selected by existing state. Internal capability selected by $superflow.
 ---
+
+## Archive routing
+
+Resolve the exact change directory from the request or existing state. If it has no `.sdd/state.yaml`, read [pure OpenSpec archive](references/pure-openspec.md) and follow that procedure. If the state file exists, follow the SDD lifecycle below; failed checks must not fall back to the pure flow. The user does not choose between two skills.
 
 # SDD Archive
 
@@ -24,9 +28,9 @@ do not mark archived until the user confirms final closeout.
 
 1. Run:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh status <change-dir>
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <change-dir> --dry-run
+   ~/.codex/skills/superflow/scripts/superflow-yaml-validate.sh <change-dir>
+   ~/.codex/skills/superflow/scripts/superflow-state.sh status <change-dir>
+   ~/.codex/skills/superflow/scripts/superflow-archive.sh <change-dir> --dry-run
    ```
 2. Show the user a short archive summary:
    - change/task directory
@@ -37,7 +41,7 @@ do not mark archived until the user confirms final closeout.
 3. Ask for explicit confirmation before archive closeout.
 4. After confirmation, run:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <change-dir> --apply
+   ~/.codex/skills/superflow/scripts/superflow-archive.sh <change-dir> --apply
    ```
 
 ## Recovery after archive relocation
@@ -48,9 +52,9 @@ from this archive's output or actual operation record. Never guess a historical
 same-name directory or repeat archive from the missing old path. Use the helper:
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <explicit-archived-dir> --dry-run
+~/.codex/skills/superflow/scripts/superflow-archive.sh <explicit-archived-dir> --dry-run
 # Check summary, original authorization, and remaining work; do not expand permission
-~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <explicit-archived-dir> --apply
+~/.codex/skills/superflow/scripts/superflow-archive.sh <explicit-archived-dir> --apply
 ```
 
 Moved directories resume only remaining annotations and the original state
@@ -82,6 +86,6 @@ OpenSpec merge, or second closeout state machine.
   active path after a successful move.
 - If the user wants adjustments, run:
   ```bash
-  ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh transition <change-dir> archive-reopen
+  ~/.codex/skills/superflow/scripts/superflow-state.sh transition <change-dir> archive-reopen
   ```
   then return to verify or implement as needed.

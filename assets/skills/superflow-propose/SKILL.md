@@ -1,0 +1,135 @@
+---
+name: superflow-propose
+description: Superflow 内部能力：按 OpenSpec 创建变更提案、规格、设计和任务，供后续合同完善使用。由 $superflow 选择，用户无需手动分流。
+license: MIT
+metadata:
+  requires: openspec CLI
+  author: openspec
+  version: "1.0"
+  generatedBy: "1.3.1"
+---
+
+Propose a new change - create the change and generate all artifacts in one step.
+
+I'll create a change with artifacts:
+- proposal.md (what & why)
+- design.md (how)
+- tasks.md (implementation steps)
+
+When ready to implement, run /opsx:apply
+
+---
+
+**Input**: The user's request should include a change name (kebab-case) OR a description of what they want to build.
+
+When this skill follows `superflow-clarify`, read the confirmed change-level
+Consensus Summary and its source evidence before creating artifacts. Put the
+goal, scope, material owner decisions, rejected alternatives, migration risks,
+and non-blocking reopen triggers in canonical `proposal.md`; cite the existing
+source audit rather than copying it. A pending owner decision that changes the
+solution blocks downstream spec/design/tasks. An explicit decision in the
+user's original request needs no second confirmation.
+
+### OpenSpec canonical change 目录（阻塞级）
+
+- change 必须只有一个实体目录：`openspec/changes/<name>/`。
+- 版本归属必须编码进 `<name>`，例如版本 `v1.1.1` 的账号权限需求使用
+  `v1-1-1-account-permission-optimization`。
+- 禁止创建 `openspec/changes/v1.1.1/<feature>/` 这类嵌套版本目录。
+- 禁止为了兼容 OpenSpec CLI 再创建扁平软链接、目录副本或第二套 canonical 文档。
+- 创建、查询、校验和后续 apply 必须始终使用同一个 `<name>`：
+  `openspec new change`、`openspec status --change`、
+  `openspec validate <name> --strict` 的名称必须一致。
+
+**Steps**
+
+1. **If no clear input provided, ask what they want to build**
+
+   Use the **AskUserQuestion tool** (open-ended, no preset options) to ask:
+   > "What change do you want to work on? Describe what you want to build or fix."
+
+   From their description, derive a kebab-case name (e.g., "add user authentication" → `add-user-auth`).
+
+   **IMPORTANT**: Do NOT proceed without understanding what the user wants to build.
+
+2. **Create the change directory**
+   ```bash
+   openspec new change "<name>"
+   ```
+   This creates a scaffolded change at `openspec/changes/<name>/` with `.openspec.yaml`.
+
+3. **Get the artifact build order**
+   ```bash
+   openspec status --change "<name>" --json
+   ```
+   Parse the JSON to get:
+   - `applyRequires`: array of artifact IDs needed before implementation (e.g., `["tasks"]`)
+   - `artifacts`: list of all artifacts with their status and dependencies
+
+4. **Create artifacts in sequence until apply-ready**
+
+   Use the **TodoWrite tool** to track progress through the artifacts.
+
+   Loop through artifacts in dependency order (artifacts with no pending dependencies first):
+
+   a. **For each artifact that is `ready` (dependencies satisfied)**:
+      - Get instructions:
+        ```bash
+        openspec instructions <artifact-id> --change "<name>" --json
+        ```
+      - The instructions JSON includes:
+        - `context`: Project background (constraints for you - do NOT include in output)
+        - `rules`: Artifact-specific rules (constraints for you - do NOT include in output)
+        - `template`: The structure to use for your output file
+        - `instruction`: Schema-specific guidance for this artifact type
+        - `outputPath`: Where to write the artifact
+        - `dependencies`: Completed artifacts to read for context
+      - Read any completed dependency files for context
+      - Create the artifact file using `template` as the structure
+      - Apply `context` and `rules` as constraints - but do NOT copy them into the file
+      - Show brief progress: "Created <artifact-id>"
+
+   b. **Continue until all `applyRequires` artifacts are complete**
+      - After creating each artifact, re-run `openspec status --change "<name>" --json`
+      - Check if every artifact ID in `applyRequires` has `status: "done"` in the artifacts array
+      - Stop when all `applyRequires` artifacts are done
+
+   c. **If an artifact requires user input** (unclear context):
+      - Use **AskUserQuestion tool** to clarify
+      - Then continue with creation
+
+5. **Show final status**
+   ```bash
+   openspec status --change "<name>"
+   ```
+
+**Output**
+
+After completing all artifacts, summarize:
+- Change name and location
+- List of artifacts created with brief descriptions
+- What's ready: "All artifacts created! Ready for implementation."
+- Prompt: "Run `/opsx:apply` or ask me to implement to start working on the tasks."
+
+**Artifact Creation Guidelines**
+
+- Follow the `instruction` field from `openspec instructions` for each artifact type
+- The schema defines what each artifact should contain - follow it
+- Read dependency artifacts for context before creating new ones
+- For a Superflow change, keep ordinary OpenSpec checkbox task syntax. For each
+  independently verifiable task, state its observable delivery and acceptance
+  signal; record real predecessor task IDs as `Blocked by` and link the relevant
+  requirement/scenario or traceability row. A free-text blocker does not change
+  Superflow's `[local_required]` / `[environment_required]` /
+  `[release_required]` machine classification. Do not invent dependencies.
+- Use `template` as the structure for your output file - fill in its sections
+- **IMPORTANT**: `context` and `rules` are constraints for YOU, not content for the file
+  - Do NOT copy `<context>`, `<rules>`, `<project_context>` blocks into the artifact
+  - These guide what you write, but should never appear in the output
+
+**Guardrails**
+- Create ALL artifacts needed for implementation (as defined by schema's `apply.requires`)
+- Always read dependency artifacts before creating a new one
+- If context is critically unclear, ask the user - but prefer making reasonable decisions to keep momentum
+- If a change with that name already exists, ask if user wants to continue it or create a new one
+- Verify each artifact file exists after writing before proceeding to next

@@ -6,7 +6,7 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const EN_SKILLS_DIR = path.join(ROOT, "assets", "skills-en");
 const EN_PIPELINE_SKILL = path.join(
   EN_SKILLS_DIR,
-  "superflow-pipeline",
+  "superflow",
   "SKILL.md",
 );
 const EN_CLARIFY_SKILL = path.join(
@@ -14,7 +14,7 @@ const EN_CLARIFY_SKILL = path.join(
   "superflow-clarify",
   "SKILL.md",
 );
-const EN_DOCS_SKILL = path.join(EN_SKILLS_DIR, "superflow-docs", "SKILL.md");
+const EN_DOCS_SKILL = path.join(EN_SKILLS_DIR, "superflow-contracts", "SKILL.md");
 const EN_DESIGN_SKILL = path.join(
   EN_SKILLS_DIR,
   "superflow-design",
@@ -22,7 +22,7 @@ const EN_DESIGN_SKILL = path.join(
 );
 const EN_MINIMAL_DESIGN_TEMPLATE = path.join(
   EN_SKILLS_DIR,
-  "superflow-pipeline",
+  "superflow",
   "references",
   "superpower-technical-design-template.md",
 );

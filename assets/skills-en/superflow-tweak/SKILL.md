@@ -25,15 +25,15 @@ status/enum, SDK, cross-repo, frontend contract, or real integration changes.
 
 1. Initialize state:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh init <change-dir> tweak docs
+   ~/.codex/skills/superflow/scripts/superflow-state.sh init <change-dir> tweak docs
    ```
 2. Generate/update handoff so future sessions can recover exact context.
 3. Set:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> build_mode direct
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> isolation branch
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> tdd_mode direct
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> review_mode off
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> build_mode direct
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> isolation branch
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> tdd_mode direct
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> review_mode off
    ```
 4. Run `superflow-state.sh scale <change-dir>`. If it returns `full`, stop tweak and
    upgrade to full SDD.

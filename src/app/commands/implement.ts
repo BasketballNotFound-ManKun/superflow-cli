@@ -4,7 +4,7 @@ import {
 } from "../../domains/skill/check.js";
 import { runCodingReady } from "./change-guard.js";
 
-const SKILL_NAME = "superflow-implement";
+const SKILL_NAME = "superflow-handoff";
 
 export async function implementCommand(
   change?: string,

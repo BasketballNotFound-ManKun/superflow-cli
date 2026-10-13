@@ -7,7 +7,6 @@ import {
 import { homedir } from 'os';
 import path from 'path';
 import { runCommand } from '../platform/process.js';
-import { ASSETS_DIR } from '../platform/assets.js';
 import type { Agent, InstallScope } from '../types.js';
 
 export interface InstallResult {
@@ -281,21 +280,5 @@ async function linkCodexUnderstandSkills(): Promise<InstallResult> {
     return { ok: true };
   } catch (err) {
     return { ok: false, error: `understand-anything fallback failed: ${(err as Error).message}` };
-  }
-}
-
-/**
- * 安装 api-doc-changelog（直接复制）
- */
-export async function installApiDocChangelog(
-  skillsDir = path.join(homedir(), '.claude', 'skills')
-): Promise<InstallResult> {
-  const source = path.join(ASSETS_DIR, 'skills', 'api-doc-changelog');
-  const dest = path.join(skillsDir, 'api-doc-changelog');
-  try {
-    await fs.cp(source, dest, { recursive: true, force: true});
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: (err as Error).message };
   }
 }

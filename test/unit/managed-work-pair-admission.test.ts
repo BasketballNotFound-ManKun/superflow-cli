@@ -46,7 +46,7 @@ describe("managed work pair admission", () => {
 
   it("rejects a missing asset and gives a repair command", () => {
     const runtime = healthyRuntime();
-    runtime.exists = (file: string) => !file.endsWith("superflow-pipeline/SKILL.md");
+    runtime.exists = (file: string) => !file.endsWith("superflow/SKILL.md");
 
     expect(() => assertManagedAgentPair("codex", "claude", runtime)).toThrow(
       "superflow update --agent codex --scope global",

@@ -118,8 +118,8 @@ Create or update these files in the active OpenSpec change directory:
 
 Use the detailed workflow in:
 
-- `../superflow-pipeline/references/feature-gated-workflow.md`
-- `../superflow-pipeline/references/api-design-template.md`
+- `../superflow/references/feature-gated-workflow.md`
+- `../superflow/references/api-design-template.md`
 
 ## Per-Feature Procedure
 
@@ -198,7 +198,7 @@ progress alone does not change the agreed contract.
 
 ## Handoff
 
-When the feature is frozen, tell the user to continue with `$openspec-propose`
-for OpenSpec document generation. After `$openspec-propose` creates the base
-artifacts, use `$superflow-docs` only for SDD quality gates, traceability, API/test
+When the feature is frozen, tell the user to continue with `$superflow-propose`
+for OpenSpec document generation. After `$superflow-propose` creates the base
+artifacts, use `$superflow-contracts` only for SDD quality gates, traceability, API/test
 evidence, and prompt handoff checks.

@@ -1,4 +1,6 @@
 interface:
-  display_name: "SDD Clarify"
-  short_description: "需求理解澄清、功能点串行门禁与 API 草案冻结阶段"
-  default_prompt: "Use $superflow-clarify to process this requirement one confirmed feature at a time before SDD docs."
+  display_name: "Superflow · 阶段 · 需求澄清"
+  short_description: "读取需求与原型，核实源码事实，逐功能澄清并冻结需求和接口草案"
+  default_prompt: "使用 $superflow-clarify，读取需求与原型，核实源码事实，逐功能澄清并冻结需求和接口草案。"
+policy:
+  allow_implicit_invocation: false

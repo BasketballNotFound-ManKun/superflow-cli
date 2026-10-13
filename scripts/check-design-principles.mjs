@@ -23,7 +23,7 @@ const requirements = new Map([
     ],
   ],
   [
-    "assets/skills/superflow-pipeline/SKILL.md",
+    "assets/skills/superflow/SKILL.md",
     [
       "docs/superflow-cli-design-principles.md",
       "docs/superflow-cli-evaluation-framework.md",
@@ -32,7 +32,7 @@ const requirements = new Map([
     ],
   ],
   [
-    "assets/skills-en/superflow-pipeline/SKILL.md",
+    "assets/skills-en/superflow/SKILL.md",
     [
       "docs/superflow-cli-design-principles.en.md",
       "docs/superflow-cli-evaluation-framework.en.md",

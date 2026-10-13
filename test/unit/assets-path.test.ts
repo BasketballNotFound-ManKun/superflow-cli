@@ -7,7 +7,7 @@ describe('bundled asset paths', () => {
   it('resolves assets from the package root', () => {
     expect(ASSETS_DIR).toBe(path.join(PACKAGE_ROOT, 'assets'));
     expect(existsSync(path.join(ASSETS_DIR, 'manifest.json'))).toBe(true);
-    expect(existsSync(path.join(ASSETS_DIR, 'skills', 'superflow-pipeline'))).toBe(
+    expect(existsSync(path.join(ASSETS_DIR, 'skills', 'superflow'))).toBe(
       true,
     );
   });

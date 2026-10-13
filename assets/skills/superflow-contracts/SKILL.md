@@ -1,0 +1,508 @@
+---
+name: superflow-contracts
+description: Superflow 内部能力：补齐接口、测试、追溯和质量合同，为源码技术详设与执行交接提供依据。由 $superflow 选择，用户无需手动分流。
+---
+
+# SDD Docs
+
+## 测试方案入口
+
+写 tests.md 前读取[测试指南](../superflow/references/test-guide.md)，先复用项目测试与环境，
+把受影响行为映射到验证信号，在本阶段冻结用例、实际后端、mockBoundary、命令和断言。
+实现阶段只继承；不能把必要数据库验证留到编码时临场决定。
+
+完整文档交付必须读取并执行
+[需求×真实入口评审](../superflow/references/document-review-coverage.md)：
+扩展现有三轮评审凭证，逐项核对原始需求、真实调用分支、EXCLUDED/VERIFY_EXISTING
+及验收断言。禁止用“文档内部一致”代替对用户原始语义的核验。
+
+Use this skill after a feature is frozen or after `$superflow-propose` has
+created the base OpenSpec artifacts. This skill is an SDD contract-doc wrapper;
+it must not replace the installed OpenSpec skills for core artifact generation
+and must not generate implementation prompts.
+
+需要跨轮复用对命令/目录/调用环境敏感的检查时，本阶段按
+[executionContext 合同](../superflow/references/document-review-coverage.md#声明式执行上下文与证据复用)
+冻结 argv、相对 cwd 和已选非秘密环境项；历史未绑定证据不自动升级为新上下文完整通过。
+
+
+## OpenSpec First
+
+For new OpenSpec document generation, invoke `$superflow-propose` first. The
+OpenSpec skill must drive:
+
+- `openspec new change "<name>"`
+- `openspec status --change "<name>" --json`
+- `openspec instructions <artifact-id> --change "<name>" --json`
+- artifact creation in the dependency order returned by the OpenSpec CLI
+
+Only after the OpenSpec artifacts exist should this skill add or refine SDD
+quality artifacts such as API contract details, traceability, quality gates,
+mock/test strategy, review checklist, and test-report skeleton.
+
+Do not hand-write fixed OpenSpec templates when `openspec instructions` can
+provide the schema-specific template, rules, dependencies, and output path.
+Do not invent new fields or requirements.
+
+## Preconditions
+
+For complex requirements, verify these before writing docs:
+
+- `proposal.md` carries the confirmed change-level Consensus Summary from
+  clarification: goal, scope, owner choices and rejected alternatives,
+  production/migration risks, and non-blocking reopen triggers. Check it
+  against original sources and `source-code-audit.md`; do not treat the
+  handoff summary as a second authority. If a material choice remains open,
+  return to `$superflow-clarify` before finalizing design or tasks.
+- `source-ingestion.md`, `feature-inventory.md`, and `feature-gates.md` prove
+  that the original PRD/Lark/Feishu/screenshots were processed section by
+  section, not summarized into tasks in one whole-document pass. Each feature
+  used by docs must have a source range/page/screenshot reference and a frozen
+  or explicitly blocked gate. If this evidence is missing for a long or mixed
+  requirement source, stop and return to `$superflow-clarify`.
+- The OpenSpec/SDD docs include platform-level impact discovery evidence.
+  Prefer understand-anything artifacts when present, but treat them only as
+  locator evidence. If missing, stale, incomplete, or unavailable, the docs must
+  show the downgrade path: `rg`, source reading, Mapper/XML, configuration,
+  database table names, log templates, and sibling-repo search. Do not stop only
+  because understand-anything is missing; stop when no platform impact discovery
+  evidence exists.
+- The docs record: discovery method, understand-anything index status when
+  available, analyzed platform scope, impacted modules/interfaces/tables,
+  sibling repo or SDK implications, regression risks, source/DB/API
+  confirmation evidence, and validation approach.
+- For cross-repository, service-to-service, SDK, MQ, scheduler, device,
+  callback, third-party, mini-program, gateway, or adapter designs, the docs
+  include a module responsibility and call-direction judgment before freezing
+  API/tasks/tests. The judgment must identify the business-entry owner, outbound
+  adapter owner, existing entry/exit points, proposed entry/exit points, and
+  forbidden shortcuts. If the design would route a business entry through an
+  outbound adapter/protocol translator/device gateway, stop and return to
+  `$superflow-clarify` unless owner approval is explicitly recorded.
+- For any design that depends on existing source behavior, table relationships,
+  data permissions, field ownership, status derivation, external parameters, or
+  upstream/downstream calls, the docs include a verified evidence chain:
+  platform impact discovery scope, source/Mapper/XML anchors, and read-only DB
+  checks when source is insufficient. Graph output or chat explanation alone is
+  not sufficient. If this evidence is missing and the relationship affects
+  design, stop and return to `$superflow-clarify`.
+- For full-workflow existing-system changes, `source-code-audit.md` must contain
+  the source fact freeze card, current/legacy/unmounted/data-model-only/
+  owner-confirmed/blocked classifications, all writers and real callers, DB
+  evidence or a skip reason, and the owner decision boundary. `List`,
+  `orderIds`, `batchInsert`, or one-to-many schema signals that conflict with a
+  single-item real entry require an explicit conflict audit. Missing evidence
+  blocks docs even when understand-anything contains a plausible summary.
+- For any database-backed design, the docs include table-to-code reverse impact
+  evidence: every affected table/field, all writers/readers/filters, sibling
+  repo or third-party consumers, real user-facing endpoints, reverse-state
+  scenarios, and validation cases. If the docs only describe the write/sync
+  path and do not prove consumers, stop and return to `$superflow-clarify`. Use
+  `$superflow-table-impact-analysis` when available.
+- For any schema, index, constraint, seed-data, or historical-data change,
+  docs MUST create `release-sql.md` during the contract-design phase, before
+  `$superflow-design` or implementation prompts. It must contain exactly one
+  complete executable `sql` block plus front matter:
+  `database_change: true`, exact `target_sql_path`, `copy_policy: verbatim`,
+  and normalized payload `sql_sha256`. Prechecks, DDL/DML, post-verification,
+  defaults, constraints, indexes, and migration semantics must be frozen here.
+  `design.md`, `tasks.md`, and `sdd-quality-gate.md` must reference it and state
+  that implementation agents may only copy it verbatim. A placeholder path,
+  missing hash, SQL fragment, or instruction to design/append SQL later blocks
+  docs completion.
+- For any status, enum, sync, derived, default, or compatibility behavior, the
+  docs include business semantic evidence:
+  `真源字段 | 真源枚举 | 目标字段 | 目标枚举 | 消费方解释 | 业务依据 | 不确定项`.
+  If the docs only prove that a value exists, is non-null, or lets the request
+  succeed, stop and return to `$superflow-clarify`. If fallback/default/keep-old-value
+  behavior is proposed without explicit requirement or owner approval, stop.
+- For third-party platforms/tools, SDKs, MQ/Kafka, callbacks, payment gateways,
+  cloud services, or other external integrations, `api.md` and
+  `sdd-quality-gate.md` must include `外部集成配置与部署合同` / `External
+  Integration Configuration And Deployment Contract`. Inventory endpoints,
+  app/tenant/project IDs, Topic/Tag/Consumer Group, namespace, webhook,
+  ACL/role, feature switches, timeout, and credential references across local,
+  test, and production environments. Record injection/provisioning method,
+  runtime owner, provisioning owner/time, readiness evidence, rollback, secret
+  handling, and blockers. Environment-dependent values must not be hard-coded;
+  test auto-creation or existing test resources do not prove production
+  readiness. Missing production provisioning evidence blocks document freeze.
+- For third-party, SDK, BEM/parking, payment/refund, financial display,
+  source/origin, status sync, or external dictionary/enum fields, `api.md` and
+  `sdd-quality-gate.md` must include `外部枚举绑定确认` / `External Enum
+Binding` with:
+  `业务字段 | 本系统真源字段/枚举 | 外部系统字段 | 外部枚举/字典值 |
+展示文案/业务语义/财务语义 | 取值来源 | owner/确认时间 |
+不确定项/阻塞处理 | 测试证据`. Unconfirmed values are blockers; do not
+  invent numeric values, origin/source values, display meanings, or fallback
+  mappings.
+- For amount, fee, discount, deduction, refund, sharing, payment, invoice,
+  balance, electricity/service fee, package settlement, proration, allocation,
+  reconciliation, or financial display changes, `sdd-quality-gate.md` must
+  declare `Money Precision Boundary` as blocking. `tests.md` and the
+  `test-report.md` skeleton must reserve half-cent, residual, or multi-detail
+  cases and reconciliation evidence. Do not freeze docs that allow intermediate
+  money to be rounded before later slicing, aggregation, discounting, or
+  allocation. For additive identities, docs must name the authoritative total,
+  independently calculated N-1 components, and the final complement formula:
+  `authoritative total - sum(other components)`. Do not allow every component
+  to be calculated and rounded independently before rebuilding the total.
+- For low-freedom implementation handoff, docs include the five hard gates:
+  field semantic contract, write-through persistence closure, real-entry call
+  chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
+  any gate is missing from `design.md`, `tests.md`, or quality gate, stop and
+  complete the docs first.
+- Low-freedom means the Executor has no unresolved implementation or test-design
+  choice. `design.md` names reusable modules, exact change points, call/data flow,
+  transaction and concurrency boundaries, error behavior, and implementation
+  order. `tests.md` names environment, fixtures, startup command, steps,
+  automation command, response/DB/log assertions, cleanup, and evidence paths.
+  If two materially different implementations or acceptance paths remain valid,
+  return to clarification/design instead of delegating the choice to development.
+- For full workflow changes, `design.md` must include `复杂度减法评审` before
+  docs freeze. Inventory every proposed table, field, API, Service/component,
+  cache, async/MQ/event flow, scheduled job, compatibility layer, and new
+  abstraction. For each item, record existing reuse evidence, necessity, the
+  simplest implementation, removed/rejected complexity, and blockers.
+  Prefer extending current modules and synchronous transactions. Do not retain
+  a new layer merely for future flexibility; without evidence, remove it.
+- `sdd-quality-gate.md` must record the complexity review verdict as
+  `PASS` or `BLOCKED`; only `PASS` may leave docs/design. Missing reuse evidence, unexplained parallel APIs/models,
+  redundant persisted fields, speculative cache/async/compensation, or an
+  unresolved simpler option blocks docs completion.
+- After a reviewable full-workflow contract draft exists, run
+  `$superflow-requirement-review` before docs guard completion. It must create
+  `requirement-review.md`, repair canonical documents for every confirmed
+  `BLOCKER/IMPORTANT` finding, and re-review from source evidence. Record its
+  verdict and unresolved findings in `sdd-quality-gate.md` and `test-report.md`.
+  Source-resolvable unknowns must be investigated, owner decisions must return to
+  clarification, and implementation-affecting external contracts must be evidenced and frozen.
+  Merely documenting or assigning a blocker does not close it. A missing report, non-READY
+  implementation verdict, or nonzero blocker count prevents transition to design.
+- 完整 workflow 在交给开发前，必须针对当前 handoff hash 完成三轮独立评审：
+  `source-contract`、`architecture-minimality`、`e2e-environment`，并写入
+  `.sdd/reviews/document-review.json`。可自行调查的问题继续修订；只把业务 owner、
+  不可获得的权限/凭据和外部资源集中到最后一次澄清。
+- 按配置文件探索本地/开发/测试环境，把失败安全检查写入
+  `.sdd/readiness/environment.json`，并用 v2 `executionContract` 唯一冻结应用位置、依赖
+  策略、配置来源和允许/禁止覆盖项。`tests.md` 必须使用已验证的启动命令、端口、模拟器和
+  依赖；不能把环境探索留给开发 Agent，也不能只用“地址可连接”代替环境合同。
+- 跨仓、跨服务、设备、MQ、回调、状态机或三个以上模块的复杂逻辑必须提供 Mermaid
+  `sequenceDiagram` 与 `flowchart`/`stateDiagram`。
+- 实现 Prompt 完成后必须通过 `superflow check <change> --level coding-ready`，生成与
+  当前 handoff hash 绑定的 Coding Ready 凭证；失败的 implement 门禁不能转交开发 Agent。
+- 跨系统明确失败且上游拥有退款/撤单补偿时，默认快速失败、失败关闭、至多一次和调用方
+  补偿；禁止下游透明重试、改投或补发。额外兜底必须在“跨系统失败归属与补偿边界”中
+  获得 owner 确认。
+- `design.md` stays the OpenSpec/SDD design contract: requirement mapping,
+  API/DB/field semantics, source facts, real-entry call chain, no-fallback
+  boundary, risks, and acceptance hooks. It must not try to own all source-level
+  implementation choreography.
+- `design.md` includes a "Superpowers Technical Design Handoff" placeholder
+  that states the boundary and target path for the later `$superflow-design` phase:
+  OpenSpec/SDD owns WHAT/contracts, Superpowers owns source-level HOW. Do not
+  write the final technical design in `$superflow-contracts`.
+- `.sdd/handoff/sdd-context.md`, `.sdd/handoff/sdd-context.json`, and
+  `.sdd/handoff/sdd-context.sha256` exist for the change/task. Generate them
+  with `../superflow/scripts/superflow-handoff.sh <change-dir> --refresh`
+  after core OpenSpec/SDD docs are written and before `$superflow-design` or
+  implementation prompt generation. Also initialize
+  `.sdd/state.yaml` with
+  `../superflow/scripts/superflow-state.sh init <change-dir> docs`.
+- `sdd-quality-gate.md` records the handoff command, context hash, and
+  `../superflow/scripts/superflow-guard.sh <change-dir> docs` result.
+  Missing handoff/state evidence is `Blocked for context drift guard`.
+- `.sdd/state.yaml` records `phase: docs`, `workflow`, `handoff_context`,
+  `handoff_hash`, `context_compression`, and any known `build_command` /
+  `verify_command`.
+  Do not manually edit phase. When docs are complete, run
+  `../superflow/scripts/superflow-yaml-validate.sh <change-dir>` and
+  `../superflow/scripts/superflow-guard.sh <change-dir> docs --apply`; the
+  guard must advance state through `docs-complete` into `phase: design` for
+  full workflow and print the deterministic next step.
+- For very large requirements, multi-agent handoff, or repeated context
+  compression risk, create project `.sdd/config.yaml` or
+  `<change-dir>/.sdd/config.yaml` with `context_compression: beta` before
+  running `superflow-handoff.sh --refresh`. See
+  `../superflow/references/project-config.md`.
+- If docs hit a real decision point, use
+  `../superflow/references/decision-point.md` and record the decision
+  in `design.md` or `sdd-quality-gate.md` before regenerating handoff.
+- `tests.md` can freeze executable tests before implementation. For each
+  scenario/API/database-backed path, it must include concrete test data source,
+  automation command, assertion, RED expected failure, GREEN expected pass,
+  DB/log evidence, and matching `test-report.md` section. If test data,
+  token, device, third-party dependency, or environment is unavailable, mark
+  that case `Blocked`/`Partially verified`; do not leave it as an open TODO.
+- `feature-gates.md` exists and the current feature is `已冻结`.
+- `ui-contract.md` contains page-to-API/DTO/DB mapping.
+- `gap-analysis.md` has no unresolved blocker for the current feature.
+- A precise `api.md` section exists or can be generated from the confirmed API draft.
+
+If any precondition fails, stop and return to `$superflow-clarify`.
+If the base OpenSpec change does not exist, stop and invoke `$superflow-propose`.
+
+## Required Documents
+
+Generate or update through OpenSpec instructions first, then SDD checks as
+applicable:
+
+- `proposal.md`
+- `bug-fix-plan.md` for bug fixes, production/test incident reports, root-cause
+  reports, CR/Px fixes, and report-driven corrections
+- `api.md`
+- `specs/<capability>/spec.md`
+- `design.md`
+- `tasks.md`
+- `tasks.md` 每个 checkbox 必须带且只带一个机器分类：`[local_required]`、
+  `[environment_required]` 或 `[release_required]`。能够在本地完成的编码、测试、启动和浏览器
+  验证必须是 local_required；不得用自由文本 Blocker/owner 代替分类。
+- For each implementation task, review observable delivery, acceptance signal,
+  requirement/scenario coverage, and actual predecessors. Show the currently
+  executable tasks whose predecessors are complete. Reuse
+  `traceability-matrix.md` for detailed coverage; do not create another task
+  state file. `Blocked by` expresses execution order and never changes the
+  machine task classification above.
+- `tests.md`
+- `test-report.md` skeleton
+- `sdd-quality-gate.md`
+- `traceability-matrix.md` when tasks are split
+- `mock.md` when external dependencies exist
+- `review-checklist.md` when implementation will be split
+- `requirement-review.md` for full-workflow changes before docs completion
+- `source-code-audit.md` for full existing-system, DB, cross-repo, or real-entry changes
+- `release-sql.md` for every database change; omit it only when the docs prove
+  that no schema/data migration is required
+- `.sdd/state.yaml`
+- `.sdd/handoff/sdd-context.md`
+- `.sdd/handoff/sdd-context.json`
+- `.sdd/handoff/sdd-context.sha256`
+- `.sdd/config.yaml` when context compression mode differs from default
+
+For every embedded P/CR/bug-fix/follow-up task, create the same document set
+inside that task directory before updating aggregate/root documents:
+
+- `.openspec.yaml`
+- `proposal.md`
+- `bug-fix-plan.md` when applicable
+- `api.md`
+- `spec.md` or `specs/<capability>/spec.md`
+- `design.md`
+- `tasks.md`
+- `tests.md`
+- `traceability-matrix.md`
+- `review-checklist.md`
+- `sdd-quality-gate.md`
+- `test-report.md`
+
+Then update root `tasks.md`, root `tests.md`, root `traceability-matrix.md`,
+root `sdd-quality-gate.md`, and root `test-report.md`. Missing any task-local
+required document or root cross-link is `Blocked for docs`; do not proceed to
+`$superflow-design`.
+
+Use references only as needed:
+
+- `../superflow/references/openspec-format.md`
+- `../superflow/references/document-templates.md`
+- `../superflow/references/api-design-template.md`
+- `../superflow/references/quality-standards.md`
+- `../superflow/references/quality-gate.md`
+- `../superflow/references/traceability-matrix.md`
+- `../superflow/references/mock-strategy-guide.md`
+- `../superflow/references/test-execution-template.md`
+- `../superflow/references/test-guide.md`
+- `../superflow/references/validation-integrity.md`
+- `../superflow/references/decision-point.md`
+- `../superflow/references/dirty-worktree.md`
+- `../superflow/references/project-config.md`
+
+## Rules
+
+- API is design input, not post-implementation documentation.
+- New requirements and bug fixes must include platform-level impact discovery
+  before finalizing design/tasks/tests. Use understand-anything as a locator
+  when available, but do not use it as the design authority. Do not rely only
+  on the current service's local design; verify whether sibling repos, shared
+  SDKs, common DTOs, shared database tables, scheduled jobs, callbacks, external
+  platform adapters, or configuration consumers are affected.
+- Do not freeze cross-module design from "this module can technically call it"
+  evidence. `design.md` or `traceability-matrix.md` must include:
+  `链路步骤 | 调用方向 | 业务入口 owner | 出口/适配 owner | 既有入口/出口 |
+拟新增入口/出口 | 是否符合职责 | 证据锚点 | 禁止绕路`.
+  Outbound adapters, protocol translators, MQ notification consumers, and
+  device gateways must not be promoted into business-entry orchestrators unless
+  the contract says they own that entry and records approval.
+- Do not finalize a design by guessing existing relationships from names. For
+  existing-code-backed decisions, start with platform impact discovery, then
+  verify with source/Mapper/XML anchors, then database checks if source is not conclusive.
+  If the relation is still unclear, write a blocker and ask the user; do not
+  turn an assumption into a requirement, table design, API contract, or prompt.
+- Do not finalize database-backed design from a forward-only flow. For each
+  affected table/field, `design.md` or `traceability-matrix.md` must include:
+  `表/字段 | 写入方 | 读取/过滤方 | 跨仓/外部消费方 | 真实入口 | 反向状态场景 | 必测用例`.
+  Status fields must include recovery scenarios such as offline -> online,
+  deleted -> restored, missing -> reappearing, and old invalid value -> valid
+  after an upstream omission.
+- Do not finalize status/enum/sync/default design from "has a value" evidence.
+  `design.md` or `traceability-matrix.md` must include:
+  `真源字段 | 真源枚举 | 目标字段 | 目标枚举 | 消费方解释 | 业务依据 | 不确定项`.
+  Default values, fallback values, null-to-available conversions, old-value
+  retention, and alternative-field substitution are forbidden unless explicitly
+  required for dirty historical data or uncontrollable external input. Approved
+  compatibility must document:
+  `兜底触发条件 | 业务依据 | 会掩盖的异常 | 监控/告警/暴露方式 | 移除条件 | owner确认`.
+- `design.md`, `tests.md`, `sdd-quality-gate.md`, or `test-report.md` must name
+  the relationship judgment as `确定/部分确定/不确定` when a bug fix hinges on
+  existing data or call-chain behavior.
+- `design.md` must reference the frozen `api.md` fields and errors.
+- `design.md` must include `复杂度减法评审` with:
+  `设计项 | 现有能力/复用证据 | 是否必要 | 最简实现 | 删除/拒绝项 | 证据/阻塞`.
+  It must also count new tables, fields, APIs, services/components, caches,
+  async flows, jobs, and compatibility layers. A zero count is valid and
+  preferable when existing capabilities close the contract.
+- `design.md` must include a "字段语义合同" table for every risky field:
+  `字段 | 来源表/DTO/事件 | 真实语义 | 目标字段 | 目标语义 | 是否可等价 |
+证据锚点 | 禁止用法 | 不确定项/owner`.
+- `design.md` or `traceability-matrix.md` must include a "写入闭环" table for
+  every persisted or synchronized value:
+  `业务动作 | Java setter/赋值点 | Converter/DTO 映射 | Mapper insert/update |
+DB column | 后续读取方 | 消费入口 | 验证 SQL | 测试用例`.
+- `design.md` must include a "真实入口调用链" table:
+  `用户/外部动作 | 上游服务/接口 | 本仓入口 | MQ/异步回调 | 关键字段变化 |
+DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
+- `design.md` or `sdd-quality-gate.md` must include a "禁止 fallback 与猜测实现"
+  section. It must explicitly list forbidden defaults, fallback queries,
+  substitute fields, keep-old-value behavior, null conversion, and downstream
+  compensation. Approved compatibility must include owner confirmation and
+  exposure/removal rules.
+- `design.md` must include a "Superpowers Technical Design Handoff" placeholder
+  after the OpenSpec/SDD contract decisions are written. It records
+  `handoff_hash`, the intended technical design path, and states:
+  OpenSpec/SDD owns WHAT/API/DB/tests/gates; Superpowers owns source-level HOW,
+  TDD/RED order, team split, worktree/port plan, and verification choreography.
+  The final technical design is created by `$superflow-design`, not `$superflow-contracts`.
+- `test-report.md` skeleton must include an "Agent 执行前自检" section with:
+  `真实入口已定位 | 字段语义合同已核对 | 写入闭环已核对 |
+禁止兜底边界已确认 | RED 测试已执行 | 允许修改文件 | 禁止修改文件 |
+阻塞项`.
+- `tasks.md`, `tests.md`, and later prompts must use the same field names as `api.md`.
+- `tests.md` is a pre-implementation contract. It must not be a vague checklist.
+  Every case must include:
+  `用例ID | 需求/Scenario | 层级L1/L2/L3/L4 | 前置数据 | 操作步骤 |
+  自动化命令 | 响应断言 | DB断言 | 日志断言 | RED预期失败 | GREEN预期通过 |
+  test-report证据位置`.
+- For cross-page management or database-backed display changes, reconcile the
+  frontend action/list inventory with real Controller, Service, exact Mapper
+  statement and table anchors before freezing tasks. Put the confirmed chain
+  and entry ID in `source-code-audit.md` and reuse it in `design.md`, `tasks.md`
+  and `tests.md`. A similarly named query is not evidence for the page route.
+  Include every visible mutation button, such as enable/disable, as an entry
+  even when the original task list omitted it.
+- For a returned persisted field, `tests.md` must freeze at least one non-null
+  fixture and an allowed historical-NULL fixture separately. Assert API and DB
+  values for the same record ID, then browser rendering where a page is in
+  scope. Key-presence, HTTP 200, empty-page and NULL-only assertions cannot
+  close the non-null data path. Name the exact query/command and evidence file.
+- 对 L3/L4 的输入校验、协议拒绝或异常分支，`tests.md` 还必须冻结真实注入载荷及其到达
+  目标解析/校验分支的证据；仅断言同一个 HTTP 状态码不算覆盖。原始畸形 JSON、错误
+  Content-Type、越权身份或非法字段必须按真实线协议发送，并同时断言无副作用。
+- 当任务新增或复制本地进程、容器或临时资源的 owner/清理原语时，`design.md`、`tests.md`
+  与 `test-report.md` 必须冻结资源身份字段、生产方与消费方的相等关系及每个不匹配时拒绝
+  清理的用例（例如 nonce、PID、端口、进程签名）。复用未改动的认证 owner helper 时，
+  只记录其完整性、任务参数、一次失败清理和最终零残留，不重复写成框架认证。
+- When a design uses a version field for optimistic locking, `design.md` must
+  freeze the database-level atomic compare-and-set boundary, conflict response,
+  and zero-row distinction between missing data and stale version. A
+  read-then-write check alone is blocked. `tests.md` must include two concurrent
+  requests holding the same old version and assert exactly one success, one
+  conflict, and one version increment. The implementation prompt only inherits
+  these frozen case IDs and commands; managed orchestration must not invent the
+  business design later.
+- Each visible UI field, button action, list column, dropdown, and enum must map to API/DTO/DB/tests or be explicitly out of scope.
+- Every spec scenario must have at least one test case.
+- Every implementation batch must have at least one test that can fail before
+  code changes. For new behavior this is the new API/service/mapper/unit test;
+  for bug fixes this is the reported failure path. If the behavior cannot be
+  executed before implementation, write the blocker and required data instead
+  of pretending RED is complete.
+- Any page-invisible required field is a blocker unless marked backend default or backend-derived.
+- For every L3/L4, frontend payload, dropdown, enum, external dependency, export,
+  import, or cross-system case, `tests.md` must name the real test data source
+  and exact evidence required in `test-report.md`; placeholder data cannot prove
+  real integration.
+- For every API case, `tests.md` must include an executable interface command
+  (`curl`, Postman/Newman, pytest, RestAssured, or project-native test command),
+  token/cookie setup, request payload, expected response fields and business
+  assertions. It must also list the DB SELECT and log keywords that prove the
+  request changed or read the correct state.
+- For every affected table/field, `tests.md` must include at least one consumer
+  test against a real business entry point, not only a table write or sync-task
+  assertion. If a field participates in filtering, startup checks, QR scan,
+  order creation, payment/refund, notification, scheduled jobs, or third-party
+  adapters, those consuming paths must be listed as required validation or
+  explicitly blocked.
+- For every status/enum/sync field, `tests.md` must assert the consumer-facing
+  business meaning of each involved value. Non-null checks, HTTP 200, successful
+  sync-task execution, or "field exists" assertions are insufficient.
+- `test-report.md` skeleton must include Red-Green evidence for bug fixes and
+  CR/Px follow-ups: failing evidence before the fix, then the same path passing
+  after the fix.
+- `test-report.md` skeleton must include these sections before implementation:
+  `RED 失败证据`, `GREEN 通过证据`, `接口自动化证据`, `DB 核查证据`,
+  `日志核查证据`, `未自动化/阻塞用例`, and `Partially verified 边界`.
+  Each section must reference concrete `tests.md` case IDs.
+- `tests.md` must freeze runtime-specific acceptance instead of leaving it to
+  managed orchestration:
+  - Spring Boot/backend services: verified startup command, dynamic or planned
+    isolated port, readiness condition, at least one real HTTP invocation, and
+    failure evidence when the environment blocks startup.
+  - `.vue/.tsx/.jsx`, frontend API registration, page permission, or visible UI
+    behavior: frontend startup plus real-browser Playwright/Cypress cases and
+    page assertions; build, static inspection, and mocks are supplementary only.
+  - Controller/API DTO plus frontend request changes: backend Controller contract,
+    frontend request contract, and dynamic API export/call-resolution snapshot
+    when applicable.
+  - Named runtime backends such as MySQL, Testcontainers, a real browser, or a
+    real service: exact backend and command; H2, mocks, stubs, in-memory stores,
+    and compatibility modes never close the named gate.
+  - Multi-repository/service changes: build/runtime checks for every affected
+    repository plus the real cross-repository path; one repository's evidence
+    never substitutes for another.
+  `design.md` records why each runtime and repository is in scope; `tasks.md`
+  classifies local, environment, and release work; the implementation prompt
+  inherits the exact case IDs, commands, assertions, and evidence paths.
+- For money-related changes, `test-report.md` must also include `Money Precision
+  Boundary` evidence: original calculation inputs and precision, actual rounding
+  boundary and mode, half-cent/residual/multi-detail cases, and reconciliation
+  of original, discount, actual/refund, and allocated totals. Evidence must show
+  which total was authoritative and which complement was derived by subtraction.
+- `sdd-quality-gate.md` must include blocking checks for:
+  executable tests frozen, RED/GREEN expectations present, interface automation
+  commands present, DB/log assertions present, and mock/skipped cases excluded
+  from Passed.
+- `sdd-quality-gate.md` must include a blocking check that
+  `.sdd/handoff/sdd-context.*` exists, the hash is recorded, and
+  `../superflow/scripts/superflow-guard.sh <change-dir> docs` passes.
+- `sdd-quality-gate.md` must include a state-machine check:
+  `.sdd/state.yaml` exists, `phase: docs` before docs completion, and
+  `superflow-state.sh next <change-dir>` / `recover <change-dir>` have clear output.
+- External dependency failures must be modeled as blocked, partially verified,
+  or real integration passed. A generic fallback error is not a pass unless the
+  requirement explicitly says so.
+- Do not proceed to `$superflow-design` until quality gates pass.
+- Do not mark document completeness as passed unless `sdd-quality-gate.md`
+  lists the actual task-local required files and root cross-links.
+
+## Handoff
+
+When SDD docs pass quality gates, continue with `$superflow-design` for Superpowers
+technical design before prompt splitting or coding orchestration.
+
+
+逐用例 PASS 必须提供可重放本地执行凭证；冻结服务/入口、源码写入链与持久化前后值断言。沿用 pipeline/references/document-review-coverage.md 的 execution-receipt.v1 合同，旧证据保留 PARTIAL；独立评审核对精确 Mapper statement 与原始输出，完整交付运行当前安装的 lint --require-complete。哈希不等同防伪或业务充分性。
+
+### 数据库分层证据
+
+按 [数据库合同](../superflow/references/document-review-coverage.md#数据库分层合同)
+冻结并继承 `testLayer`、entry.database、生产 statement、mockBoundary 和数据断言。
+生成文档后用必要DB仅Mock反例和真实生产SQL正例审查；辅助层不强迫DB。

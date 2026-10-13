@@ -1,4 +1,6 @@
 interface:
-  display_name: "SDD Design"
-  short_description: "Use Superpowers for source-level technical design and reverse impact analysis"
-  default_prompt: "Use $superflow-design to create the Superpowers technical design after SDD contract docs are complete."
+  display_name: "Superflow · Phase · Technical design"
+  short_description: "Define source-level implementation and verification design"
+  default_prompt: "Use $superflow-design to define source-level implementation and verification design."
+policy:
+  allow_implicit_invocation: false

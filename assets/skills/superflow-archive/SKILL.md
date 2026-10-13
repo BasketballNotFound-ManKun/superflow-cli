@@ -1,7 +1,11 @@
 ---
 name: superflow-archive
-description: Use when an SDD/OpenSpec change has passed verification and needs final archive confirmation, lifecycle closeout, archived state recording, or recovery from phase archive.
+description: Superflow 内部归档能力：根据变更是否存在 SDD 状态选择生命周期收口或纯 OpenSpec 归档；由 $superflow 选择。
 ---
+
+## 归档分流
+
+先从请求或既有状态确定精确 change 目录。没有 `.sdd/state.yaml` 时读取[纯 OpenSpec 归档流程](references/pure-openspec.md)并执行；文件存在时遵守下方 SDD 生命周期门禁，失败不得退回纯 OpenSpec 流程。用户无需在两个技能之间选择。
 
 # SDD Archive
 
@@ -23,9 +27,9 @@ do not mark archived until the user confirms final closeout.
 
 1. Run:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh status <change-dir>
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <change-dir> --dry-run
+   ~/.codex/skills/superflow/scripts/superflow-yaml-validate.sh <change-dir>
+   ~/.codex/skills/superflow/scripts/superflow-state.sh status <change-dir>
+   ~/.codex/skills/superflow/scripts/superflow-archive.sh <change-dir> --dry-run
    ```
 2. Show the user a short archive summary:
    - change/task directory
@@ -36,7 +40,7 @@ do not mark archived until the user confirms final closeout.
 3. Ask for explicit confirmation before archive closeout.
 4. After confirmation, run:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <change-dir> --apply
+   ~/.codex/skills/superflow/scripts/superflow-archive.sh <change-dir> --apply
    ```
 
 ## 归档搬迁后的恢复
@@ -46,9 +50,9 @@ OpenSpec 已移动目录但文档标注或 state 收口失败时，保留现场�
 不能凭同名选择旧日期目录，也不对失效的原路径重复归档。明确目标后运行原 helper：
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <explicit-archived-dir> --dry-run
+~/.codex/skills/superflow/scripts/superflow-archive.sh <explicit-archived-dir> --dry-run
 # 核对摘要、原授权与当前未完成步骤后继续；不扩大原归档授权
-~/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh <explicit-archived-dir> --apply
+~/.codex/skills/superflow/scripts/superflow-archive.sh <explicit-archived-dir> --apply
 ```
 
 已移动目录只恢复剩余标注与原 state transition，仍需 validate/guard；done + archived 状态
@@ -78,6 +82,6 @@ OpenSpec 已移动目录但文档标注或 state 收口失败时，保留现场�
   active path after a successful move.
 - If the user wants adjustments, run:
   ```bash
-  ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh transition <change-dir> archive-reopen
+  ~/.codex/skills/superflow/scripts/superflow-state.sh transition <change-dir> archive-reopen
   ```
   then return to verify or implement as needed.

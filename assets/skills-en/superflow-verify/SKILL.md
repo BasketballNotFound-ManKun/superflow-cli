@@ -7,7 +7,7 @@ description: Use when reviewing code changes or verifying an SDD/OpenSpec implem
 
 ## Verification signal review
 
-Read the [test guide](../superflow-pipeline/references/test-guide.md). Compare current
+Read the [test guide](../superflow/references/test-guide.md). Compare current
 changes, frozen cases, and actual execution counts; distinguish logic, database,
 and real-entry conclusions. Judge historical applicability before requesting
 affected reruns. Report formatting alone does not force full-chain reruns. Reviewers
@@ -28,7 +28,7 @@ identity does not prove actual execution or business sufficiency.
 
 ## Five-axis and independent review entry
 
-Read the [canonical Reviewer checklist](../superflow-pipeline/references/reviewer-checklist.md)
+Read the [canonical Reviewer checklist](../superflow/references/reviewer-checklist.md)
 for code-quality review. Follow its actual-impact depth selection, isolated bundle,
 axis coverage, finding falsification, and merging. `review-coverage` risk.tier is a
 path hint, not the actual depth: print both tiers with evidence. Ordinary code
@@ -56,7 +56,7 @@ smallest implementation when no second caller or contract requires expansion.
 Only propose a recurring project rule after the user confirms it; review
 feedback remains advisory and does not silently change repository policy.
 
-For full workflow acceptance, read [requirement × real-entry review](../superflow-pipeline/references/document-review-coverage.md).
+For full workflow acceptance, read [requirement × real-entry review](../superflow/references/document-review-coverage.md).
 Reuse R/E/C IDs in the existing test-report with actual actors, page actions, request routes,
 final state and forbidden-effect evidence. Independently compare originals and actual callers;
 API-only is not browser E2E, and planned cases are not execution evidence.
@@ -92,15 +92,15 @@ associated SDD/OpenSpec delivery; do not create state for a bare diff review.
 Run:
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>
-~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh recover <change-dir>
-~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh scale <change-dir>
+~/.codex/skills/superflow/scripts/superflow-yaml-validate.sh <change-dir>
+~/.codex/skills/superflow/scripts/superflow-state.sh recover <change-dir>
+~/.codex/skills/superflow/scripts/superflow-state.sh scale <change-dir>
 ```
 
 If the change is still in `implement`, run:
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-guard.sh <change-dir> implement --apply
+~/.codex/skills/superflow/scripts/superflow-guard.sh <change-dir> implement --apply
 ```
 
 Do not verify from conversation memory. Reload `.sdd/handoff/sdd-context.md`,
@@ -156,10 +156,10 @@ CRITICAL or IMPORTANT failures cannot be accepted silently. If the user chooses
 to fix, run:
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh transition <change-dir> verify-fail
+~/.codex/skills/superflow/scripts/superflow-state.sh transition <change-dir> verify-fail
 ```
 
-Then return to `$superflow-implement` or `$superflow-docs` depending on whether the failure
+Then return to `$superflow-handoff` or `$superflow-contracts` depending on whether the failure
 is implementation drift or design/spec drift.
 
 After three consecutive verify-fail cycles, do not auto-continue fixing. Ask
@@ -203,7 +203,7 @@ Before pass:
 Only then run:
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-guard.sh <change-dir> verify --apply
+~/.codex/skills/superflow/scripts/superflow-guard.sh <change-dir> verify --apply
 ```
 
 This advances to `phase: archive`, sets `verify_result: pass`, and records
@@ -220,5 +220,5 @@ Per-case PASS requires retained local execution receipts. Freeze service/entry, 
 ### Database layer evidence
 
 Freeze and inherit `testLayer`, entry.database, production statements, mockBoundary,
-and data assertions from the [database contract](../superflow-pipeline/references/document-review-coverage.md#database-layer-contract).
+and data assertions from the [database contract](../superflow/references/document-review-coverage.md#database-layer-contract).
 Compare original events/receipts and source/build/entry/engine versions; preserve fixed-version historical evidence, require new evidence for changed sources.

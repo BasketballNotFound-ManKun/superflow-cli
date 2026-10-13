@@ -37,5 +37,5 @@ export function checkSkillDeployment(
   for (const readyPath of readyPaths) {
     console.log(readyPath);
   }
-  console.log(`\n→ Agent should load this skill via description matching.`);
+  console.log(`\n→ Agent should explicitly read the selected skill. Start user requests with $superflow.`);
 }

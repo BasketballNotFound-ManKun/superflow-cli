@@ -1,13 +1,13 @@
 ---
 name: superflow-verify
-description: Use when reviewing code changes or verifying an SDD/OpenSpec implementation, test evidence, branch/worktree handling, or retry decisions.
+description: Superflow 内部能力：只读评审代码、测试证据和交付状态，确认冻结合同是否已被完整实现。由 $superflow 选择，用户无需手动分流。
 ---
 
 # SDD Verify
 
 ## 验证信号复核
 
-读取[测试指南](../superflow-pipeline/references/test-guide.md)，核对当前差异、冻结用例及
+读取[测试指南](../superflow/references/test-guide.md)，核对当前差异、冻结用例及
 实际执行数；区分逻辑、数据库和真实入口结论。先判断历史证据是否失效，再要求实施方
 重跑受影响验证；仅报告格式变更不自动重跑全链路。评审方只读核验原始输出与源码。
 
@@ -25,7 +25,7 @@ anchors, a fresh reading of the affected call path, and independent judgment.
 
 ## 五维与独立评审入口
 
-代码质量评审必须读取[统一 Reviewer 清单](../superflow-pipeline/references/reviewer-checklist.md)，
+代码质量评审必须读取[统一 Reviewer 清单](../superflow/references/reviewer-checklist.md)，
 按其中的实际影响分档、隔离包、五维覆盖、finding 证伪与合并步骤执行。
 `review-coverage` 的 risk.tier 是路径提示，不能直接决定实际深度；打印提示与实际档位及依据。
 普通代码评审可以直接进入此入口，不要求先创建 SDD 状态；有冻结合同则同时核验符合度。
@@ -44,7 +44,7 @@ DONE_WITH_CONCERNS 先调查全部 concern，再决定。原生子代理支持�
 遇到“做成通用版本”等宽泛建议，先检查真实调用点；没有第二个调用方或合同要求时保持最小实现。
 项目规则只有用户确认后才回写，评审反馈不会静默改变仓库政策。
 
-完整 workflow 验收必须读取[需求×真实入口评审](../superflow-pipeline/references/document-review-coverage.md)。
+完整 workflow 验收必须读取[需求×真实入口评审](../superflow/references/document-review-coverage.md)。
 沿 R/E/C ID 在现有 test-report 回填实际角色、页面动作、请求路由、最终状态与禁止副作用
 的原始证据。独立对照原始来源及实际调用方；API-only 不得冒充 browser E2E，计划不等于执行。
 横向字段改造还要复核页面请求命中的精确 Mapper statement，并查看非空记录的同 ID
@@ -76,15 +76,15 @@ readability pass, not a second code review or a license for unrelated cleanup.
 Run:
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-yaml-validate.sh <change-dir>
-~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh recover <change-dir>
-~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh scale <change-dir>
+~/.codex/skills/superflow/scripts/superflow-yaml-validate.sh <change-dir>
+~/.codex/skills/superflow/scripts/superflow-state.sh recover <change-dir>
+~/.codex/skills/superflow/scripts/superflow-state.sh scale <change-dir>
 ```
 
 If the change is still in `implement`, run:
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-guard.sh <change-dir> implement --apply
+~/.codex/skills/superflow/scripts/superflow-guard.sh <change-dir> implement --apply
 ```
 
 Do not verify from conversation memory. Reload `.sdd/handoff/sdd-context.md`,
@@ -140,10 +140,10 @@ CRITICAL or IMPORTANT failures cannot be accepted silently. If the user chooses
 to fix, run:
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh transition <change-dir> verify-fail
+~/.codex/skills/superflow/scripts/superflow-state.sh transition <change-dir> verify-fail
 ```
 
-Then return to `$superflow-implement` or `$superflow-docs` depending on whether the failure
+Then return to `$superflow-handoff` or `$superflow-contracts` depending on whether the failure
 is implementation drift or design/spec drift.
 
 After three consecutive verify-fail cycles, do not auto-continue fixing. Ask
@@ -186,7 +186,7 @@ Before pass:
 Only then run:
 
 ```bash
-~/.codex/skills/superflow-pipeline/scripts/superflow-guard.sh <change-dir> verify --apply
+~/.codex/skills/superflow/scripts/superflow-guard.sh <change-dir> verify --apply
 ```
 
 This advances to `phase: archive`, sets `verify_result: pass`, and records
@@ -202,6 +202,6 @@ and wait for explicit user confirmation.
 
 ### 数据库分层证据
 
-按 [数据库合同](../superflow-pipeline/references/document-review-coverage.md#数据库分层合同)
+按 [数据库合同](../superflow/references/document-review-coverage.md#数据库分层合同)
 冻结并继承 `testLayer`、entry.database、生产 statement、mockBoundary 和数据断言。
 核对原始事件与receipt、源码/构建/入口/引擎版本；旧固定版本证据保留，当前源码变化需新证据。

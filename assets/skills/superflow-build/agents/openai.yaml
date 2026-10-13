@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · 阶段 · 代码实现"
+  short_description: "执行已批准变更的任务清单，继承冻结的设计和测试合同并记录进度"
+  default_prompt: "使用 $superflow-build，执行已批准变更的任务清单，继承冻结的设计和测试合同并记录进度。"
+policy:
+  allow_implicit_invocation: false

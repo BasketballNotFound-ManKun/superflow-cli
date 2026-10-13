@@ -14,7 +14,7 @@ export function handoffHash(change: string): string {
     [
       path.join(
         ROOT,
-        "assets/skills/superflow-pipeline/scripts/superflow-handoff.sh",
+        "assets/skills/superflow/scripts/superflow-handoff.sh",
       ),
       change,
       "--hash-only",

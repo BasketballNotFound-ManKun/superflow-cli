@@ -15,7 +15,8 @@ import {
 } from '../../domains/agent.js';
 import { deployRules } from '../../domains/skill/rules.js';
 import { deployScripts } from '../../domains/skill/scripts.js';
-import { deploySkill } from '../../domains/skill/deploy.js';
+import { deploySkill, retireSkillAssets } from '../../domains/skill/deploy.js';
+import { getManifest } from '../../domains/config/manifest.js';
 import { deployPrompts } from '../../domains/skill/prompts.js';
 import { syncManagedHooks } from '../../domains/hook.js';
 import type { Agent, InstallScope, Language, SddState } from '../../types.js';
@@ -163,11 +164,17 @@ export async function updateCommand(options: {
         const skillsRoot = skillsRootForLanguage(language);
         await deploySkill(skill, skillsRoot, platform.skillsDir, { agent });
       }
+      const retired = await retireSkillAssets(platform.skillsDir, getManifest().retiredSkills ?? {});
+      if (retired.preserved.length) console.warn(language === 'zh'
+        ? `保留修改过的旧技能，请人工核对：${retired.preserved.join(', ')}`
+        : `Modified old skills preserved for manual review: ${retired.preserved.join(', ')}`);
       await deployRules(ALL_RULES, path.join(ASSETS_DIR, 'rules'), platform.rulesDir);
       const scripts = scriptsForAgent(agent);
       await deployScripts(scripts, path.join(ASSETS_DIR, 'scripts'), platform.scriptsDir, { agent });
       if (agent === 'codex') {
         await deployPrompts(CODEX_PROMPTS, path.join(ASSETS_DIR, 'prompts'), platform.promptsDir);
+        const retiredPrompts = await retireSkillAssets(platform.promptsDir, getManifest().retiredPrompts ?? {});
+        if (retiredPrompts.preserved.length) console.warn(language === 'zh' ? `保留修改过的旧 Prompt：${retiredPrompts.preserved.join(', ')}` : `Modified old prompts preserved: ${retiredPrompts.preserved.join(', ')}`);
       }
       const hooks = hookScriptsForAgent(agent);
       if (!options.noHooks && hooks.length > 0) {
@@ -206,13 +213,14 @@ export function detectInstalledTargets(
   agents: Agent[]
 ): UpdateTarget[] {
   const targets: UpdateTarget[] = [];
+  // Retired router names are discovery inputs for migration, never aliases.
+  const routers = ['superflow', 'sdd-spec-pipeline', ...Object.keys(
+    getManifest().retiredSkills ?? {}
+  ).filter((name) => name.endsWith('-pipeline'))];
   for (const scope of ['project', 'global'] as InstallScope[]) {
     for (const agent of agents) {
       const platform = getPlatformPaths(agent, scope, projectPath);
-      if (
-        existsSync(path.join(platform.skillsDir, 'superflow-pipeline', 'SKILL.md')) ||
-        existsSync(path.join(platform.skillsDir, 'sdd-spec-pipeline', 'SKILL.md'))
-      ) {
+      if (routers.some((name) => existsSync(path.join(platform.skillsDir, name, 'SKILL.md')))) {
         targets.push({ agent, scope, projectPath });
       }
     }

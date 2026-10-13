@@ -6,7 +6,7 @@ import { ASSETS_DIR } from "../../platform/assets.js";
 const PIPELINE_SCRIPTS = path.resolve(
   ASSETS_DIR,
   "skills",
-  "superflow-pipeline",
+  "superflow",
   "scripts",
 );
 

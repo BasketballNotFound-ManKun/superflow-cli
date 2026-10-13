@@ -38,7 +38,7 @@ describe("review coverage installation closure", () => {
       fs.mkdirSync(path.dirname(custom), { recursive: true });
       fs.writeFileSync(custom, "user-owned\n");
       for (let round = 0; round < 2; round++) {
-        for (const skill of ["superflow-pipeline", "superflow-verify"]) {
+        for (const skill of ["superflow", "superflow-verify"]) {
           await deploySkill(skill, source, target, { agent });
         }
         const entry = fs.readFileSync(
@@ -49,7 +49,7 @@ describe("review coverage installation closure", () => {
         const guide = fs.readFileSync(
           path.join(
             target,
-            "superflow-pipeline/references/reviewer-checklist.md",
+            "superflow/references/reviewer-checklist.md",
           ),
           "utf8",
         );
@@ -85,12 +85,12 @@ describe("review coverage installation closure", () => {
     async (agent, language) => {
       const host = path.join(temporary, `.${agent}`);
       const scripts = path.join(host, agent === "codex" ? "hooks" : "scripts");
-      const skills = path.join(host, "skills/superflow-pipeline");
+      const skills = path.join(host, "skills/superflow");
       fs.mkdirSync(skills, { recursive: true });
       fs.cpSync(
         path.join(
           ROOT,
-          `assets/${language === "en" ? "skills-en" : "skills"}/superflow-pipeline`,
+          `assets/${language === "en" ? "skills-en" : "skills"}/superflow`,
         ),
         skills,
         { recursive: true },

@@ -1,4 +1,6 @@
 interface:
-  display_name: "SDD Clarify"
-  short_description: "Clarify requirements, confirm features one by one, and freeze API drafts"
-  default_prompt: "Use $superflow-clarify to process this requirement one confirmed feature at a time before SDD docs."
+  display_name: "Superflow · Phase · Requirements"
+  short_description: "Clarify product inputs and freeze requirements and API drafts"
+  default_prompt: "Use $superflow-clarify to clarify product inputs and freeze requirements and API drafts."
+policy:
+  allow_implicit_invocation: false

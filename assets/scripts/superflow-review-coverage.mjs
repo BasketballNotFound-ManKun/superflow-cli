@@ -15,10 +15,10 @@ export function fileHash(file) {
 export function currentHandoffHash(root) {
   const directory = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
-    path.resolve(directory, "../skills/superflow-pipeline/scripts"),
-    path.resolve(directory, "../skills-en/superflow-pipeline/scripts"),
-    path.join(os.homedir(), ".codex/skills/superflow-pipeline/scripts"),
-    path.join(os.homedir(), ".claude/skills/superflow-pipeline/scripts"),
+    path.resolve(directory, "../skills/superflow/scripts"),
+    path.resolve(directory, "../skills-en/superflow/scripts"),
+    path.join(os.homedir(), ".codex/skills/superflow/scripts"),
+    path.join(os.homedir(), ".claude/skills/superflow/scripts"),
   ];
   const script = candidates
     .map((dir) => path.join(dir, "superflow-handoff.sh"))

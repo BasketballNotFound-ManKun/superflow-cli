@@ -9,13 +9,14 @@ import {
   inspectCodexSuperpowers,
   updateClaudeSuperpowers,
   installUnderstand,
-  installApiDocChangelog,
 } from '../../src/domains/deps.js';
 import { runCommand } from '../../src/platform/process.js';
 import { promises as fs } from 'fs';
 import fsSync from 'fs';
 import os from 'os';
 import path from 'path';
+import { deploySkill } from '../../src/domains/skill/deploy.js';
+import { ASSETS_DIR } from '../../src/platform/assets.js';
 
 vi.mock('../../src/platform/process.js', () => ({
   runCommand: vi.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
@@ -231,11 +232,16 @@ describe('core/dependencies', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('installApiDocChangelog 用 fs.cp 复制', async () => {
-    const spy = vi.spyOn(fs, 'cp').mockResolvedValue(undefined);
-    await installApiDocChangelog();
-    expect(spy).toHaveBeenCalled();
-    spy.mockRestore();
+  it('接口变更标注通过统一部署器继承 Claude 宿主路径与内部可见性', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'superflow-api-skill-'));
+    try {
+      await deploySkill('superflow-api-changelog', path.join(ASSETS_DIR, 'skills'), root, { agent: 'claude' });
+      const text = await fs.readFile(path.join(root, 'superflow-api-changelog', 'SKILL.md'), 'utf8');
+      expect(text).toContain('user-invocable: false');
+      expect(fsSync.existsSync(path.join(root, 'superflow-api-changelog', 'agents', 'openai.yaml'))).toBe(true);
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
   });
 
   it('拒绝安装结果比官方目录版本旧', async () => {

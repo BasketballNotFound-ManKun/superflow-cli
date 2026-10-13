@@ -10,12 +10,12 @@ import {
 describe("core/manifest", () => {
   it("manifest exposes SDD, OpenSpec, and verify skill assets", () => {
     const skills = getManifestSkillNames();
-    expect(skills).toContain("superflow-pipeline");
+    expect(skills).toContain("superflow");
     expect(skills).toContain("superflow-design");
     expect(skills).toContain("superflow-verify");
     expect(skills).not.toContain("sdd-spec-pipeline");
-    expect(skills).toContain("openspec-propose");
-    expect(skills).toContain("openspec-apply-change");
+    expect(skills).toContain("superflow-propose");
+    expect(skills).toContain("superflow-build");
   });
 
   it("manifest exposes common and agent-specific scripts", () => {

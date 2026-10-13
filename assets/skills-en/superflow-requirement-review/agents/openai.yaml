@@ -1,4 +1,6 @@
 interface:
-  display_name: "Superflow Requirement Review"
-  short_description: "Reverse-review requirements and close source-backed findings"
-  default_prompt: "Use $superflow-requirement-review to reverse-review the current OpenSpec requirement and close all findings."
+  display_name: "Superflow · Specialist · Requirement review"
+  short_description: "Review requirements for omissions, conflicts, and testability"
+  default_prompt: "Use $superflow-requirement-review to review requirements for omissions, conflicts, and testability."
+policy:
+  allow_implicit_invocation: false

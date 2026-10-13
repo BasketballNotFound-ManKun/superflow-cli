@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Routing · Small code task"
+  short_description: "Handle bounded code tasks; escalate unclear scope or risk"
+  default_prompt: "Use $superflow-quick-dev to handle bounded code tasks; escalate unclear scope or risk."
+policy:
+  allow_implicit_invocation: false

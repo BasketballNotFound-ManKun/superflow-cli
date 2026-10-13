@@ -38,7 +38,7 @@
 - `docs/managed-agent-protocol.md`
 
 适用范围包括 `src/domains/managed-work/`、`src/mcp/`、托管 Prompt、Hook、脚本、
-`superflow-pipeline` 托管 Skill、状态机、协议、预算、等待、通知和恢复逻辑。
+`superflow` 托管 Skill、状态机、协议、预算、等待、通知和恢复逻辑。
 
 每次修改必须先判断：
 

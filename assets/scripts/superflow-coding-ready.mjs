@@ -133,21 +133,21 @@ function resolvePipelineScripts(currentScriptDir) {
       currentScriptDir,
       "..",
       "skills",
-      "superflow-pipeline",
+      "superflow",
       "scripts",
     ),
     path.join(
       os.homedir(),
       ".codex",
       "skills",
-      "superflow-pipeline",
+      "superflow",
       "scripts",
     ),
     path.join(
       os.homedir(),
       ".claude",
       "skills",
-      "superflow-pipeline",
+      "superflow",
       "scripts",
     ),
   ];
@@ -155,7 +155,7 @@ function resolvePipelineScripts(currentScriptDir) {
     fs.existsSync(path.join(candidate, "superflow-guard.sh")),
   );
   if (!found) {
-    fail(["找不到 superflow-pipeline 门禁脚本，请先执行 superflow update"]);
+    fail(["找不到 superflow 门禁脚本，请先执行 superflow update"]);
   }
   return found;
 }

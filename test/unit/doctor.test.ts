@@ -49,11 +49,11 @@ describe('commands/doctor', () => {
 
   it('auto scope checks both project and global scopes', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-doctor-'));
-    fs.mkdirSync(path.join(root, '.codex', 'skills', 'superflow-pipeline'), {
+    fs.mkdirSync(path.join(root, '.codex', 'skills', 'superflow'), {
       recursive: true,
     });
     fs.writeFileSync(
-      path.join(root, '.codex', 'skills', 'superflow-pipeline', 'SKILL.md'),
+      path.join(root, '.codex', 'skills', 'superflow', 'SKILL.md'),
       'ok'
     );
 
@@ -66,7 +66,7 @@ describe('commands/doctor', () => {
     expect(result.scope).toBe('auto');
     expect(result.scopesChecked).toEqual(['project', 'global']);
     expect(result.checks.some((check) =>
-      check.check === 'skill:codex:project:superflow-pipeline'
+      check.check === 'skill:codex:project:superflow'
     )).toBe(true);
     fs.rmSync(root, { recursive: true, force: true });
   });

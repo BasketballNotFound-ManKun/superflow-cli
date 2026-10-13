@@ -101,7 +101,7 @@ CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code，
    OpenSpec，例如 `openspec init <project> --tools claude,codex --profile custom`。
 4. 为 Claude Code / Codex 安装 Superpowers；这是 Superflow 的核心 HOW/TDD
    依赖，安装失败会中断初始化。
-5. 尝试安装 understand-anything，并复制 api-doc-changelog；失败只警告，
+5. 尝试安装 understand-anything；失败只警告，
    不阻断初始化。
 6. 部署 SuperBridge Flow/OpenSpec skills。
 7. 部署 hook/command 脚本；Codex 写入 `hooks.json`，Claude Code 写入
@@ -221,7 +221,7 @@ claude mcp get superflow
 
 - `superflow` CLI 是否在 PATH。
 - `openspec` CLI 是否可用。
-- Superpowers、understand-anything、api-doc-changelog 是否可检测。
+- Superpowers、understand-anything 是否可检测，以及正式技能是否完整部署。
 - SuperBridge Flow skills 是否完整。
 - hook 脚本是否存在。
 - hook 是否已注册。
@@ -246,18 +246,18 @@ superflow archive --agent codex
 Codex、Claude Code 的触发方式不同：
 
 - Codex：通常用自然语言或 `$skill-name` 触发，例如“请使用 SuperBridge Flow 流程”或
-  `$superflow-pipeline`。
+  `$superflow`。
 - Claude Code：安装后可以直接使用 slash command，例如
-  `/superflow-pipeline`、`/superflow-clarify`、`/superflow-docs`、`/superflow-design`、
-  `/superflow-implement`、`/superflow-verify`、`/superflow-archive`。
+  `/superflow`、`/superflow-clarify`、`/superflow-contracts`、`/superflow-design`、
+  `/superflow-handoff`、`/superflow-verify`、`/superflow-archive`。
 
 普通使用建议始终先走总路由，让 SDD 自己判断阶段：
 
-- Codex：优先 `$superflow-pipeline` 或自然语言“请使用 SuperBridge Flow 流程”。
-- Claude Code：优先 `/superflow-pipeline`。
+- Codex：优先 `$superflow` 或自然语言“请使用 SuperBridge Flow 流程”。
+- Claude Code：优先 `/superflow`。
 
 只有你非常明确当前就是需求澄清、文档补齐、技术详设或实现阶段时，才直达
-`$superflow-clarify` / `/superflow-clarify`、`$superflow-docs` / `/superflow-docs` 等阶段命令。
+`$superflow-clarify` / `/superflow-clarify`、`$superflow-contracts` / `/superflow-contracts` 等阶段命令。
 
 在 Codex 会话里描述需求，并明确使用 SuperBridge Flow 流程。例如：
 
@@ -268,7 +268,7 @@ Codex、Claude Code 的触发方式不同：
 在 Claude Code 会话里可以直接运行：
 
 ```text
-/superflow-pipeline 处理这个需求：……
+/superflow 处理这个需求：……
 ```
 
 两种方式都会从 SDD 总入口路由，通常按下面阶段推进。
@@ -281,7 +281,7 @@ SuperBridge Flow CLI 不内置安装 `lark-cli`。如果团队使用飞书，可
 Claude Code：
 
 ```text
-/superflow-pipeline
+/superflow
 使用 lark-cli 读取这份飞书在线文档：<文档链接>。
 只分析 1.1 这个需求。
 ```
@@ -289,7 +289,7 @@ Claude Code：
 Codex：
 
 ```text
-请使用 $superflow-pipeline。
+请使用 $superflow。
 使用 lark-cli 读取这份飞书在线文档：<文档链接>。
 只分析 1.1 这个需求。
 ```
@@ -301,7 +301,7 @@ Codex：
 Claude Code：
 
 ```text
-/superflow-pipeline
+/superflow
 读取本地需求文件：docs/requirements/charging-package-prd.md。
 只分析 1.1 这个需求。
 ```
@@ -309,7 +309,7 @@ Claude Code：
 Codex：
 
 ```text
-请使用 $superflow-pipeline。
+请使用 $superflow。
 读取本地需求文件：docs/requirements/charging-package-prd.md。
 只分析 1.1 这个需求。
 ```
@@ -321,8 +321,8 @@ Codex：
 
 负责技能 / 命令：
 
-- Codex：`$superflow-clarify`、`$openspec-propose`、`$superflow-docs`
-- Claude Code：`/superflow-clarify`、`/openspec-propose`、`/superflow-docs`
+- Codex：`$superflow-clarify`、`$superflow-propose`、`$superflow-contracts`
+- Claude Code：`/superflow-clarify`、`/superflow-propose`、`/superflow-contracts`
 
 长 PRD、飞书/语雀导出、截图很多或多个功能混在一起的需求，必须先用
 clarify 阶段分段处理：先建 `source-ingestion.md` 和
@@ -382,8 +382,8 @@ quality gate，并推进到 `phase: implement`。
 
 负责技能 / 命令：
 
-- Codex：`$superflow-implement`、`$openspec-apply-change`
-- Claude Code：`/superflow-implement`、`/openspec-apply-change`
+- Codex：`$superflow-handoff`、`$superflow-build`
+- Claude Code：`/superflow-handoff`、`/superflow-build`
 - 内部会使用 Superpowers 的 executing-plans、test-driven-development、
   subagent-driven-development、using-git-worktrees 等能力
 
@@ -442,8 +442,8 @@ verify 阶段不能只写“已验证”。需要写清：
 
 负责技能 / 命令：
 
-- Codex：`$superflow-archive`、`$openspec-archive-change`
-- Claude Code：`/superflow-archive`、`/openspec-archive-change`
+- Codex：`$superflow-archive`、`$superflow-archive`
+- Claude Code：`/superflow-archive`、`/superflow-archive`
 
 归档前要求：
 
@@ -479,7 +479,7 @@ Claude Code 里也可以直接用当前阶段命令继续，例如：
 
 ```text
 /superflow-design
-/superflow-implement
+/superflow-handoff
 /superflow-verify
 ```
 
@@ -649,8 +649,8 @@ superflow pipeline --agent codex
 然后在会话里明确说：
 
 ```text
-请使用 $superflow-pipeline 处理这个需求。
-/superflow-pipeline 处理这个需求。
+请使用 $superflow 处理这个需求。
+/superflow 处理这个需求。
 ```
 
 ### 任务 prompt 偶发缺失
@@ -665,10 +665,10 @@ superflow pipeline --agent codex
 
 ```bash
 # Codex 全局安装
-~/.codex/skills/superflow-pipeline/scripts/superflow-handoff.sh <change-dir> --refresh
+~/.codex/skills/superflow/scripts/superflow-handoff.sh <change-dir> --refresh
 
 # Claude Code 全局安装
-~/.claude/skills/superflow-pipeline/scripts/superflow-handoff.sh <change-dir> --refresh
+~/.claude/skills/superflow/scripts/superflow-handoff.sh <change-dir> --refresh
 ```
 
 然后把新的 hash 写回 `design.md`、`sdd-quality-gate.md`、`test-report.md`
@@ -700,14 +700,14 @@ Codex：
 Claude Code：
 
 ```text
-/superflow-pipeline
+/superflow
 处理这个需求：……
 ```
 
 读取飞书在线文档时：
 
 ```text
-/superflow-pipeline
+/superflow
 使用 lark-cli 读取这份飞书在线文档：<文档链接>。
 只分析 1.1 这个需求。
 ```
@@ -715,7 +715,7 @@ Claude Code：
 读取本地需求文件时：
 
 ```text
-/superflow-pipeline
+/superflow
 读取本地需求文件：docs/requirements/charging-package-prd.md。
 只分析 1.1 这个需求。
 ```
@@ -735,7 +735,7 @@ Codex：
 Claude Code：
 
 ```text
-/superflow-pipeline
+/superflow
 继续当前 SuperBridge Flow change。
 ```
 

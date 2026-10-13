@@ -35,7 +35,7 @@ describe('commands/uninstall', () => {
 
   it('detects only actually installed uninstall targets in auto mode', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-uninstall-auto-'));
-    const skill = path.join(root, '.codex', 'skills', 'superflow-pipeline', 'SKILL.md');
+    const skill = path.join(root, '.codex', 'skills', 'superflow', 'SKILL.md');
     fs.mkdirSync(path.dirname(skill), { recursive: true });
     fs.writeFileSync(skill, 'ok');
 

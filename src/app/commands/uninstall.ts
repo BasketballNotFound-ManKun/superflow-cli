@@ -334,7 +334,7 @@ export function detectInstalledUninstallTargets(
     for (const agent of agents) {
       const platform = getPlatformPaths(agent, scope, projectPath);
       const hasSkill =
-        existsSync(path.join(platform.skillsDir, 'superflow-pipeline', 'SKILL.md')) ||
+        existsSync(path.join(platform.skillsDir, 'superflow', 'SKILL.md')) ||
         existsSync(path.join(platform.skillsDir, 'sdd-spec-pipeline', 'SKILL.md'));
       const hasRule = ALL_RULES.some((rule) => existsSync(rulePath(platform.rulesDir, rule)));
       const hasScript = scriptsForAgent(agent).some((script) =>

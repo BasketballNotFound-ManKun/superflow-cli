@@ -1,0 +1,167 @@
+---
+name: superflow-handoff
+description: Use when SDD/OpenSpec contract docs and Superpowers technical design exist and implementation prompts, batch plans, worktree plans, TDD strategy, reviewer/tester checkpoints, validation plans, or test-report updates are needed.
+---
+
+# SuperFlow Implement
+
+## Verification contract inheritance
+
+Before generating prompts, read the [test guide](../superflow/references/test-guide.md).
+Inherit frozen tests.md cases, commands, actual backends, and assertions; require
+implementers to check them before editing, execute them, and record results. Missing
+signals or real-environment obligations return to superflow-contracts, not a second plan.
+
+Prompts inherit frozen executionContext only. Execution entries generate actual
+cwd/selected environment hashes for raw-event/receipt checks; Agents do not fill
+expected observations. Missing bindings or changed contexts return to the document
+owner or affected reruns without rewriting historical successful records.
+
+
+## Role
+
+This phase turns frozen contracts and source-level technical design into safe
+execution prompts. It does not rewrite the WHAT. OpenSpec/SDD remains canonical
+for requirements, API, DB, SQL, tests, and acceptance gates. Superpowers owns the
+source-level HOW and the execution plan.
+
+## Entry Gate
+
+Before generating prompts, reload and verify:
+
+- .sdd/state.yaml
+- .sdd/handoff/sdd-context.md
+- .sdd/handoff/sdd-context.json
+- .sdd/handoff/sdd-context.sha256
+- api.md
+- design.md
+- tasks.md
+- tests.md
+- traceability-matrix.md
+- review-checklist.md
+- sdd-quality-gate.md
+- test-report.md
+- technical_design from state, when present
+
+Run:
+
+- ../superflow/scripts/superflow-yaml-validate.sh <change-dir>
+- ../superflow/scripts/superflow-guard.sh <change-dir> design --apply
+
+If docs changed, run:
+
+- ../superflow/scripts/superflow-handoff.sh <change-dir> --refresh
+- ../superflow/scripts/superflow-state.sh init <change-dir> docs
+- ../superflow/scripts/superflow-guard.sh <change-dir> docs
+
+## Prompt Contract
+
+Every implementation prompt must include these sections:
+
+- Required reading: handoff, API contract, design, tests, quality gate,
+  review checklist, traceability, and technical design.
+- Context drift and state inheritance: clickable handoff link, handoff_hash,
+  current phase, and refresh rules.
+- Applicable project rules selected in the frozen handoff and task-relevant
+  skills found through the Host's normal skill discovery. The Host reads the
+  relevant skill content and passes applicable rule statements through the
+  existing `mandatoryEngineeringRules` input. Names alone are insufficient;
+  do not scan personal configuration directories or copy personal rules into
+  project artifacts. Executor and Reviewer receive the same frozen statements.
+- Data-intensive work carries technical-design scale, growth, processing-cost
+  trade-offs, and validation evidence. Keep proportional to risk; simple work
+  does not require a performance benchmark.
+- Superpowers technical design inheritance: source-level HOW, TDD entry points,
+  team roles, reviewer/tester checkpoints, risky assumptions, and forbidden
+  improvisation.
+- State-machine execution decision: build_mode, isolation, tdd_mode,
+  review_mode, implementation_prompt, and worktree ports.
+- Platform impact discovery: code search scope, modules, APIs, tables,
+  regression points, and evidence anchors.
+- Existing code and data relationship check: real entry, mapper/XML, entity,
+  DTO, converter, SQL, scheduled job, MQ, callback, and sibling repo references.
+- Field semantic contract: source field, source meaning, target field, target
+  meaning, equivalence, evidence anchor, forbidden usage, and owner for unknowns.
+- Money precision boundary when monetary behavior changes: calculation-state
+  source and intermediate precision, settlement/display boundary, scale and
+  rounding mode, forbidden early rounding, deterministic residual allocation,
+  authoritative total, complement derivation as `authoritative total -
+  sum(other components)`, and half-cent or multi-detail reconciliation evidence.
+  It also inherits `money-precision-algorithms.md`: exact representation,
+  currency/provider minor units, rounding policy source, stable residual
+  tie-breaker, signed-value evidence, and conditional FX metadata.
+- Write-loop verification: business action, setter/assignment, converter, mapper
+  insert/update, DB column, downstream reader, consumer entry, SQL check, test
+  case.
+- Real-entry call chain: user or external action, upstream service, repository
+  entry point, async callback, DB state, downstream consumer, and validation
+  method.
+- No fallback or guesswork: any default, silent skip, alternate field, retained
+  stale value, or compensation must be approved with owner, monitoring, exposure,
+  and removal rules.
+- TDD red-green plan: failing test evidence before the fix, green evidence after
+  the fix, and regression command.
+- Interface automation checklist: base URL, auth flow, request body, response
+  assertion, DB assertion, log assertion, and external callback evidence when
+  relevant.
+- Agent preflight checklist: real entry located, field contract checked,
+  write-loop checked, no-fallback boundary confirmed, RED test run, allowed
+  files, forbidden files, blockers.
+- Worktree start port: isolated worktree path, branch, app port, debug port, and
+  collision fallback.
+- Completion report: changed files, executed commands, real evidence, skipped
+  tests with reason, design deviations, blockers, and next-batch dependencies.
+
+## Batch Split Rules
+
+Use references/batch-split-guide.md and references/batch-prompt-template.md.
+Split by business closure, not by file type. Each batch must have independent
+entry, implementation scope, verification, and report obligations.
+
+Read `tasks.md` predecessor links before splitting or dispatching. A batch is
+executable only when its real predecessors are complete; independent batches
+may run in parallel. Keep the existing checkbox and machine category as the
+progress authority. An implementation discovery that changes a confirmed
+owner decision or task acceptance requires canonical document repair, handoff
+refresh, document review, and a new Coding Ready receipt before the affected
+batch resumes. A free-text `Blocked by` note cannot downgrade a locally
+executable task to an external category.
+
+Workers may update only their own embedded-changes/pXX-* docs. Root aggregate
+docs are updated by the leader during closeout after related worktrees merge.
+
+## Hard Gates
+
+Block prompt generation or execution when any of these are missing:
+
+- task-local docs for every embedded change;
+- handoff files and matching hash;
+- technical_design for full workflow;
+- field/status reverse impact matrix when risky fields or states are touched;
+- money precision boundary when monetary calculation, settlement, allocation,
+  reconciliation, or financial display is touched;
+- architecture boundary and call-direction matrix for cross-service or external
+  flows;
+- executable tests.md commands for L3/L4 or real-entry requirements;
+- SQL risk review for DB changes;
+- real-entry acceptance path for integrations;
+- superflow-guard implement passing.
+
+## Completion
+
+Before moving to verify, run:
+
+- ../superflow/scripts/superflow-guard.sh <change-dir> implement --apply
+
+Do not claim completion from unit tests alone. Runtime code changes require
+compile/build evidence, app start evidence when applicable, real API or event
+execution, DB/log checks, hook output, and test-report updates.
+
+
+Per-case PASS requires retained local execution receipts. Freeze service/entry, source write chains and before/after persistence assertions using pipeline/references/document-review-coverage.md and execution-receipt.v1. Keep legacy evidence PARTIAL. Independent review checks the exact Mapper statement and raw output; full delivery runs the current installation's lint --require-complete. Hashes do not prove authenticity or business sufficiency.
+
+### Database layer evidence
+
+Freeze and inherit `testLayer`, entry.database, production statements, mockBoundary,
+and data assertions from the [database contract](../superflow/references/document-review-coverage.md#database-layer-contract).
+Execute frozen layers/assertions; missing DB environments are PARTIAL/BLOCKED. Do not substitute another engine or mocks.

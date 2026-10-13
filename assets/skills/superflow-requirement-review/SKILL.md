@@ -1,11 +1,11 @@
 ---
 name: superflow-requirement-review
-description: 对已澄清或已形成 OpenSpec/SDD 草案的需求和设计执行源码驱动的反向评审，主动发现闭环缺口、事实冲突、遗漏场景、过度设计、欠设计、API/UI/DB/tests 漂移及不可验证合同，并推动整改和复审闭环。Use when the user asks for 需求评审、反向评审、挑战需求、找遗漏、查错误、检查可测性、评审设计是否走偏、检查过度设计，或要求在 Superflow docs/design/implementation 前做独立审查。
+description: Superflow 内部能力：基于源码检查需求与设计的遗漏、冲突、可测性和过度设计并推动整改。由 $superflow 选择，用户无需手动分流。
 ---
 
 # Superflow Requirement Review
 
-必须读取并执行[需求×真实入口评审](../superflow-pipeline/references/document-review-coverage.md)。
+必须读取并执行[需求×真实入口评审](../superflow/references/document-review-coverage.md)。
 从原始需求独立建立核对清单，不从 FIX 任务反推范围；逐需求维度核对全部入口，特别是
 EXCLUDED、VERIFY_EXISTING 和无代码改动的路径。用户允许的动作不能被擅自改成拒绝。
 
@@ -178,5 +178,5 @@ open_owner_decisions: <number>
 ## Handoff
 
 评审通过后继续当前 Superflow 阶段；若发现 owner 决策缺失，返回
-`superflow-clarify`；若发现文档合同缺失，返回 `superflow-docs` 并在修正后再次执行
+`superflow-clarify`；若发现文档合同缺失，返回 `superflow-contracts` 并在修正后再次执行
 本 skill。

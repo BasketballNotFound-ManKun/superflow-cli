@@ -1,6 +1,6 @@
 ---
 name: superflow-tweak
-description: Use when an SDD task is a tiny non-behavioral tweak such as wording, prompt, docs, config comments, or local process text and may use a lighter path unless runtime gates are involved.
+description: Superflow 内部能力：处理文案、文档与流程文字的小改动，运行行为变更交给正式开发流程。由 $superflow 选择，用户无需手动分流。
 ---
 
 # SDD Tweak
@@ -25,15 +25,15 @@ status/enum, SDK, cross-repo, frontend contract, or real integration changes.
 
 1. Initialize state:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh init <change-dir> tweak docs
+   ~/.codex/skills/superflow/scripts/superflow-state.sh init <change-dir> tweak docs
    ```
 2. Generate/update handoff so future sessions can recover exact context.
 3. Set:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> build_mode direct
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> isolation branch
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> tdd_mode direct
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> review_mode off
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> build_mode direct
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> isolation branch
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> tdd_mode direct
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> review_mode off
    ```
 4. Run `superflow-state.sh scale <change-dir>`. If it returns `full`, stop tweak and
    upgrade to full SDD.

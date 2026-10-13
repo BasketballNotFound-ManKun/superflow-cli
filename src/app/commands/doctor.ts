@@ -267,13 +267,6 @@ export async function collectDoctor(options: {
   for (const currentScope of scopesChecked) {
     for (const agent of agents) {
     const platform = getPlatformPaths(agent, currentScope, projectPath);
-    checks.push({
-      check: `api-doc-changelog:${agent}`,
-      status: existsSync(path.join(platform.skillsDir, 'api-doc-changelog', 'SKILL.md')) ? 'pass' : 'warn',
-      message: existsSync(path.join(platform.skillsDir, 'api-doc-changelog', 'SKILL.md'))
-        ? managedText(language, '已检测', 'detected')
-        : managedText(language, '缺失', 'missing'),
-    });
 
     for (const script of scriptsForAgent(agent)) {
         const scriptPath = path.join(platform.scriptsDir, script);

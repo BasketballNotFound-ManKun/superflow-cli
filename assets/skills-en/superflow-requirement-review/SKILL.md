@@ -5,7 +5,7 @@ description: Perform source-backed reverse review of clarified requirements and 
 
 # Superflow Requirement Review
 
-Read and apply [requirement × real-entry review](../superflow-pipeline/references/document-review-coverage.md).
+Read and apply [requirement × real-entry review](../superflow/references/document-review-coverage.md).
 Build an independent checklist from original requirements, not FIX tasks. Review every entry
 per requirement dimension, especially EXCLUDED, VERIFY_EXISTING and unchanged paths.
 Never silently turn a user-authorized action into a rejection.

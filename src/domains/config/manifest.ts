@@ -2,6 +2,8 @@ import manifestJson from "../../../assets/manifest.json" with { type: "json" };
 import type { Agent } from "../../types.js";
 
 export interface SddManifest {
+  retiredSkills?: Record<string, string[]>;
+  retiredPrompts?: Record<string, string[]>;
   legacyScriptAliases?: Record<
     string,
     { target: string; knownHashes: string[] }

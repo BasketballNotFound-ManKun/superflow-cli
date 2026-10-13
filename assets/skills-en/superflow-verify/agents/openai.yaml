@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Phase · Verify"
+  short_description: "Review code and evidence against frozen delivery contracts"
+  default_prompt: "Use $superflow-verify to review code and evidence against frozen delivery contracts."
+policy:
+  allow_implicit_invocation: false

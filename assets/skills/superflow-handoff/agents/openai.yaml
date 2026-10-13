@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · 阶段 · 执行交接"
+  short_description: "将冻结合同与技术详设转成分批研发指令、整改任务和验证交接材料"
+  default_prompt: "使用 $superflow-handoff，将冻结合同与技术详设转成分批研发指令、整改任务和验证交接材料。"
+policy:
+  allow_implicit_invocation: false

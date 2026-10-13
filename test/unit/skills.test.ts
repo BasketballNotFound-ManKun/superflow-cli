@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { deploySkill, listDeployedSkills } from '../../src/domains/skill/deploy.js';
+import { deploySkill, listDeployedSkills, retireSkillAssets } from '../../src/domains/skill/deploy.js';
+import { computeDirHash } from '../../src/platform/fs.js';
+import { getManifestSkillNames } from '../../src/domains/config/manifest.js';
 
 const TMP = path.join(os.tmpdir(), 'sdd-test-skills-' + Date.now());
 const TMP_SKILLS = path.join(TMP, '.claude', 'skills');
@@ -71,4 +73,68 @@ describe('core/skills', () => {
     expect(content).not.toContain('~/.codex/hooks');
   });
 
+});
+
+describe('Superflow 用户入口安装', () => {
+  it.each(['skills', 'skills-en'])('%s 双端重复安装只有统一命名并保留用户资产', async (languageRoot) => {
+    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'superflow-entry-'));
+    try {
+      const names = getManifestSkillNames();
+      expect(names).toContain('superflow');
+      expect(names.every((name) => name === 'superflow' || name.startsWith('superflow-'))).toBe(true);
+      for (const agent of ['codex', 'claude'] as const) {
+        const destination = path.join(root, agent);
+        const custom = path.join(destination, 'custom-skill', 'SKILL.md');
+        await fs.promises.mkdir(path.dirname(custom), { recursive: true });
+        await fs.promises.writeFile(custom, '用户自定义技能');
+        for (let repeat = 0; repeat < 2; repeat++) {
+          for (const name of names) {
+            await deploySkill(name, path.resolve('assets', languageRoot), destination, { agent });
+            const metadata = path.join(destination, name, 'agents', 'openai.yaml');
+            expect(fs.existsSync(metadata), name).toBe(true);
+          }
+        }
+        const entry = fs.readFileSync(path.join(destination, 'superflow', 'SKILL.md'), 'utf-8');
+        expect(entry).not.toContain('../superflow/SKILL.md');
+        expect(fs.existsSync(path.join(destination, 'superflow', 'scripts', 'superflow-state.sh'))).toBe(true);
+        const phase = fs.readFileSync(path.join(destination, 'superflow-build', 'SKILL.md'), 'utf-8');
+        expect(phase.includes('user-invocable: false')).toBe(agent === 'claude');
+        expect(entry).not.toContain('user-invocable: false');
+        expect(fs.readFileSync(custom, 'utf-8')).toBe('用户自定义技能');
+        expect(fs.readdirSync(destination).some((name) => name.includes('.backup-'))).toBe(false);
+      }
+    } finally {
+      await fs.promises.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('只备份移出已确认的旧资产，保留自定义和符号链接且重复执行幂等', async () => {
+    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'superflow-retire-'));
+    const skills = path.join(root, 'skills');
+    const old = path.join(skills, 'old-entry');
+    const custom = path.join(skills, 'custom-entry');
+    try {
+      await fs.promises.mkdir(old, { recursive: true });
+      await fs.promises.writeFile(path.join(old, 'SKILL.md'), 'known release');
+      await fs.promises.cp(old, custom, { recursive: true });
+      const fingerprint = computeDirHash(old);
+      await fs.promises.writeFile(path.join(custom, 'extra.txt'), 'user addition');
+      await fs.promises.symlink(old, path.join(skills, 'linked-entry'));
+      const retired = { 'old-entry': [fingerprint], 'custom-entry': [fingerprint], 'linked-entry': [fingerprint] };
+      const first = await retireSkillAssets(skills, retired);
+      expect(first.removed).toEqual(['old-entry']);
+      expect(first.preserved).toEqual(['custom-entry', 'linked-entry']);
+      expect(fs.existsSync(old)).toBe(false);
+      expect(fs.existsSync(path.join(custom, 'extra.txt'))).toBe(true);
+      const backup = path.join(root, '.superflow-retired-assets', fingerprint, 'old-entry', 'SKILL.md');
+      expect(fs.readFileSync(backup, 'utf-8')).toBe('known release');
+      expect((await retireSkillAssets(skills, retired)).removed).toEqual([]);
+      await fs.promises.cp(path.dirname(backup), old, { recursive: true });
+      expect((await retireSkillAssets(skills, retired)).removed).toEqual(['old-entry']);
+      expect(fs.existsSync(old)).toBe(false);
+      expect(fs.readFileSync(backup, 'utf-8')).toBe('known release');
+    } finally {
+      await fs.promises.rm(root, { recursive: true, force: true });
+    }
+  });
 });

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Phase · Implement"
+  short_description: "Implement approved tasks using frozen design and test contracts"
+  default_prompt: "Use $superflow-build to implement approved tasks using frozen design and test contracts."
+policy:
+  allow_implicit_invocation: false

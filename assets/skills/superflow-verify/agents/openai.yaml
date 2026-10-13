@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · 阶段 · 交付验证"
+  short_description: "只读评审代码、测试证据和交付状态，确认冻结合同是否已被完整实现"
+  default_prompt: "使用 $superflow-verify，只读评审代码、测试证据和交付状态，确认冻结合同是否已被完整实现。"
+policy:
+  allow_implicit_invocation: false

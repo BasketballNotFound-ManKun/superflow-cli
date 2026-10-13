@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Phase · Explore"
+  short_description: "Explore requirements and compare approaches before committing"
+  default_prompt: "Use $superflow-explore to explore requirements and compare approaches before committing."
+policy:
+  allow_implicit_invocation: false

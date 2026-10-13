@@ -1,6 +1,6 @@
 ---
 name: superflow-clarify
-description: SDD 需求理解、澄清、功能点串行确认和 API 草案冻结。Use when Codex reads a PRD, Lark/Feishu document, screenshots, prototype images, downloaded requirement docs, or oral product requirements and must process one feature at a time before generating full SDD docs. Triggers include 需求澄清、读产品文档、分析原型、功能点确认、接口草案、API 先行、feature gate、source ingestion, or preventing over-design before coding.
+description: Superflow 内部能力：读取需求与原型，核实源码事实，逐功能澄清并冻结需求和接口草案。由 $superflow 选择，用户无需手动分流。
 ---
 
 # SDD Clarify
@@ -115,8 +115,8 @@ Create or update these files in the active OpenSpec change directory:
 
 Use the detailed workflow in:
 
-- `../superflow-pipeline/references/feature-gated-workflow.md`
-- `../superflow-pipeline/references/api-design-template.md`
+- `../superflow/references/feature-gated-workflow.md`
+- `../superflow/references/api-design-template.md`
 
 ## Per-Feature Procedure
 
@@ -195,7 +195,7 @@ progress alone does not change the agreed contract.
 
 ## Handoff
 
-When the feature is frozen, tell the user to continue with `$openspec-propose`
-for OpenSpec document generation. After `$openspec-propose` creates the base
-artifacts, use `$superflow-docs` only for SDD quality gates, traceability, API/test
+When the feature is frozen, tell the user to continue with `$superflow-propose`
+for OpenSpec document generation. After `$superflow-propose` creates the base
+artifacts, use `$superflow-contracts` only for SDD quality gates, traceability, API/test
 evidence, and prompt handoff checks.

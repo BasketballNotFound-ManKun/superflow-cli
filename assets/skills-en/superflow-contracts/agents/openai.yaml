@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Phase · Contracts"
+  short_description: "Complete API, test, traceability, and delivery contracts"
+  default_prompt: "Use $superflow-contracts to complete API, test, traceability, and delivery contracts."
+policy:
+  allow_implicit_invocation: false

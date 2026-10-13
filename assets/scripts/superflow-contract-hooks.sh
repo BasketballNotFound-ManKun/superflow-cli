@@ -738,7 +738,7 @@ hook_i_superpower_design_boundary
 if [ -n "$WARNINGS" ]; then
     echo "$WARNINGS"
     echo ""
-    echo "[SDD 契约检查] 详细说明请参考 superflow-pipeline/references/api-design-template.md"
+    echo "[SDD 契约检查] 详细说明请参考 superflow/references/api-design-template.md"
 fi
 
 if [ -n "$HAS_FAIL" ]; then

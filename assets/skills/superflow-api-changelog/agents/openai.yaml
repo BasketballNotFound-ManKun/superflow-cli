@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · 专项 · 接口变更标注"
+  short_description: "在接口合同中标注新增、修改和废弃接口及字段，帮助调用方识别本次变更"
+  default_prompt: "使用 $superflow-api-changelog 标注本次接口与字段变更。"
+policy:
+  allow_implicit_invocation: false

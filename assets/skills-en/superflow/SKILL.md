@@ -1,0 +1,455 @@
+---
+name: superflow
+description: Superflow user entry — analyze requirements, continue work, implement, verify, or archive. Select the existing workflow from the user goal.
+---
+
+## Start here
+
+Users describe their goal and constraints. Select the existing phase or specialist capability below; do not require users to choose a skill, task size, or OpenSpec versus SDD. For continuation, read current state and handoff first. Discussion and document-only requests do not authorize implementation or managed execution. Read the selected internal skill explicitly. This is the sole user router; all scripts and recovery paths live in this directory.
+
+## Canonical test guidance entry
+
+Read [test-guide.md](references/test-guide.md) for test documentation, implementation
+preparation, or delivery review. Documents freeze required signals; implementation
+inherits and review verifies. Mock examples cannot override canonical DB contracts.
+
+# SuperBridge Flow Pipeline
+
+When maintaining Superflow CLI itself, first read repository-root
+`docs/superflow-cli-design-principles.en.md` and
+`docs/superflow-cli-evaluation-framework.en.md`; managed-work changes also read
+the managed constitution and protocol. Identify the owner layer before editing,
+then record baseline, hypothesis, scenario, result, and rollback condition under
+the unified evaluation framework.
+
+## Role
+
+This is the main router and stateful workflow orchestrator for SuperBridge Flow.
+
+## Role ownership and mutual exclusions
+
+| Role | Sole owner | May do | Must not do |
+|---|---|---|---|
+| Host | goal, clarification, supervision, semantic review | choose routing and judge code/architecture risk | write business code or start a nested Supervisor |
+| Executor | source implementation, tests, startup, repair | change the workspace within the frozen contract and return evidence | edit the contract/state, lower verification, or release automatically |
+| Runner | state, hashes, exit codes, evidence persistence | schedule, wait, recover, and enforce deterministic facts | guess business meaning or replace Host review |
+
+Menus and personas change entry wording only; they never create a second state
+machine. Return to Host clarification when ownership conflicts.
+It combines OpenSpec/SDD and Superpowers without letting them overwrite each
+other:
+
+- OpenSpec/SDD owns WHAT: requirements, API contracts, data contracts, specs,
+  tests, quality gates, traceability, and acceptance rules.
+- Superpowers owns HOW: source-level technical design, TDD strategy, worktree
+  execution, implementation planning, reviewer/tester roles, and code-level risk
+  discovery.
+- Handoff files and state files are the memory boundary. Do not rely on chat
+  memory after compaction.
+
+## Managed Work And Dual-Agent Closure
+
+When the Superflow MCP is installed for the host Agent, prefer
+`superflow_managed_start/status/wait/message/submit_review` instead of manually
+spawning `superflow pipeline` from chat. MCP tasks are always `external_host`:
+the current host keeps the user conversation and reviews directly, while the
+background service starts only the peer executor. Never spawn a nested
+supervisor CLI. Wait with `superflow_managed_wait` locally instead of spending
+model turns on periodic status checks. Use the CLI equivalent below only when
+MCP is unavailable.
+Call `superflow_managed_runtime` before task creation. If its fingerprint is
+stale, require a Host restart and never start a new validation task through the
+pre-install MCP process.
+
+When the user says to use Superflow for managed delivery and provides an
+implementation prompt, change directory, or direct task, use built-in managed
+mode. Do not require the user to name `superflow`, roles, or CLI flags:
+
+Before start, perform one Host semantic routing step. Docs-only requests stop
+after autonomous document review and Coding Ready without a managed Task. A
+user-approved change/prompt is frozen from its original path. Only a bounded
+verbal request enters minimal or standard directly. Direction-changing API,
+data, concurrency, cross-repository, or owner choices return to
+clarification/documents; Runner regexes and Executor improvisation do not decide them.
+For cross-page, cross-stack or database-field changes requesting closed delivery,
+use full SDD to freeze real entries, `tests.md` and per-entry acceptance. A raw
+OpenSpec `spec/design/tasks` set or generic smoke report supports only its
+actually verified scope, not a full SDD acceptance claim.
+
+```bash
+superflow pipeline "<implementation prompt, change directory, or direct task>" --managed --project "<project root>" \
+  --supervisor current --executor peer --language en
+```
+
+`current/peer` resolves the host automatically: a Codex host drives Claude and a
+Claude host drives Codex. Ambiguous environments fail closed and require explicit
+roles. The background service
+invokes only the executor; the current host agent performs the read-only review
+without spawning another copy of itself. After executor delivery, read
+`host-review-N.md`, write the structured review JSON, then resume with
+`--resume-task <task-id> --submit-host-review <json>`. Losing the follower does
+not stop the task. Read `references/managed-work.md` before dispatch.
+
+Managed delivery uses the lower-cost executor for implementation and validation;
+the more expensive host only freezes the goal, supervises, and reviews delivery
+quality. The host must not code, build, start, test, or manage executor processes.
+When the task reaches `external_supervisor_review_required`, review, submit, and
+resume automatically in the same turn; it must not stop and wait for manual user handoff.
+Only an owner decision, unavailable external authority, or final Git approval may
+interrupt the user.
+
+Hard gates:
+
+- Use a fresh short session for every execution and repair call. Hand off through
+  the current workspace, frozen prompt, persisted result, and findings; keep old
+  session IDs only for audit and never resume a long session indefinitely.
+- The first invocation must receive the frozen task prompt automatically. Every
+  later invocation must first receive and read a condensed handoff containing at
+  least the prompt path/hash, task progress, local pending work, external
+  prerequisites, all current findings, diff stat, and recent report. Old and new
+  sessions both treat the handoff and current workspace as authoritative.
+- In `external_host` mode the current agent reviews; the service must not spawn a
+  nested Codex or Claude CLI for the supervisor role.
+- Host conversation and review do not count as background Agent invocations;
+  only real executor calls consume the execution budget.
+- Task contract, event journal, review results, and evidence are authoritative.
+- Maximum 5 reviews, 7 executor calls, and 12 total agent calls.
+- Revalidate the frozen contract and hard limits on every start or resume. Engineering work cannot enter review with only one verification category.
+- Resolve a change directory through `.sdd/state.yaml` `implementation_prompt`, reject `tasks.md` as an execution entry, and freeze one prompt snapshot plus SHA-256 for both agents.
+- Supervisor is read-only; executor cannot edit `.superflow/tasks` or commit/push/publish.
+- Frozen requirements, designs, prompts, handoffs, rules, and task facts are
+  immutable protected inputs. Tasks and test reports are retained progress
+  evidence that may be updated but not deleted. Executor cleans runtime and
+  workspace-temporary resources and keeps delivery artifacts and protected
+  contracts for Host review.
+- Never use pkill, killall, a bare kill, port/name-only cleanup, or rm -rf
+  without owner-helper verification. Native hooks block before mutation and
+  preflight/final gates verify every Host.
+- A passing run enters `environment_validation_blocked`, `local_delivery_ready`, or `release_ready`; Git always requires user approval.
+- Default MCP waits to a 240-second Host-compatible transport window. On window
+  expiry, immediately continue only from returned `latestSequence`; do not call
+  status, read full events, or restart Executor. Hosts with longer tool limits may
+  explicitly request up to twelve hours; semantic supervision runs only for attention.
+- When the user names a task-prompt document, pass its original path to start and verify the frozen SHA-256; never replace it with a host summary.
+- Page/permission changes require frontend startup and real-browser E2E; cross-stack API changes require both backend and frontend contract tests.
+- `superflow-managed-work-check.mjs` must pass before delivery-ready status.
+- Record the single delivery-ready event only after the integrity script passes.
+- After the managed command returns a terminal state, read the task report and summarize it to the user instead of returning only a task ID.
+- Freeze the selected language into the task contract. Executor and reviewer prompts, resumed rounds, journals, reports, notifications, and errors must inherit that language without switching mid-run.
+- Claude Executor long sessions use early auto-compaction by default, while
+  explicit user environment values win. Reload the frozen prompt and handoff after
+  compaction. Final `result.usage` is authoritative; a large value alone does not
+  prove Runner double counting.
+
+## Phase Order
+
+Always route work through this order unless the task is explicitly a tweak or
+hotfix:
+
+1. clarify: ingest requirements one feature at a time, freeze scope, and produce
+   source-ingestion, feature gates, inventory, UI/API gaps, and freeze review.
+2. docs: generate OpenSpec/SDD contract artifacts and the first handoff package.
+   Before closing docs, run source-backed requirement review, repair blocking
+   findings, resolve all source investigations, owner decisions, and implementation-affecting
+   external contracts, then record `requirement-review.md`. Naming or assigning a blocker does
+   not close it.
+3. design: let Superpowers produce source-level technical design from the frozen
+   contract and codebase evidence.
+4. implement: generate implementation prompts, execution plans, worktree/port
+   strategy, TDD entry points, reviewer/tester checkpoints, and delivery gates.
+5. verify: prove the implementation with tests, real-entry evidence, DB/log/API
+   checks, hook output, and test-report closure.
+6. archive: archive only after verification passes and the user confirms.
+
+## Routing
+
+- One clear, low-blast-radius code change with an existing test seam: use
+  superflow-quick-dev before editing, then reuse the existing quick managed
+  profile after Quick Spec approval. API, DB, security, transaction,
+  concurrency, payment, cross-module, active-SDD, or ownership uncertainty
+  routes to superflow-clarify instead; do not add a second managed state machine.
+- When the user explicitly asks for rigorous questioning, or a bounded feature
+  has unresolved owner decisions, mutually exclusive approaches, an unclear
+  source of truth, unclear acceptance behavior, or cross-system responsibility,
+  use `superflow-clarify` in embedded deep-clarification mode. This is a mode
+  inside the normal clarify phase, not a separate command the user must remember.
+- New or unclear requirement: use superflow-clarify.
+- Requirement review, reverse review, omission search, design challenge,
+  testability review, or over-design review: use superflow-requirement-review.
+- Confirmed requirement needing full docs: use superflow-propose, then
+  superflow-contracts.
+- Contract docs exist and code-level HOW is needed: use superflow-design.
+- Technical design and handoff exist, and prompts or execution are needed: use
+  superflow-handoff.
+- Code is ready for evidence-based closure: use superflow-verify.
+- Verified change needs lifecycle closure: use superflow-archive.
+- Small wording or non-runtime process change: use superflow-tweak.
+- Urgent small behavior repair: use superflow-hotfix, unless API, DB, cross-repo,
+  status, SQL, SDK, or real-entry gates are involved.
+
+## Embedded Deep Clarification
+
+When the router selects embedded deep clarification, follow these rules inside
+`superflow-clarify`:
+
+- Do not activate it for a clear, bounded hotfix or tweak whose intended behavior
+  and acceptance result are already evidenced. Do not turn routine work into an
+  interview.
+- Establish facts from the requirement, repository, configuration, tests, logs,
+  or available tools before asking the user. Ask only for a decision the user or
+  owner must make.
+- Ask exactly one decision question at a time. State the recommended option and
+  its important consequence, then wait for the answer before the next question.
+- After each answer, update `.sdd/handoff/brainstorm-summary.md` with
+  `confirmed`, `candidate`, `pending`, and `rejected` entries. Do not rely on
+  chat memory for a resolved decision.
+- Do not create or change proposal, spec, design, tasks, tests, or implementation
+  artifacts until all decisions that affect the current feature are confirmed or
+  explicitly marked blocked.
+- Exit deep clarification once only repository-verifiable facts remain and the
+  user confirms the current feature understanding. Continue through the existing
+  clarify workflow without invoking an external skill dependency.
+- After all relevant features are frozen, show the change-level Consensus
+  Summary from `superflow-clarify` before OpenSpec artifact generation. Carry
+  confirmed choices into canonical `proposal.md`; do not create a parallel
+  alignment fact source or add approval prompts for decisions already explicit
+  in the user's request. A changed owner choice requires affected documents,
+  handoff, review, and Coding Ready to be refreshed before execution.
+
+## Required Artifacts
+
+### Source Fact Freeze And Question Eligibility (Blocking)
+
+- When a full workflow involves existing behavior, DB/table relationships,
+  cross-repository impact, or a real entry, docs must include
+  `source-code-audit.md` with: `Business conclusion | understand-anything
+locator | Data model | All writers | Real user entry | Current callers |
+Legacy conflict | DB check required | Conclusion level | owner decision`.
+- understand-anything is a locator, not the final source of truth. Classify
+  evidence as `current`, `legacy`, `unmounted`, `data-model-only`,
+  `owner-confirmed`, or `blocked`.
+- If `List`, `orderIds`, `batchInsert`, or a one-to-many model conflicts with a
+  single-item real entry, complete a Conflict Audit instead of inferring current
+  product behavior from the data structure.
+- Before asking the user, search source, Mapper/SQL, frontend/mini-program/H5
+  callers, sibling repositories, and read-only DB data when needed. Do not turn
+  repository-verifiable facts into clarification questions.
+
+### Canonical OpenSpec Change Directory (Blocking)
+
+- Superflow must use the OpenSpec CLI single-level layout:
+  `openspec/changes/<change-name>/`.
+- The release version belongs in the change name, not an intermediate
+  directory. Encode `v1.1.1` as `v1-1-1-<feature-slug>` and never create
+  `changes/v1.1.1/<feature-slug>/`.
+- Keep exactly one physical directory for each change. Do not create a
+  compatibility symlink, copied directory, or second canonical document tree.
+- Run `openspec new change <change-name>` first, then reuse that same physical
+  directory for status, instructions, strict validation, state, handoff, and
+  every Superflow guard.
+- If a nested version directory or symlinked change is found, stop document
+  generation, migrate it to one flat physical directory, and rerun
+  `openspec validate <change-name> --strict`.
+
+For a full change, the docs phase must create or refresh:
+
+- proposal.md
+- api.md
+- spec.md or specs/<capability>/spec.md
+- design.md
+- tasks.md
+- tests.md
+- traceability-matrix.md
+- review-checklist.md
+- sdd-quality-gate.md
+- test-report.md
+- source-code-audit.md when the source fact gate is triggered
+- .sdd/state.yaml
+- .sdd/handoff/sdd-context.md
+- .sdd/handoff/sdd-context.json
+- .sdd/handoff/sdd-context.sha256
+
+Every embedded change must include .openspec.yaml, api.md, spec.md, design.md,
+tasks.md, tests.md, review-checklist.md, and sdd-quality-gate.md. Missing files
+block implementation.
+
+## State And Handoff
+
+Before moving phases, run the local scripts from this skill directory:
+
+- scripts/superflow-env.sh
+- scripts/superflow-handoff.sh <change-dir> --refresh
+- scripts/superflow-state.sh init <change-dir> <phase>
+- scripts/superflow-yaml-validate.sh <change-dir>
+- scripts/superflow-guard.sh <change-dir> docs|design|implement|verify|archive
+- scripts/superflow-archive.sh <change-dir> --dry-run|--apply
+- scripts/superflow-status.sh
+
+Rules:
+
+- Never proceed when superflow-guard fails.
+- If a frozen SDD/OpenSpec contract changes, regenerate handoff and its state-file
+  binding. Task checkbox progress and test-report updates do not require refresh.
+- The handoff_hash binding lives in .sdd/state.yaml. Prose documents reference
+  the handoff context by path; do not copy the raw hash into every document.
+- After context compaction or session handoff, reload .sdd/state.yaml and
+  .sdd/handoff/sdd-context.md before acting.
+
+## Decision Points
+
+## Autonomous Document Delivery Closure
+
+A full-workflow docs Agent must not equate a successful keyword/file guard with
+100% implementation readiness. Before developer handoff, record at least three
+independent review lenses against the same current handoff hash in
+`.sdd/reviews/document-review.json`:
+
+1. `source-contract`: source, cross-repo callers, contracts, and real entries;
+2. `architecture-minimality`: ownership, reuse, simplest design, failure owner,
+   and overdesign;
+3. `e2e-environment`: startup order, configured environment, simulators,
+   automation, DB/log assertions, and cleanup.
+
+The Agent resolves every source/config/log/probe-discoverable gap itself. Only
+business-owner decisions, unavailable credentials/authority, or external
+resources may remain in `openOwnerDecisions`, and they are asked as one final
+batch. Open findings mean `BLOCKED_FOR_OWNER_BATCH`, never 100%.
+
+Explore the configured environment during docs and record
+`.sdd/readiness/environment.json`. Only fail-safe `file`, `directory`,
+`executable`, `tcp`, and `http` probes are allowed. Never print credentials or
+write production data. Respect the declared local/dev/test scope instead of
+requiring a remote environment by default. Use
+`superflow.environment-readiness.v2` to freeze the application location,
+`local-isolated/shared-dev/shared-test/mixed` dependency policy, config sources,
+allowed/forbidden overrides, and a `contractRef` for every probe. Reachability
+alone is not an environment execution contract.
+
+Cross-service, cross-repo, device, MQ, callback, scheduler, state-machine,
+compensation, or three-plus-module logic declares `complex_logic: true` or
+`mermaid: required` in `.openspec.yaml` and includes both a Mermaid
+`sequenceDiagram` and a `flowchart`/`stateDiagram` showing failure exits,
+compensation owner, and forbidden fallback.
+
+Run `superflow check <change> --level coding-ready` after all prompts are ready.
+It validates YAML, OpenSpec, docs/design/implement, every prompt and exact link,
+review receipts, environment probes, and Mermaid diagrams, then writes a receipt
+bound to the current handoff hash. Never delegate a failed implement gate to the
+developer Agent.
+
+## Cross-System Failure Ownership And Compensation Boundary
+
+Record `Failure signal | Interpreter | Compensation owner | Retry allowed? |
+Idempotency basis | Accepted race window | Extreme fallback | Owner approval`.
+When the caller receives an explicit failure and owns refund/cancel/state
+compensation, the downstream adapter defaults to `Fail-fast + Fail-closed +
+At-most-once + Caller-owned compensation`: no transparent retry, reroute,
+resend, or guessed success. Accept a bounded false-negative window when duplicate
+side effects are more harmful. Additional fallback requires explicit owner
+approval and a proven idempotency basis, collected with other owner-only
+questions in one final batch.
+
+Record irreversible or ambiguous decisions in references/decision-point.md
+format. Do not store decisions only in chat memory.
+
+For repository-wide terminology, run `superflow context-audit --path <project>`
+when a change introduces a domain term or a durable architectural decision. Keep
+business vocabulary in `CONTEXT.md`; use an ADR only when the decision is hard
+to reverse and has meaningful alternatives. The audit is advisory: a missing
+ADR is a warning, while incomplete ADR fields or implementation details in the
+terminology list are reported for repair. It does not create approval gates or
+replace the canonical `design.md` contract.
+
+Decision points include:
+
+- API compatibility choices
+- field semantic uncertainty
+- fallback or default behavior approval
+- cross-repo ownership boundaries
+- SQL migration strategy
+- real-entry test blockers
+- archive confirmation
+
+## Quality Gates
+
+The machine-readable review, environment, Mermaid, and Coding Ready contracts
+are defined in `references/document-readiness.md`.
+
+The workflow must preserve these gates:
+
+- API-first contract freeze before implementation.
+- Requirements are processed feature by feature, not as one giant prompt.
+- Traceability from requirement to design, task, test, prompt, and report.
+- No fallback or guesswork unless explicitly approved with owner, exposure, and
+  removal rules.
+- Field/status reverse impact analysis for IDs, statuses, enums, payment,
+  online/offline, sync markers, external state, or persisted behavior.
+- Money Precision Boundary for monetary calculation, settlement, allocation,
+  reconciliation, or financial display. Preserve calculation-state precision
+  until the confirmed final boundary, forbid early rounding, define scale and
+  rounding mode plus deterministic residual handling, and require half-cent or
+  multi-detail reconciliation evidence across design, prompts, review, tests,
+  and verify. When an additive identity has an authoritative total, calculate
+  only N-1 components independently and derive the final complement as
+  `authoritative total - sum(other components)`; never round every component
+  independently and rebuild the authoritative total.
+- Architecture boundary and call-direction analysis for multi-repo, service,
+  SDK, MQ, scheduler, callback, gateway, adapter, device, or third-party flows.
+- SQL risk review before implementation for DB changes.
+- Frozen release SQL before source design for DB changes. `release-sql.md` must
+  declare `database_change: true`, an exact placeholder-free
+  `target_sql_path`, `copy_policy: verbatim`, and the normalized SQL payload
+  `sql_sha256`, with exactly one complete executable SQL block containing the
+  required prechecks, DDL/DML, migration, and post-verification. Implementation
+  agents may only copy the block verbatim and verify the hash; any SQL design
+  omission returns to docs and requires a refreshed handoff.
+- Real-entry acceptance for integration, device, callback, payment, client, or
+  cross-system flows. Mock-only is never real integration.
+- Delivery completeness: runtime code changes must update the relevant task
+  docs and evidence docs.
+
+## Implementation Prompt Requirements
+
+Implementation prompts must require:
+
+- required reading list with handoff, api.md, design.md, tests.md,
+  review-checklist.md, sdd-quality-gate.md, and technical_design when present;
+- inherited handoff_hash and instructions to refresh handoff after SDD doc edits;
+- Superpowers technical design inheritance;
+- TDD red-green entry points;
+- exact allowed and forbidden file boundaries;
+- worktree and port plan for parallel work;
+- real-entry validation commands from tests.md;
+- DB SELECT or SHOW CREATE checks when persisted state is touched;
+- `release-sql.md`, its exact target path, verbatim-copy rule, and SHA-256 when
+  the change touches schema or data migration; prompts must never ask an
+  implementation agent to author or append SQL;
+- log checks and error checks;
+- superflow-verify-integration and superflow-delivery-check before completion;
+- a report format that distinguishes Passed, Partially verified, and Blocked.
+
+## References
+
+Use the reference files in this skill directory as templates:
+
+- references/feature-gated-workflow.md
+- references/api-design-template.md
+- references/openspec-format.md
+- references/document-templates.md
+- references/quality-standards.md
+- references/quality-gate.md
+- references/traceability-matrix.md
+- references/mock-strategy-guide.md
+- references/test-execution-template.md
+- references/test-guide.md
+- references/validation-integrity.md
+- references/batch-split-guide.md
+- references/batch-prompt-template.md
+- references/orchestration.md
+- references/sql-risk-review-checklist.md
+- references/project-config.md
+- references/decision-point.md
+- references/dirty-worktree.md
+- references/subagent-progress.md
+- references/superpower-technical-design-template.md
+- references/money-precision-algorithms.md

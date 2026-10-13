@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Routing · Wording edit"
+  short_description: "Handle small wording edits without changing runtime behavior"
+  default_prompt: "Use $superflow-tweak to handle small wording edits without changing runtime behavior."
+policy:
+  allow_implicit_invocation: false

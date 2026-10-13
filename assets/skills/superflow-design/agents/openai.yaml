@@ -1,4 +1,6 @@
 interface:
-  display_name: "SDD Design"
-  short_description: "用 Superpowers 生成源码级技术详设和反向影响面分析"
-  default_prompt: "Use $superflow-design to create the Superpowers technical design after SDD contract docs are complete."
+  display_name: "Superflow · 阶段 · 技术详设"
+  short_description: "根据冻结合同和现有源码明确复用点、实现方案、影响范围与验证策略"
+  default_prompt: "使用 $superflow-design，根据冻结合同和现有源码明确复用点、实现方案、影响范围与验证策略。"
+policy:
+  allow_implicit_invocation: false

@@ -58,7 +58,7 @@ import {
   parseManagedAcceptanceContractFile,
 } from "../../domains/managed-work/acceptance-contract.js";
 
-const SKILL_NAME = "superflow-pipeline";
+const SKILL_NAME = "superflow";
 type ManagedAgentSelector = ManagedAgent | "current" | "peer";
 
 export interface PipelineCommandOptions extends SkillCheckOptions {
@@ -173,7 +173,7 @@ async function submitManagedTask(
   createManagedTaskFiles(contract, state);
   appendManagedEvent(state, {
     eventType: "run.created",
-    actor: "superflow-pipeline",
+    actor: "superflow",
     role: "runner",
     summary: managedText(
       language,
@@ -417,7 +417,7 @@ async function resumeManagedTask(
     saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "run.delivery_reopened",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -459,7 +459,7 @@ async function resumeManagedTask(
     saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "executor.stale_process_recovered",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -513,7 +513,7 @@ async function resumeManagedTask(
     saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "executor.blocked_retry_requested",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -532,7 +532,7 @@ async function resumeManagedTask(
     saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "budget.infrastructure_credited",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -546,7 +546,7 @@ async function resumeManagedTask(
     saveManagedTask(contract);
     appendManagedEvent(state, {
       eventType: "budget.limit_increased",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -560,7 +560,7 @@ async function resumeManagedTask(
     saveManagedTask(contract);
     appendManagedEvent(state, {
       eventType: "budget.unlimited_enabled",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -574,7 +574,7 @@ async function resumeManagedTask(
     saveManagedTask(contract);
     appendManagedEvent(state, {
       eventType: "budget.executor_window_set",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -587,7 +587,7 @@ async function resumeManagedTask(
     saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "executor.session_replaced",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -600,7 +600,7 @@ async function resumeManagedTask(
     saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "executor.session_reset",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -613,7 +613,7 @@ async function resumeManagedTask(
     saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "provider.switch_confirmed",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -630,7 +630,7 @@ async function resumeManagedTask(
     saveManagedRun(state);
     appendManagedEvent(state, {
       eventType: "executor.result_recovered",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,
@@ -660,7 +660,7 @@ async function resumeManagedTask(
   });
   appendManagedEvent(state, {
     eventType: "recovery.started",
-    actor: "superflow-pipeline",
+    actor: "superflow",
     role: "runner",
     summary: managedText(
       language,
@@ -683,7 +683,7 @@ async function resumeManagedTask(
   if (reopenBlockedReview) {
     appendManagedEvent(state, {
       eventType: "review.reopened",
-      actor: "superflow-pipeline",
+      actor: "superflow",
       role: "runner",
       summary: managedText(
         language,

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Phase · Execution handoff"
+  short_description: "Prepare bounded implementation prompts and validation handoff"
+  default_prompt: "Use $superflow-handoff to prepare bounded implementation prompts and validation handoff."
+policy:
+  allow_implicit_invocation: false

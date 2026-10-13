@@ -4,7 +4,7 @@ import {
 } from "../../domains/skill/check.js";
 import { runChangeGuard } from "./change-guard.js";
 
-const SKILL_NAME = "superflow-docs";
+const SKILL_NAME = "superflow-contracts";
 
 export async function docsCommand(
   change?: string,

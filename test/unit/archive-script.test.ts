@@ -11,7 +11,7 @@ const ARCHIVE = path.join(
   ROOT,
   "assets",
   "skills",
-  "superflow-pipeline",
+  "superflow",
   "scripts",
   "superflow-archive.sh",
 );

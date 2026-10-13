@@ -101,7 +101,7 @@ npm `--ignore-scripts` skips postinstall. Restart the host session after migrati
 
 0.5.10 strengthens document delivery: requirement × real-entry coverage (including
 exclusions), real-entry test contracts, and content-bound Coding Ready receipts.
-Existing document receipts need [coverage migration and re-review](assets/skills-en/superflow-pipeline/references/document-review-coverage.md)
+Existing document receipts need [coverage migration and re-review](assets/skills-en/superflow/references/document-review-coverage.md)
 before new dispatch or source edits. Semantic correctness remains an Agent review responsibility.
 
 - **Dual-Agent managed delivery.** The current host Agent reviews directly while
@@ -401,14 +401,27 @@ best-effort and does not block initialization.
 In Codex:
 
 ```text
-Use $superflow-pipeline to analyze this requirement and drive the full workflow.
+Use $superflow to analyze this requirement and drive the full workflow.
 ```
 
 In Claude Code:
 
 ```text
-/superflow-pipeline
+/superflow
 ```
+
+Describe the goal; the router selects the phase and task size. All bundled skills
+use the `superflow` namespace. Only `superflow` is a default user entry; phase,
+small-task, and specialist capabilities are selected internally. Claude hides
+internal skills from the slash menu. Codex keeps them explicitly accessible,
+with clear labels and implicit invocation disabled. Archive routing handles both
+SDD and pure OpenSpec changes automatically. API change annotation is a managed
+core skill, not a separately copied optional dependency.
+
+This release replaces old skill names and prompt paths without aliases. Update
+with `superflow update`, then restart the host. Known original old assets are
+moved outside the skill/prompt directories into `.superflow-retired-assets`;
+modified or unknown assets are preserved and reported for manual review.
 
 For large requirements, ask the agent to read one section or one feature at a
 time. The total router automatically uses embedded deep clarification when a

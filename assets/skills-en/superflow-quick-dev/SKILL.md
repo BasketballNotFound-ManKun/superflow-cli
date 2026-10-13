@@ -20,23 +20,23 @@ behavior**; reusing its code or depending on its output is insufficient. Continu
 when it returns `QUICK`. Public APIs, databases/migrations, transactions,
 concurrency, locks, permissions, security, payments, cross-module work, active
 SDD changes, or a non-exclusive worktree must return `STOP` and switch to
-`superflow-clarify`. If ake-harness's `ssd-propose` is also visible, do not
-route there merely because it is installed. Switch to ake SSD only when the
-user explicitly chooses that workflow.
+`superflow-clarify`. If another workflow is installed, do not route there
+merely because its skills are visible. Switch only when the user explicitly
+chooses that workflow.
 
 ## Quick Spec
 
 Write and show the current disk version at
 `.sdd/tasks/<YYYY-MM-DD>-<slug>/spec.md` with Intent / Non-goals, current and
 target behavior, confirmed test seam, applicable signals/commands/assertions/evidence paths from
-the [test guide](../superflow-pipeline/references/test-guide.md), ordered implementation steps, Given /
+the [test guide](../superflow/references/test-guide.md), ordered implementation steps, Given /
 When / Then acceptance, risks, escalation conditions, deferred work, baseline
 commit, and exact file scope.
 
 Do not edit runtime code before approval. After explicit approval of the current
 disk version, run `superflow quick "<request>" --path <files...> --seam <existing-file> --spec <spec> --approve`.
 The CLI binds the approval to the current content digest. If Intent, Non-goals, or Acceptance
-Criteria change, return to `draft` and obtain approval again. Read the [test guide](../superflow-pipeline/references/test-guide.md), verify applicable
+Criteria change, return to `draft` and obtain approval again. Read the [test guide](../superflow/references/test-guide.md), verify applicable
 signals, commands, assertions, and evidence paths are already frozen in the approved
 Quick Spec (repair omissions and reapprove before edits), then
 run TDD RED/GREEN and close with `superflow review-coverage`

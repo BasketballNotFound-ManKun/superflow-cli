@@ -919,7 +919,7 @@ def _generate_sql_header(path):
         f"-- 关联批次：{batch}\n"
         "-- 风险等级：中\n"
         "-- 评审人：（待填）\n"
-        "-- 评审 checklist：参考 ~/.codex/skills/superflow-pipeline/references/sql-risk-review-checklist.md\n"
+        "-- 评审 checklist：参考 ~/.codex/skills/superflow/references/sql-risk-review-checklist.md\n"
         "-- 涉及表：（待补充）\n"
         "-- 变更摘要：（待补充）\n"
         "-- ============================================================================\n"

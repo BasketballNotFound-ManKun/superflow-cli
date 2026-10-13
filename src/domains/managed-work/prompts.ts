@@ -225,7 +225,7 @@ export function buildReviewPrompt(
         ]
       : []),
     "- 检查是否复用了现有能力，是否出现重复实现。",
-    `- 读取统一五维及独立评审规范：${path.join(ASSETS_DIR, "skills/superflow-pipeline/references/reviewer-checklist.md")}。Host 持有实际风险深度、finding 复核/合并和最终结论；需要独立视角时使用该规范的隔离上下文包，不继承实现聊天历史。仍按本次既有 review JSON 返回，不新增状态或启动嵌套监督。`,
+    `- 读取统一五维及独立评审规范：${path.join(ASSETS_DIR, "skills/superflow/references/reviewer-checklist.md")}。Host 持有实际风险深度、finding 复核/合并和最终结论；需要独立视角时使用该规范的隔离上下文包，不继承实现聊天历史。仍按本次既有 review JSON 返回，不新增状态或启动嵌套监督。`,
     "- 检查正确性、安全、数据、并发、事务、配置和真实运行风险。",
     "- 任务需要启动/API/数据库/日志证据时，缺少任一项必须阻断。",
     "- 按冻结文档逐项核对真实后端、应用启动、接口、浏览器和跨仓测试证据；托管评审不得另行发明测试合同。",
@@ -592,7 +592,7 @@ function buildReviewPromptEnglish(
         ]
       : []),
     "- Check reuse of existing capabilities and reject parallel duplicate implementations.",
-    `- Read the canonical five-axis and independent-review guide: ${path.join(ASSETS_DIR, "skills-en/superflow-pipeline/references/reviewer-checklist.md")}. Host owns actual review depth, finding verification/merging, and the final verdict. Use its isolated context bundle when an independent view is needed, without implementation chat history. Return the existing review JSON; add no state or nested supervisor.`,
+    `- Read the canonical five-axis and independent-review guide: ${path.join(ASSETS_DIR, "skills-en/superflow/references/reviewer-checklist.md")}. Host owns actual review depth, finding verification/merging, and the final verdict. Use its isolated context bundle when an independent view is needed, without implementation chat history. Return the existing review JSON; add no state or nested supervisor.`,
     "- Check correctness, security, data, concurrency, transactions, configuration, and real runtime risks.",
     "- If startup, API, database, or log evidence is required, block when any required category is missing.",
     "- Check every real backend, application-startup, API, browser, and cross-repository test required by the frozen documents; managed review never invents a separate test contract.",

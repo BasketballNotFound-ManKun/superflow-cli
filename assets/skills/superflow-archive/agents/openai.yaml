@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · 阶段 · 流程归档"
+  short_description: "验证并收口已完成变更，自动选择 SDD 或纯 OpenSpec 归档流程并保留确认边界"
+  default_prompt: "使用 $superflow-archive 收口并归档当前变更。"
+policy:
+  allow_implicit_invocation: false

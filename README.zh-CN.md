@@ -69,7 +69,7 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 
 0.5.10 加强文档交付：逐需求×真实入口核对（含排除项）、真实入口验收合同、
 绑定内容指纹的 Coding Ready。旧文档凭证需先完成
-[覆盖补齐与复审](assets/skills/superflow-pipeline/references/document-review-coverage.md)，
+[覆盖补齐与复审](assets/skills/superflow/references/document-review-coverage.md)，
 才能新启动任务或编辑源码；业务语义正确性仍由智能体独立评审负责。
 
 - **双 Agent 托管到真实交付。** 当前 Host Agent 直接监督，另一个 Agent 在一次不限制工具
@@ -273,9 +273,11 @@ MCP 是主 Agent 与本地托管状态机的通信通道，不会把 Superflow �
 - OpenSpec/SDD 负责 WHAT 和合同：需求、API、DB、SQL、字段语义、tests、真实入口验收和质量门禁。
 - Superpowers 负责 HOW：源码级技术详设、TDD/RED 顺序、团队分工、worktree/端口并行、review/tester 编排和验证闭环。
 - 完整流程是 `docs -> design -> implement -> verify -> archive`。Superpowers 技术详设落到 `docs/superpowers/specs/*-technical-design.md`，并记录到 `.sdd/state.yaml` 的 `technical_design`，避免长会话压缩后漂移。
-- Codex 侧通常用自然语言或 `$superflow-pipeline` 触发；Claude Code 侧可以直接用 `/superflow-pipeline`、`/superflow-docs`、`/superflow-design` 等 slash command。
+- Codex 统一从 `$superflow` 开始，Claude Code 统一从 `/superflow` 开始；直接描述目标即可，由路由选择阶段和任务规模。
 - 只说一句话触发总路由时，遇到需要业务负责人选择的关键分歧，SuperFlow 会在 clarify 阶段自动进入深度澄清：先查代码和已有资料能确认的事实，再一次只问一个决策问题，并给出推荐方案与影响。明确、范围小的改动不会被强行拉进问答流程。
-- 飞书、语雀等在线文档读取工具不内置在 SuperBridge Flow CLI 中；可自行用 `lark-cli` 等外部工具读取，再通过 `/superflow-pipeline` 或 `$superflow-pipeline` 分段分析指定小节。
+- 所有内置技能统一使用 `superflow` 命名空间，唯一默认入口是 `superflow`。阶段、分流和专项能力由路由内部选择。Claude 菜单隐藏内部技能；Codex 保留显式访问，统一展示层级并关闭内部技能的隐式触发。归档自动区分 SDD 和纯 OpenSpec。
+- 本次直接替换旧技能名称和 Prompt 路径，不保留别名。执行 `superflow update` 后重启宿主；已知原版旧资产备份移出到 `.superflow-retired-assets`，修改过或来源未知的资产保留并提示人工核对。接口变更标注纳入正式安装清单。
+- 飞书、语雀等在线文档读取工具不内置在 SuperBridge Flow CLI 中；可自行用 `lark-cli` 等外部工具读取，再通过 `/superflow` 或 `$superflow` 分段分析指定小节。
 
 ## 命令
 
@@ -326,7 +328,7 @@ Agent 进程树；macOS/Linux 继续使用独立进程组。三端均不通过�
     当前渠道 `superpowers@openai-curated-remote`；从原生插件清单发现版本并核验验证、
     代码评审和分支收尾三个强制技能，不以旧 config.toml 条目或缓存存在代替可用性）
   - understand-anything（尽力安装，失败只警告）
-  - api-doc-changelog（辅助 skill，复制到目标 agent skills 目录）
+  - superflow-api-changelog（正式专项技能，由统一安装清单部署）
 
 ## 自动检查更新
 

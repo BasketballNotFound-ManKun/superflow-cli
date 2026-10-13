@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Specialist · API changes"
+  short_description: "Annotate API and field changes in the delivery contract"
+  default_prompt: "Use $superflow-api-changelog to annotate API changes."
+policy:
+  allow_implicit_invocation: false

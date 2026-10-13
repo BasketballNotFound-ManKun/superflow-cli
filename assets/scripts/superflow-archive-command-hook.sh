@@ -66,7 +66,18 @@ fi
 
 [ -d "$CHANGE_DIR" ] || exit 0
 
-ARCHIVE_SCRIPT=${SUPERFLOW_ARCHIVE_SCRIPT:-$HOME/.codex/skills/superflow-pipeline/scripts/superflow-archive.sh}
+# A pure OpenSpec change uses native OpenSpec validation. SDD remnants without
+# state remain blocked by the lifecycle helper; absence of state is not enough.
+if [ -f "$CHANGE_DIR/.openspec.yaml" ] &&
+   [ ! -e "$CHANGE_DIR/.sdd" ] && [ ! -L "$CHANGE_DIR/.sdd" ] &&
+   [ ! -e "$CHANGE_DIR/api.md" ] &&
+   [ ! -e "$CHANGE_DIR/tests.md" ] &&
+   [ ! -e "$CHANGE_DIR/sdd-quality-gate.md" ] &&
+   [ ! -e "$CHANGE_DIR/test-report.md" ]; then
+  exit 0
+fi
+
+ARCHIVE_SCRIPT=${SUPERFLOW_ARCHIVE_SCRIPT:-$HOME/.codex/skills/superflow/scripts/superflow-archive.sh}
 if [ ! -x "$ARCHIVE_SCRIPT" ]; then
   echo "[Superflow 归档门禁] 归档脚本不存在或不可执行：$ARCHIVE_SCRIPT" >&2
   exit 2

@@ -1,6 +1,6 @@
 ---
 name: superflow-table-impact-analysis
-description: Use when an SDD/OpenSpec requirement, bug fix, sync task, migration, or test plan touches database tables, status fields, Mapper/XML queries, cross-repo shared data, or user-facing behavior driven by persisted fields.
+description: Superflow 内部能力：从表和字段反查全部读写方、跨仓消费入口及需要覆盖的回归影响。由 $superflow 选择，用户无需手动分流。
 ---
 
 # SDD Table Impact Analysis
@@ -78,6 +78,6 @@ succeeded" without consumer-path evidence is blocked.
 
 ### 数据库分层证据
 
-按 [数据库合同](../superflow-pipeline/references/document-review-coverage.md#数据库分层合同)
+按 [数据库合同](../superflow/references/document-review-coverage.md#数据库分层合同)
 冻结并继承 `testLayer`、entry.database、生产 statement、mockBoundary 和数据断言。
 从表、字段、CAS与事务反向发现DB义务并声明entry.database；纯逻辑明确无持久化理由可免DB。

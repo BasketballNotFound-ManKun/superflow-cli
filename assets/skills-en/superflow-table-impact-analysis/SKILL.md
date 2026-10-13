@@ -79,5 +79,5 @@ succeeded" without consumer-path evidence is blocked.
 ### Database layer evidence
 
 Freeze and inherit `testLayer`, entry.database, production statements, mockBoundary,
-and data assertions from the [database contract](../superflow-pipeline/references/document-review-coverage.md#database-layer-contract).
+and data assertions from the [database contract](../superflow/references/document-review-coverage.md#database-layer-contract).
 Discover DB obligations from tables, fields, CAS, and transactions and declare entry.database; explicit no-persistence logic needs no DB.

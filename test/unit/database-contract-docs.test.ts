@@ -5,15 +5,15 @@ import os from "node:os";
 import { deploySkill } from "../../src/domains/skill/deploy.js";
 const root = path.resolve(__dirname, "../..");
 describe("数据库分层文档合同", () => {
-  const references = "superflow-pipeline/references";
+  const references = "superflow/references";
   for (const language of ["skills", "skills-en"]) {
     it(`${language} 所有测试入口指向同一指南且无外部验证技能依赖`, () => {
       for (const skill of [
-        "superflow-docs",
-        "superflow-implement",
+        "superflow-contracts",
+        "superflow-handoff",
         "superflow-verify",
         "superflow-quick-dev",
-        "openspec-apply-change",
+        "superflow-build",
       ]) {
         const text = fs.readFileSync(
           path.join(root, "assets", language, skill, "SKILL.md"),
@@ -93,12 +93,12 @@ describe("数据库分层文档合同", () => {
         fs.writeFileSync(custom, "user-owned\n");
         for (let round = 0; round < 2; round++) {
           for (const skill of [
-            "superflow-pipeline",
-            "superflow-docs",
-            "superflow-implement",
+            "superflow",
+            "superflow-contracts",
+            "superflow-handoff",
             "superflow-verify",
             "superflow-quick-dev",
-            "openspec-apply-change",
+            "superflow-build",
           ]) {
             await deploySkill(
               skill,
@@ -133,7 +133,7 @@ describe("数据库分层文档合同", () => {
           root,
           "assets",
           language,
-          "superflow-pipeline/references/document-review-coverage.md",
+          "superflow/references/document-review-coverage.md",
         ),
         "utf8",
       );
@@ -149,9 +149,9 @@ describe("数据库分层文档合同", () => {
         expect(text).toContain(token);
     });
     for (const skill of [
-      "docs",
+      "contracts",
       "design",
-      "implement",
+      "handoff",
       "verify",
       "table-impact-analysis",
     ])

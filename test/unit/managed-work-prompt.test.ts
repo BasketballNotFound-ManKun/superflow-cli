@@ -39,7 +39,7 @@ describe("managed work prompt snapshot", () => {
         __dirname,
         "../../assets",
         language === "en" ? "skills-en" : "skills",
-        "superflow-pipeline/references/reviewer-checklist.md",
+        "superflow/references/reviewer-checklist.md",
       );
       expect(prompt).toContain(guide);
       expect(fs.existsSync(guide)).toBe(true);

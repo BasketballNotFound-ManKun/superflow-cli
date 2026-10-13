@@ -2,7 +2,29 @@
   "version": "1.0.0",
   "contracts": [
     {
-      "name": "openspec-apply-change",
+      "name": "superflow",
+      "owner": "pipeline",
+      "triggers": [
+        "Superflow user entry"
+      ],
+      "excludes": [
+        "unrelated general questions"
+      ],
+      "outputs": [
+        "state.yaml handoff"
+      ],
+      "neighbors": [
+        "superflow-clarify",
+        "superflow-contracts",
+        "superflow-handoff",
+        "superflow-build",
+        "superflow-verify",
+        "superflow-archive"
+      ],
+      "visibility": "public"
+    },
+    {
+      "name": "superflow-build",
       "owner": "implement",
       "triggers": [
         "implement approved change"
@@ -13,26 +35,24 @@
       "outputs": [
         "tasks.md progress"
       ],
-      "neighbors": []
+      "neighbors": [],
+      "visibility": "internal"
     },
     {
-      "name": "openspec-archive-change",
+      "name": "superflow-archive",
       "owner": "archive",
       "triggers": [
         "archive completed change"
       ],
-      "excludes": [
-        "change directory contains .sdd/state.yaml; SDD lifecycle closeout belongs to superflow-archive"
-      ],
+      "excludes": [],
       "outputs": [
-        "archive result"
+        "archive result and SDD lifecycle closeout"
       ],
-      "neighbors": [
-        "superflow-archive"
-      ]
+      "neighbors": [],
+      "visibility": "internal"
     },
     {
-      "name": "openspec-explore",
+      "name": "superflow-explore",
       "owner": "explore",
       "triggers": [
         "explore requirements"
@@ -42,11 +62,12 @@
         "alignment.md"
       ],
       "neighbors": [
-        "openspec-propose"
-      ]
+        "superflow-propose"
+      ],
+      "visibility": "internal"
     },
     {
-      "name": "openspec-propose",
+      "name": "superflow-propose",
       "owner": "propose",
       "triggers": [
         "generate OpenSpec proposal"
@@ -58,22 +79,9 @@
       "neighbors": [
         "superflow-clarify",
         "superflow-design",
-        "superflow-implement"
-      ]
-    },
-    {
-      "name": "superflow-archive",
-      "owner": "archive",
-      "triggers": [
-        "archive SDD change"
+        "superflow-handoff"
       ],
-      "excludes": [],
-      "outputs": [
-        "archive report"
-      ],
-      "neighbors": [
-        "superflow-verify"
-      ]
+      "visibility": "internal"
     },
     {
       "name": "superflow-clarify",
@@ -86,9 +94,10 @@
         "source-code-audit.md feature-gates.md brainstorm-summary.md"
       ],
       "neighbors": [
-        "openspec-propose",
-        "superflow-docs"
-      ]
+        "superflow-propose",
+        "superflow-contracts"
+      ],
+      "visibility": "internal"
     },
     {
       "name": "superflow-design",
@@ -101,12 +110,13 @@
         "technical_design"
       ],
       "neighbors": [
-        "superflow-docs",
-        "superflow-implement"
-      ]
+        "superflow-contracts",
+        "superflow-handoff"
+      ],
+      "visibility": "internal"
     },
     {
-      "name": "superflow-docs",
+      "name": "superflow-contracts",
       "owner": "docs",
       "triggers": [
         "SDD contract documents"
@@ -120,8 +130,9 @@
       "neighbors": [
         "superflow-clarify",
         "superflow-design",
-        "superflow-implement"
-      ]
+        "superflow-handoff"
+      ],
+      "visibility": "internal"
     },
     {
       "name": "superflow-hotfix",
@@ -133,10 +144,11 @@
       "outputs": [
         "bug-fix-plan.md"
       ],
-      "neighbors": []
+      "neighbors": [],
+      "visibility": "internal"
     },
     {
-      "name": "superflow-implement",
+      "name": "superflow-handoff",
       "owner": "implement",
       "triggers": [
         "generate implementation prompts"
@@ -150,19 +162,8 @@
       "neighbors": [
         "superflow-design",
         "superflow-verify"
-      ]
-    },
-    {
-      "name": "superflow-pipeline",
-      "owner": "pipeline",
-      "triggers": [
-        "Superflow SDD pipeline"
       ],
-      "excludes": [],
-      "outputs": [
-        "state.yaml handoff"
-      ],
-      "neighbors": []
+      "visibility": "internal"
     },
     {
       "name": "superflow-requirement-review",
@@ -174,7 +175,8 @@
       "outputs": [
         "requirement-review.md"
       ],
-      "neighbors": []
+      "neighbors": [],
+      "visibility": "internal"
     },
     {
       "name": "superflow-table-impact-analysis",
@@ -186,7 +188,8 @@
       "outputs": [
         "impact analysis"
       ],
-      "neighbors": []
+      "neighbors": [],
+      "visibility": "internal"
     },
     {
       "name": "superflow-tweak",
@@ -198,7 +201,8 @@
       "outputs": [
         "tweak result"
       ],
-      "neighbors": []
+      "neighbors": [],
+      "visibility": "internal"
     },
     {
       "name": "superflow-quick-dev",
@@ -219,7 +223,8 @@
       "neighbors": [
         "superflow-clarify",
         "superflow-verify"
-      ]
+      ],
+      "visibility": "internal"
     },
     {
       "name": "superflow-verify",
@@ -236,9 +241,27 @@
         "verification report"
       ],
       "neighbors": [
-        "superflow-implement",
+        "superflow-handoff",
         "superflow-archive"
-      ]
+      ],
+      "visibility": "internal"
+    },
+    {
+      "name": "superflow-api-changelog",
+      "owner": "docs",
+      "triggers": [
+        "annotate API contract changes"
+      ],
+      "excludes": [
+        "generate API contracts"
+      ],
+      "outputs": [
+        "API change annotations"
+      ],
+      "neighbors": [
+        "superflow-contracts"
+      ],
+      "visibility": "internal"
     }
   ]
 }

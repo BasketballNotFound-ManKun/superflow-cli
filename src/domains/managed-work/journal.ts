@@ -132,7 +132,7 @@ export function rebuildManagedJournalAfterSecurityRedaction(
   );
   appendManagedEvent(state, {
     eventType: "journal.security_redaction_migrated",
-    actor: "superflow-pipeline",
+    actor: "superflow",
     role: "runner",
     summary: reason.trim(),
     evidencePaths: [manifest],

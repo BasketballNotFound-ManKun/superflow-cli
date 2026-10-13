@@ -17,7 +17,7 @@ const ARCHIVE = path.join(
   ROOT,
   "assets",
   "skills",
-  "superflow-pipeline",
+  "superflow",
   "scripts",
   "superflow-archive.sh",
 );
@@ -60,6 +60,20 @@ describe("superflow archive command hook", () => {
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("归档门禁未通过"),
     });
+  });
+
+  it('allows a pure OpenSpec change to use native archive validation', async () => {
+    await fs.promises.writeFile(path.join(tmp, 'openspec', 'changes', 'legacy-change', '.openspec.yaml'), 'schema: spec-driven\n');
+    const input = JSON.stringify({ tool_input: { command: 'openspec archive legacy-change --yes', cwd: tmp } });
+    await expect(execFileAsync('bash', ['-c', 'printf %s "$HOOK_INPUT" | bash "$HOOK"'], {
+      cwd: tmp,
+      env: { ...process.env, HOOK_INPUT: input, HOOK, SUPERFLOW_ARCHIVE_SCRIPT: ARCHIVE },
+    })).resolves.toMatchObject({ stdout: '' });
+    await fs.promises.mkdir(path.join(tmp, 'openspec', 'changes', 'legacy-change', '.sdd'));
+    await expect(execFileAsync('bash', ['-c', 'printf %s "$HOOK_INPUT" | bash "$HOOK"'], {
+      cwd: tmp,
+      env: { ...process.env, HOOK_INPUT: input, HOOK, SUPERFLOW_ARCHIVE_SCRIPT: ARCHIVE },
+    })).rejects.toMatchObject({ stderr: expect.stringContaining('归档门禁未通过') });
   });
 
   it("ignores unrelated shell commands", async () => {

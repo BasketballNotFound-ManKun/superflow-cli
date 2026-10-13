@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · 专项 · 数据影响分析"
+  short_description: "从表和字段反查全部读写方、跨仓消费入口及需要覆盖的回归影响"
+  default_prompt: "使用 $superflow-table-impact-analysis，从表和字段反查全部读写方、跨仓消费入口及需要覆盖的回归影响。"
+policy:
+  allow_implicit_invocation: false

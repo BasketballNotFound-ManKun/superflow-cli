@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Phase · Archive"
+  short_description: "Archive completed changes using the appropriate lifecycle"
+  default_prompt: "Use $superflow-archive to close and archive this change."
+policy:
+  allow_implicit_invocation: false

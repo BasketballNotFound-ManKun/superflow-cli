@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { runChangeGuard } from "../../src/app/commands/change-guard.js";
 
-const scripts = path.resolve("assets/skills/superflow-pipeline/scripts");
+const scripts = path.resolve("assets/skills/superflow/scripts");
 describe("anonymous application replay through the actual verify guard", () => {
   it.each(["omit", "complete"])(
     "verifies each service write in %s mode",

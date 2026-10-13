@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · 阶段 · 交付合同"
+  short_description: "补齐接口、测试、追溯和质量合同，为源码技术详设与执行交接提供依据"
+  default_prompt: "使用 $superflow-contracts，补齐接口、测试、追溯和质量合同，为源码技术详设与执行交接提供依据。"
+policy:
+  allow_implicit_invocation: false

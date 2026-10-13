@@ -7,7 +7,7 @@ import { auditDocs } from "../../src/domains/docs-audit.js";
 
 describe("文档落位与策展审计", () => {
   it("采集失效锚点、入链和琐碎文档，不执行删除", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-docs-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-contracts-"));
     fs.mkdirSync(path.join(root, "docs"));
     fs.writeFileSync(path.join(root, "README.md"), "See docs/guide.md\n");
     fs.writeFileSync(path.join(root, "docs", "guide.md"), "`missing.java`\n`gone.xml`\n");

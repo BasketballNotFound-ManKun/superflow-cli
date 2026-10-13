@@ -5,6 +5,7 @@ export interface SkillContract {
   excludes: string[];
   outputs: string[];
   neighbors: string[];
+  visibility?: string;
 }
 
 export interface SkillRegistryInput {
@@ -64,9 +65,23 @@ export function auditSkillRegistry(
     if (!Array.isArray(contract.neighbors)) {
       errors.push(`neighbors must be an array: ${contract.name}`);
     }
+    if (contract.visibility !== undefined &&
+        !['public', 'internal'].includes(contract.visibility)) {
+      errors.push(`invalid visibility: ${contract.name}`);
+    }
   }
 
   const missingContracts = manifestSkills.filter((name) => !byName.has(name));
+  if (contracts.some((contract) => contract.visibility !== undefined)) {
+    if (contracts.filter((contract) => contract.visibility === 'public').length !== 1) {
+      errors.push('registry must have exactly one public entry');
+    }
+    for (const contract of contracts) {
+      if (contract.visibility === undefined) {
+        errors.push(`missing visibility: ${contract.name}`);
+      }
+    }
+  }
   for (const name of missingContracts) {
     errors.push(`missing contract: ${name}`);
   }

@@ -18,9 +18,8 @@ import {
   installCodexSuperpowers,
   installUnderstand,
   installCodexUnderstand,
-  installApiDocChangelog,
 } from '../../domains/deps.js';
-import { deploySkill } from '../../domains/skill/deploy.js';
+import { deploySkill, retireSkillAssets } from '../../domains/skill/deploy.js';
 import { deployScripts } from '../../domains/skill/scripts.js';
 import { deployPrompts } from '../../domains/skill/prompts.js';
 import { deployRules } from '../../domains/skill/rules.js';
@@ -35,6 +34,7 @@ import {
   scriptsForAgent,
   hookScriptsForAgent,
 } from '../../domains/skill/assets.js';
+import { getManifest } from '../../domains/config/manifest.js';
 import { normalizeLanguage, t } from '../../domains/config/i18n.js';
 import type { Agent, AgentSelection, InstallScope, Language } from '../../types.js';
 import { ASSETS_DIR } from '../../platform/assets.js';
@@ -341,10 +341,6 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
         }
         const und = await installUnderstand();
         if (!und.ok) warn(`[WARN] understand-anything: ${und.error}`);
-        const api = await installApiDocChangelog(
-          getPlatformPaths('claude', options.scope, projectPath).skillsDir
-        );
-        if (!api.ok) warn(`[WARN] api-doc-changelog: ${api.error}`);
       }
       if (agents.includes('codex')) {
         const sup = await installCodexSuperpowers(true);
@@ -357,10 +353,6 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
         );
         const und = await installCodexUnderstand();
         if (!und.ok) warn(`[WARN] codex understand-anything: ${und.error}`);
-        const api = await installApiDocChangelog(
-          getPlatformPaths('codex', options.scope, projectPath).skillsDir
-        );
-        if (!api.ok) warn(`[WARN] codex api-doc-changelog: ${api.error}`);
       }
     }},
     { id: 3, name: `${t(options.language, 'stepSkills')} (${ALL_SKILLS.length})`, run: async () => {
@@ -385,6 +377,12 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
             skipExisting: options.skipExisting,
           });
           log(`    ${options.skipExisting && existed ? '-' : '✓'} ${name}`);
+        }
+        if (!options.skipExisting) {
+          const retired = await retireSkillAssets(platform.skillsDir, getManifest().retiredSkills ?? {});
+          if (retired.preserved.length) warn(zh
+            ? `保留修改过的旧技能，请人工核对：${retired.preserved.join(', ')}`
+            : `Modified old skills preserved for manual review: ${retired.preserved.join(', ')}`);
         }
         state.platforms[agent].skills = ALL_SKILLS;
       }
@@ -466,6 +464,12 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
           platform.promptsDir,
           { skipExisting: options.skipExisting }
         );
+        if (!options.skipExisting) {
+          const retiredPrompts = await retireSkillAssets(platform.promptsDir, getManifest().retiredPrompts ?? {});
+          if (retiredPrompts.preserved.length) warn(zh
+            ? `保留修改过的旧 Prompt：${retiredPrompts.preserved.join(', ')}`
+            : `Modified old prompts preserved: ${retiredPrompts.preserved.join(', ')}`);
+        }
         log(`  ✓ ${platform.name}: ${CODEX_PROMPTS.length} prompt alias deployed`);
       }
     }},

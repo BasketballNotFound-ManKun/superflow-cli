@@ -100,7 +100,7 @@ skills、prompts、hooks、tests、中英文资产和迁移兼容边界。
 | 通用 YAML Workflow Engine | ❌ | 当前强约束状态机、guard、hook 和 handoff 更贴合 SDD 交付，通用编排会增加一层状态模型 | `.sdd/state.yaml`、`superflow-state.sh`、`superflow-guard.sh` |
 | Extensions/Presets/Bundles/Catalog | ❌ | 面向多人生态和能力分发，不直接提升个人一站式开发效率 | 当前 assets manifest 与固定技能集 |
 | 30+ Agent Integration Registry | ❌ | 立项目的只重点支持 Codex 和 Claude Code | `src/domains/agent.ts` |
-| Spec Kit 文档目录和模板模型 | ❌ | OpenSpec/SDD 已是合同事实源，并且包含 API、DB、tests、traceability 和 evidence | `superflow-docs`、OpenSpec change 目录 |
+| Spec Kit 文档目录和模板模型 | ❌ | OpenSpec/SDD 已是合同事实源，并且包含 API、DB、tests、traceability 和 evidence | `superflow-contracts`、OpenSpec change 目录 |
 | 将 Spec Kit 作为运行依赖 | ❌ | 没有不可替代的运行能力，反而增加版本、安装和语义耦合 | 当前 Superflow 独立安装链路 |
 
 ### 观察与重新评估触发条件

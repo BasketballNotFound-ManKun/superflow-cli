@@ -9,7 +9,7 @@
 ## 结论
 
 当前托管 Prompt 已移除具体乐观锁 SQL，以及 Spring Boot、浏览器、跨端合同、指定数据库
-后端和多仓链路等场景专用测试规则。这些已迁入中英文 `superflow-docs`/`superflow-design`
+后端和多仓链路等场景专用测试规则。这些已迁入中英文 `superflow-contracts`/`superflow-design`
 文档编写原则。托管层只保留“执行冻结文档要求且不得降级替代”的通用合同。
 
 ## A. 应保留在托管 Prompt

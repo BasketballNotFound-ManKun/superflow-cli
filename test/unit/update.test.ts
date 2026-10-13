@@ -19,6 +19,21 @@ import {
 } from '../../src/app/commands/update.js';
 
 describe('commands/update', () => {
+  it('无历史状态时仍识别旧版项目安装，不把更新扩大到全局', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-old-project-'));
+    try {
+      const old = path.join(root, '.codex', 'skills', 'superflow-pipeline');
+      fs.mkdirSync(old, { recursive: true });
+      fs.writeFileSync(path.join(old, 'SKILL.md'), 'old installation');
+      expect(detectInstalledTargets(root, ['codex'])).toContainEqual({
+        agent: 'codex', scope: 'project', projectPath: root,
+      });
+      expect(resolveUpdateTargetsFromState(root, ['codex'], 'auto', null))
+        .toContainEqual({ agent: 'codex', scope: 'project', projectPath: root });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
   it('creates a JSON-safe update plan for selected agents', () => {
     const plan = createUpdatePlan(['codex']);
     expect(plan.agents).toEqual(['codex']);
@@ -215,11 +230,11 @@ describe('commands/update', () => {
 
   it('detects installed project targets for update auto mode', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-update-'));
-    fs.mkdirSync(path.join(root, '.codex', 'skills', 'superflow-pipeline'), {
+    fs.mkdirSync(path.join(root, '.codex', 'skills', 'superflow'), {
       recursive: true,
     });
     fs.writeFileSync(
-      path.join(root, '.codex', 'skills', 'superflow-pipeline', 'SKILL.md'),
+      path.join(root, '.codex', 'skills', 'superflow', 'SKILL.md'),
       'ok'
     );
 

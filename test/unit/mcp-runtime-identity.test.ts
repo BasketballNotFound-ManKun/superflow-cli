@@ -11,7 +11,7 @@ describe("MCP runtime identity", () => {
   it.each([
     "package.json",
     "assets/scripts/gate.py",
-    "assets/skills/superflow-pipeline/scripts/owner.sh",
+    "assets/skills/superflow/scripts/owner.sh",
   ])("rejects a package closure change in %s after startup", (relative) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-closure-"));
     try {

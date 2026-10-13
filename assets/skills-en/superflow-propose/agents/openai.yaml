@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Phase · Proposal"
+  short_description: "Create OpenSpec proposal, specifications, design, and tasks"
+  default_prompt: "Use $superflow-propose to create OpenSpec proposal, specifications, design, and tasks."
+policy:
+  allow_implicit_invocation: false

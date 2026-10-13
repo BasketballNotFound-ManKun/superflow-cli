@@ -174,7 +174,7 @@ const requirements = new Map([
     ["windows_tree", "taskkill.exe", "process_group"],
   ],
   [
-    "assets/skills/superflow-pipeline/references/managed-work.md",
+    "assets/skills/superflow/references/managed-work.md",
     [
       "设计宪章门禁",
       "docs/managed-work-design-principles.md",
@@ -191,7 +191,7 @@ const requirements = new Map([
     ],
   ],
   [
-    "assets/skills-en/superflow-pipeline/references/managed-work.md",
+    "assets/skills-en/superflow/references/managed-work.md",
     [
       "Design-constitution gate",
       "docs/managed-work-design-principles.en.md",

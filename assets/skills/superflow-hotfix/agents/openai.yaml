@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · 分流 · 缺陷修复"
+  short_description: "处理行为明确的小型缺陷，涉及复杂接口或数据合同时升级完整流程"
+  default_prompt: "使用 $superflow-hotfix，处理行为明确的小型缺陷，涉及复杂接口或数据合同时升级完整流程。"
+policy:
+  allow_implicit_invocation: false

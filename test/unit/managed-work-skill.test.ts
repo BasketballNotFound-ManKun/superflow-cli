@@ -5,11 +5,11 @@ import { describe, expect, it } from "vitest";
 describe("managed work skill", () => {
   it("keeps the expensive host on supervision and closes reviews automatically", () => {
     const zh = fs.readFileSync(
-      path.join("assets", "skills", "superflow-pipeline", "SKILL.md"),
+      path.join("assets", "skills", "superflow", "SKILL.md"),
       "utf-8",
     );
     const en = fs.readFileSync(
-      path.join("assets", "skills-en", "superflow-pipeline", "SKILL.md"),
+      path.join("assets", "skills-en", "superflow", "SKILL.md"),
       "utf-8",
     );
 
@@ -25,7 +25,7 @@ describe("managed work skill", () => {
     expect(zh).toContain("Claude Executor 长会话默认提前自动压缩");
     expect(zh).toContain("执行前必须阅读 `references/managed-work.md`");
     const zhRules = fs.readFileSync(
-      path.join("assets", "skills", "superflow-pipeline", "references", "managed-work.md"),
+      path.join("assets", "skills", "superflow", "references", "managed-work.md"),
       "utf-8",
     );
     expect(zhRules).toContain("mandatoryEngineeringRules");
@@ -40,7 +40,7 @@ describe("managed work skill", () => {
     expect(en).toContain("240-second Host-compatible transport window");
     expect(en).toContain("Claude Executor long sessions use early auto-compaction");
     const enRules = fs.readFileSync(
-      path.join("assets", "skills-en", "superflow-pipeline", "references", "managed-work.md"),
+      path.join("assets", "skills-en", "superflow", "references", "managed-work.md"),
       "utf-8",
     );
     expect(enRules).toContain("mandatoryEngineeringRules");

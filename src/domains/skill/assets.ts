@@ -9,15 +9,7 @@ import {
 export const ALL_SKILLS = getManifestSkillNames();
 export const ALL_RULES = getManifestRules();
 
-export const CODEX_PROMPTS = [
-  'superflow-pipeline.md',
-  'superflow-clarify.md',
-  'superflow-docs.md',
-  'superflow-design.md',
-  'superflow-implement.md',
-  'superflow-verify.md',
-  'superflow-archive.md',
-];
+export const CODEX_PROMPTS = ['superflow.md'];
 
 export const LEGACY_CODEX_PROMPTS = [
   'sdd.md',

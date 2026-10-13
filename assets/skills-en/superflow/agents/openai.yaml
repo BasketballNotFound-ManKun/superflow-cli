@@ -1,0 +1,4 @@
+interface:
+  display_name: "Superflow · Start here"
+  short_description: "Describe your goal; Superflow selects and continues the workflow"
+  default_prompt: "Use $superflow to complete this goal."

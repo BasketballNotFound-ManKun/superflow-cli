@@ -24,7 +24,7 @@ If any condition fails, set `workflow: full` and return to full SDD docs.
 
 1. Initialize or update state:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh init <change-dir> hotfix docs
+   ~/.codex/skills/superflow/scripts/superflow-state.sh init <change-dir> hotfix docs
    ```
 2. Create the minimum SDD docs needed to freeze the fix:
    `proposal.md`, `api.md` when an interface is touched, `design.md`,
@@ -33,10 +33,10 @@ If any condition fails, set `workflow: full` and return to full SDD docs.
 3. Generate handoff and run docs guard.
 4. Set implementation decisions:
    ```bash
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> build_mode team-prompt
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> isolation worktree
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> tdd_mode direct
-   ~/.codex/skills/superflow-pipeline/scripts/superflow-state.sh set <change-dir> review_mode off
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> build_mode team-prompt
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> isolation worktree
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> tdd_mode direct
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> review_mode off
    ```
 5. Run implement and verify guards. If `scale` reports `full`, upgrade to full.
 

@@ -13,7 +13,7 @@ const SCRIPT_DIR = path.join(
   ROOT,
   "assets",
   "skills",
-  "superflow-pipeline",
+  "superflow",
   "scripts",
 );
 const GUARD = path.join(SCRIPT_DIR, "superflow-guard.sh");
@@ -21,7 +21,7 @@ const EN_GUARD = path.join(
   ROOT,
   "assets",
   "skills-en",
-  "superflow-pipeline",
+  "superflow",
   "scripts",
   "superflow-guard.sh",
 );

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Superflow · Routing · Bug fix"
+  short_description: "Handle bounded bug fixes; escalate complex contract changes"
+  default_prompt: "Use $superflow-hotfix to handle bounded bug fixes; escalate complex contract changes."
+policy:
+  allow_implicit_invocation: false
