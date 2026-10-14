@@ -12,26 +12,160 @@
 </p>
 
 <p align="center">
-  <strong>把 OpenSpec/SDD 的合同约束和 Superpowers 的工程纪律，收束成一个可执行的交付工作流。</strong>
+  <strong>在 Claude Code 或 Codex 中，用一个入口完成需求梳理、开发与验证。</strong>
 </p>
 
 <p align="center">
-  <a href="./README.md">English</a>
-  ·
-  <a href="#安装">安装</a>
-  ·
-  <a href="#工作流">工作流</a>
-  ·
-  <a href="#star-history">Star History</a>
+  <a href="./README.md">English</a> ·
+  <a href="#快速开始">快速开始</a> ·
+  <a href="#常用说法">使用示例</a> ·
+  <a href="#升级与排查">升级与排查</a> ·
+  <a href="./INSTALL.md">完整安装指南</a>
 </p>
 
-# SuperBridge Flow
+# Superflow
 
-通用 SDD 开发工作流 CLI，支持 Claude Code 和 Codex。
+Superflow（SuperBridge Flow）把需求、源码实现、测试和独立评审串成一个可恢复的开发工作流。
+你描述目标，它根据项目和已有进度选择下一步；需要你决定的需求或权限问题，会明确提出。
 
-SuperBridge Flow 不是简单“装两个工具”，而是把 OpenSpec/SDD 和
-Superpowers 编排成一个有状态的研发流程：前者负责需求、合同和验收口径，
-后者负责源码级设计、TDD 顺序、实现分工、review 和真实验证。
+**日常只需记住一个入口：Claude Code 用 `/superflow`，Codex 用 `$superflow`。**
+阶段技能由总入口按需选择，你不用先学习 OpenSpec、SDD 或内部技能名称。
+
+## 快速开始
+
+准备好 **Node.js 20+、Git**，以及已经安装并登录的 Claude Code 或 Codex。
+Hook 脚本需要 Bash 和 Python3；Windows 用户需准备 Git Bash 或等价 shell。
+需求梳理和文档工作可以从一个工具开始；**双 Agent 托管开发需要两个 CLI 都可用并完成登录**。
+Superflow 使用你已有的模型账号与权限，对应模型用量按各平台计费。
+
+### 安装
+
+先在系统终端安装 CLI：
+
+```bash
+npm install -g @chenmk/superflow@latest --registry https://registry.npmjs.org
+```
+
+进入你要开发的**项目根目录**，按正在使用的工具选择一组命令。
+`init` 部署技能、Hook 和项目上下文；`mcp install` 注册托管服务：
+
+**Claude Code：**
+
+```bash
+superflow init --agent claude --scope global --language zh --yes
+superflow mcp install --agent claude
+```
+
+**Codex：**
+
+```bash
+superflow init --agent codex --scope global --language zh --yes
+superflow mcp install --agent codex
+```
+
+两端都使用时，将上面两条命令的 `--agent` 改为 `both`。
+选择 `global` 后，安装的工具资产可跨项目复用；项目内仍会初始化 OpenSpec 和上下文目录。
+完整安装选项、源码安装和 Windows 说明见 [INSTALL.md](./INSTALL.md)。
+
+### 重启并检查
+
+**安装完成后，重启对应的 Claude Code / Codex**，让新技能和 MCP 加载。
+然后在系统终端检查，例如：
+
+```bash
+superflow --version
+superflow doctor --agent claude --scope global
+# Codex 用户将 claude 改为 codex；两端都检查时改为 both。
+```
+
+有失败项时，先按 `doctor` 给出的修复提示处理。
+
+### 开始第一个任务
+
+在对应工具的**对话框**中输入：
+
+| 工具 | 输入位置 | 统一入口 |
+| --- | --- | --- |
+| Claude Code | 项目中的 Claude Code 对话 | `/superflow` |
+| Codex | 已打开该项目的 Codex 对话 | `$superflow` |
+
+可以先从一个只读任务熟悉流程：
+
+**Claude Code：**
+
+```text
+/superflow 帮我梳理这个项目的主要模块和调用关系，先不要修改代码。
+```
+
+**Codex：**
+
+```text
+$superflow 帮我梳理这个项目的主要模块和调用关系，先不要修改代码。
+```
+
+接着描述你的真实需求，并带上相关文档路径、问题现象或预期结果即可。
+
+## 常用说法
+
+下面以 Claude Code 为例；在 Codex 中将开头换成 `$superflow`。
+
+| 你想做什么 | 可以直接这样说 |
+| --- | --- |
+| 先把需求想清楚 | `/superflow 分析 docs/需求.md，先确认范围和待决问题，暂不开发。` |
+| 开发一个功能 | `/superflow 给订单列表增加 CSV 导出。先检查现有实现，明确方案后开发并验证。` |
+| 修复一个问题 | `/superflow 搜索条件清空后列表没有恢复。先复现并定位，再修复和验证。` |
+| 交给双 Agent 托管 | `/superflow 用托管模式完成这个需求，实施后独立评审，有问题继续整改。` |
+| 从已有文档继续 | `/superflow 继续 openspec/changes/order-export/，从当前未完成项推进。` |
+| 检查交付是否完整 | `/superflow 核对当前实现与需求、测试证据是否一致，列出尚未完成的事项。` |
+| 准备归档 | `/superflow 检查当前变更能否归档，说明验证结果和剩余事项。` |
+
+将示例中的文档和目录替换成实际路径。需要限制范围时直接写清楚，例如“只讨论”“只生成文档”“暂不修改代码”。
+继续任务时可以提供现有变更目录或实现指令路径，流程会先核对已有状态与交接材料。
+
+## 接下来会发生什么
+
+```text
+描述目标 → 核对项目与需求 → 确定方案 → 实现与验证 → 独立评审与整改 → 汇报结果
+```
+
+- **范围清楚的小任务**：按风险选择适用流程。
+- **复杂或有分歧的需求**：先核实源码和资料，再请你确认影响实现方向的决定。
+- **只要求文档**：完成文档与评审，不启动托管开发。
+- **双 Agent 托管**：当前对话中的 Agent 负责监督和独立评审，对端 Agent 负责实施与验证。
+- **交付时**：汇总改动、验证证据、剩余风险或外部阻塞；提交、推送和发布需要你的明确授权。
+
+中途会话压缩或中断后，可用同一入口要求“继续当前任务”；流程依据落盘状态恢复。
+
+## 升级与排查
+
+在项目根目录执行以下命令，`--agent` 按需选择 `claude`、`codex` 或 `both`：
+
+```bash
+superflow update --with-package --agent claude --scope global --language zh
+```
+
+该入口统一升级 CLI、依赖与宿主资产。**升级后重启对应工具，再运行带有对应 `--agent` 的 `superflow doctor`。**
+
+| 遇到的情况 | 下一步 |
+| --- | --- |
+| 找不到 `/superflow` 或 `$superflow` | 检查是否已执行 `init`，确认安装目标正确，然后重启对应工具。 |
+| 提示 MCP 缺失或运行时过期 | 执行 `superflow mcp install --agent <工具>` 或更新命令，再重启工具。 |
+| CLI 显示的版本仍旧 | 用 `which -a superflow`（Windows 用 `where superflow`）检查 PATH，确认运行的是新安装入口。 |
+| 只有一个工具，托管无法启动 | 先安装并登录对端 CLI；需求分析和文档任务仍可从现有工具开始。 |
+| 需要数据库、设备或外部系统权限 | 提供所需测试资源或确认处理方式，按报告中的缺口继续。 |
+| 换了一个项目 | 全局资产可以复用；需要项目目录和上下文时，在新项目根目录执行 `init`。 |
+| 正在使用 0.5.x 的旧技能名 | 0.6.0 起统一使用新入口。更新会备份移出已识别的旧资产，自定义内容保留并提示核对。 |
+
+进一步阅读：[完整安装指南](./INSTALL.md) · [托管交付说明](./docs/managed-delivery-loop.md) ·
+[版本更新记录](https://github.com/BasketballNotFound-ManKun/superflow-cli/releases)。
+
+<details>
+<summary>展开进阶参考：工作流、门禁、终端托管与维护命令</summary>
+
+## 工作原理与工程约束
+
+Superflow 将 OpenSpec/SDD 的需求合同和 Superpowers 的工程流程连接起来：
+前者负责需求、合同和验收口径，后者负责源码级设计、TDD 顺序、实现分工和验证纪律。
 
 CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 npm 包，
 启用 OpenSpec/SDD 的 Java 仓库还会在写码时拦截危险 Mapper `${}` 插值、Git Hook 绕过和暂存密钥；Java/构建文件编辑只记录路径，在 Stop 时按受影响 Maven/Gradle 模块批量编译一次。缺少构建工具或编译失败会明确报告，不能当作验证通过。
@@ -47,24 +181,6 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
 - Claude Code：`~/.claude/skills/`、`~/.claude/scripts/`，并注册 `~/.claude/settings.json` hook
 - Codex：`~/.codex/skills/`、`~/.codex/hooks/`
 
-## 0.5.18 数据库分层与 Git 门禁接入
-
-- 保留 Mock 逻辑单测，分别冻结 SQL 生成/绑定、真实数据库、HTTP 入口义务；必测 MySQL 不能由 Mock/H2/SQLite 替代。
-- 凭证绑定引擎版本、schema、生产 statement 和实际行观测；历史证据按已验证源码版本保留。
-- 已确认旧 sdd 入口备份后委托当前规范脚本；未知/自定义入口和符号链接保留。
-- 核验实际 Git Hook 路由、执行权限及当前包内容；拒绝根级报告假 PASS 和 tracked 证据/index 错配，私有未跟踪日志仍可留本地。
-
-运行 `superflow update --scope global --agent both` 后，用 `superflow doctor <项目>` 核对实际接入。未知自定义路由明确交给 owner 核验，不能只看文件名或日期。
-
-## 0.5.17 验收证据修复
-
-- 逐用例 PASS 绑定本地执行凭证、原始输出、具体服务入口及当前源码/构建；空文件、远端链接、零执行和入口替代不再通过。
-- 持久化字段需冻结同业务 ID 前后值与预期断言；独立评审继续核对实际 Service→Mapper statement。
-- 局部结果保留 PARTIAL，最终完整汇总才可交付；轻量文档不追加数据库要求。
-- CLI、Codex/Claude 脚本使用同一安装来源，重复更新刷新版本记录并保留自定义状态。
-
-旧报告缺执行凭证时补齐受影响证据；哈希只证明身份，不证明业务正确性或防伪。
-
 ## 亮点
 
 0.5.10 加强文档交付：逐需求×真实入口核对（含排除项）、真实入口验收合同、
@@ -77,13 +193,13 @@ CLI 会把 SuperBridge Flow 技能、配套 hook/command 脚本整合为单一 n
   或人工恢复才创建后续会话。工作区与落盘 finding 负责交接，默认最多 5 轮评审、7 次执行、
   12 次总调用。
   状态和证据全部落盘，终端或网络中断后可恢复，最终停在等待 Git 批准。
-- **9 类翻车场景，沉淀成门禁。** 我们见过的 AI 翻车——需求一次吞、字段漏查消费者、SQL 漂移、mock-only 报告、跨服务只看到"能调"……9 种典型形态都被固化成 guard，AI 想跳过都不行。
+- **检查常见交付缺口。** 需求遗漏、消费者漏查、SQL 漂移和仅有 Mock 的验证报告等问题，由阶段检查与独立评审共同核对。
 - **跨服务代码必须先答架构 6 问。** 涉及跨仓、跨服务、SDK、MQ、设备、回调、网关的改动，技术详设里必须先回答：owner 是谁、调用方向、新入口是否允许、禁止路径、证据锚点——答不全不让进入实现。
 - **改字段之前先填"字段与状态反向影响"矩阵。** 任何 schema、状态、枚举的改动，必须枚举写入点、读取点、过滤点、派生 / 同步点、跨模块消费者、测试覆盖，还要列反向恢复场景（下线后重上线、旧值不可用但上游没传字段、历史脏数据被新过滤条件消费）。
 - **6 条踩坑经验产品化，不是提醒是门禁。** 影响面要查全、业务语义 > 接口成功、禁止默认兜底、数据库收口、真实入口验证、代码与数据关系核实——每条绑定特定阶段和特定 hook，缺证据就阻断下一阶段。
 - **5 个阶段 × 5+ 门禁脚本硬阻断。** `superflow-guard.sh` + `superflow-hook-guard.sh` + `superflow-contract-hooks.sh` + `superflow-sql-sync-hook.py` + `superflow-test-report-lint.py` + `superflow-verify-integration.sh`。没有 handoff hash 不进实现，没有真实入口证据不写"通过"。
 - **用 handoff + state + sha256 治上下文漂移。** 长会话压缩、切 agent、并行 worktree——`.sdd/handoff/sdd-context.{md,json}` + sha256 + `.sdd/state.yaml` 让 Worker / Tester / Reviewer 始终基于同一份上下文，hash 对不上的旧 prompt 自动被 guard 拒绝。
-- **用户只说一句话，流水线跑 9 步。** 不用写复杂 prompt：`> 用 SuperFlow 处理这个需求` 触发 clarify → docs → design → implement → verify → archive。阶段推进、guard、hash、hook 全是流程强制，不靠用户自觉。
+- **统一入口衔接各阶段。** `/superflow` 或 `$superflow` 根据任务和当前状态选择澄清、合同、设计、实施、验证与归档流程，并执行对应的阶段检查。
 - **`superflow check` 分级诊断交付就绪度。** `files` 检查必备文件，`docs` 增加逐 Prompt 链接、多轮评审和复杂流程图检查，`coding-ready` 再执行环境预检及 docs/design/implement 全门禁，并生成绑定当前 handoff hash 的可编码凭证。
 - **`superflow config` 按需调整审查强度。** `--review-mode off|standard|thorough` 控制代码审查深度；`--auto-transition` 控制阶段自动流转。不同改动匹配不同强度，省 token 不省质量。
 - **启动自动检查新版本。** 每次执行 superflow 命令，后台静默对比 npm registry。发现新版本时 stderr 输出升级提示，不阻塞、不拖慢。
@@ -125,62 +241,10 @@ docs -> design -> implement -> verify -> archive
 | `docs`      | OpenSpec/SDD                   | 需求、接口、数据库、测试和验收合同     |
 | `design`    | Superpowers                    | 源码级技术详设、影响面分析和 TDD 计划  |
 | `implement` | Superpowers + SuperBridge Flow | 分批任务 prompt、review 门禁和执行状态 |
-| `verify`    | SuperBridge Flow hooks         | 有证据的测试报告、真实入口和联调校验   |
+| `verify`    | 当前 Host 评审 + 确定性门禁    | 实现一致性评审、验证报告和真实入口证据 |
 | `archive`   | OpenSpec/SDD                   | 归档后的 spec 状态和生命周期闭环       |
 
-## 安装
-
-```bash
-npx --yes --package=@chenmk/superflow@0.5.6 superflow-install
-# 或本地源码：
-# git clone https://github.com/.../superflow-cli && cd superflow-cli && bash install.sh
-```
-
-> **Node.js 要求：** 需要 Node.js 20+。版本不足时，安装会在创建命令前停止，并打印 Node 20 的升级和重装指引。
-
-完整安装、初始化和日常使用教程见 [INSTALL.md](./INSTALL.md)。
-
-从源码执行 `bash install.sh` 时，会检测本机已有的 Codex、Claude，并一次完成
-CLI、Skills/Hooks 与对应托管 MCP 注册；安装后重启检测到的 Agent 即可。
-
-> **💡 装完即全局生效，无需逐项目 init**：`npx --yes --package=@chenmk/superflow@0.5.6 superflow-install`（或 `bash install.sh`）会自动把 superflow hooks 注册到 `~/.claude/settings.json`（全局），**本机上所有项目仓库**都获得 superflow 守门。钩子内部靠 `.sdd-enforced` 标记懒激活（没跑 `superflow clarify` 之前所有钩子静默放行，零干扰）。
->
-> 只有需要项目级产物（OpenSpec change 目录 / `.sdd/` 任务文件 / 团队约定）时，才在项目根目录跑 `superflow init`。**绝大多数项目不需要这一步**——hooks 已经在全局生效了。
-
-## 快速开始
-
-> ⚠️ `superflow init` **通常不需要再跑**——参见上文「装完即全局生效」。下面这些命令只在你想加项目级产物或显式重置时使用。
-
-```bash
-# 交互式选择 Claude Code / Codex（可多选）
-superflow init
-
-# 非交互模式，默认同时安装 Claude Code + Codex（默认 --scope global）
-superflow init --yes
-
-# 跳过 hook 注册（手工管理）
-superflow init --no-hooks
-
-# 只打印计划不执行
-superflow init --dry-run
-
-# 从失败步骤继续
-superflow init --resume
-
-# 验证安装
-superflow doctor
-```
-
-语言也可以全局切换：
-
-```bash
-# 查看英文 CLI help
-superflow --language en --help
-
-# 当前 shell 默认使用英文提示
-export SUPERFLOW_LANG=en
-superflow init
-```
+## 进阶：在终端管理托管任务
 
 托管一个 implementation prompt、OpenSpec change 或简单开发任务：
 
@@ -362,6 +426,9 @@ export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 统一更新 OpenSpec/Superpowers、所有已检测到的 Agent 资产和 MCP 注册。
 任一步失败都会保留日志和下次会话重试资格，不会把半升级状态标记为成功。升级完成后需要
 重启 Agent，旧会话不会热加载新的 MCP 运行时。
+
+
+</details>
 
 ## Star History
 

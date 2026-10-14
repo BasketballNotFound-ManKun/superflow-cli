@@ -43,22 +43,22 @@ docs -> design -> implement -> verify -> archive
 ### 2.1 npm 全局安装（推荐给普通用户）
 
 ```bash
-npx --yes --package=@chenmk/superflow@0.5.6 superflow-install
+npx --yes --package=@chenmk/superflow@latest --registry=https://registry.npmjs.org superflow-install
 superflow --version
 ```
 
-如果网络慢，可以切换 npm registry：
+这个引导命令安装 CLI。继续执行下方的初始化与 MCP 注册，才能在对话中使用技能和托管功能。
+也可以在已准备好 Node.js 20+ 的终端直接运行：
 
 ```bash
-npm config set registry https://registry.npmmirror.com
-npx --yes --package=@chenmk/superflow@0.5.6 superflow-install
+npm install -g @chenmk/superflow@latest --registry https://registry.npmjs.org
 ```
 
 ### 2.2 从源码安装（贡献者或本地调试）
 
 ```bash
-git clone <your-repo-url>
-cd superflow
+git clone https://github.com/BasketballNotFound-ManKun/superflow-cli.git
+cd superflow-cli
 npm install
 npm run build
 npm install -g .
@@ -93,6 +93,15 @@ CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code，
 也可以选择多个工具。
 选择结果会替代手写 `--agent codex` / `--agent claude`。
 
+初始化后，按所选工具注册 MCP，例如 Claude Code：
+
+```bash
+superflow mcp install --agent claude
+```
+
+Codex 用户将 `claude` 改为 `codex`，两端都使用时改为 `both`。
+重启对应工具后，在 Claude Code 对话中输入 `/superflow`，在 Codex 对话中输入 `$superflow`。
+
 `superflow init` 会执行：
 
 1. 检测系统、安装范围和 agent 目录。
@@ -103,7 +112,7 @@ CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code，
    依赖，安装失败会中断初始化。
 5. 尝试安装 understand-anything；失败只警告，
    不阻断初始化。
-6. 部署 SuperBridge Flow/OpenSpec skills。
+6. 部署 Superflow 技能（统一 superflow 命名）。
 7. 部署 hook/command 脚本；Codex 写入 `hooks.json`，Claude Code 写入
    `settings.json`。
 8. 部署 SuperBridge Flow 防漂移规则。
@@ -182,7 +191,7 @@ superflow mcp status --agent both
 创建的任务固定使用 `external_host`，不会再额外启动一个同类型 Supervisor CLI。
 因此可以避免重复传递完整上下文、嵌套会话 401 重试，以及监督侧 Token 重复消耗。
 
-托管期间应使用 `superflow_managed_wait` 默认最长等待 12 小时；活动请求通过标准 MCP
+托管期间使用 `superflow_managed_wait`，默认传输窗口为 240 秒；窗口超时后携带返回的序号续接。支持长调用的宿主可显式提高窗口。活动请求通过标准 MCP
 progress notification 展示健康进度，单个监督点不会唤醒，连续两个无有效里程碑才返回，
 不会通过模型回合做固定频率轮询或重复回传大段证据。任务进入
 `waiting_for_host_review` 后，当前主 Agent 一次性完成全量
@@ -678,7 +687,7 @@ superflow pipeline --agent codex
 
 | 场景 | 命令 |
 |------|------|
-| 安装 CLI | `npx --yes --package=@chenmk/superflow@0.5.6 superflow-install` |
+| 安装 CLI | `npx --yes --package=@chenmk/superflow@latest --registry=https://registry.npmjs.org superflow-install` |
 | 初始化并选择工具 | `superflow init` |
 | 非交互初始化两侧 | `superflow init --yes` |
 | 检查健康 | `superflow doctor` |

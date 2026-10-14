@@ -8,7 +8,15 @@ aliases, scripts, rules, and handoff state for Claude Code and Codex.
 ## 1. Install
 
 ```bash
-npx --yes --package=@chenmk/superflow@0.5.6 superflow-install
+npx --yes --package=@chenmk/superflow@latest --registry=https://registry.npmjs.org superflow-install
+```
+
+This bootstrap command installs the CLI. Continue with initialization and MCP
+registration below before using the skills and managed work in a conversation.
+With Node.js 20+ already available, you can also install directly:
+
+```bash
+npm install -g @chenmk/superflow@latest --registry https://registry.npmjs.org
 ```
 
 > **Node.js requirement:** Node.js 20 or later is required. If `node -v` is older,
@@ -47,28 +55,32 @@ SUPERFLOW_LANG=en superflow init
 3. Run native `openspec init <project> --tools ... --profile custom`.
 4. Install Superpowers for selected Claude Code/Codex agents.
 5. Try understand-anything; API change annotation is deployed with the core skills.
-6. Deploy SuperBridge Flow/OpenSpec skills.
+6. Deploy Superflow skills under the unified superflow namespace.
 7. Register hooks and rules.
 8. Scaffold `docs/sdd-context/`.
 
-### 2.1 Register The Managed MCP (Recommended)
+### 2.1 Register The Managed MCP
 
 To start managed delivery directly from the current Codex or Claude host while
 Superflow launches only the peer executor in the background, register the stdio
 MCP server:
 
 ```bash
-superflow mcp install --agent both
-superflow mcp status --agent both
+superflow mcp install --agent claude
+superflow mcp status --agent claude
 ```
 
-Restart Codex and Claude after registration. The current host remains responsible
+Use `codex` for Codex or `both` for both tools. Restart the selected tools after
+registration. In Claude Code conversations use `/superflow`; in Codex use
+`$superflow`. The current host remains responsible
 for user interaction and independent review. MCP-created tasks always use
 `external_host`, so Superflow does not launch another supervisor CLI of the same
 type. This avoids duplicated context, nested-session authentication retries, and
 duplicate supervisor token usage.
 
-Use `superflow_managed_wait` for a local wait of up to twelve hours by default.
+Use `superflow_managed_wait` with its default 240-second transport window.
+Resume a timed-out window using its returned sequence; hosts that support
+longer tool calls can explicitly increase the window.
 An active request exposes healthy progress through standard MCP progress
 notifications. One checkpoint does not wake Host; two consecutive checkpoints
 without an effective milestone return for attention, without repeating large

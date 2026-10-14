@@ -12,42 +12,155 @@
 </p>
 
 <p align="center">
-  <strong>A workflow harness for turning OpenSpec/SDD contracts and
-  Superpowers engineering discipline into one delivery flow.</strong>
+  <strong>One entry for requirements, implementation, and verification in Claude Code or Codex.</strong>
 </p>
 
 <p align="center">
-  <a href="./README.zh-CN.md">中文文档</a>
-  ·
-  <a href="#install">Install</a>
-  ·
-  <a href="#workflow">Workflow</a>
-  ·
-  <a href="#star-history">Star History</a>
+  <a href="./README.zh-CN.md">中文文档</a> ·
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#everyday-examples">Examples</a> ·
+  <a href="#upgrade-and-troubleshoot">Upgrade & troubleshooting</a> ·
+  <a href="./INSTALL.en.md">Installation guide</a>
 </p>
 
-# SuperBridge Flow
+# Superflow
 
-SuperBridge Flow is a workflow CLI for bringing OpenSpec/SDD and Superpowers
-together in real software delivery.
+Superflow (SuperBridge Flow) connects requirements, source changes, tests, and independent review in a recoverable development workflow.
+Describe your goal; it chooses the next step from your project and existing progress, and asks when a requirement or permission needs your decision.
 
-## 0.5.18 database layers and Git gate closure
+**For everyday use, remember one entry: `/superflow` in Claude Code or `$superflow` in Codex.**
+The router selects phase skills as needed. You can start without learning OpenSpec, SDD, or internal skill names.
 
-- Preserve Mock logic tests while freezing separate SQL-binding, real database and HTTP-entry obligations. Required MySQL proof cannot be replaced with Mock/H2/SQLite.
-- Bind receipts to engine/version, schema, production statement and actual row observations. Retain historical evidence for its verified revision.
-- Delegate exact known legacy sdd entries to current canonical scripts after backup. Preserve unknown/custom entries and symlinks.
-- Audit effective Git Hook routes, executable state and current package content. Reject root report false PASS and tracked evidence/index mismatches, while keeping private untracked logs local.
+## Quickstart
 
-Run `superflow update --scope global --agent both`, then `superflow doctor <project>`. Unknown custom routes remain visible for owner review; filename/date is not proof of integration.
+Have **Node.js 20+, Git**, and an installed, signed-in Claude Code or Codex ready.
+Hooks require Bash and Python3; on Windows, use Git Bash or an equivalent shell.
+Requirements and document work can start in one tool; **dual-Agent managed development requires both CLIs to be installed and authenticated**.
+Superflow uses your existing model accounts and permissions. Model usage is billed by the respective platforms.
 
-## 0.5.17 acceptance evidence fixes
+### Install
 
-- Per-case PASS binds retained receipts and raw output to the service entry and current source/build. Empty files, remote links, zero execution and substituted entries no longer pass.
-- Persisted fields freeze before/after values for the same business ID and expected assertions. Independent review still checks the actual Service-to-Mapper statement.
-- Keep partial results; only a complete final summary authorizes delivery. Lightweight documentation acquires no DB requirement.
-- CLI and Codex/Claude scripts use the same installation source. Repeated updates refresh version records and preserve custom state.
+Install the CLI in your system terminal:
 
-Complete affected evidence for legacy reports. Hashes prove identity, not business correctness or authenticity.
+```bash
+npm install -g @chenmk/superflow@latest --registry https://registry.npmjs.org
+```
+
+Enter the **root of the project** you want to work on and choose one set of commands.
+`init` deploys skills, Hooks, and project context; `mcp install` registers managed work:
+
+**Claude Code:**
+
+```bash
+superflow init --agent claude --scope global --language en --yes
+superflow mcp install --agent claude
+```
+
+**Codex:**
+
+```bash
+superflow init --agent codex --scope global --language en --yes
+superflow mcp install --agent codex
+```
+
+For both tools, use `--agent both` in both commands.
+Global tool assets can be reused across projects; initialization also creates the current project's OpenSpec and context directories.
+See [INSTALL.en.md](./INSTALL.en.md) for installation options, source installation, and Windows guidance.
+
+### Restart and check
+
+**Restart the selected Claude Code / Codex tool after setup** to load the skills and MCP.
+Then check from your system terminal, for example:
+
+```bash
+superflow --version
+superflow doctor --agent claude --scope global
+# Use codex for Codex, or both to check both tools.
+```
+
+Resolve failed checks using the remediation shown by `doctor`.
+
+### Start your first task
+
+Type in your tool's **conversation**, with the project open:
+
+| Tool | Where to type | Entry |
+| --- | --- | --- |
+| Claude Code | Claude Code conversation in the project | `/superflow` |
+| Codex | Codex conversation with the project open | `$superflow` |
+
+Start with a read-only task to get familiar with the flow:
+
+**Claude Code:**
+
+```text
+/superflow Explain this project's main modules and call relationships. Do not change code yet.
+```
+
+**Codex:**
+
+```text
+$superflow Explain this project's main modules and call relationships. Do not change code yet.
+```
+
+Then describe your real task, including relevant document paths, symptoms, or expected outcomes.
+
+## Everyday examples
+
+These examples use Claude Code. In Codex, replace the prefix with `$superflow`.
+
+| Goal | Example request |
+| --- | --- |
+| Clarify requirements | `/superflow Analyze docs/requirements.md, confirm scope and open decisions, and stop before implementation.` |
+| Build a feature | `/superflow Add CSV export to the order list. Inspect existing code, agree on the approach, then implement and verify.` |
+| Fix a problem | `/superflow Clearing the search filters does not restore the list. Reproduce, investigate, fix, and verify.` |
+| Use managed delivery | `/superflow Complete this requirement in managed mode, independently review the implementation, and repair findings.` |
+| Continue existing work | `/superflow Continue openspec/changes/order-export/ from its current unfinished tasks.` |
+| Check delivery | `/superflow Compare this implementation with the requirements and test evidence, and list unfinished work.` |
+| Prepare archive | `/superflow Check whether the current change is ready to archive, and summarize verification and remaining work.` |
+
+Replace example document and directory paths with your actual paths. State scope limits directly, such as “discussion only”, “documents only”, or “do not change code yet”.
+For continuation, provide the existing change directory or implementation prompt so the workflow can inspect its state and handoff.
+
+## What happens next
+
+```text
+Describe a goal → Inspect project and requirements → Agree on design → Implement and verify → Independently review and repair → Report results
+```
+
+- **Clear, bounded work:** select the applicable flow based on risk.
+- **Complex or disputed requirements:** investigate source and documents, then ask for decisions that affect implementation.
+- **Document-only requests:** complete documents and review without starting managed implementation.
+- **Dual-Agent managed work:** the current host supervises and reviews; the peer implements and verifies.
+- **Delivery:** summarize changes, evidence, remaining risks, or external blockers. Commits, pushes, and releases require your explicit authorization.
+
+After interruption or conversation compaction, use the same entry to continue; persisted state guides recovery.
+
+## Upgrade and troubleshoot
+
+From your project root, select `claude`, `codex`, or `both` as appropriate:
+
+```bash
+superflow update --with-package --agent claude --scope global --language en
+```
+
+This entry upgrades the CLI, dependencies, and host assets together. **Restart the selected tool after upgrading, then run `superflow doctor` with the matching `--agent`.**
+
+| Situation | Next step |
+| --- | --- |
+| `/superflow` or `$superflow` is missing | Check that `init` targeted the intended tool, then restart it. |
+| MCP is missing or its runtime is stale | Run `superflow mcp install --agent <tool>` or the update command, then restart. |
+| The CLI still reports an old version | Inspect PATH with `which -a superflow` (`where superflow` on Windows) and identify the new entry. |
+| Managed work cannot start with only one tool | Install and authenticate the peer CLI; requirements and documents can still start in the available tool. |
+| A database, device, or external permission is required | Provide the test resource or decide how to handle the reported gap. |
+| You switched projects | Reuse global assets; run `init` in the new project root when project directories and context are needed. |
+| You used 0.5.x skill names | Use the unified entry from 0.6.0. Updates back up and retire recognized old assets while preserving custom content for review. |
+
+Read more: [installation guide](./INSTALL.en.md) · [managed delivery](./docs/managed-delivery-loop.en.md) ·
+[release history](https://github.com/BasketballNotFound-ManKun/superflow-cli/releases).
+
+<details>
+<summary>Advanced reference: workflow, gates, terminal-managed work, and maintenance commands</summary>
 
 ## Why SuperBridge Flow
 
@@ -111,11 +224,7 @@ before new dispatch or source edits. Semantic correctness remains an Agent revie
   and execution default to 5 reviews, 7 executor calls, and 12 total calls.
   Durable journals allow recovery after terminal or network
   interruption, and passing work stops for explicit Git approval.
-- **9 catalogued failure modes, blocked at the gate.** Nine real ways AI breaks
-  in production — swallowing the whole PRD then forgetting details, editing
-  only the setter while missing consumers, SQL drift across dev/test/DB
-  layers, mock-only "已验证" reports, and more — each baked into a hard check
-  the agent cannot skip.
+- **Checks for common delivery gaps.** Phase checks and independent review examine missed requirements, missing consumers, SQL drift, and Mock-only evidence.
 - **Architecture 6-questions before cross-service code.** Any change crossing
   service / SDK / MQ / device / callback / gateway boundaries must answer six
   questions in the technical design: who owns the module, what is the call
@@ -140,10 +249,7 @@ before new dispatch or source edits. Semantic correctness remains an Agent revie
   `.sdd/handoff/sdd-context.{md,json}` + sha256 + `.sdd/state.yaml` keep
   Worker / Tester / Reviewer on the same source of truth. Stale prompts
   blocked by hash mismatch.
-- **User says one sentence, pipeline runs 9 steps.** No prompt engineering
-  required: `> use SuperFlow to handle this requirement` triggers clarify →
-  docs → design → implement → verify → archive. Phase progression, guards,
-  hashes, and hooks are flow-enforced, not user-discipline.
+- **One entry across the workflow.** `/superflow` or `$superflow` selects clarification, contracts, design, implementation, verification, and archive from the task and current state, then applies the relevant checks.
 - **`superflow check` audits delivery readiness by level.** `files` checks the
   required set, `docs` adds every-prompt links, independent reviews, and complex
   diagrams, while `coding-ready` adds environment preflight plus the complete
@@ -201,48 +307,10 @@ Each phase has a clear owner and an exit gate:
 | `docs`      | OpenSpec/SDD                   | Requirements, contracts, API/DB/test docs         |
 | `design`    | Superpowers                    | Source-level technical design and TDD plan        |
 | `implement` | Superpowers + SuperBridge Flow | Batched implementation prompts and review gates   |
-| `verify`    | SuperBridge Flow hooks         | Evidence-backed test report and real-entry checks |
+| `verify`    | Current Host + deterministic gates | Implementation review, test reports, and real-entry evidence |
 | `archive`   | OpenSpec/SDD                   | Final spec archive and lifecycle closure          |
 
-## Install
-
-```bash
-npx --yes --package=@chenmk/superflow@0.5.6 superflow-install
-```
-
-> **Node.js requirement:** Node.js 20 or later is required. On an older runtime,
-> installation stops before command aliases are created and prints Node 20 upgrade instructions.
-
-For a source checkout, `bash install.sh` detects installed Codex, Claude, and
-Codex and Claude Hosts and installs CLI, Skills/Hooks, and their managed MCP registrations
-in one pass. Restart the detected Hosts afterwards.
-
-Then initialize a project:
-
-```bash
-superflow init
-```
-
-Interactive init lets you select:
-
-- target agent tools: Claude Code, Codex, or both
-- language: English or Chinese
-- install scope: global or project
-
-Non-interactive usage:
-
-```bash
-superflow init --yes
-superflow init --language en --yes
-superflow init --language zh --yes
-```
-
-CLI help and runtime prompts can also be switched globally:
-
-```bash
-superflow --language en --help
-SUPERFLOW_LANG=en superflow init
-```
+## Advanced: manage tasks from the terminal
 
 Manage an implementation prompt, OpenSpec change, or direct development task:
 
@@ -360,7 +428,7 @@ Design and field evidence:
   current `superpowers@openai-curated-remote` plugin, discovering versions from native inventory and checking
   `verification-before-completion`, `requesting-code-review`, and
   `finishing-a-development-branch`.
-- SuperBridge Flow/OpenSpec skills
+- Superflow skills under the unified superflow namespace
 - hooks, scripts, and anti-drift rules
 - Codex prompt aliases
 - optional understand-anything integration checks
@@ -395,40 +463,6 @@ best-effort and does not block initialization.
 | `superflow status`                                           | List active changes with phase, tasks, and doc gaps                      |
 | `superflow eval <taskPath> [--json]`                         | Evaluate managed quality, calls, tokens, cache, and time offline         |
 | `superflow update --with-package`                            | Update superflow, OpenSpec, and Superpowers                              |
-
-## Agent Usage
-
-In Codex:
-
-```text
-Use $superflow to analyze this requirement and drive the full workflow.
-```
-
-In Claude Code:
-
-```text
-/superflow
-```
-
-Describe the goal; the router selects the phase and task size. All bundled skills
-use the `superflow` namespace. Only `superflow` is a default user entry; phase,
-small-task, and specialist capabilities are selected internally. Claude hides
-internal skills from the slash menu. Codex keeps them explicitly accessible,
-with clear labels and implicit invocation disabled. Archive routing handles both
-SDD and pure OpenSpec changes automatically. API change annotation is a managed
-core skill, not a separately copied optional dependency.
-
-This release replaces old skill names and prompt paths without aliases. Update
-with `superflow update`, then restart the host. Known original old assets are
-moved outside the skill/prompt directories into `.superflow-retired-assets`;
-modified or unknown assets are preserved and reported for manual review.
-
-For large requirements, ask the agent to read one section or one feature at a
-time. The total router automatically uses embedded deep clarification when a
-feature needs an owner decision; it investigates available facts first and asks
-one decision at a time with a recommendation. Clear, bounded work continues
-without an interview. SuperBridge Flow then routes through OpenSpec docs,
-Superpowers technical design, implementation prompts, verification, and archive.
 
 ## Automatic Update Checks
 
@@ -477,9 +511,8 @@ SuperBridge Flow supports English and Chinese installation modes.
   prompts where available.
 - `--language zh`: deploys the original Chinese full-detail skill set.
 
-The Chinese skill set currently contains the most detailed operational
-templates. The English skill set is designed as a practical public beta and
-keeps the same workflow contracts.
+Both language sets follow the same workflow contracts. Choose the language
+that fits your team.
 
 ## Requirements
 
@@ -492,6 +525,9 @@ On Windows, managed work resolves Agent `.exe/.cmd/.bat` shims and stops the
 complete Agent process tree on pause or timeout. macOS/Linux keep detached
 process groups; none of the three Agent launch paths concatenates commands in a
 general-purpose shell.
+
+
+</details>
 
 ## Star History
 
