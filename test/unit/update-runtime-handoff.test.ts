@@ -14,8 +14,9 @@ describe('dependency updates run in the new CLI', () => {
     cli = path.join(root, '@chenmk/superflow/dist/app/cli.js');
     fs.mkdirSync(path.dirname(cli), { recursive: true });
     fs.writeFileSync(cli, '// new runtime fixture');
-    vi.mocked(runCommand).mockReset().mockImplementation(async (_command, args) => ({
-      code: 0, stderr: '', stdout: args[0] === 'root' ? root : '',
+    fs.writeFileSync(path.join(root, '@chenmk/superflow/package.json'), JSON.stringify({ version: '0.6.2' }));
+    vi.mocked(runCommand).mockReset().mockImplementation(async (command, args) => ({
+      code: 0, stderr: '', stdout: args[0] === 'root' ? root : command === 'superflow' ? '0.6.2' : '',
     }));
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -26,9 +27,17 @@ describe('dependency updates run in the new CLI', () => {
   it('does not execute stale plugin logic before the refreshed runtime', async () => {
     await updateCommand({ agent: 'codex', scope: 'global', withPackage: true, targetPath: root });
     const calls = vi.mocked(runCommand).mock.calls;
-    expect(calls.map(([command]) => command)).toEqual(['npm', 'npm', process.execPath]);
+    expect(calls.map(([command]) => command)).toEqual(['npm', 'npm', process.execPath, 'superflow']);
     expect(calls[2][1][0]).toBe(cli);
     expect(calls[2][1]).toContain('--with-dependencies');
+  });
+  it('rejects a stale PATH entry after the new package and assets are installed', async () => {
+    vi.mocked(runCommand).mockImplementation(async (command, args) => ({
+      code: 0, stderr: '', stdout: args[0] === 'root' ? root
+        : command === 'superflow' ? '0.6.0' : '',
+    }));
+    await expect(updateCommand({ agent: 'codex', scope: 'global', withPackage: true, targetPath: root }))
+      .rejects.toThrow(/PATH/);
   });
   it('propagates child dependency failure instead of declaring update complete', async () => {
     vi.mocked(runCommand).mockImplementation(async (command, args) => ({

@@ -38,34 +38,39 @@ Hooks require Bash and Python3; on Windows, use Git Bash or an equivalent shell.
 Requirements and document work can start in one tool; **dual-Agent managed development requires both CLIs to be installed and authenticated**.
 Superflow uses your existing model accounts and permissions. Model usage is billed by the respective platforms.
 
-### Install
-
-Install the CLI in your system terminal:
+### Install the public npm package
 
 ```bash
-npm install -g @chenmk/superflow@latest --registry https://registry.npmjs.org
+npm install -g @chenmk/superflow@latest
 ```
 
-Enter the **root of the project** you want to work on and choose one set of commands.
-`init` deploys skills, Hooks, and project context; `mcp install` registers managed work:
+This installs the CLI from npm; no repository clone is required. npm's default
+registry is the public registry, so ordinary commands need no `--registry` flag.
+Installing the package alone does not select or configure Agents.
 
-**Claude Code:**
+### Run the setup wizard
+
+Enter the root of the project where you will use Superflow, then run:
 
 ```bash
-superflow init --agent claude --scope global --language en --yes
-superflow mcp install --agent claude
+superflow init
 ```
 
-**Codex:**
+The wizard detects available Agent CLIs and asks for language, Claude Code/Codex/
+both, and global/current-project installation. It shows the project and intended
+changes before confirmation. Enter `q` or press Ctrl+C to cancel without starting
+installation. Initialization deploys dependencies, skills, Hooks and MCP together;
+a separate `mcp install` command is no longer part of normal setup.
+
+Global tool assets are reusable across projects; OpenSpec/context initialization
+still applies to the displayed project. For automation, retain explicit options:
 
 ```bash
-superflow init --agent codex --scope global --language en --yes
-superflow mcp install --agent codex
+superflow init --agent both --scope global --language en --yes
 ```
 
-For both tools, use `--agent both` in both commands.
-Global tool assets can be reused across projects; initialization also creates the current project's OpenSpec and context directories.
-See [INSTALL.en.md](./INSTALL.en.md) for installation options, source installation, and Windows guidance.
+Single-tool users can replace `both` with `codex` or `claude`. See
+[INSTALL.en.md](./INSTALL.en.md) for source installs, Windows and advanced flags.
 
 ### Restart and check
 
@@ -138,13 +143,31 @@ After interruption or conversation compaction, use the same entry to continue; p
 
 ## Upgrade and troubleshoot
 
-From your project root, select `claude`, `codex`, or `both` as appropriate:
+In an interactive terminal run:
 
 ```bash
-superflow update --with-package --agent claude --scope global --language en
+superflow update
 ```
 
-This entry upgrades the CLI, dependencies, and host assets together. **Restart the selected tool after upgrading, then run `superflow doctor` with the matching `--agent`.**
+Choose Agent tools, complete update / asset refresh / preview only, and existing/
+global/current-project locations. The plan shows the active CLI version/path and
+all affected directories, including registered projects. Installation starts only
+after confirmation. Complete update downloads the public npm package and lets the
+new CLI refresh dependencies and assets. A stale PATH entry is reported explicitly.
+
+Explicit arguments remain available for scripts; JSON/dry-run/noninteractive calls
+never wait for the wizard:
+
+```bash
+superflow update --with-package --agent both --scope global --language en
+```
+
+If an older CLI does not recognize these options or has no wizard, bootstrap once
+with `npm install -g @chenmk/superflow@latest`, then run the new entry. Restart the
+selected tools after success and run `superflow doctor --agent both --scope global`
+(use the selected single Agent when appropriate). If your npm configuration uses a
+mirror/private registry, inspect `npm config get registry` and the scoped registry;
+use an explicit official registry only when troubleshooting that configuration.
 
 | Situation | Next step |
 | --- | --- |
@@ -346,7 +369,7 @@ superflow pipeline --resume-task <task-id> --submit-host-review <review.json>
 
 ### Interact from the current host Agent (recommended MCP path)
 
-Register the bundled local stdio MCP server for Codex or Claude:
+Initialization already registers the bundled MCP server. To repair a missing Codex/Claude entry:
 
 ```bash
 superflow mcp install --agent both

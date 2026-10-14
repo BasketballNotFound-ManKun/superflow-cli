@@ -66,12 +66,20 @@ program
   .option("--lang <language>", helpText.languageOption)
   .version(pkg.version);
 
+program.action(() => {
+  console.log(helpText.initDescription);
+  console.log("  superflow init");
+  console.log(helpText.updateDescription);
+  console.log("  superflow update");
+  console.log("  superflow --help");
+});
+
 program
   .command("init [targetPath]")
   .description(helpText.initDescription)
   .option("--dry-run", helpText.dryRun)
   .option("--agent <agent>", helpText.agentOption)
-  .option("--scope <scope>", helpText.scopeOption, "global")
+  .option("--scope <scope>", helpText.scopeOption)
   .option("--language <language>", helpText.languageOption)
   .option("--yes", helpText.yesOption)
   .option("--json", helpText.jsonOption)
@@ -81,10 +89,19 @@ program
   .option("--no-hooks", helpText.noHooksOption)
   .option("--no-openspec-init", helpText.noOpenspecInitOption)
   .option("--no-scan", helpText.noScanOption)
-  .action(async (targetPath, options) => {
+  .action(async (targetPath, options, command: Command) => {
     const { initCommand } = await import("./commands/init.js");
     await initCommand({
       ...commandOptions(options),
+      interactive:
+        command.options.every(
+          (option) =>
+            command.getOptionValueSource(option.attributeName()) !== "cli",
+        ) &&
+        program.options.every(
+          (option) =>
+            program.getOptionValueSource(option.attributeName()) !== "cli",
+        ),
       targetPath: resolveTargetPathArg(targetPath, options, "init"),
     });
   });
@@ -308,10 +325,22 @@ program
   .option("--with-package", helpText.withPackageOption)
   .option("--with-dependencies", helpText.withDependenciesOption)
   .option("--language <language>", helpText.languageOption)
-  .action(async (targetPath, options) => {
+  .action(async (targetPath, options, command: Command) => {
     const { updateCommand } = await import("./commands/update.js");
     await updateCommand({
       ...commandOptions(options),
+      noHooks: commandOptions(options).hooks === false,
+      interactive:
+        targetPath === undefined &&
+        Boolean(process.stdin.isTTY && process.stdout.isTTY) &&
+        command.options.every(
+          (option) =>
+            command.getOptionValueSource(option.attributeName()) !== "cli",
+        ) &&
+        program.options.every(
+          (option) =>
+            program.getOptionValueSource(option.attributeName()) !== "cli",
+        ),
       targetPath: resolveTargetPathArg(targetPath, options, "update"),
     });
   });
@@ -349,7 +378,8 @@ program
   .option("--report <path>", helpText.reviewReportOption)
   .option("--json", helpText.jsonOption)
   .action(async (options) => {
-    const { reviewCoverageCommand } = await import("./commands/review-coverage.js");
+    const { reviewCoverageCommand } =
+      await import("./commands/review-coverage.js");
     reviewCoverageCommand({
       base: options.base,
       paths: options.path,
@@ -380,7 +410,9 @@ program
 
 program
   .command("map-audit")
-  .description("Compare Understand Anything map context modes without replacing the map")
+  .description(
+    "Compare Understand Anything map context modes without replacing the map",
+  )
   .option("--path <path>", "Project path")
   .option("--query <query>", "Task keywords")
   .option("--limit <n>", "Top-K limit", "8")

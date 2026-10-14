@@ -93,15 +93,15 @@ describe("mcp command", () => {
     expect(powershellInstaller).toContain("dist\\app\\cli.js");
     expect(powershellInstaller).toContain("dist\\mcp\\server.js");
     expect(shellInstaller).toContain('command -v codex');
-    expect(shellInstaller).toContain("mcp install $AGENT_FLAG");
+    expect(shellInstaller).toContain('"$BIN_TARGET" init $INIT_BASE');
+    expect(shellInstaller).not.toContain('"$BIN_TARGET" mcp install');
     expect(shellInstaller).toContain("mcp status $AGENT_FLAG");
     expect(powershellInstaller).toContain(
-      '@("mcp", "install", "--agent", $agentValue)',
+      '@("mcp", "status", "--agent", $agentValue)',
     );
     expect(powershellInstaller).toContain("Get-Command codex");
-    expect(powershellInstaller).toContain(
-      "mcp status --agent $agentValue",
-    );
+    expect(powershellInstaller).toContain("node $distBin @initArgs");
+    expect(powershellInstaller).toContain("node $distBin @mcpArgs");
     expect(`${shellInstaller}\n${powershellInstaller}`).not.toContain(
       "dist/cli/index.js",
     );

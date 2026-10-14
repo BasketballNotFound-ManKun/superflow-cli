@@ -1,6 +1,6 @@
 {
   "name": "@chenmk/superflow",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "SuperBridge Flow workflow CLI for Claude Code and Codex",
   "license": "MIT",
   "type": "module",

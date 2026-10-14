@@ -748,3 +748,13 @@ environments, browsers, and commits/releases with separate coverage and counts.
 These extend document contracts and Host semantic review only, without protocol
 fields, Hooks, or state machines. Project coding/test policies do not enter generic
 managed prompts; historical consent does not authorize shared-resource cleanup.
+
+## Initialization installation closure
+
+Initialization delegates to the existing MCP registration owner to complete
+dependencies, skills, Hooks and MCP. Registration failure retains the pending
+installation step and never reports initialization complete. Source installers
+delegate to the same initialization entry and then check MCP status rather than
+registering again. npm lifecycle scripts do not ask terminal questions; interaction
+belongs to CLI init/update. Explicit options, JSON, dry-run and noninteractive calls
+remain scriptable. Managed roles and protocols do not change.

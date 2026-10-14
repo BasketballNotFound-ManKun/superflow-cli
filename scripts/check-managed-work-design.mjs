@@ -467,14 +467,17 @@ if (
     "安装器必须在 Unix/Windows 重复部署时覆盖 Skills，避免持续生成 backup",
   );
 }
+const initCommandSource = fs.readFileSync(path.join(root, "src/app/commands/init.ts"), "utf8");
 if (
-  !installer.includes("mcp install $AGENT_FLAG") ||
+  !initCommandSource.includes("manageMcpIntegration(") ||
+  !initCommandSource.includes("stepMcp") ||
+  !installer.includes("mcp status $AGENT_FLAG") ||
   !installer.includes("command -v codex") ||
-  !windowsInstaller.includes('@("mcp", "install", "--agent", $agentValue)') ||
+  !windowsInstaller.includes('@("mcp", "status", "--agent", $agentValue)') ||
   !windowsInstaller.includes("Get-Command codex")
 ) {
   failures.push(
-    "Unix/Windows 一键安装器必须检测实际 Host 并自动注册对应托管 MCP",
+    "Unix/Windows 安装器必须检测实际 Host，委托 init 注册并核对 MCP 状态",
   );
 }
 if (

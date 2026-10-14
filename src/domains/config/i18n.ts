@@ -18,6 +18,7 @@ export type TranslationKey =
   | 'stepPrompts'
   | 'stepRules'
   | 'stepScan'
+  | 'stepMcp'
   | 'summaryTitle'
   | 'stateLabel'
   | 'initComplete'
@@ -61,11 +62,12 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     stepScriptsHooks: 'Deploy scripts and register hooks',
     stepPrompts: 'Deploy prompt and command aliases',
     stepRules: 'Deploy SuperBridge Flow anti-drift rules',
+    stepMcp: 'Register managed MCP',
     stepScan: 'Scaffold docs/sdd-context and check understand-anything',
     summaryTitle: 'superflow init summary',
     stateLabel: 'State',
     initComplete: 'superflow init complete',
-    runResume: "Run 'superflow init --resume' to continue from this step.",
+    runResume: "Resume this initialization with the complete command below:",
     noActiveChanges: 'No active SuperBridge Flow changes.',
     statusHeader: 'Active SuperBridge Flow changes',
     nextDocs: 'Current phase is docs. Continue OpenSpec/SDD contract documents.',
@@ -104,11 +106,12 @@ const TRANSLATIONS: Record<Language, Record<TranslationKey, string>> = {
     stepScriptsHooks: '部署脚本 + 注册 hook',
     stepPrompts: '部署 prompt/command alias',
     stepRules: '部署 SuperBridge Flow 防漂移规则',
+    stepMcp: '注册托管 MCP',
     stepScan: '脚手架 docs/sdd-context/ + understand-anything 扫描 + 软提示',
     summaryTitle: 'superflow init summary',
     stateLabel: 'State',
     initComplete: 'superflow init complete',
-    runResume: "Run 'superflow init --resume' to continue from this step.",
+    runResume: "请使用以下完整命令恢复本次初始化：",
     noActiveChanges: 'No active SuperBridge Flow changes.',
     statusHeader: 'Active SuperBridge Flow changes',
     nextDocs: '当前处于 docs 阶段，继续生成或补齐 OpenSpec/SDD 合同文档。',

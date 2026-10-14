@@ -40,6 +40,13 @@ import { managedText } from '../../domains/managed-work/i18n.js';
 import { manageMcpIntegration } from './mcp.js';
 import { migrateGlobalHooks, migrateProjectHooks } from '../../domains/hook-migration.js';
 
+import {
+  TerminalWizard,
+  WizardCancelled,
+  canPrompt,
+  detectedAgentDefault,
+} from "../interactive.js";
+
 const PACKAGE_NAME = '@chenmk/superflow';
 const OPENSPEC_PACKAGE_NAME = '@fission-ai/openspec';
 const OFFICIAL_REGISTRY = 'https://registry.npmjs.org';
@@ -64,17 +71,65 @@ export interface UpdateTarget {
   projectPath: string;
 }
 
-export async function updateCommand(options: {
-  agent?: string;
-  dryRun?: boolean;
-  json?: boolean;
-  noHooks?: boolean;
-  scope?: string;
-  withPackage?: boolean;
-  withDependencies?: boolean;
-  targetPath?: string;
-  language?: string;
-} = {}): Promise<void> {
+export async function updateCommand(
+  options: {
+    agent?: string;
+    dryRun?: boolean;
+    json?: boolean;
+    noHooks?: boolean;
+    scope?: string;
+    withPackage?: boolean;
+    withDependencies?: boolean;
+    targetPath?: string;
+    language?: string;
+    interactive?: boolean;
+  } = {},
+): Promise<void> {
+  let wizard: TerminalWizard | undefined;
+  try {
+    if (options.interactive && canPrompt(options)) {
+      wizard = new TerminalWizard(resolveUpdateLanguage(options.language));
+      const language = await wizard.selectLanguage();
+      const agent = await wizard.selectAgents(await detectedAgentDefault());
+      const mode = await wizard.selectUpdateMode();
+      const scope = await wizard.selectScope(true);
+      options = {
+        ...options,
+        language,
+        agent: Array.isArray(agent) ? agent.join(",") : agent,
+        scope,
+        withPackage: mode !== "assets",
+        withDependencies: false,
+        dryRun: mode === "preview",
+      };
+    }
+    await executeUpdate(options, wizard);
+  } catch (error) {
+    if (error instanceof WizardCancelled) {
+      console.log("Cancelled / 已取消");
+      return;
+    }
+    throw error;
+  } finally {
+    wizard?.close();
+  }
+}
+
+async function executeUpdate(
+  options: {
+    agent?: string;
+    dryRun?: boolean;
+    json?: boolean;
+    noHooks?: boolean;
+    scope?: string;
+    withPackage?: boolean;
+    withDependencies?: boolean;
+    targetPath?: string;
+    language?: string;
+    interactive?: boolean;
+  },
+  wizard?: TerminalWizard,
+): Promise<void> {
   const language = resolveUpdateLanguage(options.language);
   const agents = resolveAgents(parseAgentSelection(options.agent));
   const projectPath = path.resolve(options.targetPath ?? process.cwd());
@@ -112,6 +167,12 @@ export async function updateCommand(options: {
   if (options.dryRun) {
     printPlan(plan, !!options.json);
     return;
+  }
+
+  if (wizard) {
+    printPlan(plan, false);
+    if (!(await wizard.confirm())) return;
+    wizard.close();
   }
 
   if (options.withPackage) {
@@ -206,6 +267,18 @@ export async function updateCommand(options: {
   }
 
   printPlan(plan, !!options.json, 'updated');
+  if (!options.json) {
+    console.log(
+      managedText(
+        language,
+        "请重启所选宿主后运行：",
+        "Restart the selected hosts, then run:",
+      ),
+    );
+    console.log(
+      `superflow doctor --agent ${planAgents.join(",")} --scope ${planScope}`,
+    );
+  }
 }
 
 export function detectInstalledTargets(
@@ -402,7 +475,10 @@ export function detectPackageScope(
 
 function isSameOrInside(childPath: string, parentPath: string): boolean {
   const relative = path.relative(path.resolve(parentPath), path.resolve(childPath));
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  );
 }
 
 function printPlan(plan: UpdatePlan, json: boolean, status = 'planned'): void {
@@ -418,6 +494,14 @@ function printPlan(plan: UpdatePlan, json: boolean, status = 'planned'): void {
     ),
   );
   console.log(managedText(plan.language, `语言: ${plan.language}`, `language: ${plan.language}`));
+  const installed = JSON.parse(readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8')) as { version: string };
+  console.log(`CLI: ${installed.version} (${path.join(PACKAGE_ROOT, 'dist', 'app', 'cli.js')})`);
+  console.log(managedText(plan.language, '影响目录（包含已登记项目）：', 'Target directories (including registered projects):'));
+  for (const target of plan.targets) {
+    const platform = getPlatformPaths(target.agent, target.scope, target.projectPath);
+    console.log(`  ${target.agent} [${target.scope}]: ${platform.skillsDir}`);
+    console.log(`    ${platform.settingsFile}`);
+  }
   if (plan.packageUpdate.enabled) {
     console.log('packages:');
     for (const command of plan.packageUpdate.commands) {
@@ -507,6 +591,14 @@ async function refreshWithInstalledCli(input: {
   }
   const output = result.stdout.trim();
   if (output) console.log(output);
+  const metadata = JSON.parse(readFileSync(path.join(packageBase, '@chenmk', 'superflow', 'package.json'), 'utf8')) as { version: string };
+  const active = await runCommand('superflow', ['--version'], { timeout: 8_000 });
+  if (active.code !== 0 || active.stdout.trim() !== metadata.version) {
+    throw new Error(managedText(input.language,
+      `新版CLI与配套资产已刷新，但PATH中的superflow未指向${metadata.version}。新版入口：${cliPath}。请检查命令路径并刷新终端缓存。`,
+      `The new CLI and assets were refreshed, but superflow on PATH is not ${metadata.version}. New entry: ${cliPath}. Check command paths and refresh the shell cache.`));
+  }
+  if (!input.json) console.log(`CLI ${metadata.version}: ${cliPath}`);
 }
 
 async function globalNpmRoot(): Promise<string> {

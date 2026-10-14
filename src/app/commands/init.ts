@@ -1,7 +1,5 @@
 import path from 'path';
-import { existsSync } from 'fs';
-import { createInterface } from 'readline/promises';
-import { stdin as input, stdout as output } from 'process';
+import { existsSync, readFileSync } from 'fs';
 import { detectOS } from '../../platform/os.js';
 import { getPlatformPaths, stateFile } from '../../platform/paths.js';
 import {
@@ -36,8 +34,17 @@ import {
 } from '../../domains/skill/assets.js';
 import { getManifest } from '../../domains/config/manifest.js';
 import { normalizeLanguage, t } from '../../domains/config/i18n.js';
-import type { Agent, AgentSelection, InstallScope, Language } from '../../types.js';
-import { ASSETS_DIR } from '../../platform/assets.js';
+import type { AgentSelection, InstallScope, Language } from '../../types.js';
+import { ASSETS_DIR, PACKAGE_ROOT } from '../../platform/assets.js';
+import { manageMcpIntegration } from "./mcp.js";
+import { resolveRuntimeLanguage } from "../../domains/config/cli-help.js";
+import {
+  TerminalWizard,
+  WizardCancelled,
+  canPrompt,
+  detectedAgentDefault,
+} from "../interactive.js";
+export { parseAgentInput as parseInitAgentInput } from "../interactive.js";
 import { ensureSuperflowGitignore } from '../../domains/managed-work/gitignore.js';
 
 export interface InitOptions {
@@ -68,6 +75,7 @@ export interface InitResult {
   scripts: Record<string, { total: number; names: string[] }>;
   hooks: Record<string, { total: number; names: string[]; registered: boolean }>;
   stateFile: string;
+  resumeCommand?: string;
 }
 
 export async function initCommand(cmdOptions: {
@@ -84,96 +92,98 @@ export async function initCommand(cmdOptions: {
   scope?: string;
   targetPath?: string;
   language?: string;
+  interactive?: boolean;
 }) {
+  let wizard: TerminalWizard | undefined;
   // commander 的 --no-hooks 标志让 options.hooks = false；默认是 true
   // commander 的 --no-scan 标志让 options.scan = false；默认是 true
   try {
-    const language = await resolveInitLanguage(cmdOptions);
-    const agent = await resolveInitAgentSelection(cmdOptions, language);
+    if (cmdOptions.resume && (!cmdOptions.agent || !cmdOptions.scope)) {
+      throw new Error(
+        resolveRuntimeLanguage(cmdOptions.language) === 'zh'
+          ? '恢复需要原来的 --agent 和 --scope，请使用失败输出中的完整恢复命令。'
+          : 'Resume requires the original --agent and --scope. Use the complete recovery command from the failure output.',
+      );
+    }
+    const fullWizard =
+      cmdOptions.interactive ??
+      (!cmdOptions.agent && !cmdOptions.scope && !cmdOptions.language);
+    if (canPrompt(cmdOptions))
+      wizard = new TerminalWizard(resolveRuntimeLanguage(cmdOptions.language));
+    const explicitLanguage = cmdOptions.language
+      ? normalizeLanguage(cmdOptions.language)
+      : undefined;
+    if (cmdOptions.language && !explicitLanguage)
+      throw new Error(`invalid language: ${cmdOptions.language}`);
+    const language =
+      explicitLanguage ??
+      (wizard ? await wizard.selectLanguage() : resolveRuntimeLanguage());
+    const agent = cmdOptions.agent
+      ? parseAgentSelection(cmdOptions.agent)
+      : wizard
+        ? await wizard.selectAgents(await detectedAgentDefault())
+        : 'both';
+    const scope = cmdOptions.scope
+      ? parseInstallScope(cmdOptions.scope)
+      : wizard && fullWizard
+        ? ((await wizard.selectScope(false)) as InstallScope)
+        : 'global';
+    if (wizard && fullWizard) {
+      const installed = JSON.parse(
+        readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8'),
+      ) as { version: string };
+      console.log(
+        `CLI: ${installed.version} (${path.join(PACKAGE_ROOT, 'dist', 'app', 'cli.js')})`,
+      );
+      console.log(
+        wizard.text(
+          `\nAgent: ${resolveAgents(agent).join(', ')}\n语言: ${language}\n范围: ${scope}\n项目: ${path.resolve(cmdOptions.targetPath ?? process.cwd())}`,
+          `\nAgents: ${resolveAgents(agent).join(', ')}\nLanguage: ${language}\nScope: ${scope}\nProject: ${path.resolve(cmdOptions.targetPath ?? process.cwd())}`,
+        ),
+      );
+      console.log(
+        wizard.text(
+          '将部署技能、Hooks、依赖、MCP，并按选项初始化项目上下文。',
+          'Deploy skills, Hooks, dependencies and MCP, initializing project context as selected.',
+        ),
+      );
+      const confirmed = await wizard.confirm();
+      wizard.close();
+      wizard = undefined;
+      if (!confirmed) return;
+    }
+    wizard?.close();
+    wizard = undefined;
     await runInit({
       dryRun: !!cmdOptions.dryRun,
       agent,
       resume: !!cmdOptions.resume,
-      noHooks: cmdOptions.hooks === false,  // 明确 false 才算 noHooks
+      noHooks: cmdOptions.hooks === false, // 明确 false 才算 noHooks
       noOpenspecInit: cmdOptions.openspecInit === false,
-      noScan: cmdOptions.scan === false,    // 明确 false 才算 noScan
+      noScan: cmdOptions.scan === false, // 明确 false 才算 noScan
       yes: !!cmdOptions.yes,
       json: !!cmdOptions.json,
       skipExisting: !!cmdOptions.skipExisting,
-      scope: parseInstallScope(cmdOptions.scope),
+      scope,
       language,
       projectPath: path.resolve(cmdOptions.targetPath ?? process.cwd()),
     });
   } catch (err) {
+    if (err instanceof WizardCancelled) {
+      console.log('Cancelled / 已取消');
+      return;
+    }
     if (cmdOptions.json) {
-      console.log(JSON.stringify({ ok: false, error: (err as Error).message }, null, 2));
+      console.log(
+        JSON.stringify({ ok: false, error: (err as Error).message }, null, 2),
+      );
     } else {
       console.error(`[FAIL] ${(err as Error).message}`);
     }
     process.exit(1);
+  } finally {
+    wizard?.close();
   }
-}
-
-async function resolveInitLanguage(cmdOptions: {
-  language?: string;
-  dryRun?: boolean;
-  yes?: boolean;
-  json?: boolean;
-  resume?: boolean;
-}): Promise<Language> {
-  if (cmdOptions.language) {
-    const parsed = normalizeLanguage(cmdOptions.language);
-    if (!parsed) throw new Error(`invalid language: ${cmdOptions.language}`);
-    return parsed;
-  }
-  const envLanguage = normalizeLanguage(process.env.SUPERFLOW_LANG);
-  if (envLanguage) return envLanguage;
-  if (cmdOptions.yes || cmdOptions.json || cmdOptions.dryRun || cmdOptions.resume) {
-    return 'zh';
-  }
-  if (!process.stdin.isTTY || !process.stdout.isTTY) return 'zh';
-  return promptLanguageSelection();
-}
-
-async function resolveInitAgentSelection(cmdOptions: {
-  agent?: string;
-  dryRun?: boolean;
-  yes?: boolean;
-  json?: boolean;
-  resume?: boolean;
-}, language: Language): Promise<AgentSelection> {
-  if (cmdOptions.agent) return parseAgentSelection(cmdOptions.agent);
-  if (cmdOptions.yes || cmdOptions.json || cmdOptions.dryRun || cmdOptions.resume) {
-    return 'both';
-  }
-  if (!process.stdin.isTTY || !process.stdout.isTTY) return 'both';
-  return promptAgentSelection(language);
-}
-
-export function parseInitAgentInput(value: string): AgentSelection | null {
-  const normalized = value.trim().toLowerCase();
-  if (!normalized || normalized === 'a' || normalized === 'both') {
-    return 'both';
-  }
-  const parts = normalized
-    .split(/[,\s]+/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const selected = new Set<Agent>();
-  for (const part of parts) {
-    if (part === '1' || part === 'claude' || part === 'c') {
-      selected.add('claude');
-    } else if (part === '2' || part === 'codex' || part === 'x') {
-      selected.add('codex');
-    } else {
-      return null;
-    }
-  }
-  if (selected.size === 2 && selected.has('claude') && selected.has('codex')) return 'both';
-  if (selected.size > 1) return [...selected];
-  if (selected.has('claude')) return 'claude';
-  if (selected.has('codex')) return 'codex';
-  return null;
 }
 
 function initStepSummary(result: InitResult): string[] {
@@ -208,41 +218,6 @@ function initStepSummary(result: InitResult): string[] {
 function printInitSummary(result: InitResult, write: (line: string) => void): void {
   for (const line of initStepSummary(result)) {
     write(line);
-  }
-}
-
-async function promptAgentSelection(language: Language): Promise<AgentSelection> {
-  const rl = createInterface({ input, output });
-  try {
-    while (true) {
-      console.log(`\n${t(language, 'agentPrompt')}`);
-      console.log(`  1) ${t(language, 'agentClaude')}`);
-      console.log(`  2) ${t(language, 'agentCodex')}`);
-      console.log(`  a) ${t(language, 'agentBoth')}`);
-      const answer = await rl.question(t(language, 'agentAnswer'));
-      const selection = parseInitAgentInput(answer);
-      if (selection) return selection;
-      console.log(t(language, 'agentInvalid'));
-    }
-  } finally {
-    rl.close();
-  }
-}
-
-async function promptLanguageSelection(): Promise<Language> {
-  const rl = createInterface({ input, output });
-  try {
-    while (true) {
-      console.log(`\n${t('en', 'languagePrompt')}`);
-      console.log(`  1) ${t('en', 'languageEnglish')}`);
-      console.log(`  2) ${t('en', 'languageChinese')}`);
-      const answer = await rl.question('Enter 1 / 2 / en / zh: ');
-      const language = normalizeLanguage(answer);
-      if (language) return language;
-      console.log(t('en', 'languageInvalid'));
-    }
-  } finally {
-    rl.close();
   }
 }
 
@@ -527,6 +502,23 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
         printSoftPrompt(cwd, scaffolding, understandResult, options.language);
       }
     }},
+    {
+      id: 8,
+      name: t(options.language, "stepMcp"),
+      run: async () => {
+        if (options.dryRun) {
+          log(`[dry-run] superflow mcp install --agent ${agents.join(",")}`);
+          return;
+        }
+        const registration = manageMcpIntegration(
+          "install",
+          { agent: agents.join(",") },
+          options.language,
+        );
+        for (const item of registration.agents)
+          log(`  ✓ ${item.agent}: MCP configured`);
+      },
+    },
   ];
 
   for (const step of steps) {
@@ -548,6 +540,7 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
       state.completedSteps = state.completedSteps.filter((n) => n !== step.id);
       if (!options.dryRun) saveState(stateFile, state);
       result.ok = false;
+      result.resumeCommand = initResumeCommand(options);
       result.steps.push({
         id: step.id,
         name: step.name,
@@ -559,7 +552,7 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
       } else {
         console.error(`[FAIL] Step ${step.id} failed: ${(err as Error).message}`);
         printInitSummary(result, (line) => console.error(line));
-        console.error(t(options.language, 'runResume'));
+        console.error(`${t(options.language, 'runResume')}\n${result.resumeCommand}`);
       }
       process.exit(1);
     }
@@ -593,9 +586,41 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
     log(`\n=== ${t(options.language, 'initComplete')} ===`);
     log(`${t(options.language, 'stateLabel')}: ${stateFile}`);
     printInitSummary(result, log);
+    log(
+      zh
+        ? "请重启所选宿主，让新技能和 MCP 生效。"
+        : "Restart the selected hosts to load the new skills and MCP.",
+    );
+    log(
+      `superflow doctor --agent ${agents.length === 2 ? "both" : agents[0]} --scope ${options.scope}`,
+    );
   }
   if (options.json) {
     console.log(JSON.stringify(result, null, 2));
   }
   return result;
+}
+
+function initResumeCommand(options: InitOptions): string {
+  const escape = process.platform === 'win32' ? "''" : "'\\''";
+  const project = "'" + options.projectPath.replaceAll("'", escape) + "'";
+  const args = [
+    'superflow',
+    'init',
+    project,
+    '--resume',
+    '--agent',
+    resolveAgents(options.agent).join(','),
+    '--scope',
+    options.scope,
+    '--language',
+    options.language,
+    '--yes',
+  ];
+  if (options.noHooks) args.push('--no-hooks');
+  if (options.noScan) args.push('--no-scan');
+  if (options.noOpenspecInit) args.push('--no-openspec-init');
+  if (options.skipExisting) args.push('--skip-existing');
+  if (options.json) args.push('--json');
+  return args.join(' ');
 }

@@ -103,7 +103,7 @@ describe('commands/init 受管登记链路', () => {
       { command: 'bash scripts/hooks/company-check.sh' },
     ] }] } }));
     const resumed = stateModule.initState('0.5.15', 'codex');
-    resumed.completedSteps = [1, 2, 3, 5, 6, 7];
+    resumed.completedSteps = [1, 2, 3, 5, 6, 7, 8];
     vi.stubEnv('HOME', root);
     vi.spyOn(stateModule, 'loadState').mockReturnValue(resumed);
     vi.spyOn(stateModule, 'saveState').mockImplementation(() => {});
@@ -143,7 +143,7 @@ describe('commands/init 受管登记链路', () => {
       { command: 'bash scripts/hooks/project-custom.sh' },
     ] }] } }));
     const resumed = stateModule.initState('0.5.15', 'codex');
-    resumed.completedSteps = [1, 2, 3, 5, 6, 7];
+    resumed.completedSteps = [1, 2, 3, 5, 6, 7, 8];
     vi.stubEnv('HOME', root);
     vi.spyOn(stateModule, 'loadState').mockReturnValue(resumed);
     vi.spyOn(stateModule, 'saveState').mockImplementation(() => {});
@@ -172,7 +172,7 @@ describe('commands/init 受管登记链路', () => {
       { command: 'bash scripts/hooks/stop-compile-check.sh' },
     ] }] } }));
     const resumed = stateModule.initState('0.5.15', 'codex');
-    resumed.completedSteps = [1, 2, 3, 4, 5, 6, 7];
+    resumed.completedSteps = [1, 2, 3, 4, 5, 6, 7, 8];
     vi.stubEnv('HOME', root);
     vi.spyOn(stateModule, 'loadState').mockReturnValue(resumed);
     vi.spyOn(stateModule, 'saveState').mockImplementation(() => {});
@@ -196,7 +196,7 @@ describe('commands/init 受管登记链路', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-managed-init-'));
     const saved: SddState[] = [];
     const resumed = stateModule.initState('0.5.12', 'codex');
-    resumed.completedSteps = [1, 2, 3, 4, 5, 6, 7];
+    resumed.completedSteps = [1, 2, 3, 4, 5, 6, 7, 8];
     vi.spyOn(stateModule, 'loadState').mockReturnValue(resumed);
     vi.spyOn(stateModule, 'saveState').mockImplementation((_file, state) => {
       saved.push(state);
@@ -235,7 +235,7 @@ describe('commands/init 受管登记链路', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-global-init-'));
     const saved: SddState[] = [];
     const resumed = stateModule.initState('0.5.12', 'codex');
-    resumed.completedSteps = [1, 2, 3, 4, 5, 6, 7];
+    resumed.completedSteps = [1, 2, 3, 4, 5, 6, 7, 8];
     vi.spyOn(stateModule, 'loadState').mockReturnValue(resumed);
     vi.spyOn(stateModule, 'saveState').mockImplementation((_file, state) => {
       saved.push(state);

@@ -70,7 +70,7 @@ function printUpdateHint(current: string, latest: string): void {
     "",
     `\x1b[33m⚠  superflow ${latest} 可用（当前 ${current}）\x1b[0m`,
     `   升级: \x1b[36mnpm install -g ${PACKAGE_NAME}@latest\x1b[0m`,
-    `   或: \x1b[36msuperflow update --with-package\x1b[0m`,
+    `   或: \x1b[36msuperflow update\x1b[0m`,
     "",
   ].join("\n");
   process.stderr.write(msg + "\n");

@@ -15,7 +15,7 @@
 #   3. npm run build（生成 dist/）
 #   4. link superflow 命令到全局 PATH
 #   5. 跑 superflow init 部署 SDD 技能、hook 脚本和第三方依赖
-#   6. 注册托管 MCP，并输出状态供重启后核对
+#   6. 核对初始化已注册的托管 MCP 状态，供重启后检查
 
 set -e
 
@@ -149,12 +149,11 @@ fi
 
 log_ok "superflow 全局部署完成：hooks/skills 已写入已检测到的 Agent 用户目录"
 
-# ----- Step 6: 注册托管 MCP -----
-log_info "Step 6 / 6: 注册托管 MCP"
+# ----- Step 6: 核对初始化已注册的托管 MCP -----
+log_info "Step 6 / 6: 核对托管 MCP"
 if [ "$SDD_INIT_FLAGS" = "--dry-run" ]; then
-  "$BIN_TARGET" mcp install $AGENT_FLAG --dry-run
+  "$BIN_TARGET" mcp status $AGENT_FLAG --dry-run
 else
-  "$BIN_TARGET" mcp install $AGENT_FLAG
   "$BIN_TARGET" mcp status $AGENT_FLAG
 fi
 log_ok "托管 MCP 已按本机 Agent 安装情况完成注册"

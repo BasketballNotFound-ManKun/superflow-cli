@@ -72,7 +72,8 @@ function main() {
 if (require.main === module) {
 try {
   main();
-  console.log('[Superflow] Installation complete. Restart your terminal before using Superflow.');
+  console.log('[Superflow] CLI installation complete. Enter your project root and run: superflow init');
+  console.log('[Superflow] CLI 安装完成；进入项目根目录运行 superflow init，选择语言、Agent 和范围并注册 MCP。');
 } catch (error) {
   console.error(`[Superflow] Installation failed: ${error.message}`);
   process.exitCode = 1;

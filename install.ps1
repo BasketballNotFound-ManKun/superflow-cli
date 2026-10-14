@@ -45,10 +45,12 @@ if (-not $registry) {
 }
 Write-Info "使用 npm registry: $registry"
 npm install --registry="$registry" --no-audit --no-fund
+if ($LASTEXITCODE -ne 0) { throw "npm install failed: $LASTEXITCODE" }
 Write-Ok "npm install 完成"
 
 Write-Info "Step 3 / 6: build 编译 TypeScript"
 npm run build
+if ($LASTEXITCODE -ne 0) { throw "build failed: $LASTEXITCODE" }
 Write-Ok "build 完成"
 
 Write-Info "Step 4 / 6: 生成 superflow.cmd"
@@ -105,20 +107,19 @@ New-Item -ItemType Directory -Force -Path $bootstrapDir | Out-Null
 Push-Location $bootstrapDir
 try {
   node $distBin @initArgs
+  if ($LASTEXITCODE -ne 0) { throw "initialization failed: $LASTEXITCODE" }
 } finally {
   Pop-Location
   Remove-Item -Recurse -Force $bootstrapDir -ErrorAction SilentlyContinue
 }
 
-Write-Info "Step 6 / 6: 注册托管 MCP"
-$mcpArgs = @("mcp", "install", "--agent", $agentValue)
+Write-Info "Step 6 / 6: 核对初始化已注册的托管 MCP"
+$mcpArgs = @("mcp", "status", "--agent", $agentValue)
 if ($DryRun) {
   $mcpArgs += "--dry-run"
 }
 node $distBin @mcpArgs
-if (-not $DryRun) {
-  node $distBin mcp status --agent $agentValue
-}
+if ($LASTEXITCODE -ne 0) { throw "MCP status failed: $LASTEXITCODE" }
 Write-Ok "托管 MCP 已按本机 Agent 安装情况完成注册"
 
 Write-Ok "@chenmk/superflow 安装完成"

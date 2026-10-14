@@ -17,6 +17,30 @@ docs -> design -> implement -> verify -> archive
 - `.sdd/state.yaml`、`.sdd/handoff/` 和 `superflow-guard.sh` 负责流程状态、
   上下文防漂移和阶段推进门禁。
 
+## 推荐的交互式安装与更新
+
+从公共 npm 安装 CLI，再进入项目根目录运行初始化向导：
+
+```bash
+npm install -g @chenmk/superflow@latest
+superflow init
+```
+
+`init` 会询问语言、Agent 和范围，展示计划并确认后安装，包含 MCP 注册。
+npm 安装过程不收集 Agent 选择；问答由 CLI 在真实终端中完成。以后交互式更新只需
+`superflow update`，可选完整更新、仅配套刷新或只预览。自动化保留显式参数、init 的
+`--yes`、JSON 和 dry-run。成功后重启所选宿主并运行
+`superflow doctor --agent both --scope global` 检查（单端替换对应 Agent）。
+
+失败时复制输出中的完整恢复命令，保留原 Agent、范围、项目和开关。历史记录只提供
+`init --resume` 且上下文缺失时，不会猜测 both/global；需补齐原 `--agent`、`--scope` 和项目。
+
+npm 默认使用公共官方库，但已有镜像、作用域源或私服配置可能覆盖它。可检查
+`npm config get registry` 与 `npm config get @chenmk:registry`，必要时在排查命令中追加
+`--registry https://registry.npmjs.org`，无需修改全局 npm 配置。
+下文保留非交互和源码安装方式；手工 `mcp install` 用于修复，不再是正常初始化的额外步骤。
+
+
 ## 1. 前置要求
 
 | 项 | 要求 | 检查命令 |
@@ -43,7 +67,7 @@ docs -> design -> implement -> verify -> archive
 ### 2.1 npm 全局安装（推荐给普通用户）
 
 ```bash
-npx --yes --package=@chenmk/superflow@latest --registry=https://registry.npmjs.org superflow-install
+npx --yes --package=@chenmk/superflow@latest superflow-install
 superflow --version
 ```
 
@@ -51,7 +75,7 @@ superflow --version
 也可以在已准备好 Node.js 20+ 的终端直接运行：
 
 ```bash
-npm install -g @chenmk/superflow@latest --registry https://registry.npmjs.org
+npm install -g @chenmk/superflow@latest
 ```
 
 ### 2.2 从源码安装（贡献者或本地调试）
@@ -93,7 +117,7 @@ CLI 会弹出工具选择列表。你可以只选 Codex、只选 Claude Code，
 也可以选择多个工具。
 选择结果会替代手写 `--agent codex` / `--agent claude`。
 
-初始化后，按所选工具注册 MCP，例如 Claude Code：
+初始化会自动注册 MCP。仅在需要修复缺失配置时，按所选工具执行，例如 Claude Code：
 
 ```bash
 superflow mcp install --agent claude
@@ -150,7 +174,7 @@ Codex 用户将 `claude` 改为 `codex`，两端都使用时改为 `both`。
 | `superflow init --no-scan` | 跳过项目上下文脚手架和扫描提示 |
 | `superflow init --dry-run` | 只打印计划，不写文件 |
 | `superflow init --json` | 输出 JSON，适合脚本集成 |
-| `superflow init --resume` | 从上次失败步骤继续 |
+| 失败输出中的完整恢复命令 | 保留原 Agent、范围、项目和开关，从失败步骤继续 |
 | `superflow init --skip-existing` | 保留已存在技能，不覆盖；默认直接更新受管理技能且不生成备份副本 |
 
 语言可以通过两种方式选择：
@@ -177,10 +201,10 @@ superflow scan --language en --force
 
 初始化后建议重启 Claude Code 或 Codex，让 agent 重新加载技能列表。
 
-### 3.1 注册托管 MCP（推荐）
+### 3.1 核对或修复托管 MCP
 
-如果希望直接在当前 Codex 或 Claude 主 Agent 会话中发起托管，并由 Superflow
-在后台只启动对端研发 Agent，请注册 stdio MCP：
+正常初始化已注册 stdio MCP，可直接在当前 Codex 或 Claude 主 Agent 会话中发起托管。
+仅修复缺失配置时执行：
 
 ```bash
 superflow mcp install --agent both
@@ -687,7 +711,7 @@ superflow pipeline --agent codex
 
 | 场景 | 命令 |
 |------|------|
-| 安装 CLI | `npx --yes --package=@chenmk/superflow@latest --registry=https://registry.npmjs.org superflow-install` |
+| 安装 CLI | `npx --yes --package=@chenmk/superflow@latest superflow-install` |
 | 初始化并选择工具 | `superflow init` |
 | 非交互初始化两侧 | `superflow init --yes` |
 | 检查健康 | `superflow doctor` |

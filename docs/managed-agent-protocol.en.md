@@ -453,3 +453,9 @@ environments, browsers, and commits/releases with separate coverage and counts.
 These extend document contracts and Host semantic review only, without protocol
 fields, Hooks, or state machines. Project coding/test policies do not enter generic
 managed prompts; historical consent does not authorize shared-resource cleanup.
+
+Initialization and source installers share the existing MCP registration owner:
+init completes the closure and installer scripts check status. Interactive choices
+add no Agent messages or Task/Run state. Cancel/preview creates no installation
+state; registration failure resumes through existing installation steps and never
+claims completion.

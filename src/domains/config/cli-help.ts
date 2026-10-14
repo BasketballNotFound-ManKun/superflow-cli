@@ -130,7 +130,7 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     cleanupProjectOption: "Project directory that owns the managed task",
     cleanupRetentionOption: "Retention policy: full | compact | none",
     updateDescription:
-      "Update installed SuperBridge Flow skills, scripts, and hooks",
+      "Update Superflow (interactive wizard with no options)",
     doctorDescription:
       "Diagnose installation content and effective Git Hook sources",
     hookMigrateDescription:
@@ -250,7 +250,7 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     cleanupDescription: "按确定性留存规则精简已停止托管任务的过程产物",
     cleanupProjectOption: "托管任务所属项目目录",
     cleanupRetentionOption: "留存策略：full | compact | none",
-    updateDescription: "更新已安装的 SuperBridge Flow skills、scripts 和 hooks",
+    updateDescription: "更新 Superflow（无参数时进入交互向导）",
     doctorDescription: "诊断安装内容与实际 Git Hook 来源",
     hookMigrateDescription: "安全迁移已确认受管的旧 Hook 入口，保留自定义 Hook",
     hookAuditDescription: "只读核验宿主/Git Hook 引用及脚本来源",

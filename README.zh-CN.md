@@ -38,34 +38,36 @@ Hook 脚本需要 Bash 和 Python3；Windows 用户需准备 Git Bash 或等价 
 需求梳理和文档工作可以从一个工具开始；**双 Agent 托管开发需要两个 CLI 都可用并完成登录**。
 Superflow 使用你已有的模型账号与权限，对应模型用量按各平台计费。
 
-### 安装
-
-先在系统终端安装 CLI：
+### 安装公共 npm 包
 
 ```bash
-npm install -g @chenmk/superflow@latest --registry https://registry.npmjs.org
+npm install -g @chenmk/superflow@latest
 ```
 
-进入你要开发的**项目根目录**，按正在使用的工具选择一组命令。
-`init` 部署技能、Hook 和项目上下文；`mcp install` 注册托管服务：
+从公共 npm 包安装，不需要拉取代码仓库。npm 默认使用官方公共库，普通命令无需填写
+`--registry`。这一步只安装 CLI，尚未选择或配置 Agent。
 
-**Claude Code：**
+### 运行初始化向导
+
+先进入准备使用 Superflow 的**项目根目录**，再执行：
 
 ```bash
-superflow init --agent claude --scope global --language zh --yes
-superflow mcp install --agent claude
+superflow init
 ```
 
-**Codex：**
+向导会检测可用的 Agent CLI，询问语言、Claude Code/Codex/两者、全局/当前项目范围，
+展示项目目录和将执行的操作，最后确认。输入 `q` 或按 Ctrl+C 可取消，不启动安装。
+初始化会完成依赖、技能、Hooks 和 MCP 配置，正常安装无需再单独执行 `mcp install`。
+
+全局工具资产可跨项目复用；OpenSpec 和上下文仍初始化到展示的项目目录。
+自动化脚本可继续明确传参：
 
 ```bash
-superflow init --agent codex --scope global --language zh --yes
-superflow mcp install --agent codex
+superflow init --agent both --scope global --language zh --yes
 ```
 
-两端都使用时，将上面两条命令的 `--agent` 改为 `both`。
-选择 `global` 后，安装的工具资产可跨项目复用；项目内仍会初始化 OpenSpec 和上下文目录。
-完整安装选项、源码安装和 Windows 说明见 [INSTALL.md](./INSTALL.md)。
+只用一端时将 `both` 替换为 `codex` 或 `claude`。源码安装、Windows 和进阶选项见
+[INSTALL.md](./INSTALL.md)。
 
 ### 重启并检查
 
@@ -138,13 +140,25 @@ $superflow 帮我梳理这个项目的主要模块和调用关系，先不要修
 
 ## 升级与排查
 
-在项目根目录执行以下命令，`--agent` 按需选择 `claude`、`codex` 或 `both`：
+在交互终端直接执行：
 
 ```bash
-superflow update --with-package --agent claude --scope global --language zh
+superflow update
 ```
 
-该入口统一升级 CLI、依赖与宿主资产。**升级后重启对应工具，再运行带有对应 `--agent` 的 `superflow doctor`。**
+选择 Agent、完整更新/只刷新配套资产/只预览，以及沿用现有安装/全局/当前项目范围。
+计划会显示当前 CLI 版本、实际入口和全部影响目录（含已登记项目），确认后才执行。
+完整更新从公共 npm 包安装，再由新版 CLI 刷新依赖和配套资产；PATH 仍命中旧入口时会明确报错。
+
+脚本仍可使用完整参数；JSON、dry-run 和非交互调用不会等待向导：
+
+```bash
+superflow update --with-package --agent both --scope global --language zh
+```
+
+旧版不认识参数或没有向导时，先用 `npm install -g @chenmk/superflow@latest` 更新一次，再使用新版入口。
+成功后重启所选工具，运行 `superflow doctor --agent both --scope global`（只用一端则替换 Agent）。
+若 npm 被配置成镜像或私服，检查 `npm config get registry` 及作用域源；仅排查该配置时才需显式指定官方源。
 
 | 遇到的情况 | 下一步 |
 | --- | --- |
@@ -274,7 +288,7 @@ superflow pipeline --resume-task <任务编号> --submit-host-review <review.jso
 
 ### 在主 Agent 中直接交互（MCP，推荐）
 
-安装 Superflow 后，将本地 stdio MCP 注册到 Codex、Claude：
+初始化已完成本地 stdio MCP 注册。仅修复缺失的 Codex/Claude 配置时执行：
 
 ```bash
 superflow mcp install --agent both
@@ -350,7 +364,7 @@ MCP 是主 Agent 与本地托管状态机的通信通道，不会把 Superflow �
 | `superflow init`                                             | 一站式安装；交互终端中可多选 Claude Code / Codex |
 | `superflow init --yes`                                       | 非交互安装，默认 `--agent both`                             |
 | `superflow init --dry-run`                                   | 只打印计划不执行                                            |
-| `superflow init --resume`                                    | 从失败步骤继续                                              |
+| 复制失败输出中的完整恢复命令 | 保留原 Agent、范围、项目和开关，从失败步骤继续 |
 | `superflow init --no-hooks`                                  | 只装技能 + 脚本，跳过 Codex/Claude hook 注册                |
 | `superflow init --no-openspec-init`                          | 跳过当前项目 OpenSpec 原生初始化                            |
 | `superflow doctor`                                           | 诊断 CLI / MCP / 第三方 / 脚本 / skills                     |

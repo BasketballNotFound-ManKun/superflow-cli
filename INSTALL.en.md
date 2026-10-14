@@ -5,10 +5,38 @@
 SuperBridge Flow installs OpenSpec, Superpowers, skills, hooks or command
 aliases, scripts, rules, and handoff state for Claude Code and Codex.
 
+## Recommended interactive setup and updates
+
+Install the CLI from public npm, then enter your project root and run the setup wizard:
+
+```bash
+npm install -g @chenmk/superflow@latest
+superflow init
+```
+
+`init` asks for language, Agent tools and scope, previews changes and confirms before
+installing. MCP registration is included. npm installation itself remains
+noninteractive; lifecycle scripts do not collect Agent choices. Future interactive
+updates use `superflow update` with complete/assets/preview modes. Explicit flags,
+`--yes` for init, JSON and dry-run remain available for automation. Restart selected
+hosts and run `superflow doctor --agent both --scope global` afterward.
+
+On failure, copy the complete recovery command from the output: it preserves Agent,
+scope, project and flags. A legacy bare `init --resume` with missing context refuses
+to guess both/global; supply the original `--agent`, `--scope` and project.
+
+npm defaults to the public registry. Existing mirror, scoped or private registry
+configuration can override it; inspect `npm config get registry` and
+`npm config get @chenmk:registry`. If necessary for troubleshooting, append
+`--registry https://registry.npmjs.org` without changing your global npm settings.
+The detailed noninteractive and source-install paths below remain supported;
+manual `mcp install` is a repair entry, not an extra normal setup step.
+
+
 ## 1. Install
 
 ```bash
-npx --yes --package=@chenmk/superflow@latest --registry=https://registry.npmjs.org superflow-install
+npx --yes --package=@chenmk/superflow@latest superflow-install
 ```
 
 This bootstrap command installs the CLI. Continue with initialization and MCP
@@ -16,7 +44,7 @@ registration below before using the skills and managed work in a conversation.
 With Node.js 20+ already available, you can also install directly:
 
 ```bash
-npm install -g @chenmk/superflow@latest --registry https://registry.npmjs.org
+npm install -g @chenmk/superflow@latest
 ```
 
 > **Node.js requirement:** Node.js 20 or later is required. If `node -v` is older,
@@ -59,11 +87,10 @@ SUPERFLOW_LANG=en superflow init
 7. Register hooks and rules.
 8. Scaffold `docs/sdd-context/`.
 
-### 2.1 Register The Managed MCP
+### 2.1 Inspect Or Repair Managed MCP
 
-To start managed delivery directly from the current Codex or Claude host while
-Superflow launches only the peer executor in the background, register the stdio
-MCP server:
+Initialization registers the MCP server for the selected hosts. Only if that
+entry needs repair, run:
 
 ```bash
 superflow mcp install --agent claude

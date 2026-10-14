@@ -27,20 +27,24 @@ export function resolveInstallLanguage(env = process.env) {
 export function buildInstallMessage(version, language) {
   if (language === LANGUAGE_ZH) {
     return [
-      `✅ @chenmk/superflow v${version} 安装成功`,
-      '',
-      '   快速开始：',
-      '     superflow init              # 在当前项目初始化',
-      '     superflow --help            # 查看全部命令',
-    ].join('\n');
+      `✅ @chenmk/superflow v${version} CLI 安装成功（已有 Agent 配置保留）`,
+      "",
+      "   下一步：进入项目根目录，运行初始化向导",
+      "   向导会选择语言、Agent、范围，并注册 MCP：",
+      "     superflow init",
+      "   以后升级：superflow update",
+      "     superflow --help            # 查看全部命令",
+    ].join("\n");
   }
   return [
-    `✅ @chenmk/superflow v${version} installed successfully`,
-    '',
-    '   Quick start:',
-    '     superflow init              # Initialize in current project',
-    '     superflow --help            # Show all commands',
-  ].join('\n');
+    `✅ @chenmk/superflow v${version} CLI installed successfully (existing Agent configuration preserved)`,
+    "",
+    "   Next: enter your project root and run the setup wizard.",
+    "   Choose language, Agents, scope and register MCP:",
+    "     superflow init",
+    "   Future updates: superflow update",
+    "     superflow --help            # Show all commands",
+  ].join("\n");
 }
 
 function printInstallMessage(version, language) {

@@ -13,7 +13,7 @@ describe('commands/init', () => {
   ] as const)('runtime ignore respects scope=%s and dryRun=%s', async (scope, dryRun, expected) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-init-ignore-'));
     const state = stateModule.initState('0.5.8', 'codex');
-    state.completedSteps = [1, 2, 3, 4, 5, 6, 7];
+    state.completedSteps = [1, 2, 3, 4, 5, 6, 7, 8];
     vi.spyOn(stateModule, 'loadState').mockReturnValue(state);
     vi.spyOn(stateModule, 'saveState').mockImplementation(() => {});
     vi.spyOn(console, 'log').mockImplementation(() => {});
