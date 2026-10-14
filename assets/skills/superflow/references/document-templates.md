@@ -140,3 +140,6 @@
 表头：`改动/风险 | 用例 ID | 验证信号 | 实际环境/后端 | 命令 | 断言 | 证据位置 | 不适用依据/阻塞`。
 数据库分层只继承 [document-review-coverage.md](document-review-coverage.md) 的
 `testLayer` / `mockBoundary`；关键业务主流程和 Bug 复现优先复用项目场景回归资产。
+
+操作链、合法空响应、异常回补与启动脚本按 test-guide.md 冻结；tests.md 引用已有
+单命令入口及已验证配置，不在模板中复制业务策略。报告逐组声明模拟/真实/浏览器边界。

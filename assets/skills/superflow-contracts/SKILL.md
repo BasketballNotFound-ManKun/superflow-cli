@@ -5,6 +5,14 @@ description: Superflow 内部能力：补齐接口、测试、追溯和质量合
 
 # SDD Docs
 
+## 定向源码调查与当前合同
+
+生成 design/tasks/tests 之前，按[源码调查规范](../superflow/references/document-review-coverage.md)
+的“先调查源码，再冻结设计”执行实际源码读取、调用/写入/读取反查与复用分析。
+新生成的完整存量系统合同冻结 `source_investigation: required`；调查未知不得以哈希、
+模板栏目或用户澄清代替。单一正文 owner 与历史隔离也按该规范执行。
+
+
 ## 测试方案入口
 
 写 tests.md 前读取[测试指南](../superflow/references/test-guide.md)，先复用项目测试与环境，

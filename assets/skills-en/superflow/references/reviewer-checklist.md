@@ -92,6 +92,19 @@ finding IDs / acceptanceContractRefs, protocols, budgets, and state owners.
 Subagent reports do not directly promote pass; format checks do not prove code
 correctness. Rerun only invalidated or contract-required evidence.
 
+
+### Operation chains, valid empty responses, and evidence boundaries
+
+Use [test-guide.md](test-guide.md) to check complete user operation chains, not
+just endpoint success. For deleted entries, reverse-trace unique state writes and
+remaining consumers. Check consumption of valid empty/blank/placeholder responses,
+cache/retry boundaries, and regression coverage of real anomalies. Nonempty
+placeholder blacklists require contract evidence, never implementer guesses. Verify that
+restart scripts preserve verified overrides and dependencies. Separate simulated,
+real backend/device, and browser conclusions; reconcile counts, versions, and
+blockers per set. Keywords or HTTP 200 cannot prove success. These are Host
+semantic checks; existing scripts validate deterministic evidence facts only.
+
 ### Reviewer report shape
 
 Reuse the four-state report, not another machine protocol. Managed reviews keep
@@ -103,6 +116,16 @@ guide.
 
 ```markdown
 DONE
+### Independent source-claim rechecks
+
+Reuse key-claim checks in the [source investigation contract](document-review-coverage.md),
+not a parallel claim ledger. “Verified” and hashes do not prove understanding. Try to falsify
+claims using current callers/bodies/Mapper/DDL: unmounted activation, re-reads dropping prepared
+fields, zero-row misclassification, omitted outer transactions, swallowed errors claimed to roll
+back messages, column capacity, stale case entries and current/next-run termination conflicts.
+Record actual evidence, counterexamples and conclusions; unresolved facts stay
+SOURCE_INVESTIGATION, never user questions. Do not block an evidenced normal contract by keywords.
+
 ## Impact
 Path hint / actual depth / source evidence / adjustment / diff and contract version
 ## Axes

@@ -14,6 +14,12 @@ Independently challenge the current OpenSpec change with source-backed evidence.
 an advisory side path: blocking findings must repair canonical documents and pass re-review
 before the docs phase can close.
 
+Independently reread current source under the
+[source investigation contract](../superflow/references/document-review-coverage.md),
+recheck key claims and counterexamples in existing sourceChecks without generation-chat
+context or hash-only refresh. Check canonical prose, separate history and task/entry/case
+references; repair authoritative sections before closing conflicts.
+
 ## Boundaries
 
 - Use after complex requirements are clarified and reviewable drafts exist.

@@ -1167,15 +1167,15 @@ Worker 完成编码和启动后，必须按以下 checklist 逐项执行接口�
 
 | 占位符              | 说明                            | 示例                                                      |
 | ------------------- | ------------------------------- | --------------------------------------------------------- |
-| `{change-id}`       | 变更目录名                      | `3.24.0.2-fix-debug-status-and-light-on-bind`             |
-| `{project-path}`    | 项目绝对路径                    | `/home/ake-yanfa/IdeaProjects/MPGS/park-mpgs`             |
+| `{change-id}`       | 变更目录名                      | `improve-workflow-validation`             |
+| `{project-path}`    | 项目绝对路径                    | `/workspace/example-service`             |
 | `{maven-or-gradle}` | 构建工具                        | `Gradle`                                                  |
-| `{profile-name}`    | Spring Profile                  | `cmk`                                                     |
-| `{base-port}`       | 应用基础端口号（配置文件中）    | `9250`                                                    |
-| `{batch-id}`        | 批次序号                        | `15`                                                      |
-| `{port}`            | 计算端口 = base-port + batch-id | `9265`                                                    |
-| `{context-path}`    | 上下文路径                      | `/mpgs`                                                   |
+| `{profile-name}`    | Spring Profile                  | `test`                                                     |
+| `{base-port}`       | 应用基础端口号（配置文件中）    | `8080`                                                    |
+| `{batch-id}`        | 批次序号                        | `1`                                                      |
+| `{port}`            | 计算端口 = base-port + batch-id | `8081`                                                    |
+| `{context-path}`    | 上下文路径                      | `/app`                                                   |
 | `{compile-cmd}`     | 编译命令                        | `./gradlew clean compileJava -x test`                     |
-| `{run-cmd}`         | 启动命令                        | `./gradlew bootRun --args='--spring.profiles.active=cmk'` |
+| `{run-cmd}`         | 启动命令                        | `./gradlew bootRun --args='--spring.profiles.active=test'` |
 | `{task-list-N}`     | 分配给 Worker 的任务            | `Task 5.1, Task 7.1, Task 9.1`                            |
 | `{curl-examples}`   | curl 命令示例                   | 从 tests.md 提取                                          |

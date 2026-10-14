@@ -732,3 +732,19 @@ Report conclusions, placeholders, and archive readiness come from Markdown body 
 Runtime fingerprints cover current package metadata and the canonical assets closure. Script/Skill-only updates invalidate old MCP/services; build provenance remains diagnostic. Service reuse and termination compare persisted OS creation time and command identity, rechecking immediately before signaling. Legacy live services without identity, reused PIDs, and unobservable identity fail closed without killing unknown processes. Failed startup must not let a new service claim tasks before its one-time handshake; the existing service owner retains control without a new Task/Run state machine or Agent protocol.
 
 For a legacy live service without identity, users inspect the process and tasks, stop the confirmed old service, then restart the Host and resume. Host restart alone does not guarantee detached-service exit. Selected update platforms apply to registered projects, dependencies, and MCP; project inventories must not silently add another host.
+
+## Delivery evidence and communication boundaries
+
+The Host continues authorized work through existing supervision returns, explaining
+new decision-relevant facts, evidence, goal impact, and next actions. Blocker reports
+include ruled-out causes and specific help needed. Transport timeout or unchanged
+facts alone do not trigger another report, model wakeup/poll, or Executor call.
+The Executor records facts, the Host interprets semantics, and the Runner owns
+state and deterministic decisions. The distributed test-guide.md governs user
+operation chains, valid empty-response consumption, real-anomaly regressions, and
+reproducible startup settings in tests.md/project scripts; the Host checks them
+through existing reviewer-checklist.md. Report implementation, simulation, real
+environments, browsers, and commits/releases with separate coverage and counts.
+These extend document contracts and Host semantic review only, without protocol
+fields, Hooks, or state machines. Project coding/test policies do not enter generic
+managed prompts; historical consent does not authorize shared-resource cleanup.

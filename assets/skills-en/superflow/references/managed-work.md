@@ -199,3 +199,19 @@ and continued wait only: it cannot reset state or budgets or launch another
 Executor. Only a recorded PID proven dead enters stale recovery; a missing PID
 fails closed into attach-and-wait. An active MCP wait's progress notifications
 are request-scoped, not autonomous callbacks after the Host turn ends.
+
+## Report meaningful milestones to the user
+
+The Host owns continued progress on authorized work through existing wait, review,
+and recovery loops until delivery or a real blocker. On an existing supervision
+return, review/repair, or user inquiry, report new decision-relevant facts briefly:
+confirmed fact → evidence path/result → effect on the goal → next action. For a
+blocker, include ruled-out causes, remaining autonomous work, and the specific
+help needed; continue locally executable work. A transport timeout or unchanged
+facts alone do not warrant another report. Do not add wakeups, model polling, or
+Executor calls for summaries. Active notifications still carry facts only.
+The Executor records actions, raw results, and blockers; the Host explains value
+and coverage boundaries; the Runner decides deterministic facts, never semantic
+completion. Close out using [test-guide.md](test-guide.md), separating implementation,
+simulation, real environment, browser, commit, and release; counts must match final
+effective evidence.

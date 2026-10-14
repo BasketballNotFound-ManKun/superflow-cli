@@ -71,3 +71,8 @@ Table: `Change/risk | Case ID | Signal | Actual environment/backend | Command | 
 Database layers inherit only `testLayer` / `mockBoundary` from
 [document-review-coverage.md](document-review-coverage.md). Reuse project scenario
 regression assets for critical business flows and bug reproductions.
+
+Freeze operation chains, valid empty responses, anomaly regressions, and startup
+scripts under test-guide.md. tests.md references the existing single-command entry
+and verified settings; templates do not duplicate business policies. Report
+simulated/real/browser boundaries per case set.

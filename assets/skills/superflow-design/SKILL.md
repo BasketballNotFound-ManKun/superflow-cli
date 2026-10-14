@@ -66,6 +66,11 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
 3. If design discussion is still evolving, maintain
    `.sdd/handoff/brainstorm-summary.md` with confirmed, candidate, pending, and
    rejected items. Do not create final technical design from memory only.
+   Before choosing HOW, read actual reusable method bodies and their callers,
+   Mapper/DDL constraints and write/read effects using
+   [the source investigation contract](../superflow/references/document-review-coverage.md).
+   Recheck re-reads, outer transactions, swallowed exceptions and loop boundaries;
+   no existing behavior may be inferred from method names or fingerprints.
 4. Use Superpowers `brainstorming` or equivalent deep design reasoning to
    decide source-level HOW.
 5. Write:

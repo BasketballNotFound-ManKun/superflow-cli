@@ -288,13 +288,51 @@ def closing_fence_line(line: str, prefixes: list) -> str | None:
     return text
 
 
-def markdown_body_lines(text: str) -> tuple[list[str], bool]:
+def task_list_container(line: str, columns: list[int]) -> tuple[int, bool]:
+    indent = len(line) - len(line.lstrip(" "))
+    while columns and indent < columns[-1]:
+        columns.pop()
+    container = columns[-1] if columns else 0
+    if indent - container >= 4:
+        return container, True
+    item = re.match(r"^ *(?:([-+*])|(\d{1,9}[.)]))( +)", line)
+    if item:
+        marker = item[1] or item[2]
+        padding = len(item[3]) if len(item[3]) <= 4 else 1
+        columns.append(indent + len(marker) + padding)
+    return container, False
+
+
+def task_comment_line(line: str, in_comment: bool) -> tuple[str, bool]:
+    visible = []
+    cursor = 0
+    while cursor < len(line):
+        if in_comment:
+            end = line.find("-->", cursor)
+            if end < 0:
+                return "".join(visible), True
+            cursor, in_comment = end + 3, False
+        else:
+            start = line.find("<!--", cursor)
+            if start < 0:
+                visible.append(line[cursor:])
+                break
+            visible.append(line[cursor:start])
+            cursor, in_comment = start + 4, True
+    return "".join(visible), in_comment
+
+
+def markdown_body_lines(text: str, task_index: bool = False) -> tuple[list[str], bool]:
     """Structural report content only; preserve original line positions."""
     fence = None
     prefixes = []
     unsupported_tab = False
     result = []
+    columns: list[int] = []
+    in_comment = False
     for line in text.splitlines():
+        if task_index:
+            line = line.expandtabs(4)
         if fence is not None:
             candidate = closing_fence_line(line, prefixes)
             marker = None if candidate is None else re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", candidate)
@@ -304,10 +342,36 @@ def markdown_body_lines(text: str) -> tuple[list[str], bool]:
                 fence = None
             result.append("")
             continue
+        container = 0
+        if task_index:
+            if in_comment:
+                line, in_comment = task_comment_line(line, True)
+            if not line.strip():
+                result.append("")
+                continue
+            # Determine the container before erasing blocks. Root fences and
+            # comments terminate a prior list; list-local blocks retain it.
+            indent = len(line) - len(line.lstrip(" "))
+            while columns and indent < columns[-1]:
+                columns.pop()
+            container = columns[-1] if columns else 0
+            if indent - container >= 4:
+                result.append("")
+                continue
+            line, in_comment = task_comment_line(line, in_comment)
+            if not line.strip():
+                result.append("")
+                continue
+            container, is_code = task_list_container(line, columns)
+            if is_code:
+                result.append("")
+                continue
         possible_container = re.match(r"^((?:[ \t]*>[ \t]*|[ \t]*(?:[-+*]|\d{1,9}[.)])[ \t]+)+)(`{3,}|~{3,})", line)
         if possible_container and "\t" in possible_container[1]:
             unsupported_tab = True
-        candidate, next_prefixes = fence_container_line(line)
+        candidate, next_prefixes = fence_container_line(line[container:])
+        if container:
+            next_prefixes = [container, *next_prefixes]
         marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", candidate)
         if marker and (marker[1][0] == "~" or "`" not in marker[2]):
             fence = marker[1]
@@ -316,6 +380,12 @@ def markdown_body_lines(text: str) -> tuple[list[str], bool]:
         else:
             result.append(line)
     return result, unsupported_tab or (fence is not None and bool(prefixes))
+
+
+def task_ids_from_body(lines: list[str]) -> list[str]:
+    """Extract IDs only after the canonical parser classified task blocks."""
+    return [match[1] for line in lines
+            if (match := re.match(r"^ *- \[[ xX]\]\s+([^\s]+)\s", line))]
 
 
 def final_report_result(text: str) -> str:
@@ -866,7 +936,19 @@ def main() -> int:
     parser.add_argument("--git-index-root", default="")
     parser.add_argument("--require-complete", action="store_true")
     parser.add_argument("--warn-only", action="store_true")
+    parser.add_argument("--task-index", action="store_true")
     args = parser.parse_args()
+
+    if args.task_index:
+        # The coverage checker uses this canonical body parser, not a second
+        # Markdown regex that could promote fenced examples into current tasks.
+        if len(args.reports) != 1:
+            parser.error("--task-index requires exactly one tasks.md")
+        lines, ambiguous = markdown_body_lines(
+            Path(args.reports[0]).read_text(encoding="utf-8"), task_index=True)
+        ids = task_ids_from_body(lines)
+        print(json.dumps({"ids": ids, "ambiguous": ambiguous}))
+        return 0
 
     all_issues: list[Issue] = []
     for report in args.reports:

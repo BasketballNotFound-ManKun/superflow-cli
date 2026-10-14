@@ -5,6 +5,16 @@ description: Use when confirmed requirements or OpenSpec artifacts need SDD cont
 
 # SDD Docs
 
+## Targeted source research and current contracts
+
+Before design/tasks/tests, follow “Investigate source before freezing design” in the
+[source investigation contract](../superflow/references/document-review-coverage.md).
+Read actual implementations, callers, write/read paths and reuse effects. New full
+existing-system contracts freeze `source_investigation: required`; hashes, template
+headings and user questions cannot replace investigation. Follow the same canonical
+prose ownership and explicit history separation.
+
+
 ## Test plan entry
 
 Before writing tests.md, read the [test guide](../superflow/references/test-guide.md).

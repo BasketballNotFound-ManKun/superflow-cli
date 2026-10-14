@@ -405,6 +405,268 @@ export function validateCoverage(root, review, issues, checkCode = true) {
       );
     }
   }
+  validateSourceInvestigation(
+    root,
+    review,
+    sources,
+    entries,
+    issues,
+    checkCode,
+  );
+}
+
+// Extends the existing source/entry/decision index. Anchors prove text identity,
+// not that an Agent read or understood it. Semantic checks remain Agent-owned.
+function validateSourceInvestigation(
+  root,
+  review,
+  sources,
+  entries,
+  issues,
+  checkCode,
+) {
+  const coverage = review.coverage;
+  const configPath = path.join(root, ".openspec.yaml");
+  const config = fs.existsSync(configPath)
+    ? fs.readFileSync(configPath, "utf8")
+    : "";
+  const declarations = [
+    ...config.matchAll(
+      /^\s*(?:source_investigation|"source_investigation"|'source_investigation')\s*:(.*)$/gm,
+    ),
+  ];
+  const flowDeclaration = config
+    .split(/\r?\n/)
+    .some(
+      (line) =>
+        !/^\s*#/.test(line) &&
+        /[,{]\s*["']?source_investigation["']?\s*:/.test(line),
+    );
+  const configRequiresInvestigation =
+    declarations.length > 0 || flowDeclaration;
+  if (
+    flowDeclaration ||
+    declarations.length > 1 ||
+    declarations.some(
+      (m) => !/^\s*(?:required|"required"|'required')\s*(?:#.*)?$/.test(m[1]),
+    )
+  )
+    issues.push(
+      "源码调查配置必须使用明确 required 标量 / Invalid source investigation declaration",
+    );
+  const required =
+    configRequiresInvestigation || coverage.sourceInvestigation === "required";
+  if (
+    coverage.sourceInvestigation !== undefined &&
+    coverage.sourceInvestigation !== "required"
+  )
+    issues.push("源码调查标记无效 / Invalid sourceInvestigation marker");
+  const sourceLines = new Map();
+  const anchorText = (anchor, role, label) => {
+    const source = sources.get(anchor?.sourceRef);
+    if (
+      !source ||
+      (role && source.role !== role) ||
+      !Number.isInteger(anchor?.lineStart) ||
+      anchor.lineStart < 1 ||
+      !Number.isInteger(anchor?.lineEnd) ||
+      anchor.lineEnd < anchor.lineStart ||
+      !nonempty(anchor?.text)
+    ) {
+      issues.push(
+        `${label} 缺少有效 ${role ?? "source"} 锚点 / Invalid source anchor`,
+      );
+      return null;
+    }
+    // Editing Hooks intentionally allow source changes during implementation;
+    // do not revoke that established contract with a new anchor check.
+    if (!checkCode && source.role === "code") return null;
+    try {
+      const file = path.resolve(root, source.path);
+      if (!sourceLines.has(file))
+        sourceLines.set(file, fs.readFileSync(file, "utf8").split(/\r?\n/));
+      const lines = sourceLines.get(file);
+      const actual = lines
+        .slice(anchor.lineStart - 1, anchor.lineEnd)
+        .join("\n");
+      if (anchor.lineEnd > lines.length || actual.trim() !== anchor.text.trim())
+        throw new Error("anchor mismatch");
+      return actual.trim();
+    } catch {
+      issues.push(`${label} 锚点与当前文件不符 / Source anchor mismatch`);
+      return null;
+    }
+  };
+  const evidence = (anchors, label) => {
+    if (!Array.isArray(anchors) || !anchors.length) {
+      issues.push(
+        `${label} 缺少源码调查依据 / Missing source investigation evidence`,
+      );
+      return;
+    }
+    for (const anchor of anchors) anchorText(anchor, "code", label);
+  };
+  for (const entry of entries.values()) {
+    const research = entry.investigation;
+    if (required || research !== undefined) {
+      if (
+        !research ||
+        typeof research !== "object" ||
+        Array.isArray(research)
+      ) {
+        issues.push(
+          `入口 ${entry.id} 缺少源码调查 / Missing source investigation`,
+        );
+      } else {
+        if (research.status !== "VERIFIED")
+          issues.push(
+            `入口 ${entry.id} SOURCE_INVESTIGATION 未关闭 / Source investigation unresolved`,
+          );
+        anchorText(
+          research.canonical,
+          "contract",
+          `入口 ${entry.id} canonical`,
+        );
+        evidence(research.evidence, `入口 ${entry.id}`);
+        if (!nonempty(research.counterexample))
+          issues.push(`入口 ${entry.id} 缺少反例 / Missing counterexample`);
+      }
+    }
+    if (
+      entry.valueConstraints !== undefined &&
+      !Array.isArray(entry.valueConstraints)
+    ) {
+      issues.push(
+        `入口 ${entry.id} 字段约束必须是数组 / Invalid valueConstraints`,
+      );
+      continue;
+    }
+    for (const constraint of list(entry.valueConstraints)) {
+      const label = `入口 ${entry.id} 字段 ${constraint?.field ?? "?"}`;
+      if (
+        constraint?.kind !== "string-capacity" ||
+        !/^[A-Za-z_][A-Za-z0-9_]*$/.test(constraint?.field ?? "") ||
+        !Array.isArray(constraint?.values) ||
+        !constraint.values.length
+      ) {
+        issues.push(
+          `${label} SOURCE_INVESTIGATION：无法证明的约束映射 / Unsupported constraint mapping`,
+        );
+        continue;
+      }
+      const schema = anchorText(constraint.schema, "code", label);
+      // Only the mapped, single column declaration is parsed; no corpus scan,
+      // table-name guess, computed expression evaluation or business verdict.
+      const match = schema?.match(
+        new RegExp(
+          "^`?" +
+            constraint.field +
+            "`?\\s+(?:varchar|char)\\s*\\(\\s*([1-9][0-9]*)\\s*\\)(?:\\s|,|$)",
+          "i",
+        ),
+      );
+      if (checkCode && !match)
+        issues.push(
+          `${label} SOURCE_INVESTIGATION：锚点不是明确 CHAR/VARCHAR 声明 / Column declaration unresolved`,
+        );
+      for (const value of constraint.values) {
+        if (
+          !["code", "contract"].includes(sources.get(value?.sourceRef)?.role)
+        ) {
+          issues.push(
+            `${label} 字段值来源必须是 code|contract / Literal source must be code|contract`,
+          );
+          continue;
+        }
+        const text = anchorText(value, null, label);
+        const literal = value?.value;
+        // Deliberately limited to unescaped printable ASCII literals. Charset,
+        // expressions, multiple-column lines and runtime schema need research.
+        if (
+          typeof literal !== "string" ||
+          !/^[\x20-\x7e]*$/.test(literal) ||
+          /["'`\\]/.test(literal) ||
+          (text !== null &&
+            !['"', "'", "`"].some((quote) =>
+              text.includes(quote + literal + quote),
+            ))
+        ) {
+          issues.push(
+            `${label} SOURCE_INVESTIGATION：不是可直接核验的字面量 / Literal unresolved`,
+          );
+        } else if (checkCode && match && literal.length > Number(match[1])) {
+          issues.push(
+            `${label} 字符串长度 ${literal.length} 超过容量 ${match[1]} / Literal exceeds column capacity`,
+          );
+        }
+      }
+    }
+  }
+  let tasks;
+  for (const decision of coverage.decisions) {
+    if (
+      (required && decision.disposition === "FIX") ||
+      decision.taskIds !== undefined
+    ) {
+      if (!tasks) {
+        try {
+          const parser = path.join(
+            path.dirname(fileURLToPath(import.meta.url)),
+            "superflow-test-report-lint.py",
+          );
+          const result = spawnSync(
+            "python3",
+            [parser, path.join(root, "tasks.md"), "--task-index"],
+            { encoding: "utf8", timeout: 30000 },
+          );
+          if (result.status !== 0) throw new Error("task parser unavailable");
+          const index = JSON.parse(result.stdout);
+          if (index.ambiguous) throw new Error("ambiguous task Markdown");
+          tasks = new Set(index.ids);
+          if (tasks.size !== index.ids.length)
+            issues.push("当前任务 ID 重复 / Duplicate current task IDs");
+        } catch {
+          tasks = new Set();
+          issues.push(
+            "任务索引不可读取；检查 tasks.md 和已安装正文解析器 / Task index unavailable",
+          );
+        }
+      }
+      if (
+        !Array.isArray(decision.taskIds) ||
+        !decision.taskIds.length ||
+        new Set(decision.taskIds).size !== decision.taskIds.length ||
+        decision.taskIds.some((id) => !tasks.has(id))
+      )
+        issues.push(
+          `${decision.requirementId}/${decision.entryId} 任务引用过期或缺失 / Stale or missing task reference`,
+        );
+    }
+  }
+  const checks = list(review.rounds)
+    .filter((r) => r?.lens === "source-contract")
+    .flatMap((r) => list(r.sourceChecks));
+  if (required && !checks.length)
+    issues.push(
+      "缺少关键结论的独立源码核验 / Missing independent source checks",
+    );
+  const checked = new Set();
+  for (const check of checks) {
+    if (!entries.has(check?.entryId) || checked.has(check?.entryId))
+      issues.push(
+        "独立源码核验入口未知或重复 / Unknown or duplicate source check entry",
+      );
+    checked.add(check?.entryId);
+    if (check?.result !== "CONFIRMED")
+      issues.push(
+        `独立源码核验 ${check?.entryId} ${check?.result ?? "SOURCE_INVESTIGATION"} 未关闭 / Source check unresolved`,
+      );
+    evidence(check?.evidence, `独立源码核验 ${check?.entryId}`);
+    if (!nonempty(check?.rationale) || !nonempty(check?.counterexample))
+      issues.push(
+        "独立源码核验缺少理由或反例 / Missing rationale or counterexample",
+      );
+  }
 }
 
 export function checkReceipt(root, { checkCode = false } = {}) {

@@ -149,3 +149,12 @@ Cases: repeated bilingual Codex/Claude deployment; Claude-only internal menu hid
 Results: all 107 test files and 973 tests pass, together with lint, build, global/managed design gates, strict skill audit (16/16, no English gaps), and 32 skill-file validations. Real v0.5.20/v0.5.21 Git assets pass all 16 migration cases across two tags, languages, hosts, and scopes. There remain 16 core skills after merging archive and registering API annotations; exactly one default public entry; Codex prompts decrease from seven to one. A temporary pure OpenSpec change also passed the real Hook and native CLI archive, including delta merge and directory movement. Pack preview verifies new paths and removal of old entries. Log: `/tmp/superflow-skill-cleanup-tests-final.log`.
 
 Limits: this verifies naming, deployment, gates, and migration, not real third-party task success, model routing compliance, or Windows hardware. No current-host installation or npm release was performed. Roll back the affected owner if unknown assets are retired, original old skills remain as defaults, pure OpenSpec is blocked, or missing SDD state is allowed. Preserve original assets and retirement backups; fix and rerun representative cases.
+
+## Evaluation material isolation
+
+Keep external-project raw cases and detailed run evidence in a task-owned external
+directory. Retain only de-identified mechanism evaluations and minimal synthetic
+regressions here, following “External-project verification isolation” in the global
+design principles. Verify existing implementation by default; maintaining an
+evaluation does not authorize reimplementation or business dependencies. Evidence
+authenticity and eligibility for CLI distribution are separate checks.

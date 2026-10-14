@@ -437,3 +437,19 @@ Mock proves isolated logic only. Freeze and record SQL generation/binding, same-
 ### Background-service identity and startup handshake
 
 `service.json` optionally adds `processIdentity` (OS creation time and command) for existing service-owner checks before reuse or termination. Legacy live processes missing identity are neither adopted nor stopped automatically. Automatic startup uses a one-time token between parent identity verification and child task claiming, preserving diagnostic facts on failure. This internal constraint changes neither Handoff, Executor Delivery, Host Review, nor Task/Run contracts.
+
+## Delivery evidence and communication boundaries
+
+The Host continues authorized work through existing supervision returns, explaining
+new decision-relevant facts, evidence, goal impact, and next actions. Blocker reports
+include ruled-out causes and specific help needed. Transport timeout or unchanged
+facts alone do not trigger another report, model wakeup/poll, or Executor call.
+The Executor records facts, the Host interprets semantics, and the Runner owns
+state and deterministic decisions. The distributed test-guide.md governs user
+operation chains, valid empty-response consumption, real-anomaly regressions, and
+reproducible startup settings in tests.md/project scripts; the Host checks them
+through existing reviewer-checklist.md. Report implementation, simulation, real
+environments, browsers, and commits/releases with separate coverage and counts.
+These extend document contracts and Host semantic review only, without protocol
+fields, Hooks, or state machines. Project coding/test policies do not enter generic
+managed prompts; historical consent does not authorize shared-resource cleanup.

@@ -175,3 +175,14 @@ superflow pipeline --resume-task <task-id> --submit-host-review <review.json>
 预算或重复启动 Executor；只有已记录 PID 被确认死亡时才进入陈旧恢复，PID 未记录时失败
 关闭为接入等待。活动 MCP wait 的 progress notification 只在该请求内有效，不是 Host 回合
 结束后的自主回调。
+
+## 有价值节点的用户汇报
+
+Host 对已授权任务持续负责，沿用既有 wait、评审和恢复闭环直到交付或真实阻塞。
+在已有监督返回、评审整改或用户问询时，若新增事实会影响用户判断，简要报告：
+已确认事实 → 证据路径/结果 → 对目标的影响 → 下一步。阻塞时还应列已排除项、
+剩余可自主工作和所需具体补位；本地可做工作继续推进。仅普通窗口超时或无新事实不
+重复汇报，不为阶段总结新增唤醒、模型轮询或 Executor 调用。活动通知仍只传事实。
+Executor 记录动作、原始结果和阻塞，Host 解释价值和覆盖边界，Runner 裁决确定事实；
+不得让 Runner 生成语义完成结论。收尾按 [test-guide.md](test-guide.md) 区分实现、
+模拟、真实环境、浏览器、提交及发布，数字与最终有效证据一致。

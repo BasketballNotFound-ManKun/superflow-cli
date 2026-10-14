@@ -108,3 +108,47 @@ affected regression after repair. Design changes first repair canonical contract
 Do not skip failures, weaken assertions, or hide blockers.
 
 For cross-round checks sensitive to commands/directories/invocation environments, freeze executionContext under [declared context](document-review-coverage.md#declared-execution-context-and-evidence-reuse). Keep historical proof without calling unbound records complete under a new context.
+
+## User operation chains and real anomaly regressions
+
+For caches, retries, editing, forced refresh, or state changes, freeze the complete
+user operation chain in tests.md: initial state, each action, response/side effects,
+and assertions that subsequent actions remain possible. Separate endpoint tests
+are insufficient. For example, normal call → reject result → edit input and force
+a retry → resume normal calls; trace real entries, state writes, and cache reads/
+writes at each step. When deleting an old entry, reverse-trace unique side effects
+and remaining consumers to preserve business transitions. The business contract
+decides whether old cache survives; this guide does not choose it. Pure functions
+do not acquire runtime obligations.
+
+A structurally valid response or HTTP 200 does not prove consumability. Check empty
+lists, blank text, placeholder records, partially valid values, and downstream
+behavior against field contracts. Confirmed semantics decide caching, retries, and
+failure. Do not invent a blacklist of nonempty placeholder strings or a number
+domain; invalidity requires field/provider contract evidence. For anomalies found
+during real validation, retain redacted raw responses
+and correlated logs, locate the cause, extend existing regression assets with the
+same symptom, and record failure before repair, success after repair, and affected
+regressions. Contract omissions return to the document owner for repair and
+refreezing. Simulated empty responses are not real-provider verification; real
+calls do not replace repeatable regressions.
+
+## Reproduce verified startup configuration
+
+Reuse existing task startup/acceptance scripts. Persist verified argv, relative
+cwd, dependencies, non-secret environment overrides, readiness, and stop entries
+in that script, referenced by tests.md. Bind environment-sensitive evidence through
+existing executionContext. Restarts use the same entry and check effective settings
+so manual command reconstruction cannot lose overrides or native-library settings.
+Store credential sources only, never secrets or personal paths. Do not add another
+launcher or cleanup framework. Reset only task-owned state when isolation requires
+it; historical chat consent does not authorize shared process/data cleanup.
+
+## Delivery conclusion boundaries
+
+Report implementation, isolated/simulated tests, real backends/devices, browsers,
+commits, and releases separately, including unexecuted work. Label each count by
+case set, execution layer, source/config version, passed/failed/skipped/blocked;
+one all-passed number cannot represent different sets. API simulation is not
+browser integration. Unavailable usage or call counts are unobservable, never
+zero. Final summary counts and scope must match the final effective report.

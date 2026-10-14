@@ -25,23 +25,23 @@
 
 ```
 Group 1: Controller 层变更（Bug 9, 10）
-  - 同一文件 PvdDebugController.java
+  - 同一文件 ExampleController.java
   - 无外部依赖
 
 Group 2: Service 核心逻辑（Bug 1, 2, 5, 8）
-  - DebugFlowService.java
-  - AiRecognitionService.java
+  - WorkflowService.java
+  - ValidationService.java
   - 有内部依赖（Bug 8 依赖 Bug 2 的冲突处理）
 
-Group 3: 灯色控制（Bug 3, 4）
-  - LightControlService.java
-  - DeviceOnlineLightSyncListener.java
+Group 3: 通知处理（Bug 3, 4）
+  - NotificationService.java
+  - StateChangeListener.java
   - 共享 Listener 逻辑
 
 Group 4: 独立模块（Bug 6, 7, 11）
-  - MapManagerServiceImpl.java
-  - ModeSwitchService.java
-  - PvdDebugReportExportService.java
+  - ConfigurationService.java
+  - ModeService.java
+  - ReportExportService.java
   - 完全独立，可并行
 ```
 
@@ -195,8 +195,8 @@ Group 4: 独立模块（Bug 6, 7, 11）
 ### 关键注意事项
 
 1. **Spring Profile 传递方式不同**
-   - Maven: `-Dspring-boot.run.profiles=cmk`
-   - Gradle: `--args='--spring.profiles.active=cmk'`
+   - Maven: `-Dspring-boot.run.profiles=test`
+   - Gradle: `--args='--spring.profiles.active=test'`
    - **绝对不能用 `-D` 给 Gradle 传 profile，会无效！**
 
 2. **必须先 clean**
@@ -228,26 +228,26 @@ Group 4: 独立模块（Bug 6, 7, 11）
 
 3. **构建任务依赖图**：
    ```
-   Task 5.1 (markException修复)
+   Task 5.1 (recordFailure修复)
       |
-   Task 7.1 (switchMode释放锁)
+   Task 7.1 (updateMode释放锁)
       |
    Task 9.1 + 10.1 (Controller修改)
       |
-   Task 2.1 + 8.1 (绑定流程)
+   Task 2.1 + 8.1 (处理流程)
       |
-   Task 1.1 (AI识别)
+   Task 1.1 (输入校验)
       |
-   Task 3.1 + 4.1 (灯色同步)
+   Task 3.1 + 4.1 (通知同步)
       |
-   Task 6.1 (地图校验)
+   Task 6.1 (配置校验)
    Task 11.1 (导出统计)
    ```
 
 4. **分组决策**：
    - Group A (独立): Task 5, 7, 9, 10, 11 → Worker-1
-   - Group B (绑定链): Task 1, 2, 8 → Worker-2
-   - Group C (灯色链): Task 3, 4 → Worker-3
+   - Group B (处理链): Task 1, 2, 8 → Worker-2
+   - Group C (通知链): Task 3, 4 → Worker-3
    - Group D (独立): Task 6 → Worker-4
 
 ### Phase 2：并行开发与测试（Workers + Testers 执行）
@@ -284,15 +284,15 @@ Tester 流程（Worker 启动后）：
 
 **Worker-1** 执行 Group A：
 ```
-[开始] → 修改 markException → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
-       → 修改 switchMode → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
+[开始] → 修改 recordFailure → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
+       → 修改 updateMode → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
        → 修改 Controller → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
        → 修改导出统计 → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
 ```
 
 **Worker-2** 执行 Group B（注意依赖顺序）：
 ```
-[开始] → 修改 aiRecognize → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
+[开始] → 修改 validateInput → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
        → 修改 confirmAndBind → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
        → 修改 markConflictAsException → 代码自审 → 编译 → 进程验证 → 启动 → 接口测试 → DB验证 → 日志检查 → [完成报告]
 ```
@@ -325,20 +325,12 @@ Worker 可能看到端口监听就误以为应用启动成功，但实际上：
 3. **Leader 核验进程证据**：按 Phase 3 核对 owner、构建、配置与实例身份
 4. **Leader 核验回归结果，要求实施方补齐失效或合同指定的路径**：
    ```
-   start → aiRecognize → confirm → finish
+   start → validate → confirm → finish
    ```
 5. **全链路验证**：
-   - Bug 1: AI 识别后 debug_status = 1
-   - Bug 2: 绑定后 debug_status = 2，灯色 = AUTO_CTRL
-   - Bug 3: 已完成设备上线后灯色 = AUTO_CTRL
-   - Bug 4: PENDING 设备灯色 = PURPLE+FLICKER
-   - Bug 5: markException 后 debug_status = 3
-   - Bug 6: 地图保存冲突时事务回滚
-   - Bug 7: 模式切换后可立即再次切换
-   - Bug 8: 绑定冲突后 debug_status = 3
-   - Bug 9: 成功时 message = "绑定成功"
-   - Bug 10: 冲突时 code != 0
-   - Bug 11: 导出 Excel 设备总数按 IP 去重
+   - 按 tests.md 中每个适用用例核对输入、响应、状态迁移和后续操作。
+   - 成功、失败、冲突、重试及回滚分支使用冻结的断言，不从示例推导业务规则。
+   - 列表、导出或通知等消费者按实际影响回归，记录原始证据与未执行范围。
 
 ### Phase 5：强制质量门禁（必须全部满足）
 
@@ -371,10 +363,10 @@ Worker 可能看到端口监听就误以为应用启动成功，但实际上：
 - **验证人**：Worker 执行，Leader 抽查关键数据
 
 #### 门禁 5：日志门禁
-- **执行**：`grep ERROR logs/mpgs.log` 或 `grep ERROR app.log`
+- **执行**：`grep ERROR logs/application.log` 或 `grep ERROR app.log`
 - **通过标准**：
   1. 无 ERROR 级别日志（除已知无关错误）
-  2. 关键日志出现（如 `[Bug5] markException called`）
+  2. 关键日志出现（如 `[Bug5] recordFailure called`）
 - **验证人**：Worker + Leader 都必须检查
 
 #### 门禁 6：代码评审门禁
@@ -408,14 +400,14 @@ Worker 可能看到端口监听就误以为应用启动成功，但实际上：
 ```
 任务分配：
 - 任务 ID: Task 5.1
-- 修改文件: DebugFlowService.java
-- 修改方法: markException()
-- 源码锚点: DebugFlowService.java:911-969
+- 修改文件: WorkflowService.java
+- 修改方法: recordFailure()
+- 源码锚点: WorkflowService.java:{line}
 - design.md 对应章节: ## Bug 5
 - 验收标准:
-  1. 调用 markException 后 debug_status = 3
-  2. 不校验 debugSessionId
-  3. 插入 device_debug_record
+  1. 失败状态符合 tests.md 的冻结断言
+  2. 保留原有请求上下文校验
+  3. 按 design.md 的持久化合同记录处理结果
 - 阻塞条件: 无
 - 预计工时: 0.5 人天
 - 强调：必须通过全部质量门禁才能报告完成，编译成功不算完成
@@ -427,8 +419,8 @@ Worker 可能看到端口监听就误以为应用启动成功，但实际上：
 开发完成报告：
 - 任务 ID: Task 5.1
 - 状态: 开发完成 / 阻塞中 / 失败
-- 修改文件: DebugFlowService.java
-- 修改内容摘要: 移除 validateDebugSessionId() 调用，直接透传
+- 修改文件: WorkflowService.java
+- 修改内容摘要: 按冻结设计修复失败分支，保留上下文校验
 - 数据库前置门禁：
   - 检查的表/字段: {列出}
   - 汇总 SQL 文件路径: {路径}
@@ -469,7 +461,7 @@ Worker 可能看到端口监听就误以为应用启动成功，但实际上：
 - 测试人: Tester（独立）
 - 测试用例: 共 X 个，执行 X 个，通过 X 个，失败 X 个
 - 测试详情:
-  - 用例 1 [通过]: 接口返回值 code=0，数据库 debug_status=3，日志无 ERROR
+  - 用例 1 [通过]: 接口返回值 code=0，数据库状态符合 tests.md 冻结断言，日志无 ERROR
   - 用例 2 [失败]: 预期... 实际... 现象...
 - 数据库验证: ...
 - 日志检查: ...

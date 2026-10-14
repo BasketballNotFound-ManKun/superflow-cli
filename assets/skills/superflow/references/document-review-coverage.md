@@ -33,6 +33,82 @@
    用同一业务 ID 比较 API 字段与数据库真源值，并在浏览器核对展示；仅有字段键、HTTP
    200、空列表或历史 NULL 不能证明字段链路正确。修改入口还要验证写后读及禁止的副作用。
 
+## 先调查源码，再冻结设计
+
+本节是源码调查、关键结论复核和当前合同收敛的唯一规范；沿用现有源码审计与 coverage，
+不另建 claim 账本。适用完整存量系统文档任务；纯文案、机械改动和不依赖现有行为的轻量
+任务不强加本节。新生成的适用合同在 `.openspec.yaml` 的 applicability 下写
+`source_investigation: required`，coverage 同时写 `sourceInvestigation: "required"`。
+此保留键使用 block-mapping 标量；引号和行内注释可用，flow/block-scalar 等未支持写法
+明确拒绝并要求规范化，不静默关闭核验。标记进入既有 handoff 哈希；不能删除标记或刷新哈希来关闭未解决调查。旧 v1 凭证保留原
+边界，未声明时不能声称已通过此核验；重新冻结适用合同须补调查。
+
+### 生成侧：从实际实现得出结论
+
+写 design/tasks/tests 前先完成当前功能的定向 research：
+
+1. 搜索已有模块、公共方法、调用方、测试和依赖；地图只定位，再实际读取实现与调用者。
+   从真实注册/挂载或用户动作沿调用链追踪；定义存在、名称相似、注解写在注释中不证明生效。
+2. 从写入反查全部写入方、读取/过滤方、Mapper statement、字段类型/容量/默认值/索引。
+   记录搜索范围、实际命令及未找到的路径；源码不足时核可用的只读 DB，不能假设 DDL 就是生产。
+3. 复用前读方法体：是否重读而丢弃准备实体字段、隐含费用/额度副作用、吞异常、保留外层
+   事务、代理/自调用与锁顺序。对零影响行、乱序、重复、分页终止和本轮/下轮边界给具体反例。
+4. 把“结论 → 实际源码片段 → 推导 → 可推翻条件 → 复用/冲突决定”写回已有
+   `source-code-audit.md` 冻结卡；未知为 SOURCE_INVESTIGATION，继续查，不转问用户或写 VERIFIED。
+   只有新的业务取舍才走 OWNER_DECISION。哈希、文件列表、“已分析”不能替代推导。
+5. 冻结后分配单一正文 owner：业务规则在 spec，接口/字段在 api/database-contract，HOW 在
+   design/技术详设，验证在 tests。其他正文引用权威段落和稳定 R/E/C/任务 ID，不重复抄决定。
+   改动应替换当前段落；旧推导、撤销范围和旧结论移到明确历史记录，不混在现行合同中。
+   更新入口/任务后同步 traceability、Prompt 与 coverage；独立评审逐项核对旧引用与当前范围。
+
+### 评审侧：独立核验关键结论
+
+source-contract reviewer 从原始需求和当前源码建立核对范围，不接收生成侧聊天推导。
+按风险选择代表性关键结论，至少一项；所有发现冲突、未挂载、生效范围、复用副作用、
+字段约束、事务或循环终止的相关结论必须核验，不能选一项简单结论充数。
+复读实际调用者及被调方法/Mapper/DDL，尝试推翻当前结论，记录实际依据、反例条件和理由。
+结构 PASS 只证明声明/引用一致；独立核验也不是模型诚实或源码完整性的防伪签名。
+
+在已有 `coverage.entries[].investigation` 写：
+
+```json
+{"status":"VERIFIED","canonical":{"sourceRef":"S_AUDIT","lineStart":12,"lineEnd":12,"text":"现行冻结卡的原文"},
+ "evidence":[{"sourceRef":"S_CODE","lineStart":20,"lineEnd":21,"text":"这两行源码的精确文本"}],
+ "counterexample":"若真实调用方未注册，此生效结论不成立"}
+```
+
+canonical 引用 contract 来源，evidence 引用 code 来源，均复用 sources 的 ID/哈希。
+锚点行号从 1 起，text 为整段行的原文（只忽略两端空白/换行风格）；只保存必要短片段。
+EXCLUDED/VERIFY_EXISTING 入口也须调查，不以排除免核验；多个决定引用同一入口调查，不复制。
+FIX decision 添加 `taskIds:["2.1"]`，引用 tasks.md 的实际 checkbox ID；勾选进度不改变 ID。
+任务索引复用已分发 Python 报告 linter 的正文解析；任务模式在擦除块之前按列表容器
+区分缩进代码与真实嵌套任务，过滤根级/列表内围栏和HTML注释，拒绝重复 ID。普通报告
+保留默认解析模式；字段值来源只接受 code|contract，此资格不随 checkCode=false 放宽；
+缺少 Python/解析器时给修复提示，不回退到全文件正则。历史任务移出当前 tasks.md。
+source-contract round 添加 `sourceChecks:[{entryId,result,evidence,rationale,counterexample}]`；
+result 为 CONFIRMED / CONTRADICTED / SOURCE_INVESTIGATION，evidence 同上述源码锚点。
+非 CONFIRMED 不准就绪；有冲突须先改 canonical 正文并重新独立核验，禁止只刷哈希。
+脚本核非空/来源/片段身份与任务引用，不能判断选取是否充分、推导是否成立、评审者是否独立。
+
+### 明确映射的字段容量
+
+Agent 已核实某字面量直接写入某字段时，在既有 entry 中添加 `valueConstraints`：
+
+```json
+[{"kind":"string-capacity","field":"summary",
+  "schema":{"sourceRef":"S_DDL","lineStart":8,"lineEnd":8,"text":"`summary` varchar(20) DEFAULT NULL,"},
+  "values":[{"sourceRef":"S_CODE_OR_DESIGN","lineStart":30,"lineEnd":30,
+             "text":"const state = \"START_PENDING\";","value":"START_PENDING"}]}]
+```
+
+这是已明确绑定后的窄检查，不扫描全仓猜业务关系。schema 必须是 code 来源中单个列的
+CHAR/VARCHAR 声明；values 可引用 code 或 contract 中带引号/反引号的直接 ASCII 字面量。
+脚本从实际映射片段读容量和字面量，拒绝超长；不支持表达式、转义、字符集转换、未明确列
+或实际 schema 未知时归 SOURCE_INVESTIGATION，由 Agent 继续调查，不伪装自动验证正确。
+字段映射、全部值覆盖、DDL 运行适用性仍由独立评审核实；短值通过不证明实际写入该字段。
+实施编辑 Hook 的既有 checkCode=false 保留源码可修改规则；新派发/coding-ready 用当前源码
+重核锚点/指纹。旧执行证据不被追溯改名为未测试，也不作为当前新版语义闭合证明。
+
 ## 凭证扩展
 
 下面是 `coverage` 最小结构，添加到现有三轮凭证，不替换其它字段。

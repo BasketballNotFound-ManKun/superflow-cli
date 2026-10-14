@@ -12,6 +12,10 @@ EXCLUDED、VERIFY_EXISTING 和无代码改动的路径。用户允许的动作�
 对当前 OpenSpec change 进行独立、对抗式但基于证据的反向评审。评审不是旁路建议：
 阻塞级问题必须回写并修正文档，复审通过后才能离开 docs 阶段。
 
+独立评审按[源码调查规范](../superflow/references/document-review-coverage.md)复读当前源码，
+核验关键结论及反例并写入既有 sourceChecks；不继承生成聊天、不只更新哈希。
+同时核对当前正文 owner、历史隔离及任务/入口/用例引用，发现冲突先修权威正文。
+
 ## 边界
 
 - 在复杂需求完成逐功能澄清、形成可评审文档草案后使用。

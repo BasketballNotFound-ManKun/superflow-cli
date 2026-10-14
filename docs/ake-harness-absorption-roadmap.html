@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Superflow × ake-harness 吸收路线图</title>
+<title>Superflow 吸收路线图 · 源码复核与第二轮方案</title>
 <style>
 :root{
   --bg:#0b1016; --panel:#121a23; --panel2:#17222d; --line:#2b3a48;
@@ -31,6 +31,10 @@ a{color:var(--cyan);text-decoration:none} a:hover{text-decoration:underline}
 .tracking{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}.tracking select,.tracking input{width:100%;background:#0e161f;border:1px solid #3b4c5b;color:var(--text);border-radius:8px;padding:8px 10px;font:inherit}.tracking input::placeholder{color:var(--faint)}.tracking-hint{font-size:12px;color:var(--faint);margin-top:10px}.track-summary{color:var(--muted);font-size:13px;margin:0 0 12px}
 .callout{border:1px solid #5a4930;background:linear-gradient(145deg,#2c271b,#171b20);padding:20px;border-radius:var(--radius);color:#e8d6af}.callout strong{color:var(--amber)}
 .footer{margin-top:52px;color:var(--faint);font-size:12px;border-top:1px solid var(--line);padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.review-nav{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0}.review-nav a{border:1px solid var(--line);border-radius:8px;padding:7px 12px;background:var(--panel)}
+.research-card{margin-top:18px;scroll-margin-top:20px}.research-card h3{color:var(--cyan)}.research-card dl{display:grid;grid-template-columns:100px 1fr;gap:8px 16px;margin:16px 0}.research-card dt{color:var(--amber);font-weight:600}.research-card dd{margin:0;color:#c6d2da}.research-card code,td code{overflow-wrap:anywhere}.evidence-note{font-size:13px;color:var(--muted)}
+.architecture{white-space:pre-wrap;background:var(--panel);padding:18px;border:1px solid var(--line);border-radius:12px;overflow:auto;font:13px/1.8 ui-monospace,monospace}details{margin:14px 0}summary{cursor:pointer;color:var(--cyan);font-weight:600}.audit-warning{border-left:4px solid var(--amber);padding:14px 18px;background:#272218;margin:16px 0;color:#f0d9ad}.research-table{min-width:950px}
+@media(max-width:600px){.research-card dl{grid-template-columns:1fr;gap:4px}.research-card dd{margin-bottom:12px}}
 @media(max-width:900px){.hero{grid-template-columns:1fr}.grid.stats,.grid.cols-3,.absorb-grid{grid-template-columns:1fr 1fr}.flow{grid-template-columns:repeat(2,1fr)}.flow:before{display:none}}
 @media(max-width:600px){.shell{padding:22px 15px 50px}.grid.stats,.grid.cols-3,.grid.cols-2,.absorb-grid,.checklist{grid-template-columns:1fr}.topbar{align-items:flex-start;flex-direction:column}.meta{text-align:left}.flow{grid-template-columns:1fr}}
 </style>
@@ -39,23 +43,169 @@ a{color:var(--cyan);text-decoration:none} a:hover{text-decoration:underline}
 <div class="shell">
   <header class="topbar">
     <div class="brand"><div class="mark">S</div><span>SUPERFLOW / ABSORPTION MAP</span></div>
-    <div class="meta">基于 ake-harness 全仓扫描<br>Superflow 基线提交：<code>4e6ec4a</code></div>
+    <div class="meta">第二轮源码复核与官方资料调研 · 2026-09-25<br>当前基线：<code>v0.5.13 / dab49d4</code></div>
   </header>
 
   <section class="hero">
     <div>
       <div class="eyebrow">Engineering roadmap · 2026</div>
       <h1>把成熟做法吸收成自己的工程能力。</h1>
-      <p>这份文档把 ake-harness 的研发能力拆成可验证的吸收单元。每一项都记录当前基线、预期收益、代表性例子、验证标准、回滚条件和是否应进入 Superflow 主流程。</p>
+      <p>从已有代码缺口出发，决定哪些机制值得继续吸收。第一轮保留实现历史；第二轮重新核对验收证据，比较成熟工具，并给出可执行的下一步方案。</p>
     </div>
-    <div class="hero-note"><strong>核心取舍</strong><p>优先治理 Skill 和评审编排，再补轻量 Java 护栏；状态机继续负责流程状态，代码地图继续作为定位器，暂不引入 qgate 全套裁决系统。</p></div>
+    <div class="hero-note"><strong>本轮结论</strong><p>优先修复安装所有权和 Hook 协议边界，再用真实行为评测验证 Skill。已有 13 项提交，不等于 13 项效果全部验收完成。新候选全部处于规划状态。</p></div>
+  </section>
+
+  <nav class="review-nav" aria-label="路线图导航">
+    <a href="#rescan">本轮扫描与架构</a><a href="#findings">源码缺口</a><a href="#research">外部工具成熟度</a><a href="#next-round">下一轮优先级</a><a href="#experiments">试点与验收</a><a href="#items">第一轮历史</a>
+  </nav>
+
+  <section class="section" id="rescan">
+    <h2>2026-09-25 · 重新扫描后的基线</h2>
+    <p>本轮仅更新本 HTML；未安装候选工具、未运行模型评测、未更改源码/全局配置/宿主配置，未发布。下面的验收阈值均为拟议标准，不是已测结果。</p>
+    <div class="grid stats">
+      <div class="card stat cyan"><div class="value">110</div><div class="label">src/ TypeScript 文件，全部做语法树结构扫描</div></div>
+      <div class="card stat green"><div class="value">317</div><div class="label">相对 import/export 依赖边（含类型引用）</div></div>
+      <div class="card stat amber"><div class="value">168</div><div class="label">assets/ 受跟踪资产，含中英文 Skill 与脚本</div></div>
+      <div class="card stat blue"><div class="value">95</div><div class="label">现有测试文件；本轮未重跑测试</div></div>
+    </div>
+    <p class="evidence-note">范围：git ls-files 枚举 src、assets、scripts、installer、test、devtools、.github 共 387 个受跟踪文件；TypeScript 解析扫描覆盖全部 src 文件，定位 930 个函数/类/接口/类型声明。语义深读聚焦 CLI/MCP 入口、安装迁移、状态与证据链、Hook、评分、Skill 路由及新增 audit 命令。不是对每一行代码的形式化证明。工作区扫描前干净，openspec list 无活动变更；647 项通过是上一轮发布记录，本轮没有复测。</p>
+    <h3>现有架构：保留主体，收紧边界</h3>
+    <pre class="architecture">用户 / Host
+  ├─ Skill 路由 → OpenSpec 文档合同 → Coding Ready → 实现 / verify / archive
+  ├─ CLI（src/app） ─┐
+  └─ MCP（src/mcp） ─┴→ managed-work 控制层 / Runner
+                           ├→ platform/agent-process → Codex / Claude 执行
+                           └→ 合同、workspace binding、Run、JSONL 证据账本、eval
+
+安装与生命周期：manifest → init / update / uninstall → Skill / Hook / MCP 配置
+宿主 Hook：全局 / 项目配置 → shell / Python / Node 脚本 → 规则与证据检查
+开发者自审：devtools + 本仓 .codex/.claude 配置（应继续排除 npm 分发）</pre>
+    <p>主流程已经具备合同冻结、工作区绑定、证据继承、进程清理和恢复逻辑，不建议换成另一套 Agent 框架。真正的维护热点是 <code>runner.ts</code> 3906 行、<code>pipeline.ts</code> 1449 行、<code>control.ts</code> 1204 行、<code>agent-process.ts</code> 1017 行（按换行计数）。长度只提示阅读成本，不能据此直接认定需要重写。发现 managed ↔ platform 双向引用，其中部分为 type-only，须区分运行时边后再制定依赖规则。</p>
+  </section>
+
+  <section class="section" id="findings">
+    <h2>先补真实缺口，再吸收新工具</h2>
+    <div class="audit-warning"><strong>纠正第一轮结论：</strong>“13 项已提交”成立；“13 项均完整吸收、实战效果全部验证”不成立。地图、清理、文档策展目前仅完成部分原型，若干行为 Skill 只增加了指引，缺少可重放的实际调用轨迹。下面是当前源码可支持的结论。</div>
+    <div class="table-wrap"><table class="research-table"><thead><tr><th>证据位置</th><th>当前确定事实</th><th>影响 / 尚待验证</th><th>处理顺序</th></tr></thead><tbody>
+      <tr><td><a href="../src/domains/hook-migration.ts">hook-migration.ts:42–60、110–155</a></td><td>ake 来源以标记文件存在判断，superflow/sdd 以命令名称判断；没有逐文件安装哈希、项目修改识别和逐项能力替代映射。</td><td>同名自定义脚本、带额外命令的 Hook 或项目定制脚本可能被认领。拥有备份并不证明可以删除；全局脚本存在不等于完整替代旧业务护栏。风险来自静态控制流，未对真实项目做破坏性复现。</td><td>A01 / P0</td></tr>
+      <tr><td><a href="../src/app/commands/doctor.ts">doctor.ts:259</a>；<a href="../src/domains/hook.ts">hook.ts</a>；<a href="../assets/scripts/superflow-java-build-hook.py">java-build-hook.py:146</a></td><td>doctor 的注册检查以 ≥7 条命令判通过；多个不同事件共用 120 秒默认值；编译子进程本身也有 120 秒超时。</td><td>重复项可能掩盖缺项，事件/matcher/脚本哈希/宿主支持状态尚未联合核验；多模块编译累计时间可能超过外层预算。配置存在与宿主真正触发必须分别验证。</td><td>A02 / P0</td></tr>
+      <tr><td><a href="../src/domains/skill/registry.ts">skill/registry.ts</a>；<a href="../src/domains/quick-dev/gate.ts">quick-dev/gate.ts:28</a></td><td>Registry 查名称、字段、英文镜像存在和完全相同的 trigger；Quick 风险包含“表”等正则，并按脏文件判独占。</td><td>不证明真实模型路由正确；“修改报表文案”可能因“表”升级，“干净工作树”也不证明独占。CLI 的 nextSkill 修复仍需在 ake + Superflow 共存环境测实际调用。</td><td>A03 / P0</td></tr>
+      <tr><td><a href="../src/mcp/server.ts">mcp/server.ts:37</a>；<a href="../src/domains/managed-work/schemas.ts">managed-work/schemas.ts</a>；<a href="../src/domains/managed-work/runner.ts">runner.ts:3485</a></td><td>同类评审数据分别有 MCP Zod、JSON Schema 和手写验证；已使用 Zod 4。</td><td>重复合同维护点容易漂移，不能直接抹平宿主 strict-schema 与内部兼容语义。可复用现有依赖生成派生 schema。</td><td>A02 / P0，渐进统一</td></tr>
+      <tr><td><a href="../src/domains/managed-work/storage.ts">storage.ts:32、162</a>；<a href="../src/domains/managed-work/journal.ts">journal.ts:22、172</a></td><td>已有原子 rename helper；registry 是读改写；每次追加事件会读完整账本，并重新生成最后 50 条的视图。</td><td>原子单文件不等于多写者事务；要验证并发更新不丢条目。日志增长存在累计重复读取成本，影响需基准测量，尚未证明实际性能故障。</td><td>A04 / P1</td></tr>
+      <tr><td><a href="../src/domains/context-audit.ts">context-audit.ts:10–35</a></td><td>ADR 只检查英文标题是否存在；空标题的示例在当前测试中通过，术语列表之外的形式未统计。</td><td>不能称为完整 ADR 三条件验证，也不能从未识别到术语得出质量通过。应区分“结构齐全 / 内容待审 / 不适用”。</td><td>A06 / P1</td></tr>
+      <tr><td><a href="../src/domains/docs-audit.ts">docs-audit.ts:6–26</a></td><td>年龄来自 mtime；入链按总语料出现次数减 1；redundant 没有产出分支；不解析标准 Markdown 链接。</td><td>检出/复制文件会改变年龄；唯一外部入链可能被计为 0；四态策展未完成。先修证据采集，再让 Agent 做语义处置。</td><td>A06 / P1</td></tr>
+      <tr><td><a href="../src/domains/map-audit.ts">map-audit.ts:11–23</a></td><td>JSON 可读即标 current；full 是节点数；skeleton 是前 K 个 path/name；Top-K 为关键词包含计数。</td><td>没有提交新鲜度、符号骨架、依赖遍历或 Recall@K 实验；“目录+符号骨架对照已完成”应撤回。</td><td>A08 / P2</td></tr>
+      <tr><td><a href="../src/domains/cleanup-audit.ts">cleanup-audit.ts:6–28</a>；<a href="../src/domains/review/coverage.ts">review/coverage.ts:24</a></td><td>清理扫描按同名、500 行、TODO 数列线索；不输出完整覆盖或消费者。评审默认排除测试文件。</td><td>同名不等于重复、短文件不等于简单、无引用不等于可删除；测试改坏断言可能被排除在普通评审之外。</td><td>A05 / P1，A08 / P2</td></tr>
+      <tr><td><a href="../src/domains/managed-work/evaluation.ts">evaluation.ts:507</a>；<a href="../assets/skills-en/superflow-pipeline/references/superpower-technical-design-template.md">英文技术设计模板</a></td><td>excellent 由终态/首轮评审/调用数/人工介入规则得出；英文模板没有对应的 Design-It-Twice 卡片，而两侧 Skill 都要求它。</td><td>流程评分不代表语义质量；中英文文件存在也不代表内容等价。历史“前 3 项均 excellent”只明确保留了第 2/3 项 Run 说明，第 1 项评分未核实。</td><td>A03 / P0；A06 / P1</td></tr>
+      <tr><td><a href="../.github/workflows/publish-release-notes.yml">publish-release-notes.yml</a>；<a href="../package.json">package.json</a></td><td>受跟踪工作流只有 tag → GitHub Release，未见 PR 测试/三系统安装/产物安装认证工作流。npm 发布依赖本地生命周期脚本。</td><td>本机绿灯与用户拿到的 tarball 可运行是不同证据。先补产物认证，再考虑 OIDC 自动发布。</td><td>A07 / P1</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="section" id="research">
+    <h2>外部候选：热度、维护与适配度</h2>
+    <p>2026-09-25 读取官方仓库与文档，并通过 GitHub API 记录 stars、许可证和 releases/latest。数字为当日快照，不代表效果或安全认证；main 文档可能先于 release，落地前必须锁定版本并核验 Node/Vitest/OS 兼容。</p>
+    <div class="table-wrap"><table><thead><tr><th>项目 / 官方资料</th><th>成熟度快照</th><th>为什么与我们有关</th><th>部署边界</th></tr></thead><tbody>
+      <tr><td><a href="https://github.com/affaan-m/ECC/blob/main/docs/SELECTIVE-INSTALL-ARCHITECTURE.md">ECC 安装分层设计</a> · <a href="https://github.com/affaan-m/ECC/releases/tag/v2.2.1">release</a></td><td>267,286 stars · MIT · 2026 起 · latest API v2.2.1 / 09-08</td><td>参考 planner / executor / ownership / lifecycle；此文部分为目标设计，不能把文档当实现保证。</td><td>吸收机制；不再整包安装另一套 Skill/Hook</td></tr>
+      <tr><td><a href="https://www.promptfoo.dev/docs/guides/test-agent-skills/">Promptfoo Skill 评测</a> · <a href="https://github.com/promptfoo/promptfoo/releases/tag/0.123.1">release</a></td><td>25,447 stars · MIT · 2023 起 · 0.123.1 / 09-18</td><td>对照 Skill 版本、调用轨迹、输出断言、成本与耗时；补现有 eval 的行为验证盲区。</td><td>开发/CI 可选；不随用户 CLI 常驻，不自动向模型上传源码</td></tr>
+      <tr><td><a href="https://fast-check.dev/docs/advanced/model-based-testing/">fast-check 模型测试</a> · <a href="https://github.com/dubzzz/fast-check/releases/tag/v4.10.2">release</a></td><td>5,155 stars · MIT · 2017 起 · v4.10.2 / 09-19</td><td>生成状态操作序列、缩减失败用例并用 seed 重放。</td><td>devDependency；与现有 Vitest 共用</td></tr>
+      <tr><td><a href="https://github.com/sverweij/dependency-cruiser/blob/main/doc/rules-reference.md">dependency-cruiser</a> · <a href="https://github.com/sverweij/dependency-cruiser/releases/tag/v18.4.0">release</a></td><td>7,218 stars · MIT · 2016 起 · v18.4.0 / 09-20</td><td>把允许/禁止的依赖边和循环依赖变成机械检查，不靠文件行数判断架构。</td><td>仅本仓开发治理</td></tr>
+      <tr><td><a href="https://knip.dev/">Knip</a> · <a href="https://github.com/webpro-nl/knip/releases/tag/knip%406.38.0">release</a></td><td>12,340 stars · ISC · 2022 起 · 6.38.0 / 09-23</td><td>从真实入口分析未使用文件、export 和依赖；先覆盖 Superflow 的 TS，不能承诺 Java 同等能力。</td><td>仅开发/CI 报告；不启用自动删除</td></tr>
+      <tr><td><a href="https://ast-grep.github.io/">ast-grep</a> · <a href="https://github.com/ast-grep/ast-grep/releases/tag/0.45.3">release</a></td><td>16,032 stars · MIT · 2022 起 · 0.45.3 / 08-31</td><td>多语言语法结构检索，可为地图候选补文件/符号锚点；AST 不等于跨仓业务事实。</td><td>先独立实验，可选 CLI；不默认绑定 native runtime</td></tr>
+      <tr><td><a href="https://github.com/gitleaks/gitleaks">Gitleaks</a> · <a href="https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1">release</a></td><td>29,480 stars · MIT · 2018 起 · v8.30.1 / 03-21</td><td>替代少量自写密钥正则的候选。维护者当前声明功能完备、后续以安全补丁为主，不能标成持续功能扩张项目。</td><td>可选 CI/提交扫描；后继 Betterleaks 另评，不自动追随</td></tr>
+      <tr><td><a href="https://stryker-mutator.io/docs/stryker-js/vitest-runner/">StrykerJS + Vitest</a> · <a href="https://github.com/stryker-mutator/stryker-js/releases/tag/v10.0.0">release</a></td><td>3,147 stars · Apache-2.0 · 2016 起 · v10.0.0 / 08-14</td><td>故意变异判断条件，衡量测试能否发现门禁被放宽；需核对当前 Vitest 2 兼容版本。</td><td>局部/定期运行，不进每次 Hook</td></tr>
+      <tr><td><a href="https://github.com/modelcontextprotocol/inspector">MCP Inspector</a> · <a href="https://github.com/modelcontextprotocol/inspector/releases/tag/2.8.0">release</a></td><td>10,955 stars · 2024 起 · 2.8.0 / 09-23；GitHub license API 未明确识别，采用前核验 LICENSE</td><td>独立协议客户端交叉核验 tools/list、参数错误及 transport；不替代业务验收。</td><td>仅隔离开发环境的可选探针</td></tr>
+      <tr><td><a href="https://zod.dev/json-schema">Zod 4 JSON Schema</a> / <a href="https://docs.npmjs.com/trusted-publishers/">npm Trusted Publishing</a></td><td>现有依赖 / 官方发行机制；不以 star 排名</td><td>优先复用已有 Zod；发布阶段评估 OIDC 与构建来源证明。</td><td>合同生成用现有依赖；发布权限只在 CI</td></tr>
+    </tbody></table></div>
+    <p class="evidence-note">“热门”只用于缩小候选；成熟度还看持续维护、明确许可证、版本兼容、可复现输出和本仓试点。上述研究未安装这些工具，也未确认它们对 Superflow 有性能收益。</p>
+  </section>
+
+  <section class="section" id="next-round">
+    <h2>第二轮候选 · 10 项，全部待试点</h2>
+    <p>编号 A01–A10 属于本轮新建议，不与第一轮 13 项混算。优先级按风险与依赖安排，不按 star 排名。S/M/L 表示预计改动面小/中/大，不是工期承诺。</p>
+    <div class="table-wrap"><table><thead><tr><th>顺序</th><th>方案</th><th>归属 / 复用点</th><th>成本</th></tr></thead><tbody>
+      <tr><td>P0 · A01</td><td><a href="#a01">安装所有权与保守迁移</a></td><td>安装器；扩展现有 manifest/state/hash</td><td>M</td></tr>
+      <tr><td>P0 · A02</td><td><a href="#a02">Hook / MCP 宿主合同认证</a></td><td>宿主适配、doctor、现有 Zod</td><td>M</td></tr>
+      <tr><td>P0 · A03</td><td><a href="#a03">真实 Skill 行为评测</a></td><td>开发评测；Promptfoo 与既有 eval 分工</td><td>M + 按预算模型调用</td></tr>
+      <tr><td>P1 · A04</td><td><a href="#a04">状态序列、并发与恢复测试</a></td><td>现有 Run/registry/锁；fast-check</td><td>M</td></tr>
+      <tr><td>P1 · A05</td><td><a href="#a05">架构依赖与无用代码治理</a></td><td>开发工具；dependency-cruiser + Knip</td><td>S 起步；拆分另立变更</td></tr>
+      <tr><td>P1 · A06</td><td><a href="#a06">审计结果的证据等级与资产漂移</a></td><td>现有 audit 命令；复用 parser/registry</td><td>M</td></tr>
+      <tr><td>P1 · A07</td><td><a href="#a07">产物安装矩阵与可信发布</a></td><td>CI 与发布流程；npm OIDC</td><td>M；涉及管理员一次配置</td></tr>
+      <tr><td>P2 · A08</td><td><a href="#a08">AST 定位与地图同题实验</a></td><td>既有 map-audit/Understand Anything；ast-grep</td><td>M；可选原生依赖</td></tr>
+      <tr><td>P2 · A09</td><td><a href="#a09">成熟密钥扫描器可选接入</a></td><td>提交/CI，复用脱敏与证据出口</td><td>S/M + 规则维护</td></tr>
+      <tr><td>P2 · A10</td><td><a href="#a10">门禁变异测试</a></td><td>现有 Vitest；StrykerJS 局部启用</td><td>S 起步；执行时间较高</td></tr>
+    </tbody></table></div>
+
+    <article class="card research-card" id="a01"><h3>A01 · 迁移必须证明“属于我们且未被用户改写”</h3><span class="tag p0">P0</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>现有迁移只有名称/标记，缺少 ECC 所倡导的资产所有权和受控执行层。先收紧能自动删除的集合，防止治理工具本身损害项目。</dd><dt>方案推演</dt><dd>安装时记录规范路径、host/scope、来源版本、已装内容哈希与安装方式 → 审计 current/planned/user-modified/unknown → 生成同一份 plan 供预览和执行 → apply 前重验源文件指纹 → 单事务备份与原子替换。新旧 Hook 逐项说明替代能力，命令附带额外子命令时整个条目保留；旧版无 manifest 的只读报告。</dd><dt>复用 / 不选</dt><dd>扩展 <code>hook-migration.ts</code>、<code>state.ts</code>、<code>platform/fs.ts</code>，不复制 ECC 安装引擎。不能因“有备份”就删除来源不明资产；也不把存在一个 ake 标记视作该目录所有文件均未改写。</dd><dt>实例与验收</dt><dd>虚构同名自定义 Hook、官方 Hook 本地改写、混合命令、重复更新、缺脚本、被中断写入、父目录软链。拟定：自定义/未知内容零字节改变；不完整替代零自动删除；重复 apply 不写配置；备份可恢复到原始哈希；失败不留成功标记。</dd><dt>成本 / 回滚</dt><dd>增加每个受管资产的哈希读取与少量清单数据，不新增常驻进程。任何误删或 plan/apply 漂移即停止自动迁移，回退只读审计。ECC 设计文档是参考，机制需由本仓试点证明。</dd></dl><p class="evidence-note">来源：<a href="https://github.com/affaan-m/ECC/blob/main/docs/SELECTIVE-INSTALL-ARCHITECTURE.md">ECC 安装设计</a>、<a href="https://github.com/affaan-m/ECC#codex-app-and-cli">ECC 旧安装所有权与保留策略</a>。</p>
+    </article>
+
+    <article class="card research-card" id="a02"><h3>A02 · 用真实宿主合同补齐 Hook / MCP 适配</h3><span class="tag p0">P0</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>相同脚本可被两个宿主安装，不等于事件、payload、阻断输出和超时语义兼容。现有 doctor 数量判断和字符串路径改写不足以认证。</dd><dt>方案推演</dt><dd>为支持的宿主版本维护 capability 表（event / matcher / 输入字段 / 输出 schema / timeout）→ 在边界归一化为内部事件 → 现有规则计算 allow/block/advisory → adapter 输出宿主协议。doctor 对比唯一事件+matcher+命令+哈希，并区分 configured/trusted/observed；拿不到 trust 信息写 unknown，不代签信任。</dd><dt>复用 / 不选</dt><dd>沿用 HOOK_MAP、manifest、现有脚本；先改高风险入口，避免大一统重写。复用 Zod 4 派生 JSON Schema，同时保留宿主 strict 与内部可选字段差异；Inspector 仅用于隔离协议探针。</dd><dt>实例与验收</dt><dd>普通 Read、shell、Edit、MultiEdit、apply_patch、非 SDD 子目录、root 含空格、Windows 路径、缺 Python/Java、损坏 JSON、Stop 重入与总超时。拟定：支持项实际触发一次；未知事件不宣称生效；只读场景无协议错误；危险场景能阻断并可恢复；doctor 不因堆积重复项而通过。脚本输入注入和真实 Codex/Claude 端到端两种证据分别记录。</dd><dt>成本 / 回滚</dt><dd>无须新增每次模型调用。短 Hook 预算先测 p50/p95，编译等耗时工作独立预算；协议回归就禁用受影响适配版本并明确降级，不静默放宽确定性阻断。</dd></dl><p class="evidence-note">来源：<a href="https://learn.chatgpt.com/docs/hooks">OpenAI Hooks</a>、<a href="https://code.claude.com/docs/en/hooks">Claude Hooks</a>、<a href="https://zod.dev/json-schema">Zod Schema</a>、<a href="https://github.com/modelcontextprotocol/inspector">MCP Inspector</a>。上游现行文档不代表已安装历史版本，必须锁版本回放。</p>
+    </article>
+
+    <article class="card research-card" id="a03"><h3>A03 · 用 Promptfoo 测“模型实际上做了什么”</h3><span class="tag p0">P0</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>Registry 的字段存在检查和 CLI 的 nextSkill 断言不能证明 Claude 会调用正确 Skill。PLMP 的 Quick → ake 漂移是现成失败样本；现有 excellent 只衡量流程终态与效率。</dd><dt>方案推演</dt><dd>将脱敏后的失败场景冻结成 fixtures → 无增强/当前版/候选版同题对照 → 收集真实工具调用、产物位置和最终 diff → 用确定性断言判断框架归属与禁止副作用，再由独立评审判断质量。Promptfoo 可组织数据与报告，<code>superflow eval</code>继续统计 Run，不新增另一套托管裁决。</dd><dt>复用 / 不选</dt><dd>沿用当前 Skill Registry、Quick、语义评审和 Run 账本。先 8–12 个场景，每个每宿主重复 3 次，再决定扩大；不把“输出提到某技能名”当实际使用。官方教程对 Codex 的 skill-used 可由读文件推断，证据弱于工具调用；须加产物/轨迹核验，且使用本机允许的 Codex 技能来源，不照搬 .agents 安装路径。</dd><dt>实例与验收</dt><dd>API+鉴权 Quick STOP、普通文案非 DB、仅依赖旧变更、两个框架共存、用户明确切 ake、同名不同 namespace Skill。拟定：固定集未经授权跨框架创建产物为 0；有效任务完成率不低于基线；报告总样本数、错误路由率、人工介入、token/耗时与失败原文。少量全通过只称样本通过。</dd><dt>成本 / 回滚</dt><dd>仅开发/CI 按需调用模型，预算预先封顶；企业对话先脱敏，优先合成复现，不上传原日志。质量不升或成本明显上升时撤掉新提示。先复用实际宿主 CLI；必要时才增加 SDK provider，SDK 结果不可直接等同宿主 UI。</dd></dl><p class="evidence-note">来源：<a href="https://www.promptfoo.dev/docs/guides/test-agent-skills/">Skill 对照指南</a>、<a href="https://www.promptfoo.dev/docs/configuration/expected-outputs/">断言与指标</a>。</p>
+    </article>
+
+    <article class="card research-card" id="a04"><h3>A04 · 用 fast-check 验证状态组合，而非再造状态机</h3><span class="tag p1">P1</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>已有大量状态测试值得复用；缺口在更长的操作组合、并发写入、异常恢复与随机路径。单个案例绿不证明组合不丢状态。</dd><dt>方案推演</dt><dd>用简化业务模型描述允许状态 → 生成 start/pause/resume/review/reopen/cleanup、install/update/uninstall 序列 → 实现与模型核对不变量 → 失败缩成最短步骤，保存 seed/replayPath。文件原子写入复用现有 helper；确有丢更新证据再加互斥，不先上数据库。</dd><dt>实例与验收</dt><dd>同时更新两个任务索引、评审前崩溃、临时文件残留、旧会话迟到结果、更新→卸载→更新。拟定：固定 seeds 至少 1000 序列，零未知资产改写、零预算负数、零重复终态、账本哈希链可恢复；模拟模型应更简单，不能复制实现自证。</dd><dt>性能补充</dt><dd>对 10³/10⁴/10⁵ 事件账本测追加与恢复。当前 lastEvent/regenerateProgress 全量读取是可见优化点；确认瓶颈后只改尾部读取与视图生成，保留原始账本和哈希，不默认引入 OTel/数据库。</dd><dt>成本 / 回滚</dt><dd>fast-check 仅 devDependency；初期限安装迁移和纯状态函数。随机失败必须可复现；模型误判或运行超过预算时缩小集合，不通过增大超时掩盖缺陷。</dd></dl><p class="evidence-note">来源：<a href="https://fast-check.dev/docs/advanced/model-based-testing/">fast-check 模型、缩减与重放</a>。</p>
+    </article>
+
+    <article class="card research-card" id="a05"><h3>A05 · dependency-cruiser + Knip，先守边界再拆大文件</h3><span class="tag p1">P1</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>Runner 和 CLI 控制逻辑已较大；当前设计门禁多为文档字符串标记，cleanup 也没有真正的 TS 引用图。缺的是结构证据。</dd><dt>方案推演</dt><dd>以 src/app、src/mcp、domains、platform 为边界建立实际依赖图，区分类型边和运行时边 → 首轮只报现状 → 固定允许例外且禁止新增坏边 → Knip 显式配置 CLI/MCP/bin、动态 import、manifest 引用脚本等入口 → 人工验证消费者后才删除。</dd><dt>复用 / 不选</dt><dd>只在本仓 devtools/CI 接入，不把它们作为用户每轮必跑 Hook，也不把 Knip 自动推广到 Java。Runner 按恢复、验证、证据等实际职责渐进拆分，保持协议和导出兼容；不按“每文件最多 N 行”机械切碎。</dd><dt>实例与验收</dt><dd>注入 app/domain 逆向依赖、循环和真正无用 export；同时保留 CLI 动态加载与宿主脚本。拟定：故意违反约束均被发现；所有对外入口无误删；每个清理候选带引用链及排除原因。历史例外不无限增长。</dd><dt>成本 / 回滚</dt><dd>两个 devDependency；先记录运行时间，不默认开启 --fix。误报降 advisory；拆分若增加耦合或破坏协议，逐提交回退。</dd></dl><p class="evidence-note">来源：<a href="https://github.com/sverweij/dependency-cruiser/blob/main/doc/rules-reference.md">依赖规则</a>、<a href="https://knip.dev/">Knip 官方说明</a>。</p>
+    </article>
+
+    <article class="card research-card" id="a06"><h3>A06 · 先让现有 audit 命令诚实，再加新能力</h3><span class="tag p1">P1</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>空 ADR 可 PASS、未解析节点可 current、镜像存在被当作等价，会把有限机械信号放大成质量结论。这个问题主要靠合同修正，不需要新的 Agent 框架。</dd><dt>方案推演</dt><dd>输出“已观察事实 / 未验证内容 / 不适用 / 错误” → 各 audit 复用现有目录/路径处理与 schema → ADR 检查非空结构，三条件留给语义审查 → 文档年龄用 Git 历史并对未跟踪文件标 unknown，按文档解析链接与独立入链 → 逐项绑定源码锚点和版本 → 镜像校验纳入模板实际字段。</dd><dt>实例与验收</dt><dd>空标题 ADR、中文标题、表格术语、一条有效入链、git clone 后 mtime、新旧引用、重复文档但不同业务范围。拟定：未知不报 current/PASS；一条入链计 1；重复候选不自动删除；中英文同一合同缺字段能发现。全量枚举需列出纳入/排除，失效读取不得伪装“零问题”。</dd><dt>成本 / 回滚</dt><dd>优先重用 Zod、Git 和现有工具；复杂 Markdown 解析确有必要时再单独选库。输出 schema 增加版本，旧消费者兼容；语义规则误报时撤回结论，保留机械事实。</dd></dl><p class="evidence-note">来源：<a href="https://zod.dev/json-schema">Zod 单一 schema 与派生结构</a>；其他为本轮源码证据驱动的内部修正建议。</p>
+    </article>
+
+    <article class="card research-card" id="a07"><h3>A07 · 测最终安装包，再接 npm OIDC 发布</h3><span class="tag p1">P1</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>本机 npm 生命周期脚本已经做很多验证，但用户运行的是 tarball 和已部署资产。当前仓库缺独立 PR/多平台产物认证工作流。</dd><dt>方案推演</dt><dd>CI 先跑现有测试和 build → pack 一次 → 在隔离环境安装同一 tarball → install/update/uninstall × global/project 六格验证，中英文与 Codex/Claude 资产回查 → 发布同一受验产物 → registry 完整性与 GitHub Release 回查。认证链稳定后再启用 npm Trusted Publishing。</dd><dt>实例与验收</dt><dd>Linux/macOS/Windows；干净安装、旧版升级、无 host、非 SDD 项目、项目私有 Hook、卸载保留用户定制、源仓库不可见。拟定：公共包不含 devtools 私有 Hook；缺 runtime 文件能被验出；发布 hash 与安装测试使用的 tarball 一致；Node 最低声明版本可运行。</dd><dt>成本 / 回滚</dt><dd>CI 分钟和维护矩阵增加；本轮不改远端权限。OIDC 需 npm 管理员配置，官方当前要求 npm ≥11.5.1、Node ≥22.14.0；可只提高发布 job 的版本，不自动改变用户运行时最低版本。provenance 还受公开仓库/公开包条件限制，缺条件不可宣称具备来源证明。</dd></dl><p class="evidence-note">来源：<a href="https://docs.npmjs.com/trusted-publishers/">npm Trusted Publishing 与限制</a>。回滚 CI 发布方式不等于撤销已公开版本。</p>
+    </article>
+
+    <article class="card research-card" id="a08"><h3>A08 · ast-grep 辅助定位，完成真正的地图对照</h3><span class="tag p2">P2</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>现有 skeleton 只是节点前缀，缺少符号/调用线索；补结构检索比再生成另一套自然语言地图更可复核。</dd><dt>方案推演</dt><dd>固定源码提交与人工标注的相关文件 → 对比完整 UA 图谱、同预算的任务 Top-K、目录+AST 声明骨架 → 候选都回读源码 → 同题实施并评审。图谱陈旧显示 stale；没有图谱时执行真实源码 fallback 或明确 unavailable，不能仅写一句 fallback 就算已执行。</dd><dt>实例与验收</dt><dd>合成 operator-api + domain + Mapper XML 的跨模块需求，含同名类、动态入口与过期图谱。拟定：20 个任务的 Recall@K、无关候选率、路径有效率、工具调用、上下文 token/字节与最终正确率；固定 K 与预算，关键入口漏召回直接 No-Go。</dd><dt>成本 / 回滚</dt><dd>ast-grep 原生工具分发和语言适配有成本，先作为可选实验；AST 不解决 MyBatis 动态 SQL、反射或仓外消费者语义。收益不成立则继续用 UA locator + rg，不接新索引数据库。</dd></dl><p class="evidence-note">来源：<a href="https://ast-grep.github.io/">ast-grep 结构检索</a>、<a href="https://github.com/tree-sitter/tree-sitter">Tree-sitter</a>。</p>
+    </article>
+
+    <article class="card research-card" id="a09"><h3>A09 · 可选 Gitleaks，减少密钥规则自维护</h3><span class="tag p2">P2</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>SQL Hook 的密钥检查只有少量正则；广泛格式维护不适合继续堆进 SQL 收口脚本。成熟扫描器可提供规则与报告，但不能消除误报。</dd><dt>方案推演</dt><dd>先用于本仓 CI/staged 差异扫描 → 对比现有规则的真实遗漏与误报 → 复用统一脱敏出口，仅记录文件/规则/行号 → 确有收益后提供可选 adapter。缺工具标 unavailable，禁止“未扫描=PASS”。</dd><dt>实例与验收</dt><dd>合成不同形态凭据、环境变量引用、示例占位、已删除秘密与日志脱敏；不使用真实密钥。拟定：冻结样本集必须命中真实阳性、负样本不新增阻断；报告不得回显完整凭据；存量豁免须有范围与理由。</dd><dt>成本 / 回滚</dt><dd>增加外部二进制与规则升级面，先独立 CI；Gitleaks 处于安全维护方向，版本锁定并关注维护声明。Betterleaks 不因作者推荐就自动入主链。误报或维护失去保证时退回人工/现有检查并标能力限制。</dd></dl><p class="evidence-note">来源：<a href="https://github.com/gitleaks/gitleaks">Gitleaks 官方 README 与维护声明</a>。</p>
+    </article>
+
+    <article class="card research-card" id="a10"><h3>A10 · 用 Stryker 检查测试是否真能抓住门禁退化</h3><span class="tag p2">P2</span><span class="tag proposed">提议，未实施</span>
+      <dl><dt>吸收理由</dt><dd>647 项通过说明既定断言通过，不代表换掉一个关键判断后测试一定失败。迁移、Quick、证据校验特别适合小范围变异。</dd><dt>方案推演</dt><dd>选三个纯逻辑模块 → 变异风险匹配、哈希比较、返回状态等条件 → 检查现有测试能否杀死变异 → 将真实漏检转成行为案例，而不是追求全仓分数。</dd><dt>实例与验收</dt><dd>删除“拒绝迁移未知资产”、把 STOP 改 QUICK、忽略旧批准摘要。拟定：这些已知危险变异 100% 被捕获；等价变异单列审查；总成本限定在专项/定期任务，不能让普通开发每轮等待全仓变异。</dd><dt>成本 / 回滚</dt><dd>CPU 和运行时间较高，先核对 Stryker/Vitest peer 兼容性，不为工具无条件升级全部依赖。若隔离困难，只保留手工故障注入套件。</dd></dl><p class="evidence-note">来源：<a href="https://stryker-mutator.io/docs/stryker-js/introduction/">StrykerJS</a>、<a href="https://stryker-mutator.io/docs/stryker-js/vitest-runner/">Vitest 适配</a>。</p>
+    </article>
+  </section>
+
+  <section class="section" id="experiments">
+    <h2>吸收与否：按同一证据口径决定</h2>
+    <div class="flow">
+      <div class="phase"><div class="dot">01</div><h3>先做 A01 / A02</h3><p>迁移不会误删、Hook 在支持宿主里真实生效；失败和未知可解释。</p></div>
+      <div class="phase"><div class="dot">02</div><h3>再做 A03 / A04</h3><p>真实路由评测 + 可重放状态组合，建立可信基线。</p></div>
+      <div class="phase"><div class="dot">03</div><h3>A05–A07 收口</h3><p>架构规则、审计诚实性和 tarball 安装闭环。</p></div>
+      <div class="phase"><div class="dot">04</div><h3>A08–A10 试点</h3><p>召回、秘密扫描、变异测试按收益入选；失败就不吸收。</p></div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>实验</th><th>输入基线</th><th>必须保留的产物</th><th>判定边界</th></tr></thead><tbody>
+      <tr><td>安装/Hook</td><td>旧版配置 + 用户修改 + 两宿主固定版本</td><td>迁移前后哈希、plan、备份、恢复结果、事件原始输入输出、真实宿主日志、耗时</td><td>一例误删/假通过即不准默认开启；不能只看 doctor 计数</td></tr>
+      <tr><td>Skill 路由</td><td>脱敏 PLMP 场景 + 合成正反例 + 固定模型与技能版本</td><td>逐轮 Skill/工具轨迹、产物位置、质量评审、调用/token/人工介入</td><td>回答“我会用 X”不算调用 X；读 Skill 也不证明按 Skill 执行</td></tr>
+      <tr><td>代码地图</td><td>固定 commit、相关文件真值、相同 K 与 token 预算</td><td>三种真实上下文、召回文件、失效路径、最终变更与评审</td><td>没有 Recall@K/误导率对照，不宣布提升</td></tr>
+      <tr><td>维护工具</td><td>受控故障、合法例外、已知动态入口</td><td>受影响文件/符号、实际消费者、不可破坏行为、执行路由、误报记录</td><td>工具命中是线索，不能自动授权删除或重构</td></tr>
+    </tbody></table></div>
+    <p>每个候选试点分开提交，发布需另获用户指令。项目开发评测与用户交付运行时分离：Promptfoo、fast-check、dependency-cruiser、Knip、Stryker、Inspector 优先留在本仓开发环境；不增加消费方每次对话的成本。</p>
+    <h3>本轮不建议直接吸收</h3>
+    <ul>
+      <li>整包再装 ECC/BMAD/GSD：继续吸收具体机制，不叠加另一套同名入口、Hook 和安装所有者。</li>
+      <li>LangGraph / Temporal / XState 全量替换：当前已有状态、事件、恢复与预算协议；先用 fast-check 证明现有缺口，未出现不可修补证据不换主引擎。</li>
+      <li>默认全仓 qgate / 重量静态分析：仍暂缓完整控制面。若 A09 或专项规则收益成立可独立接入，不把 qgate 与 Hook 当完全等价能力。</li>
+      <li>默认向量库、第二套持久地图、OTel 后端：先用固定任务集测现有日志与检索成本；确需跨进程 tracing 才增遥测，不另建状态真源。</li>
+      <li>无来源的大 Skill 集市打包与自动“学到就安装”：缺长期维护、许可证或可复现评测的一律候选，不默认执行。</li>
+    </ul>
   </section>
 
   <section class="section">
-    <h2>现在的基线</h2>
+    <h2>第一轮历史基线（2026-09-23）</h2>
     <p>先知道已有能力，避免把同一套东西再造一遍。</p>
     <div class="grid stats">
-      <div class="card stat cyan"><div class="value">4e6ec4a</div><div class="label">当前 Superflow 提交</div></div>
+      <div class="card stat cyan"><div class="value">4e6ec4a</div><div class="label">第一轮起点，非当前版本</div></div>
       <div class="card stat green"><div class="value">P0 · 6</div><div class="label">建议优先吸收单元</div></div>
       <div class="card stat amber"><div class="value">P1 · 5</div><div class="label">流程增强单元</div></div>
       <div class="card stat blue"><div class="value">P2 · 2</div><div class="label">实验或后续评估</div></div>
@@ -74,8 +224,8 @@ a{color:var(--cyan);text-decoration:none} a:hover{text-decoration:underline}
   </section>
 
   <section class="section" id="items">
-    <h2>吸收单元</h2>
-    <p>点击筛选查看每项的来源、收益和通过条件。</p>
+    <h2>第一轮吸收单元 · 保留历史实施记录</h2>
+    <p>以下“试点结果”为第一轮记录，不是本轮重新认证。现状以本页上方源码复核为准；地图、清理、文档、ADR 等仍有验收缺口。点击筛选查看来源与原计划。</p>
     <div class="controls">
       <button class="control active" data-filter="all">全部</button><button class="control" data-filter="P0">P0 立即</button><button class="control" data-filter="P1">P1 接入</button><button class="control" data-filter="P2">P2 实验</button><button class="control" data-filter="暂缓">暂缓</button>
     </div>
@@ -99,33 +249,33 @@ a{color:var(--cyan);text-decoration:none} a:hover{text-decoration:underline}
   </section>
 
   <section class="section" id="absorption-summary">
-    <h2>吸收总览与验证记录</h2>
+    <h2>第一轮提交与证据复核</h2>
     <div class="grid cols-3">
-      <div class="stat cyan"><div class="value">13</div><div class="label">已吸收并提交</div></div>
+      <div class="stat cyan"><div class="value">13</div><div class="label">已有实现或指引提交，非全部验收闭环</div></div>
       <div class="stat amber"><div class="value">1</div><div class="label">按路线图暂缓（qgate）</div></div>
-      <div class="stat green"><div class="value">643</div><div class="label">最后一轮全量测试通过</div></div>
+      <div class="stat green"><div class="value">647</div><div class="label">v0.5.13 历史发布测试记录；本轮未重跑</div></div>
     </div>
-    <p class="track-summary">每项都使用虚构需求或故障样本做了实战验证；前 3 项涉及真实托管交付的能力使用了 <code>superflow eval</code>，结果为 <strong>excellent</strong>。Hook、文档、地图和清理扫描属于确定性 / advisory 能力，使用真实入口、负向样本、全量测试和安装诊断验证，不把评分器替代语义验收。</p>
+    <p class="track-summary">历史材料中第 2/3 项明确列有真实 manual Run 与 <code>eval: excellent</code>，本轮没有重新读取这些 Run 的完整证据，不扩大为“前 3 项全部优秀”。其余按脚本样本、结构检查、指引落地或原型区分。测试通过、脚本注入、宿主真实执行、模型行为稳定和收益对照，是不同层级的证据。</p>
     <div class="table-wrap"><table><thead><tr><th>#</th><th>吸收项</th><th>提交</th><th>虚构需求 / 样本</th><th>验证与结果</th></tr></thead><tbody>
-      <tr><td>1</td><td>Skill Contract / Registry</td><td><code>6a7b64c</code></td><td>新增冲突 Skill、缺镜像、孤儿路由</td><td>15/15 契约通过；负向冲突报告；真实托管样本；全量回归</td></tr>
+      <tr><td>1</td><td>Skill Contract / Registry</td><td><code>6a7b64c</code></td><td>字段、同词冲突、缺镜像、孤儿路由</td><td>历史 15/15，后续 manifest 为 16 项；结构测试存在。未证实语义触发互斥、状态 owner 唯一性或独立 eval 评分。</td></tr>
       <tr><td>2</td><td>确定性代码评审编排</td><td><code>cb0f2f5</code></td><td>多模块 Java + Mapper + SQL 变更</td><td>真实人工 Run <code>release_ready</code>；<code>superflow eval: excellent</code>；覆盖锚点与恢复验证</td></tr>
       <tr><td>3</td><td>Quick Path + Quick Spec</td><td><code>7a18610</code></td><td>邮箱校验小需求及 DB/API 高风险反例</td><td>真实 RED→GREEN；人工 Run <code>release_ready</code>；<code>superflow eval: excellent</code></td></tr>
-      <tr><td>4</td><td>Java 写码时护栏</td><td><code>328fd99</code></td><td>危险 Mapper 插值、Git 绕过、暂存密钥、Maven/Gradle 多模块</td><td>真实 PreToolUse/PostToolUse/Stop；危险 exit 2、安全 exit 0；10 次编辑 1 次编译</td></tr>
+      <tr><td>4</td><td>Java 写码时护栏</td><td><code>328fd99</code></td><td>危险 Mapper 插值、Git 绕过、暂存密钥、Maven/Gradle 多模块</td><td>脚本载荷模拟：危险 exit 2、安全 exit 0；编译命令次数用替身 wrapper 记录，不等于真实 Maven/Gradle 完整构建或宿主事件验收。</td></tr>
       <tr><td>5</td><td>行为不变简化收尾</td><td><code>e5c8b96</code></td><td>收敛重复 Git 命令解析</td><td>原有 7 个 Hook 故障样本未改断言继续通过；中英文 verify 纪律同步</td></tr>
       <tr><td>6</td><td>失败循环观测</td><td><code>448cf0a</code></td><td>连续编辑、连续工具失败、会话隔离</td><td>第 6 次编辑 / 第 3 次失败各提醒一次；成功清零；SessionEnd 清理；恒退 0</td></tr>
-      <tr><td>7</td><td>CONTEXT / ADR 三条件</td><td><code>3d68ce0</code></td><td>站点术语、存储策略 ADR、缺字段与普通决定</td><td><code>context-audit</code> PASS / warning / 修复项分流；不写状态</td></tr>
-      <tr><td>8</td><td>Seam / Design-It-Twice</td><td><code>dd474ef</code></td><td>跨模块存储接口两种方案</td><td>模板要求 A/B、seam、adapter、测试面、复用证据与选择；文档门禁通过</td></tr>
-      <tr><td>9</td><td>文档落位与策展</td><td><code>4e4e94a</code></td><td>流浪 Markdown、失效代码锚点、琐碎文档</td><td><code>docs-audit</code> 输出年龄/锚点/入链/四态；落位 Hook 恒退 0；不移动删除</td></tr>
-      <tr><td>10</td><td>评审回应纪律</td><td><code>3be42a3</code></td><td>单调用适配器被建议泛化成缓存层</td><td>先验证、有效/错误分支、YAGNI 调用点检查；规则不自动回写</td></tr>
-      <tr><td>11</td><td>BMAD 选择性职责路由</td><td><code>d90992e</code></td><td>Host 改代码、Executor 改合同、Runner 判业务、嵌套 Supervisor</td><td>三角色 owner 矩阵与互斥边界写入中英文 pipeline；无第二状态机</td></tr>
-      <tr><td>12</td><td>地图检索对照实验</td><td><code>a77caaa</code></td><td>Controller / Mapper 图谱 Top-K 召回</td><td><code>map-audit</code> 输出 full / Top-K / skeleton；缺图谱明确 fallback；不修改图谱</td></tr>
-      <tr><td>13</td><td>全仓清理候选扫描</td><td><code>1f83e28</code></td><td>重复 Service、TODO 热点、大文件</td><td><code>cleanup-audit</code> 带证据与路由；<code>modified=false</code>；不自动重构</td></tr>
+      <tr><td>7</td><td>CONTEXT / ADR 三条件</td><td><code>3d68ce0</code></td><td>术语正则、标题存在、缺标题及无 ADR</td><td><code>context-audit</code> 结构样本可运行；空标题也可通过，尚未完成“难逆转且有权衡”的语义验收，见 A06。</td></tr>
+      <tr><td>8</td><td>Seam / Design-It-Twice</td><td><code>dd474ef</code></td><td>原计划：跨模块存储接口 A/B</td><td>指引与中文模板有实现；英文模板缺卡片。本轮未核实已保存的真实 A/B 设计、删除测试或模型执行轨迹。</td></tr>
+      <tr><td>9</td><td>文档落位与策展</td><td><code>4e4e94a</code></td><td>流浪 Markdown、失效锚点、小文档</td><td>基础样本测试存在；未实现 redundant 分支，年龄与入链口径待修。未达到四态策展验收。</td></tr>
+      <tr><td>10</td><td>评审回应纪律</td><td><code>3be42a3</code></td><td>原计划：错误“泛化/缓存”建议</td><td>中英文指引已落地；本轮没有找到对应的可重放模型实测证据，需 A03 补验。</td></tr>
+      <tr><td>11</td><td>BMAD 选择性职责路由</td><td><code>d90992e</code></td><td>原计划：四种角色越权</td><td>owner 矩阵已落地；既有托管保护有测试，新增指引的行为收益尚未隔离验证。</td></tr>
+      <tr><td>12</td><td>地图检索对照实验</td><td><code>a77caaa</code></td><td>两个图谱节点 + 缺图谱</td><td>只读原型；full 为计数，skeleton 为 path 截取；没有三种真实上下文、Recall@K 或正确率实验。</td></tr>
+      <tr><td>13</td><td>全仓清理候选扫描</td><td><code>1f83e28</code></td><td>重复文件名与 TODO 的一个 fixture</td><td>只读机械线索；未提供 file#symbol、消费者、行为不变量与覆盖清单。大文件分支也不能由该 fixture 证明。</td></tr>
     </tbody></table></div>
     <div class="callout"><strong>暂缓项：</strong>qgate 全套静态分析裁决。它需要任务快照、分析器 adapter、baseline、policy、缓存和控制面；当前已有 Hook、verify 和托管状态机尚无稳定漏报/误报证据，因此保留为实验触发项，不计入已吸收数量。</div>
   </section>
 
   <section class="section">
-    <h2>来源与当前关系</h2>
+    <h2>第一轮规划时的来源关系（历史）</h2>
     <div class="table-wrap"><table><thead><tr><th>来源</th><th>主要贡献</th><th>Superflow 当前状态</th><th>处理决定</th></tr></thead><tbody>
       <tr><td>ECC</td><td>Skill 分层、路径规则、Hook 治理、安装与诊断意识</td><td>已有 Skill / Hook / docs gate，但缺少完整 Skill registry</td><td><span class="tag p0">P0</span> 优先做治理</td></tr>
       <tr><td>BMAD</td><td>角色和菜单路由</td><td>已有 Host / Executor / Reviewer、状态机和阶段路由</td><td><span class="tag p1">选择性</span> 只取 owner/routing</td></tr>
@@ -179,37 +329,48 @@ a{color:var(--cyan);text-decoration:none} a:hover{text-decoration:underline}
   </section>
 
   <section class="section">
-    <div class="callout"><strong>建议的下一步</strong><br />先做 P0 的 Skill Contract、确定性代码评审和 quick path 设计，选一个跨模块 Java 需求做对照验证；随后再把 MyBatis / commit / compile Hooks 接入。只有 P0 验证证明流程没有变重且首轮评审质量提高，才进入 P1。</div>
+    <div class="callout"><strong>现在建议的下一步</strong><br />按第二轮 A01 → A02 → A03 的顺序先补迁移所有权、真实宿主合同与 Skill 行为评测，再推进 A04–A07；A08–A10 只在固定样本显示收益后吸收。本轮仅规划，不安装新依赖、不运行新模型任务、不修改产品代码。</div>
   </section>
 
-  <footer class="footer"><span>Superflow × ake-harness absorption roadmap</span><span>文档状态：draft · 只读规划，不自动修改运行逻辑</span></footer>
+  <footer class="footer"><span>Superflow · 第一轮历史 + 第二轮证据复核</span><span>2026-09-25 · 基线 dab49d4 · 仅规划，10 项候选未实施</span></footer>
 </div>
 <script>
 const buttons=[...document.querySelectorAll('.control')];
 const cards=[...document.querySelectorAll('.absorb')];
-const storageKey='superflow-absorption-roadmap-v2';
+// v2 remains untouched; v3 separates historical claims from the new audit.
+const storageKey='superflow-absorption-roadmap-v3';
 let saved={};
 try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')}catch(_){saved={}}
 const shippedDefaults={
   'Skill Contract / Registry':{
-    status:'verified',
+    status:'implemented',
     evidence:'skill-audit --strict：15/15 contracts，英文镜像 0 缺口；虚构 Skill 冲突负向测试；603 项回归'
   },
   '确定性代码评审编排':{
-    status:'verified',
+    status:'sampled',
     evidence:'多模块虚构需求 task-20260923120458-0a44d0b4：3/3 文件归属、high 风险、DONE/BLOCKED 正反验证；真实 manual Run release_ready，eval excellent（单样本）'
   },
   'Quick Path + Quick Spec':{
-    status:'verified',
+    status:'sampled',
     evidence:'邮箱校验虚构需求 task-20260923153455-19912f37：真实 seam、Git baseline、批准摘要与 stale 检查；API/DB/并发/支付 STOP；RED→GREEN；manual Run release_ready，eval excellent（单样本）'
-  }
+  },
+  'Java 写码时护栏':{status:'sampled',evidence:'脚本载荷与 wrapper 样本；宿主完整触发矩阵待 A02'},
+  '行为不变简化收尾':{status:'sampled',evidence:'同一组 Hook 测试未改断言；Skill 长期行为待 A03'},
+  '失败循环观测':{status:'sampled',evidence:'会话/阈值脚本样本；宿主能力与代价待 A02'},
+  'CONTEXT / ADR 三条件':{status:'partial',evidence:'空标题可过、三条件语义未验；见 A06'},
+  'Seam / Design-It-Twice':{status:'partial',evidence:'英文模板不齐、实际双方案证据待补；见 A03/A06'},
+  '文档落位与策展':{status:'partial',evidence:'mtime、入链计数与 redundant 分支缺口；见 A06'},
+  '评审回应纪律':{status:'implemented',evidence:'指引落地；真实反馈压力场景待 A03'},
+  'BMAD 选择性职责路由':{status:'implemented',evidence:'owner 指引落地；隔离行为评测待 A03'},
+  '地图检索对照实验':{status:'partial',evidence:'节点匹配原型；三种上下文与召回实验待 A08'},
+  '全仓清理候选扫描':{status:'partial',evidence:'同名/长度/TODO 线索；消费者与不变量待 A05/A08'}
 };
 const persist=()=>{try{localStorage.setItem(storageKey,JSON.stringify(saved))}catch(_){}}
-const statusNames={planned:'待评估',designing:'设计中',implemented:'已实现',verified:'已验证',hold:'暂缓',rejected:'不吸收'};
+const statusNames={planned:'待评估',designing:'设计中',implemented:'已落地待补验',partial:'部分原型',sampled:'有限样本验证',verified:'完整验收',hold:'暂缓',rejected:'不吸收'};
 const updateSummary=()=>{
   const counts={};
-  cards.forEach(card=>{const id=card.querySelector('h3').textContent.trim();const state=saved[id]?.status||(card.dataset.priority==='暂缓'?'hold':'planned');counts[state]=(counts[state]||0)+1});
-  document.getElementById('track-summary').textContent=`本地记录：已验证 ${counts.verified||0}/${cards.length} · 已实现 ${counts.implemented||0} · 设计中 ${counts.designing||0} · 暂缓 ${counts.hold||0}。正式验收仍以 Git 提交、测试输出和代表性任务报告为准。`;
+  cards.forEach(card=>{const id=card.querySelector('h3').textContent.trim();const state=saved[id]?.status||shippedDefaults[id]?.status||(card.dataset.priority==='暂缓'?'hold':'planned');counts[state]=(counts[state]||0)+1});
+  document.getElementById('track-summary').textContent=`第一轮本地记录：完整验收 ${counts.verified||0} · 有限样本 ${counts.sampled||0} · 已落地待补验 ${counts.implemented||0} · 部分原型 ${counts.partial||0} · 暂缓 ${counts.hold||0}。第二轮 A01–A10 均未实施；下拉标记不替代真实验收证据。`;
 };
 cards.forEach(card=>{
   const id=card.querySelector('h3').textContent.trim();

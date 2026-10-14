@@ -37,6 +37,99 @@ investigate source-resolvable questions autonomously.
    browser rendering. Field keys, HTTP 200, empty lists and historical NULL alone are insufficient.
    Mutation cases also check write-then-read behavior and forbidden side effects.
 
+## Investigate source before freezing design
+
+This section owns source investigation, key-claim rechecks and current-contract convergence.
+Extend the existing source audit and coverage; do not add a parallel claim ledger. Apply to full
+existing-system document tasks. Exclude copy-only, mechanical and lightweight tasks independent
+of existing behavior. New applicable contracts set `source_investigation: required` under
+applicability in `.openspec.yaml` and `sourceInvestigation: "required"` in coverage. The marker
+uses the existing handoff hash. This reserved key uses block-mapping scalars; quotes and inline
+comments are accepted. Unsupported flow/block-scalar forms fail explicitly and require normalization,
+never silently disable the check. Removing it or refreshing hashes cannot close investigation.
+Legacy v1 receipts keep their original boundary and cannot claim this new check; refreezing an
+applicable contract requires investigation.
+
+### Generation: derive conclusions from actual implementations
+
+Before design/tasks/tests, conduct targeted research for the current feature:
+
+1. Search existing modules, methods, callers, tests and dependencies. Maps only locate; read the
+   implementation and callers. Trace from actual registration/mounting or user action. A definition,
+   similar name or commented annotation does not prove activation.
+2. Reverse-trace all writers, readers/filters, Mapper statements and field types/capacity/defaults/
+   indexes. Record scope, actual search commands and missing paths. When source is insufficient,
+   use available read-only DB evidence; do not assume source DDL equals production schema.
+3. Read reusable method bodies for database re-reads dropping prepared fields, fee/quota side
+   effects, swallowed errors, retained outer transactions, proxies/self-invocation and lock ordering.
+   Give concrete counterexamples for zero affected rows, ordering, duplication, pagination termination
+   and current/next-run boundaries.
+4. Extend the existing `source-code-audit.md` freeze card with conclusion, actual source excerpt,
+   derivation, falsifying condition and reuse/conflict decision. Unknowns are SOURCE_INVESTIGATION:
+   keep investigating, never ask the user or mark VERIFIED. Only new business choices become
+   OWNER_DECISION. Hashes, file lists and "analyzed" cannot replace derivation.
+5. Assign one current prose owner: spec for behavior, api/database-contract for interfaces/fields,
+   design/technical design for HOW, tests for verification. Other artifacts reference canonical sections
+   and stable R/E/C/task IDs. Replace current sections on revision; move superseded reasoning, scope
+   and verdicts into explicitly separate history. Update traceability, Prompts and coverage when
+   entries/tasks change; independent review checks stale references against current scope.
+
+### Review: independently recheck key conclusions
+
+The source-contract reviewer builds scope from original requirements and current source without
+receiving generation-chat reasoning. Select representative key claims by risk, at least one. Recheck
+all relevant claims about conflicts, unmounted entries, activation scope, reuse effects, field constraints,
+transactions or loop termination; an easy claim cannot stand in for named risks. Read actual callers,
+callees/Mapper/DDL and try to falsify conclusions. Record actual evidence, counterexamples and reasoning.
+Structural PASS proves declaration/reference consistency only. Independent checks are not signatures
+of model honesty or complete source understanding.
+
+Use existing `coverage.entries[].investigation`:
+
+```json
+{"status":"VERIFIED","canonical":{"sourceRef":"S_AUDIT","lineStart":12,"lineEnd":12,"text":"Current audit card text"},
+ "evidence":[{"sourceRef":"S_CODE","lineStart":20,"lineEnd":21,"text":"Exact text of those two source lines"}],
+ "counterexample":"The activation conclusion fails if the actual caller is unregistered"}
+```
+
+canonical references a contract source; evidence references code sources via existing sources IDs/hashes.
+Line numbers are one-based; text quotes entire selected lines (only outer whitespace and newline style
+are normalized). Keep excerpts short. Investigate EXCLUDED/VERIFY_EXISTING entries too; decisions
+reference one entry investigation instead of copying it. FIX decisions add `taskIds:["2.1"]` matching
+actual checkbox IDs in tasks.md; progress changes do not change IDs. The task index reuses the
+distributed Python report linter body parser. Task mode classifies indented code versus real nested
+tasks by list containers before erasing blocks, excludes root/list-local fences and HTML comments,
+and rejects duplicate IDs. Ordinary reports retain the default parsing mode. Literal-source roles
+must be code|contract even when checkCode=false.
+Missing Python/parser produces a repair diagnostic, never a raw-file regex fallback. Move historical
+tasks out of current tasks.md. The source-contract round adds
+`sourceChecks:[{entryId,result,evidence,rationale,counterexample}]` using the same source anchors.
+result is CONFIRMED / CONTRADICTED / SOURCE_INVESTIGATION; anything except CONFIRMED prevents
+readiness. Repair canonical prose and independently recheck conflicts, never just refresh hashes.
+Scripts check shape, references, text identity and task IDs; they cannot judge selection sufficiency,
+reasoning validity or reviewer independence.
+
+### Explicit field-capacity mappings
+
+After verifying a literal writes directly to a field, add `valueConstraints` to the existing entry:
+
+```json
+[{"kind":"string-capacity","field":"summary",
+  "schema":{"sourceRef":"S_DDL","lineStart":8,"lineEnd":8,"text":"`summary` varchar(20) DEFAULT NULL,"},
+  "values":[{"sourceRef":"S_CODE_OR_DESIGN","lineStart":30,"lineEnd":30,
+             "text":"const state = \"START_PENDING\";","value":"START_PENDING"}]}]
+```
+
+This narrow check follows an explicit mapping; it never scans a corpus to guess business relationships.
+Schema must reference a code source containing one CHAR/VARCHAR column declaration. Values reference
+code or contract sources with directly quoted/backticked ASCII literals. The script reads mapped text
+and rejects over-capacity literals. Expressions, escapes, charset conversion, unresolved columns or
+unknown runtime schema stay SOURCE_INVESTIGATION for Agent research, not invented automatic proof.
+Mapping relevance, complete value coverage and deployed DDL applicability still need independent review;
+a short literal does not prove an actual write. Implementation editing Hooks retain checkCode=false source
+drift allowance; new dispatch/coding-ready rechecks current source anchors/hashes. Historical valid test
+evidence is neither renamed untested nor used to prove a new source version semantically complete.
+
 ## Receipt extension
 
 Add the following `coverage` object to the existing three-round review; preserve its other

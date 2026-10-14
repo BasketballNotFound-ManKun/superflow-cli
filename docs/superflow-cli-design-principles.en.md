@@ -100,6 +100,31 @@ backed up, and provenance-aware while preserving unknown and user-owned assets.
 Keep a change only after positive and negative examples, both host installs,
 and actual cost evidence support it.
 
+### External-project verification isolation
+
+External business projects are verification targets, not Superflow source,
+dependencies or a built-in case library. By default reuse existing implementation
+and acceptance entries, verifying only authorized scope. Reimplementation, business
+repairs or environment expansion require an explicit user request. Any authorized
+replay uses an independent checkout/worktree outside this repository.
+
+Keep raw cases, conversations, detailed evaluations, logs, screenshots, XML,
+probes and business data in a task-owned external directory. Repository evaluations
+retain only de-identified mechanism issues, baselines, hypotheses, synthetic
+positive/negative cases, result scope, conclusions and rollback conditions.
+Project identities, real classes/endpoints/tables, devices, business commit hashes
+and personal absolute paths must not become templates, test names or distributed
+assets. Use minimal synthetic fixtures, never copied business projects,
+dependencies, configuration or data. Neither gitignore nor excluding docs from
+publication substitutes for isolation.
+
+Before closeout inspect tracked/untracked files, canonical asset content, and npm
+package files/content separately. Move leaked case materials outside and regenerate
+affected build outputs. Keep only proven general rules under existing owners; add
+no business-specific Skill, Hook, blacklist or runtime dependency. Apply this to
+Codex/Claude, both languages and project/global scopes without authorizing shared
+resource changes or unrelated business repository edits.
+
 ## 5. Installation and Upgrade Closure
 
 Source install, npm install, and hook auto-upgrade install the same complete

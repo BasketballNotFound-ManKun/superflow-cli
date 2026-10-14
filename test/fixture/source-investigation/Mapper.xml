@@ -1,0 +1,1 @@
+<update id="setZero">UPDATE attempt SET amount=0 WHERE id=#{id} AND status=1</update>
