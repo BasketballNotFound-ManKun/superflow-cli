@@ -215,8 +215,10 @@ function readReviewRounds(root) {
   }
 }
 
+// 完整输出子门禁失败详情，不再截断——截断会掩盖大量 issues，
+// 迫使调用方多轮重跑才能集齐缺失清单。
 function tail(value) {
-  return String(value).trim().split("\n").slice(-4).join(" | ").slice(0, 800);
+  return String(value).trim();
 }
 
 function fail(

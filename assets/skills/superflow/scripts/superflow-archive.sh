@@ -82,6 +82,56 @@ annotate_frontmatter() {
   mv "$tmp" "$file"
 }
 
+# P3：归档时生成过程凭证摘要（业务无关）。
+# 活合同（proposal/spec/design/api/tests/release-sql）随目录完整保留；
+# 过程凭证（coverage/评审 rounds）压缩为摘要供追溯，避免大体量 JSON
+# 长期占据主工作区阅读成本。
+write_evidence_summary() {
+  local archived_dir="$1"
+  local review_file="$archived_dir/.sdd/reviews/document-review.json"
+  [[ -f "$review_file" ]] || return 0
+  python3 - "$review_file" "$archived_dir" <<'PYINNER'
+import json, sys, datetime
+review_path, archived_dir = sys.argv[1], sys.argv[2]
+try:
+    review = json.load(open(review_path, encoding="utf-8"))
+except Exception as exc:
+    print(f"evidence summary skipped: {exc}")
+    sys.exit(0)
+coverage = review.get("coverage") or {}
+rounds = review.get("rounds") or []
+findings_total = sum(len(r.get("findings") or []) for r in rounds)
+findings_closed = sum(
+    1 for r in rounds for f in (r.get("findings") or []) if f.get("status") == "closed"
+)
+summary = {
+    "schemaVersion": "superflow.evidence-summary.v1",
+    "archivedAt": datetime.datetime.utcnow().isoformat() + "Z",
+    "handoffHash": review.get("handoffHash"),
+    "projectRoot": review.get("projectRoot"),
+    "verdict": review.get("verdict"),
+    "review": {
+        "roundCount": len(rounds),
+        "lenses": [r.get("lens") for r in rounds],
+        "findingsTotal": findings_total,
+        "findingsClosed": findings_closed,
+    },
+    "coverage": {
+        "sources": len(coverage.get("sources") or []),
+        "requirements": len(coverage.get("requirements") or []),
+        "entries": len(coverage.get("entries") or []),
+        "cases": len(coverage.get("cases") or []),
+        "decisions": len(coverage.get("decisions") or []),
+    },
+    "fullEvidence": ".sdd/reviews/document-review.json",
+}
+out = f"{archived_dir}/evidence-summary.json"
+with open(out, "w", encoding="utf-8") as fh:
+    json.dump(summary, fh, ensure_ascii=False, indent=2)
+print(f"evidence summary written: {out}")
+PYINNER
+}
+
 annotate_archive_docs() {
   local archive_name="$1"
   local design_doc technical_design plan design_path technical_design_path plan_path
@@ -217,9 +267,11 @@ if [[ "$CHANGE_DIR" == "$PROJECT_ROOT/openspec/changes/$CHANGE_NAME" ]] && comma
   CHANGE_DIR="$(cd "$archived_dir" && pwd)"
   annotate_archive_docs "$ARCHIVE_NAME"
   "$STATE" transition "$archived_dir" archived
+  write_evidence_summary "$archived_dir"
   printf 'archived_dir: %s\n' "$archived_dir"
 else
   annotate_archive_docs "$ARCHIVE_NAME"
   "$STATE" transition "$CHANGE_DIR" archived
+  write_evidence_summary "$CHANGE_DIR"
   printf 'archived_dir: %s\n' "$CHANGE_DIR"
 fi

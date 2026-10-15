@@ -427,6 +427,7 @@ export function validateCoverage(root, review, issues, checkCode = true, changeD
     issues,
     checkCode,
     changeDir,
+    changeDir,
   );
 }
 
@@ -686,13 +687,19 @@ function validateSourceInvestigation(
 }
 
 function resolveTasksMd(repoRoot, changeDir) {
-  // tasks.md 位于 change 目录（可能在仓库子目录的工作区里），不在仓库根。
+  // repoRoot 在本函数语境下即 change 目录（validateCoverage 的 root 语义）。
+  const direct = path.join(repoRoot, "tasks.md");
+  if (fs.existsSync(direct)) return direct;
   if (changeDir) {
-    const direct = path.join(changeDir, "tasks.md");
-    if (fs.existsSync(direct)) return direct;
+    const inChange = path.join(changeDir, "tasks.md");
+    if (fs.existsSync(inChange)) return inChange;
+    const declared = readDeclaredProjectRoot(changeDir);
+    if (declared) {
+      const declaredTasks = path.join(declared, "openspec", "changes", path.basename(changeDir), "tasks.md");
+      if (fs.existsSync(declaredTasks)) return declaredTasks;
+    }
   }
-  const fallbackBase = readDeclaredProjectRoot(changeDir) ?? repoRoot;
-  return path.join(fallbackBase, "openspec", "changes", path.basename(changeDir ?? ""), "tasks.md");
+  return direct;
 }
 
 export function checkReceipt(root, { checkCode = false, changeDir } = {}) {
@@ -721,8 +728,10 @@ export function checkReceipt(root, { checkCode = false, changeDir } = {}) {
       fs.readFileSync(path.join(root, reviewPath), "utf8"),
     );
     validateCoverage(root, review, issues, checkCode, changeDir);
-  } catch {
-    issues.push("Coding Ready 凭证或当前合同不可验证");
+  } catch (receiptError) {
+    issues.push(
+      `Coding Ready 凭证或当前合同不可验证（${receiptError?.message ?? receiptError}）`,
+    );
   }
   return issues;
 }
@@ -734,13 +743,8 @@ if (
   // source.path 相对仓库根；change 目录可能在仓库子目录（如 doc/openspec/changes），
   // 向上探测仓库根标记，找不到时回退 change 目录本身。
   const changeDirArg = process.argv[2] ? path.resolve(process.argv[2]) : process.argv[2];
-  const declaredRoot = readDeclaredProjectRoot(changeDirArg);
-  function detectRepoRoot(fromDir) {
-    if (declaredRoot) return declaredRoot;
-    // fallback：openspec 默认布局 <repo>/openspec/changes/<name>
-    return path.resolve(fromDir, "..", "..", "..");
-  }
-  const root = changeDirArg ? detectRepoRoot(changeDirArg) : changeDirArg;
+  // coverage 契约：sources path 相对 change 目录，root 即 change 目录。
+  const root = changeDirArg;
   const issues = root
     ? checkReceipt(path.resolve(root), {
         checkCode: process.argv.includes("--check-sources"),

@@ -26,6 +26,17 @@ PHASE="${2:-}"
 MODE="${3:-}"
 CHANGE_DIR_INPUT="${CHANGE_DIR%/}"
 
+# --explain：输出全部文案门禁期望关键词模式（业务无关），任意参数位置可触发。
+if [[ " $* " == *" --explain "* ]]; then
+  printf 'Guard gate keyword patterns (grep -Eiq, case-insensitive).\n'
+  grep -n "require_grep " "$BASH_SOURCE" | grep -v "require_grep()"
+  printf '\nNon-grep gates (custom logic):\n'
+  printf '  owner-decision: design.md with behavior keywords but no owner-decided marker (WARN by default; SUPERFLOW_OWNER_DECISION_ENFORCE=1 blocks)\n'
+  printf '  audit verification: source-code-audit.md must declare a verification-command column (same enforce switch)\n'
+  printf '  scenario consistency: spec THEN lines must not mix exclusive behavior verbs like skip/release vs reject (contradiction blocks by default)\n'
+  exit 0
+fi
+
 [[ -n "$CHANGE_DIR" && -n "$PHASE" ]] || {
   usage
   exit 1
@@ -54,6 +65,65 @@ require_canonical_change_layout() {
 }
 
 require_canonical_change_layout
+
+# P1：行为级决策必须留 owner 凭证（业务无关检查）。
+# design.md 提及错误码/兼容策略/拒绝/放行/默认值/API 行为等行为语义，
+# 但全文无 owner-decided 标记时：默认 WARN（灰度）；ENFORCE=1 阻断。
+require_owner_decision_design() {
+  local path="$1"
+  local target="$CHANGE_DIR/$path"
+  [[ -f "$path" ]] && target="$path"
+  [[ -f "$target" ]] || return 0
+  if grep -Eiq 'owner-decided|owner decided' "$target"; then
+    return 0
+  fi
+  if grep -Eiq '错误码|兼容策略|兼容行为|拒绝|放行|默认值|API 行为|error code|compatib.*policy|default value' "$target"; then
+    local msg="behavior-level decision keywords found without owner-decided marker in $path (ask the owner, then mark: owner-decided <date> <context>)"
+    if [[ "${SUPERFLOW_OWNER_DECISION_ENFORCE:-0}" == "1" ]]; then
+      issues+=("$msg")
+    else
+      printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
+    fi
+  fi
+}
+
+# P2：事实断言必须可复核——audit 存在时检查验证命令列；缺失 WARN/ENFORCE 阻断。
+require_audit_verification_command() {
+  local path="source-code-audit.md"
+  local target="$CHANGE_DIR/$path"
+  [[ -f "$path" ]] && target="$path"
+  [[ -f "$target" ]] || return 0
+  if grep -Eiq '验证命令|复核命令|验证方式|verification command' "$target"; then
+    return 0
+  fi
+  local msg="source-code-audit.md lacks a verification-command column; fact assertions must record HOW to re-verify"
+  if [[ "${SUPERFLOW_OWNER_DECISION_ENFORCE:-0}" == "1" ]]; then
+    issues+=("$msg")
+  else
+    printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
+  fi
+}
+
+# P1 补充：行为合同（specs）场景句矛盾检测（业务无关）。
+# 同一 THEN 行内互斥行为动词共现（如"跳过/放行/兼容行为/按原逻辑"与
+# "拒绝/不得/禁止"）多为片段替换式坏改写的痕迹——修订场景句必须整句
+# 重写。默认 WARN；SUPERFLOW_OWNER_DECISION_ENFORCE=1 阻断。
+require_scenario_consistency() {
+  local dir="$CHANGE_DIR/specs"
+  [[ -d "$dir" ]] || dir="specs"
+  [[ -d "$dir" ]] || return 0
+  local hits
+  # grep 无匹配时 exit 1，set -e 下局部赋值会终止脚本——必须 || true
+  hits=$(grep -rnE '\*\*THEN\*\*.*((跳过|放行|兼容行为|按原逻辑).*(拒绝|不得|禁止)|(拒绝|不得|禁止).*(跳过|放行|兼容行为|按原逻辑))' "$dir" 2>/dev/null || true)
+  if [[ -n "$hits" ]]; then
+    local msg="scenario THEN contains contradictory behavior verbs (fragment-replacement artifact? rewrite the whole sentence): ${hits}"
+    if [[ "${SUPERFLOW_OWNER_DECISION_ENFORCE:-1}" == "1" ]]; then
+      issues+=("$msg")
+    else
+      printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
+    fi
+  fi
+}
 
 require_file() {
   local path="$1"
@@ -754,6 +824,9 @@ case "$PHASE" in
     require_file api.md
     require_spec_doc
     require_file design.md
+    require_owner_decision_design design.md
+    require_scenario_consistency
+    require_audit_verification_command
     require_file tasks.md
     require_file tests.md
     require_file traceability-matrix.md

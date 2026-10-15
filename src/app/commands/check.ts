@@ -116,7 +116,7 @@ function reportGateFailure(
   if (json) {
     const stderr = (error as { stderr?: string | Buffer })?.stderr;
     const rawDetail = stderr
-      ? String(stderr).trim().slice(-2000)
+      ? String(stderr).trim()
       : error instanceof Error
         ? error.message
         : "检查失败";

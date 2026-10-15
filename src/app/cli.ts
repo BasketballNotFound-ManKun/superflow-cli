@@ -409,6 +409,19 @@ program
   });
 
 program
+  .command("init-docs")
+  .description(
+    "Generate business-agnostic SDD document skeletons for a change (fill-in placeholders, gate-ready boilerplate)",
+  )
+  .argument("<change-name>", "Change name under the openspec changes root")
+  .option("--path <path>", "Project path")
+  .option("--force", "Overwrite existing files")
+  .action(async (changeName, options) => {
+    const { initDocsCommand } = await import("./commands/init-docs.js");
+    initDocsCommand(changeName, options);
+  });
+
+program
   .command("map-audit")
   .description(
     "Compare Understand Anything map context modes without replacing the map",
