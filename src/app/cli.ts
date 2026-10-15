@@ -11,8 +11,7 @@ const __dirname = dirname(__filename);
 const pkgPath = join(__dirname, "..", "..", "package.json");
 const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
 
-// 启动时后台检查新版本（非阻塞，不 await）
-checkForUpdates(pkg.version);
+// 可选升级提示只在正常命令成功后执行，帮助/版本直接退出时不启动后台子进程。
 
 const program = new Command();
 const helpText = cliText(resolveCliLanguage());
@@ -410,15 +409,17 @@ program
 
 program
   .command("init-docs")
-  .description(
-    "Generate business-agnostic SDD document skeletons for a change (fill-in placeholders, gate-ready boilerplate)",
-  )
-  .argument("<change-name>", "Change name under the openspec changes root")
-  .option("--path <path>", "Project path")
-  .option("--force", "Overwrite existing files")
+  .description(helpText.initDocsDescription)
+  .argument("<change-name>", helpText.initDocsChangeArgument)
+  .option("--path <path>", helpText.initDocsPathOption)
+  .option("--force", helpText.initDocsForceOption)
   .action(async (changeName, options) => {
     const { initDocsCommand } = await import("./commands/init-docs.js");
-    initDocsCommand(changeName, options);
+    initDocsCommand(changeName, {
+      projectPath: options.path,
+      force: options.force,
+      language: resolveCliLanguage(),
+    });
   });
 
 program
@@ -532,4 +533,5 @@ program
     });
   });
 
-program.parse();
+await program.parseAsync();
+if (!process.exitCode) await checkForUpdates(pkg.version);

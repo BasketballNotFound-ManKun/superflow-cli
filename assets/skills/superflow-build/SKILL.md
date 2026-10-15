@@ -31,6 +31,22 @@ superflow-contracts，缺环境记录阻塞。普通 OpenSpec 使用项目自己
 
    Always announce: "Using change: <name>" and how to override (e.g., `/opsx:apply <other>`).
 
+**Superflow pre-coding gate (before reading apply readiness as permission)**
+
+   Before the first source edit or initial implementation dispatch for a Superflow
+   change, including one with missing `.sdd/state.yaml`, run
+   `superflow check <change> --level coding-ready`. A failure means `Blocked for docs`;
+   return to the existing document owner using
+   [Document Delivery Exit](../superflow/SKILL.md#document-delivery-exit).
+   Do not fall back to native OpenSpec apply readiness or treat missing Superflow
+   documents as coding tasks. A passing OpenSpec status alone is insufficient.
+   When resuming implementation already admitted by a valid receipt, use the
+   existing `superflow-review-coverage.mjs <change-dir>` receipt check without
+   `--check-sources`, as source-edit hooks do. It checks frozen contracts while
+   allowing intended implementation code changes; do not rerun strict document
+   readiness solely because source code changed. Contract drift returns to its
+   document owner for review and a new receipt before the affected work continues.
+
 2. **Check status to understand the schema**
    ```bash
    openspec status --change "<name>" --json

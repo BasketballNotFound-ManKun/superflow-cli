@@ -20,13 +20,21 @@ afterEach(() => {
 });
 
 describe("resolveChangesRoot", () => {
+  it("显式工作区缺 changes 时也不能回退默认目录", () => {
+    mkdirSync(path.join(tmp, "openspec", "changes", "demo"), { recursive: true });
+    const selected = path.join(tmp, "selected");
+    process.env.SUPERFLOW_OPENSPEC_DIR = selected;
+    expect(resolveChangesRoot(tmp)).toBe(path.join(selected, "changes"));
+    expect(resolveChangeDirByName(tmp, "demo")).toBe(path.join(selected, "changes", "demo"));
+  });
+
   it("默认位置：<repo>/openspec/config.yaml + changes", () => {
     mkdirSync(path.join(tmp, "openspec", "changes", "demo"), { recursive: true });
     writeFileSync(path.join(tmp, "openspec", "config.yaml"), "schema: spec-driven\n");
     expect(resolveChangesRoot(tmp)).toBe(path.join(tmp, "openspec", "changes"));
   });
 
-  it("子目录工作区：<repo>/doc/openspec（MPGS 场景）", () => {
+  it("子目录工作区：<repo>/doc/openspec（嵌套工作区）", () => {
     mkdirSync(path.join(tmp, "doc", "openspec", "changes", "demo"), { recursive: true });
     writeFileSync(path.join(tmp, "doc", "openspec", "config.yaml"), "schema: spec-driven\n");
     expect(resolveChangesRoot(tmp)).toBe(path.join(tmp, "doc", "openspec", "changes"));
@@ -57,6 +65,14 @@ describe("resolveChangesRoot", () => {
 });
 
 describe("resolveChangeDirByName", () => {
+  it("选定工作区缺少 change 时禁止退回其他工作区", () => {
+    const selected = path.join(tmp, "doc", "openspec");
+    mkdirSync(path.join(selected, "changes"), { recursive: true });
+    mkdirSync(path.join(tmp, "openspec", "changes", "demo"), { recursive: true });
+    process.env.SUPERFLOW_OPENSPEC_DIR = selected;
+    expect(resolveChangeDirByName(tmp, "demo")).toBe(path.join(selected, "changes", "demo"));
+  });
+
   it("子目录工作区中的 change 可被解析", () => {
     mkdirSync(path.join(tmp, "doc", "openspec", "changes", "my-change"), { recursive: true });
     writeFileSync(path.join(tmp, "doc", "openspec", "config.yaml"), "schema: x\n");

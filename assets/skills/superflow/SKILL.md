@@ -3,6 +3,26 @@ name: superflow
 description: Superflow 用户总入口：分析需求、继续任务、实施、验证或归档。根据用户目标选择现有流程，无需用户判断阶段和任务规模。
 ---
 
+## Document Delivery Exit
+
+OpenSpec applyRequires completion only finishes the base-artifact stage. For a
+full Superflow document request, continue within the same authorization through
+`$superflow-contracts` → `$superflow-design` → `$superflow-handoff`. Each phase
+owns its existing output contract; do not duplicate its file checklist here.
+`$superflow-handoff` owns implementation prompts, while the existing state
+scripts own transitions. Do not stop after OpenSpec and ask whether to fill in
+Superflow documents that the user already requested.
+
+Before announcing development readiness, run
+`superflow check <change> --level coding-ready` and inspect its real exit status
+and current `.sdd/readiness/coding-ready.json`. Only a successful current gate
+permits "Coding Ready". OpenSpec apply-ready, generated skeletons, a file-count
+check, `phase: implement`, or an old receipt cannot substitute for this result.
+Missing documents, unresolved findings, or failed checks mean `Blocked for docs`:
+report the actual missing items and continue their owning phase when possible.
+If the user requested documentation only, deliver the validated document package
+and stop before coding; readiness itself does not authorize implementation.
+
 ## 从这里开始
 
 用户只需描述目标和约束。根据下方规则选择阶段或专项能力，不要求用户先选技能、任务规模，或区分 OpenSpec 与 SDD。继续任务时先读当前状态和 handoff；只讨论或只生成文档的请求不授权编码或托管。选中内部技能后显式读取其说明。这是唯一用户总路由，脚本和恢复路径统一位于本目录。

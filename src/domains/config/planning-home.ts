@@ -61,8 +61,7 @@ function searchWorkspaceRoot(dir: string, depth: number): string | null {
 export function resolveChangesRoot(projectPath: string): string {
   const envDir = process.env.SUPERFLOW_OPENSPEC_DIR;
   if (envDir) {
-    const envChanges = path.resolve(envDir, CHANGES_DIR);
-    if (existsSync(envChanges)) return envChanges;
+    return path.resolve(envDir, CHANGES_DIR);
   }
 
   const defaultRoot = path.join(projectPath, OPENSPEC_DIR);
@@ -78,13 +77,11 @@ export function resolveChangesRoot(projectPath: string): string {
   return path.join(defaultRoot, CHANGES_DIR);
 }
 
-/** 解析 change 名称到实际目录；找不到时返回默认拼接路径（保持旧报错行为）。 */
+/** 解析选定工作区中的 change；缺失时由调用者报错，禁止跨工作区回退。 */
 export function resolveChangeDirByName(
   projectPath: string,
   changeName: string,
 ): string {
   const changesRoot = resolveChangesRoot(projectPath);
-  const changeDir = path.join(changesRoot, changeName);
-  if (existsSync(changeDir)) return changeDir;
-  return path.join(projectPath, OPENSPEC_DIR, CHANGES_DIR, changeName);
+  return path.join(changesRoot, changeName);
 }

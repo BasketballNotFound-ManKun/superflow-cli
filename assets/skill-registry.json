@@ -72,14 +72,15 @@
       "triggers": [
         "generate OpenSpec proposal"
       ],
-      "excludes": [],
+      "excludes": [
+        "Superflow document completion, Coding Ready approval, or implementation dispatch"
+      ],
       "outputs": [
         "proposal.md specs design.md tasks.md"
       ],
       "neighbors": [
         "superflow-clarify",
-        "superflow-design",
-        "superflow-handoff"
+        "superflow-contracts"
       ],
       "visibility": "internal"
     },

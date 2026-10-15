@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { Language } from "../../types.js";
+import { resolveRuntimeLanguage } from "../../domains/config/cli-help.js";
 import { resolveChangesRoot } from "../../domains/config/planning-home.js";
 
 /**
@@ -81,23 +83,12 @@ ${PLACEHOLDER} 现状与约束（源码锚点见 source-code-audit.md）。
 **替代方案**：${PLACEHOLDER}（否决原因）
 
 > 行为级决策（错误码语义/兼容策略/API 请求响应行为变化/拒绝或放行策略）
-> 必须单独标注 'owner-decided <日期>（拍板语境）' 标记作为 owner 凭证；
-> 文本禁止出现未拍板的"建议/可选"措辞（guard 检查，ENFORCE=1 阻断）。
+> 在正文独立记录：owner-decided: YYYY-MM-DD | owner: <姓名/角色> | decision: <已确认结论>。
+> 指引、引用、代码示例和未填占位符不构成确认；结论是否充分由 Agent 评审。
 
 ## Minimal Design Review 附注（复杂度减法评审）
 
-**新增项统计（Complexity budget / New-item counts）**：
-
-| 维度 | 新增数量 | 复用说明 |
-|---|---|---|
-| 表 | 0 | |
-| 字段 | 0 | |
-| API | 0 | |
-| Service/组件 | 0 | |
-| 缓存 | 0 | |
-| MQ/事件/异步 | 0 | |
-| 定时任务（scheduled job） | 0 | |
-| 兼容层（compatibility layer） | 0 | |
+新增项统计：表 0；字段 0；API 0；Service/组件 0；缓存 0；MQ/事件 0；定时任务 0；兼容层 0。按实际设计替换数量，不适用时保留 0。
 
 - 复杂度减法评审（Complexity Reduction Review）：PASS（复用既有模块、最简实现、拒绝项见上）。
 
@@ -357,13 +348,16 @@ function implementationPromptTemplate(): string {
 
 export function initDocsCommand(
   changeName: string,
-  options: { projectPath?: string; force?: boolean } = {},
+  options: { projectPath?: string; force?: boolean; language?: Language } = {},
 ): void {
+  const language = resolveRuntimeLanguage(options.language);
   const projectPath = path.resolve(options.projectPath ?? process.cwd());
   const changeDir = path.join(resolveChangesRoot(projectPath), changeName);
 
   if (!fs.existsSync(changeDir)) {
-    console.error(`错误：change 目录不存在: ${changeDir}（先用 openspec new change 创建）`);
+    console.error(language === "en"
+      ? `Error: change directory does not exist: ${changeDir} (create it with openspec new change first)`
+      : `错误：change 目录不存在: ${changeDir}（先用 openspec new change 创建）`);
     process.exit(1);
   }
 
@@ -391,15 +385,317 @@ export function initDocsCommand(
       continue;
     }
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, spec.content, "utf-8");
+    fs.writeFileSync(target, language === "en" ? englishTemplates[spec.file] : spec.content, "utf-8");
     created.push(spec.file);
   }
 
-  console.log(`init-docs 完成：创建 ${created.length} 份，跳过已存在 ${skipped.length} 份。`);
-  for (const f of created) console.log(`  创建 ${f}`);
-  for (const f of skipped) console.log(`  跳过 ${f}（已存在，--force 覆盖）`);
-  console.log("\n下一步：");
-  console.log("  1. 填写各文档 <待填写：> 占位；适用场景把质量门\"不适用\"声明改写为真实论证");
-  console.log("  2. .sdd/state.yaml 初始化与 handoff：superflow-state.sh init / superflow-handoff.sh --refresh");
-  console.log("  3. 校验：superflow check <change> --level coding-ready");
+  const messages = language === "en" ? {
+    summary: `init-docs complete: created ${created.length}, skipped ${skipped.length}.`,
+    created: "Created", skipped: "Skipped", existing: "exists; --force overwrites",
+    next: "Next steps:",
+    fill: 'Fill all <fill:> placeholders; replace applicable "not applicable" statements with actual reasoning.',
+    state: "Initialize .sdd/state.yaml and handoff: superflow-state.sh init / superflow-handoff.sh --refresh",
+    check: "Validate: superflow check <change> --level coding-ready",
+  } : {
+    summary: `init-docs 完成：创建 ${created.length} 份，跳过已存在 ${skipped.length} 份。`,
+    created: "创建", skipped: "跳过", existing: "已存在，--force 覆盖",
+    next: "下一步：",
+    fill: '填写各文档 <待填写：> 占位；适用场景把质量门"不适用"声明改写为真实论证。',
+    state: ".sdd/state.yaml 初始化与 handoff：superflow-state.sh init / superflow-handoff.sh --refresh",
+    check: "校验：superflow check <change> --level coding-ready",
+  };
+  console.log(messages.summary);
+  for (const file of created) console.log(`  ${messages.created} ${file}`);
+  for (const file of skipped) console.log(`  ${messages.skipped} ${file} (${messages.existing})`);
+  console.log(`\n${messages.next}`);
+  console.log(`  1. ${messages.fill}`);
+  console.log(`  2. ${messages.state}`);
+  console.log(`  3. ${messages.check}`);
 }
+
+const englishTemplates: Record<string, string> = {
+  "proposal.md": `# Proposal
+
+## Why
+
+<fill:> Problem and motivation: why now.
+
+## What Changes
+
+- <fill:> List changes; mark breaking changes **BREAKING**.
+
+## Capabilities
+
+### New Capabilities
+
+- \`<capability-path>\`: <fill:> Capability boundary.
+
+### Modified Capabilities
+
+Leave empty when none; otherwise list requirement-level changes.
+
+## Impact
+
+- **Database**: <fill:> Freeze table/field changes in release-sql.md.
+- **Backend**: <fill:>
+- **Frontend/cross-repository**: <fill:>
+- **Compatibility**: <fill:>
+`,
+  "design.md": `# Design
+
+## Context
+
+<fill:> Current behavior and constraints; source anchors in source-code-audit.md.
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- <fill:>
+
+**Non-Goals:**
+
+- <fill:> Include rejected alternatives and reasons.
+
+## Decisions
+
+### D1: <fill:>
+
+**Choice**: <fill:>
+
+**Alternatives**: <fill:> Rejection reason.
+
+> Behavior decisions (error codes, compatibility, request/response behavior, rejection or acceptance) need a confirmed owner record in the body.
+> Format: \`owner-decided: YYYY-MM-DD | owner: <name/role> | decision: <confirmed conclusion>\`.
+> Instructions, quoted examples, code blocks and unfilled placeholders are not confirmation. Semantic adequacy remains Agent-owned.
+
+## Minimal Design Review
+
+New-item counts: tables 0; fields 0; APIs 0; services/components 0; caches 0; MQ/events 0; scheduled jobs 0; compatibility layers 0.
+
+Complexity Reduction Review: PASS (reuse existing modules, simplest implementation, rejected items above).
+
+## Superpowers Technical Design Handoff
+
+Source-level HOW is in \`technical_design\` registered in .sdd/state.yaml; OpenSpec/SDD documents are canonical for WHAT/API/DB/tests and must not be overridden.
+`,
+  "tasks.md": `# Tasks
+
+## 1. <fill:>
+
+- [ ] 1.1 <fill:> (acceptance: <fill:>)
+
+## SQL Risk Review Checklist
+
+**Reviewer**: <fill:> **Review date**: <fill:>
+
+### Prohibited items
+- [ ] B1-B8 have no violations, or explicit waivers with reasons: <fill:>
+
+### Warnings (record conclusions in test-report.md)
+- [ ] W1-W13 individually resolved: fixed / waived / not applicable with reason.
+
+### Verdict
+- [ ] **PASS**: proceed to implementation.
+`,
+  "api.md": `# API Contract
+
+> Describe the common response format, base path and authentication.
+
+## 1. <fill:> API
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| <fill:> | | | |
+
+### Response
+
+- Success: <fill:>
+- Failure: <fill:> Distinguishable error-code semantics.
+`,
+  "tests.md": `# Tests
+
+> Layers: L1=unit; L2=integration unit; L3=real API automation including curl/token; L4=cross-system chain.
+
+| Case ID | Layer | Scenario | Setup | Action | Automation command/assertion | RED expected | GREEN expected | DB checks | Evidence |
+|---|---|---|---|---|---|---|---|---|---|
+| T-01 | L1 | <fill:> | | | | | | | test-report L1 |
+
+## Blockers and Alternative Evidence
+
+<fill:> An unavailable environment is Partially verified, never Passed.
+`,
+  "release-sql.md": `---
+database_change: true
+target_sql_path: <fill:>
+copy_policy: verbatim
+sql_sha256: <fill: 64 lowercase SHA-256 characters computed from the unique sql block>
+---
+
+# Release SQL
+
+> The implementation Agent may only copy the unique SQL block verbatim to target_sql_path and verify sha256; do not rewrite it.
+
+\`\`\`sql
+-- <fill:> Change description
+ALTER TABLE <fill:>;
+
+-- Post-execution verification
+SELECT 1;
+\`\`\`
+`,
+  "review-checklist.md": `# Review Checklist
+
+## Security (highest priority)
+
+- [ ] <fill:>
+
+## Correctness
+
+- [ ] <fill:>
+
+## Performance
+
+- [ ] <fill:>
+
+## Maintainability
+
+- [ ] <fill:>
+
+## Test Evidence
+
+- [ ] Every tests.md case has evidence or a blocker in test-report.md.
+`,
+  "traceability-matrix.md": `# Traceability Matrix
+
+| Requirement (spec) | Scenario | Design decision | Task | Test case | Forbidden effects |
+|---|---|---|---|---|---|
+| <fill:> | <fill:> | <fill:> | <fill:> | <fill:> | <fill:> |
+`,
+  "source-code-audit.md": `# Source Code Audit
+
+> Impact discovery: <fill:> (understand index / rg / frontend artifacts / Mapper XML).
+> Every fact assertion needs a reproducible verification command; unverified conclusions cannot drive design.
+
+## Audit Conclusions
+
+| Business conclusion | Data model | All writers | Real user entry | Legacy conflict | DB check required | Conclusion level | owner decision | Verification command |
+|---|---|---|---|---|---|---|---|---|
+| <fill:> | <fill:> | <fill:> (file:line) | <fill:> | <fill:> | <fill:> | confirmed | <fill:> | \`<fill:>\` |
+
+## Evidence classifications
+
+Classification criteria and counts for current / legacy / unmounted / data-model-only / owner-confirmed / blocked: <fill:>
+
+## Question Eligibility Gate
+
+Repository facts have been investigated; only behavior decisions go to the owner: <fill:>
+`,
+  "sdd-quality-gate.md": `# SDD Quality Gate
+
+## Document Completeness (docs exit)
+
+| Files | Status |
+|---|---|
+| proposal.md / specs / design.md / tasks.md | exists |
+| api.md / tests.md / release-sql.md | exists |
+| review-checklist.md / traceability-matrix.md / test-report.md | exists |
+| prompt/implementation.md | exists |
+| .sdd/state.yaml and handoff | exists |
+
+## Handoff
+
+- .sdd/state.yaml handoff_hash is the single hash record; do not duplicate it here.
+
+## Concurrency And Idempotency Ownership
+
+| Concurrency point | Protection | Idempotency | Failure owner |
+|---|---|---|---|
+| <fill:> | <fill:> | <fill:> | <fill:> |
+
+- business idempotency key: <fill:>
+- application-layer atomic claim: <fill:>
+- short transaction boundary: <fill:>
+- state machine: <fill:> (success/failure terminal states, no pending intermediate state)
+- retry contract: <fill:>
+- external call boundary: <fill:>
+- unique index is not the default concurrency protection: <fill:>
+
+## Money Precision Boundary - Not Applicable Template
+
+- Rule/contract source: triggered by money fields; this change <fill:> (no money fields means not triggered).
+- exact representation / binary floating-point prohibition: no BigDecimal requirement; do not store money as float/double.
+- currency contract / minor-unit boundary: no currency or minor-unit semantics.
+- rounding level / rounding audit / forbidden early rounding: no rounding levels, before/after state, or early rounding risk.
+- deterministic residual tie-breaker / authoritative total / complement derivation / reconciliation: no residual allocation, authoritative total, complement derivation, or monetary reconciliation.
+- settlement/display boundary / calculation state / scale and rounding mode / independent calculation prohibition: no settlement/display state, calculation precision migration, scale/rounding mode, or independent calculations.
+- persistence precision contract: no DECIMAL/NUMERIC money columns.
+- **For every applicable item replace the non-applicability statement with actual reasoning and owner confirmation.**
+
+## Complexity Reduction Review: <fill:>
+
+## External Integration Configuration And Deployment Contract
+
+- **Environment matrix (local/test/production)**: <fill:>
+- **Injection/provisioning**: <fill:>
+- **Owner and timing**: <fill:>
+- **Readiness evidence**: <fill:>
+- **Rollback**: <fill:>
+- **Secret handling**: <fill:>
+- **No hard-coded external config**: <fill:>
+- **Test-production distinction**: <fill:>
+`,
+  "test-report.md": `# Test Report
+
+> Skeleton only; populate from tests.md during implementation. Never report mock-only or skipped tests as Passed.
+
+## L1 Unit Evidence
+
+| Case | Result | Failure output/notes |
+|---|---|---|
+| (fill) | Not run | |
+
+## L3 API Automation Evidence
+
+| Case | curl command | Response summary | DB check | Log grep | Result |
+|---|---|---|---|---|---|
+| (fill) | | | | | |
+
+## SQL Reconciliation
+
+| ID | Table | Field | Source reference | Aggregate SQL location | Dev DB state | Test DB state | Resolution |
+|---|---|---|---|---|---|---|---|
+| (fill) | | | | | | | |
+
+> Implementation: [prompt/implementation.md](prompt/implementation.md)
+`,
+  "prompt/implementation.md": `# Implementation Prompt
+
+## Required Reading
+
+1. [sdd-context.md](../.sdd/handoff/sdd-context.md) (hash: .sdd/state.yaml handoff_hash)
+2. [proposal.md](../proposal.md) / [design.md](../design.md) / [api.md](../api.md) / [tests.md](../tests.md) / [release-sql.md](../release-sql.md) / [source-code-audit.md](../source-code-audit.md)
+
+## Mandatory Order (database migration gate)
+
+1. Check current schema. 2. Copy the unique release-sql.md SQL block verbatim and verify sha256. 3. Execute and record evidence. 4. Only then implement. Stop on failure; never bypass through code.
+
+## Pre-execution Checklist
+
+- [ ] Locate the real entry.
+- [ ] Check field semantics.
+- [ ] Check write closure.
+- [ ] Confirm forbidden fallbacks.
+- [ ] Execute RED tests.
+- [ ] Allowed / forbidden files.
+- [ ] Blockers.
+
+## Definition of Done
+
+Application started, real APIs invoked, database verified, no ERROR logs, test-report populated, acceptance scripts passed.
+
+## Inherited Money Precision / Concurrency / External Configuration
+
+Inherit the applicable or non-applicable sections of [sdd-quality-gate.md](../sdd-quality-gate.md); do not remove or change existing assertions.
+`,
+};

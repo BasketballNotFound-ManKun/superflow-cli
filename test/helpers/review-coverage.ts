@@ -12,10 +12,7 @@ export function handoffHash(change: string): string {
   return execFileSync(
     "bash",
     [
-      path.join(
-        ROOT,
-        "assets/skills/superflow/scripts/superflow-handoff.sh",
-      ),
+      path.join(ROOT, "assets/skills/superflow/scripts/superflow-handoff.sh"),
       change,
       "--hash-only",
     ],
@@ -23,7 +20,10 @@ export function handoffHash(change: string): string {
   ).trim();
 }
 
-export function prepareCoverage(change: string): string {
+export function prepareCoverage(
+  change: string,
+  { persistState = true, persistReceipt = true } = {},
+): string {
   const write = (file: string, text: string) => {
     fs.mkdirSync(path.dirname(path.join(change, file)), { recursive: true });
     fs.writeFileSync(path.join(change, file), text);
@@ -116,16 +116,18 @@ export function prepareCoverage(change: string): string {
   };
   write(REVIEW, JSON.stringify(review));
   write(".sdd/handoff/sdd-context.sha256", `${hash}\n`);
-  write(".sdd/state.yaml", `phase: implement\nhandoff_hash: ${hash}\n`);
-  write(
-    ".sdd/readiness/coding-ready.json",
-    JSON.stringify({
-      schemaVersion: "superflow.coding-ready.v1",
-      codingReady: true,
-      handoffHash: hash,
-      reviewHash: digest(JSON.stringify(review)),
-    }),
-  );
+  if (persistState)
+    write(".sdd/state.yaml", `phase: implement\nhandoff_hash: ${hash}\n`);
+  if (persistReceipt)
+    write(
+      ".sdd/readiness/coding-ready.json",
+      JSON.stringify({
+        schemaVersion: "superflow.coding-ready.v1",
+        codingReady: true,
+        handoffHash: hash,
+        reviewHash: digest(JSON.stringify(review)),
+      }),
+    );
   return hash;
 }
 

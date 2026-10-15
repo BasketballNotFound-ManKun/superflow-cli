@@ -194,9 +194,11 @@ For complex requirements, verify these before writing docs:
   not an environment contract and discovery is not deferred to the developer.
 - Cross-repo, cross-service, device, MQ, callback, state-machine, or three-plus
   module logic includes Mermaid `sequenceDiagram` and `flowchart`/`stateDiagram`.
-- Run `superflow check <change> --level coding-ready` after prompts are complete.
-  A failed implement gate is fixed by the docs workflow, never delegated to the
-  developer Agent.
+- Continue to `$superflow-design` and `$superflow-handoff` after this phase.
+  Handoff owns prompts; do not defer them to development. Follow the entry's
+  [Document Delivery Exit](../superflow/SKILL.md#document-delivery-exit): the
+  existing coding-ready gate decides readiness after full handoff. Passing this
+  contract phase alone does not authorize coding.
 - When an upstream caller receives an explicit failure and owns refund/cancel
   compensation, default to fail-fast, fail-closed, at-most-once, and
   caller-owned compensation. Transparent retry/reroute/resend requires owner

@@ -26,6 +26,17 @@ PHASE="${2:-}"
 MODE="${3:-}"
 CHANGE_DIR_INPUT="${CHANGE_DIR%/}"
 
+# --explain exposes deterministic patterns and advisory boundaries.
+if [[ " $* " == *" --explain "* ]]; then
+  printf 'Guard gate keyword patterns (grep -Eiq, case-insensitive).\n'
+  grep -n "require_grep " "$BASH_SOURCE" | grep -v "require_grep()"
+  printf '\nNon-grep gates (custom logic):\n'
+  printf '  owner-decision: design.md with behavior keywords but no valid dated owner-decided body record (WARN by default; SUPERFLOW_OWNER_DECISION_ENFORCE=1 blocks)\n'
+  printf '  audit verification: source-code-audit.md must declare a verification-command column (same enforce switch)\n'
+  printf '  scenario consistency: co-occurring behavior words in spec THEN lines prompt Agent semantic review (advisory only)\n'
+  exit 0
+fi
+
 [[ -n "$CHANGE_DIR" && -n "$PHASE" ]] || {
   usage
   exit 1
@@ -54,6 +65,86 @@ require_canonical_change_layout() {
 }
 
 require_canonical_change_layout
+
+# A dated body record proves provenance format only; decision adequacy is Agent-owned.
+require_owner_decision_design() {
+  local path="$1"
+  local target="$CHANGE_DIR/$path"
+  [[ -f "$path" ]] && target="$path"
+  [[ -f "$target" ]] || return 0
+  local parser="${SUPERFLOW_REPORT_LINT:-$SCRIPT_DIR/../../../scripts/superflow-test-report-lint.py}"
+  [[ -f "$parser" ]] || parser="$SCRIPT_DIR/../../../hooks/superflow-test-report-lint.py"
+  if python3 - "$target" "$parser" <<'PY'
+import datetime
+import re
+import runpy
+import sys
+from pathlib import Path
+
+# Reuse the canonical Markdown body parser to exclude fenced/indented code
+# and HTML comments; quoted instructions are never owner confirmations.
+parse = runpy.run_path(sys.argv[2])["markdown_body_lines"]
+lines, ambiguous = parse(Path(sys.argv[1]).read_text(encoding="utf-8"), task_index=True)
+body = [line for line in lines if not line.lstrip().startswith(">")]
+if ambiguous:
+    sys.exit(1)
+if not re.search(r"\u9519\u8bef\u7801|\u517c\u5bb9\u7b56\u7565|\u517c\u5bb9\u884c\u4e3a|\u62d2\u7edd|\u653e\u884c|\u9ed8\u8ba4\u503c|API \u884c\u4e3a|error code|compatib.*(?:policy|strategy|behavio[u]?r)|default value|\b(?:reject(?:s|ion)?|allow(?:s)?|deny|accept(?:s|ance)?)\b|\bAPI behavio[u]?r\b", "\n".join(body), re.I):
+    sys.exit(0)
+record = re.compile(r"^\s*(?:[-+*]\s+)?owner-decided:\s*(\d{4}-\d{2}-\d{2})\s*\|\s*owner:\s*([^|]+)\|\s*decision:\s*(.+?)\s*$", re.I)
+for line in body:
+    match = record.fullmatch(line)
+    if not match or re.search(r"[<>`{}]|\u5f85\u586b\u5199|\u5f85\u5b9a|\b(?:TODO|TBD|pending)\b", line, re.I):
+        continue
+    try:
+        datetime.date.fromisoformat(match[1])
+    except ValueError:
+        continue
+    if match[2].strip() and match[3].strip():
+        sys.exit(0)
+sys.exit(1)
+PY
+  then
+    return 0
+  fi
+  local msg="behavior-level decision keywords found without a valid owner-decided record in $path (record a confirmed date, owner and decision outside instructions/examples)"
+  if [[ "${SUPERFLOW_OWNER_DECISION_ENFORCE:-0}" == "1" ]]; then
+    issues+=("$msg")
+  else
+    printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
+  fi
+}
+
+# Audit assertions need reproducible verification commands (WARN/ENFORCE).
+require_audit_verification_command() {
+  local path="source-code-audit.md"
+  local target="$CHANGE_DIR/$path"
+  [[ -f "$path" ]] && target="$path"
+  [[ -f "$target" ]] || return 0
+  if grep -Eiq 'verification command|reproduction command|verification method' "$target"; then
+    return 0
+  fi
+  local msg="source-code-audit.md lacks a verification-command column; fact assertions must record HOW to re-verify"
+  if [[ "${SUPERFLOW_OWNER_DECISION_ENFORCE:-0}" == "1" ]]; then
+    issues+=("$msg")
+  else
+    printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
+  fi
+}
+
+# Scenario co-occurrence is a review hint, never a semantic verdict or exit gate.
+require_scenario_consistency() {
+  local -a paths=()
+  [[ -f "$CHANGE_DIR/spec.md" ]] && paths+=("$CHANGE_DIR/spec.md")
+  [[ -d "$CHANGE_DIR/specs" ]] && paths+=("$CHANGE_DIR/specs")
+  [[ "${#paths[@]}" -gt 0 ]] || return 0
+  local hits
+  # Co-occurrence is only a hint: legitimate conditions/negations also match.
+  hits=$(grep -rinE '\*\*THEN\*\*.*((skip|allow).*(reject|deny|forbid)|(reject|deny|forbid).*(skip|allow))' "${paths[@]}" 2>/dev/null || true)
+  if [[ -n "$hits" ]]; then
+    local msg="scenario THEN may need semantic review; co-occurring behavior words are advisory only: ${hits}"
+    printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
+  fi
+}
 
 require_file() {
   local path="$1"
@@ -731,6 +822,9 @@ case "$PHASE" in
     require_file api.md
     require_spec_doc
     require_file design.md
+    require_owner_decision_design design.md
+    require_scenario_consistency
+    require_audit_verification_command
     require_file tasks.md
     require_file tests.md
     require_file traceability-matrix.md

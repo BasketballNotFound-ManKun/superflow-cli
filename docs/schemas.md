@@ -28,7 +28,7 @@
 | 字段 | 类型 | 要求 |
 |---|---|---|
 | schemaVersion | string | 固定 `superflow.document-review.v1` |
-| projectRoot | string | **相对 change 目录**的项目根（sources path 的解析基准）。工作区在仓库子目录时必填 |
+| projectRoot | string | 可选执行工作目录，**相对 change 目录**；不改变 coverage 来源、tasks.md 或适用性配置的解析基准 |
 | handoffHash | string | 等于当前 handoff hash |
 | verdict | enum | `PASS` |
 | openOwnerDecisions | array | 必须为空 |
@@ -41,7 +41,7 @@
 
 | 字段 | 要求 |
 |---|---|
-| sources[] | `id` 唯一、`path`（相对 projectRoot）、`role` ∈ `requirement`/`code`/`contract`、`sha256`（当前内容 64 位小写） |
+| sources[] | `id` 唯一、`path`（相对 change 目录，所有校验入口统一）、`role` ∈ `requirement`/`code`/`contract`、`sha256`（当前内容 64 位小写） |
 | requirements[] | `id` 唯一、`statement` 非空、`sourceRefs` 含 requirement 角色来源 |
 | entries[] | `id` 唯一、`actor`/`route` 非空、`kind` ∈ `browser`/`api`/`job`/`event`/`library`/`cli`、`sourceRefs` 含 code 角色；声明 `persistence` 时必须给 `database`（engine/major/schemaSourceRefs/statements，statement.sourceRef 必须 code 角色） |
 | cases[] | `entryId` 指向真实入口、`level` = 该入口 kind、`assertions.response/state/forbiddenEffects` 非空、`sourceRefs` 含 contract 角色；`testLayer` ∈ logic/sql-binding/database/http-entry（database/http-entry + 入口有 database 时要求 evidenceKind=real + mockBoundary + statements + databaseAssertions） |

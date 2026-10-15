@@ -104,17 +104,55 @@ Do not mix models, task profiles, or versions and call the result a cost trend.
 
 With insufficient samples, label the result an observation, not a general claim.
 
-## Change-scoped maintenance verification
+## Fixed delivery and change-scoped maintenance verification
 
-During Superflow repository iteration, inspect a deterministic plan with
-`npm run --silent verify:changed -- --base <ref> --plan --json`, then omit --plan to execute.
-`--language zh|en` / SUPERFLOW_LANG selects output. --full explicitly retains npm
-test. Unknown/shared source, installation, package metadata, and Agent-rule changes
-fall back to full checks with reasons. Only verified isolated leaves have narrow
-mappings; similar names do not establish test ownership. This repository helper
-never decides business sufficiency or replaces final full/build/install/release
-checks. Plan mode executes nothing; failures retain exit codes and detailed logs
-use stderr for structured output.
+**Before delivering every Superflow improvement, run the single full owner:**
+`npm run --silent verify:changed -- --full --json --report /tmp/superflow-verification/summary.json`.
+Record problem evidence, responsibility, baseline and hypothesis first; implement and observe positive/
+negative cases, then record actual results and rollback conditions. Do not add a parallel Skill,
+Hook, menu or persistent verification state.
+
+Daily work can still preview `npm run --silent verify:changed -- --base <ref> --plan --json`, then
+omit `--plan` for narrow execution. Unknown/shared source, installation, package metadata and Agent
+rules conservatively select full verification. Only proven isolated leaves have narrow mappings;
+similar filenames do not establish ownership. `--language zh|en` / SUPERFLOW_LANG selects output.
+A preview executes nothing and does not prove success.
+
+Full verification runs global/managed design gates, type checking, Lint, strict skill audit,
+**one complete npm test**, build, and a real package-install smoke check, in that order.
+The sole normal-workflow catalogue lives in `scripts/verify-changed.mjs`. It consumes that same
+Vitest JSON report; a missing/empty suite, failure or any skipped assertion in a required suite fails.
+It reuses dual-host/bilingual/project/global isolated installation, complete contracts and real
+OpenSpec strict validation, docs-to-design-to-implement state transitions, all seven real subgates
+producing Coding Ready, incomplete-contract rejection, valid implementation continuation,
+contract-drift invalidation, recovery and upgrade tests. Handwritten success receipts cannot replace
+the complete positive chain.
+
+Tools are Node 20/24, Python 3.12 and OpenSpec 1.14.1; missing tools fail explicitly, never skip.
+Install OpenSpec into a temporary isolated prefix and add its `node_modules/.bin` to PATH if needed;
+a global install is not required. CI uses the same `--full --json` entry across Linux/macOS and
+Node 20/24, retaining reports and detailed logs even on failure. Setup failures retain the same
+owner's NOT_RUN preview (success:null) and setup log; checkout failure only has GitHub's native logs.
+Configuration alone is not evidence
+that a matrix ran; it proves neither Windows compatibility nor real-model behavior.
+
+Each run gets an exclusive temporary evidence directory; `--report` only chooses its final summary.
+Checks report PASS / FAIL / NOT_RUN. Stop at the first failure with its actual exit code; later checks
+remain unexecuted, and preview success is null. Full verification compares source, tests, canonical
+assets, scripts and configuration before/after execution; drift fails the run without automatic retry.
+Package only when the same-run temporary build input/output fingerprint still matches, avoiding
+stale dist and duplicate prepack builds. Install the real tarball in an external clean consumer with
+isolated user directories and Git/npm configuration; reuse existing CLI/deployment owners, never
+link the source checkout, touch real Hosts or treat dry-run as installation. Report success only after
+consumer cleanup. CLI update checks run after normal successful commands; help/version exits do not
+start background npm work. Automation sets `NO_UPDATE_NOTIFIER=1`; `CI=1/true` also suppresses
+optional update checks so no network children are left behind.
+
+Child detail logs use stderr; JSON stdout stays parseable. This proves deterministic workflow and
+installation facts, not business sufficiency, real task acceptance or publication. Roll back affected
+changes if missing/skipped baselines pass, reports and outputs come from different inputs, unknown
+assets are overwritten, or installation touches real global configuration; preserve external failure
+evidence and rerun the same full owner after repair.
 
 ## Multica mechanism adoption verification (2026-10-12)
 
@@ -158,3 +196,46 @@ regressions here, following “External-project verification isolation” in the
 design principles. Verify existing implementation by default; maintaining an
 evaluation does not authorize reimplementation or business dependencies. Evidence
 authenticity and eligibility for CLI distribution are separate checks.
+
+## Document delivery exit and workspace convergence (2026-10-15)
+
+Evidence and baseline: targeted review of the latest two commits ran 222 tests;
+three failed after the source path base changed. Synthetic cases also reproduced
+writes to an unselected workspace, a dropped CLI path option, keyword false
+positives, and template guidance accepted as owner confirmation. The proposal
+skill explicitly announced implementation readiness after OpenSpec applyRequires
+completed, before full Superflow delivery. Owners are document contracts, existing
+gates, and workspace resolution.
+
+Hypothesis and ECC scope: one change-relative source base, no fallback from a
+selected workspace, and existing templates/language configuration restore factual
+consistency. Semantic contradictions remain advisory for Agent review. Proposal
+owns base artifacts; existing contracts, design, and handoff owners continue the
+same document task. Only the existing coding-ready gate establishes development
+readiness. No new Skill, Hook, protocol field, state machine, or legacy-format
+compatibility branch is introduced under this request.
+
+Representative cases: Chinese and English assets installed for Codex and Claude
+must not route a proposal directly to coding. Proposal-only requests retain their
+narrow scope; document-only authorization never starts implementation. The real
+gate rejects an OpenSpec-only package. Initial implementation requires strict
+readiness; resumed implementation with a valid receipt permits intended code
+changes while frozen-contract drift still blocks. Other positive/negative cases
+cover nested source paths, duplicate change names, real CLI --path, template/guard
+integration, and completed owner records.
+
+Limits and rollback: synthetic checks prove routing, contracts, and installation
+facts, not real Claude compliance rates or comparative framework efficiency.
+Revert the responsible change if cross-workspace writes, premature readiness,
+example-based confirmation, false rejection of valid implementation resumes, or
+language installation drift recurs. Keep the failure evidence and rerun the
+representative cases. Final counts, build, and installation results come from
+this iteration's actual command outputs.
+
+Final result: all 1080 tests across 113 files passed, along with build, ESLint,
+global/managed design checks, and strict Skill audit (16/16, zero English gaps).
+Chinese/English and Codex/Claude installation regressions and real CLI/guard
+integration passed. The npm dry-run listed 424 files without temporary review
+reports or editor files. Independent review found and closed an English behavior
+keyword gap; the final full suite covers that fix. Installed local skills and
+running Claude sessions were not updated; real-model compliance remains unproven.

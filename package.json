@@ -44,14 +44,15 @@
     "dev": "tsx watch src/cli/index.ts",
     "postinstall": "node scripts/postinstall.js",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run release:check && npm test && npm run build",
+    "prepublishOnly": "npm run release:check && npm run verify:changed -- --full",
     "release:check": "node scripts/release-notes-check.js",
     "pretest": "npm run check:design-principles && npm run check:managed-design",
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:changed": "node scripts/verify-changed.mjs",
     "lint": "eslint src/ test/",
-    "format": "prettier --write src/ test/"
+    "format": "prettier --write src/ test/",
+    "test:package": "tsx test/acceptance/package-smoke.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

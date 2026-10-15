@@ -197,8 +197,10 @@ Binding` with:
   依赖；不能把环境探索留给开发 Agent，也不能只用“地址可连接”代替环境合同。
 - 跨仓、跨服务、设备、MQ、回调、状态机或三个以上模块的复杂逻辑必须提供 Mermaid
   `sequenceDiagram` 与 `flowchart`/`stateDiagram`。
-- 实现 Prompt 完成后必须通过 `superflow check <change> --level coding-ready`，生成与
-  当前 handoff hash 绑定的 Coding Ready 凭证；失败的 implement 门禁不能转交开发 Agent。
+- 本阶段完成后继续交给 `$superflow-design` 和 `$superflow-handoff`；Prompt 由 handoff
+  生成，不留给开发补齐。完整文档交付与开发就绪遵循总入口的
+  [Document Delivery Exit](../superflow/SKILL.md#document-delivery-exit)，由既有
+  coding-ready 门禁裁决；本阶段通过不代表已可开发。
 - 跨系统明确失败且上游拥有退款/撤单补偿时，默认快速失败、失败关闭、至多一次和调用方
   补偿；禁止下游透明重试、改投或补发。额外兜底必须在“跨系统失败归属与补偿边界”中
   获得 owner 确认。

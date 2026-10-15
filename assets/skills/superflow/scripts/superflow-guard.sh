@@ -26,14 +26,14 @@ PHASE="${2:-}"
 MODE="${3:-}"
 CHANGE_DIR_INPUT="${CHANGE_DIR%/}"
 
-# --explain：输出全部文案门禁期望关键词模式（业务无关），任意参数位置可触发。
+# --explain exposes deterministic patterns and advisory boundaries.
 if [[ " $* " == *" --explain "* ]]; then
   printf 'Guard gate keyword patterns (grep -Eiq, case-insensitive).\n'
   grep -n "require_grep " "$BASH_SOURCE" | grep -v "require_grep()"
   printf '\nNon-grep gates (custom logic):\n'
-  printf '  owner-decision: design.md with behavior keywords but no owner-decided marker (WARN by default; SUPERFLOW_OWNER_DECISION_ENFORCE=1 blocks)\n'
+  printf '  owner-decision: design.md with behavior keywords but no valid dated owner-decided body record (WARN by default; SUPERFLOW_OWNER_DECISION_ENFORCE=1 blocks)\n'
   printf '  audit verification: source-code-audit.md must declare a verification-command column (same enforce switch)\n'
-  printf '  scenario consistency: spec THEN lines must not mix exclusive behavior verbs like skip/release vs reject (contradiction blocks by default)\n'
+  printf '  scenario consistency: co-occurring behavior words in spec THEN lines prompt Agent semantic review (advisory only)\n'
   exit 0
 fi
 
@@ -66,28 +66,55 @@ require_canonical_change_layout() {
 
 require_canonical_change_layout
 
-# P1：行为级决策必须留 owner 凭证（业务无关检查）。
-# design.md 提及错误码/兼容策略/拒绝/放行/默认值/API 行为等行为语义，
-# 但全文无 owner-decided 标记时：默认 WARN（灰度）；ENFORCE=1 阻断。
+# A dated body record proves provenance format only; decision adequacy is Agent-owned.
 require_owner_decision_design() {
   local path="$1"
   local target="$CHANGE_DIR/$path"
   [[ -f "$path" ]] && target="$path"
   [[ -f "$target" ]] || return 0
-  if grep -Eiq 'owner-decided|owner decided' "$target"; then
+  local parser="${SUPERFLOW_REPORT_LINT:-$SCRIPT_DIR/../../../scripts/superflow-test-report-lint.py}"
+  [[ -f "$parser" ]] || parser="$SCRIPT_DIR/../../../hooks/superflow-test-report-lint.py"
+  if python3 - "$target" "$parser" <<'PY'
+import datetime
+import re
+import runpy
+import sys
+from pathlib import Path
+
+# Reuse the canonical Markdown body parser to exclude fenced/indented code
+# and HTML comments; quoted instructions are never owner confirmations.
+parse = runpy.run_path(sys.argv[2])["markdown_body_lines"]
+lines, ambiguous = parse(Path(sys.argv[1]).read_text(encoding="utf-8"), task_index=True)
+body = [line for line in lines if not line.lstrip().startswith(">")]
+if ambiguous:
+    sys.exit(1)
+if not re.search(r"错误码|兼容策略|兼容行为|拒绝|放行|默认值|API 行为|error code|compatib.*(?:policy|strategy|behavio[u]?r)|default value|\b(?:reject(?:s|ion)?|allow(?:s)?|deny|accept(?:s|ance)?)\b|\bAPI behavio[u]?r\b", "\n".join(body), re.I):
+    sys.exit(0)
+record = re.compile(r"^\s*(?:[-+*]\s+)?owner-decided:\s*(\d{4}-\d{2}-\d{2})\s*\|\s*owner:\s*([^|]+)\|\s*decision:\s*(.+?)\s*$", re.I)
+for line in body:
+    match = record.fullmatch(line)
+    if not match or re.search(r"[<>`{}]|待填写|待定|\b(?:TODO|TBD|pending)\b", line, re.I):
+        continue
+    try:
+        datetime.date.fromisoformat(match[1])
+    except ValueError:
+        continue
+    if match[2].strip() and match[3].strip():
+        sys.exit(0)
+sys.exit(1)
+PY
+  then
     return 0
   fi
-  if grep -Eiq '错误码|兼容策略|兼容行为|拒绝|放行|默认值|API 行为|error code|compatib.*policy|default value' "$target"; then
-    local msg="behavior-level decision keywords found without owner-decided marker in $path (ask the owner, then mark: owner-decided <date> <context>)"
-    if [[ "${SUPERFLOW_OWNER_DECISION_ENFORCE:-0}" == "1" ]]; then
-      issues+=("$msg")
-    else
-      printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
-    fi
+  local msg="behavior-level decision keywords found without a valid owner-decided record in $path (record a confirmed date, owner and decision outside instructions/examples)"
+  if [[ "${SUPERFLOW_OWNER_DECISION_ENFORCE:-0}" == "1" ]]; then
+    issues+=("$msg")
+  else
+    printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
   fi
 }
 
-# P2：事实断言必须可复核——audit 存在时检查验证命令列；缺失 WARN/ENFORCE 阻断。
+# Audit assertions need reproducible verification commands (WARN/ENFORCE).
 require_audit_verification_command() {
   local path="source-code-audit.md"
   local target="$CHANGE_DIR/$path"
@@ -104,24 +131,18 @@ require_audit_verification_command() {
   fi
 }
 
-# P1 补充：行为合同（specs）场景句矛盾检测（业务无关）。
-# 同一 THEN 行内互斥行为动词共现（如"跳过/放行/兼容行为/按原逻辑"与
-# "拒绝/不得/禁止"）多为片段替换式坏改写的痕迹——修订场景句必须整句
-# 重写。默认 WARN；SUPERFLOW_OWNER_DECISION_ENFORCE=1 阻断。
+# Scenario co-occurrence is a review hint, never a semantic verdict or exit gate.
 require_scenario_consistency() {
-  local dir="$CHANGE_DIR/specs"
-  [[ -d "$dir" ]] || dir="specs"
-  [[ -d "$dir" ]] || return 0
+  local -a paths=()
+  [[ -f "$CHANGE_DIR/spec.md" ]] && paths+=("$CHANGE_DIR/spec.md")
+  [[ -d "$CHANGE_DIR/specs" ]] && paths+=("$CHANGE_DIR/specs")
+  [[ "${#paths[@]}" -gt 0 ]] || return 0
   local hits
-  # grep 无匹配时 exit 1，set -e 下局部赋值会终止脚本——必须 || true
-  hits=$(grep -rnE '\*\*THEN\*\*.*((跳过|放行|兼容行为|按原逻辑).*(拒绝|不得|禁止)|(拒绝|不得|禁止).*(跳过|放行|兼容行为|按原逻辑))' "$dir" 2>/dev/null || true)
+  # Co-occurrence is only a hint: legitimate conditions/negations also match.
+  hits=$(grep -rinE '\*\*THEN\*\*.*((跳过|放行|兼容行为|按原逻辑|skip|allow).*(拒绝|不得|禁止|reject|deny|forbid)|(拒绝|不得|禁止|reject|deny|forbid).*(跳过|放行|兼容行为|按原逻辑|skip|allow))' "${paths[@]}" 2>/dev/null || true)
   if [[ -n "$hits" ]]; then
-    local msg="scenario THEN contains contradictory behavior verbs (fragment-replacement artifact? rewrite the whole sentence): ${hits}"
-    if [[ "${SUPERFLOW_OWNER_DECISION_ENFORCE:-1}" == "1" ]]; then
-      issues+=("$msg")
-    else
-      printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
-    fi
+    local msg="scenario THEN may need semantic review; co-occurring behavior words are advisory only: ${hits}"
+    printf 'superflow-guard: [WARN] %s\n' "$msg" >&2
   fi
 }
 

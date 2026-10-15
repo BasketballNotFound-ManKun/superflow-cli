@@ -4,6 +4,10 @@ import { loadState } from "../state.js";
 import { stateFile } from "../../platform/paths.js";
 
 export interface CliHelpText {
+  initDocsDescription: string;
+  initDocsChangeArgument: string;
+  initDocsPathOption: string;
+  initDocsForceOption: string;
   programDescription: string;
   initDescription: string;
   scanDescription: string;
@@ -90,6 +94,10 @@ export interface CliHelpText {
 
 const CLI_TEXT: Record<Language, CliHelpText> = {
   en: {
+    initDocsDescription: "Generate SDD document skeletons; fill and review before Coding Ready",
+    initDocsChangeArgument: "Change name in the selected OpenSpec workspace",
+    initDocsPathOption: "Project directory",
+    initDocsForceOption: "Overwrite existing documents",
     reviewCoverageDescription:
       "Enumerate changed files, resolve path rules, and emit risk hints for Host impact assessment",
     reviewBaseOption: "Review changes since a Git reference",
@@ -217,6 +225,10 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     checkLevelOption: "Check level: files | docs | coding-ready",
   },
   zh: {
+    initDocsDescription: "生成 SDD 文档骨架，填写并评审后才可进入 Coding Ready",
+    initDocsChangeArgument: "选定 OpenSpec 工作区中的变更名称",
+    initDocsPathOption: "项目目录",
+    initDocsForceOption: "覆盖已存在的文档",
     reviewCoverageDescription:
       "枚举改动文件、解析路径规则并提供风险提示；实际影响由 Host 判断",
     reviewBaseOption: "评审相对 Git 引用的改动",

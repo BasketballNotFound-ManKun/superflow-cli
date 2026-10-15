@@ -1,0 +1,68 @@
+name: 完整交付验证
+
+on:
+  push:
+    branches: ["**"]
+    tags-ignore: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verification-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [20, 24]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: 初始化未执行的验证证据
+        id: evidence
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/verification"
+          npm run --silent verify:changed -- --full --plan --json --report "$RUNNER_TEMP/verification/summary.json" > "$RUNNER_TEMP/verification/plan.json" 2> "$RUNNER_TEMP/verification/setup.log"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: 安装项目依赖
+        id: dependencies
+        shell: bash
+        run: npm ci >> "$RUNNER_TEMP/verification/setup.log" 2>&1
+      - name: 准备固定版本 OpenSpec
+        id: tools
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/verification-tools" --no-audit --no-fund @fission-ai/openspec@1.14.1 >> "$RUNNER_TEMP/verification/setup.log" 2>&1
+          echo "$RUNNER_TEMP/verification-tools/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: 执行唯一完整验证入口
+        id: verification
+        shell: bash
+        env:
+          SUPERFLOW_LANG: en
+          OPENSPEC_TELEMETRY: "0"
+        run: |
+          mkdir -p "$RUNNER_TEMP/verification"
+          npm run --silent verify:changed -- --full --json --report "$RUNNER_TEMP/verification/summary.json" > "$RUNNER_TEMP/verification/stdout.json" 2> "$RUNNER_TEMP/verification/details.log"
+      - name: 保留验证报告与详细日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-${{ matrix.os }}-node${{ matrix.node }}
+          path: ${{ runner.temp }}/verification/
+          if-no-files-found: warn
+          retention-days: 14

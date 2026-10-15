@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, existsSync, readFileSync, rmSync, writeFileSync as fsWrite } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -18,9 +19,39 @@ afterEach(() => {
 });
 
 describe("initDocsCommand", () => {
+  it("英文 CLI 同步生成英文正文及提示", () => {
+    const result = spawnSync(process.execPath, [
+      "--import", "tsx", "src/app/cli.ts", "--language", "en", "init-docs", "demo-change", "--path", tmp,
+    ], { cwd: path.resolve(__dirname, "../.."), encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("Next steps");
+    for (const file of ["proposal.md", "design.md", "tasks.md", "api.md", "tests.md", "release-sql.md", "source-code-audit.md", "review-checklist.md", "traceability-matrix.md", "sdd-quality-gate.md", "test-report.md", "prompt/implementation.md"]) {
+      expect(readFileSync(path.join(changeDir, file), "utf8"), file).not.toMatch(/[\p{Script=Han}]/u);
+    }
+  });
+
+  it("真实 CLI 的 --path 在指定项目生成文件", () => {
+    const result = spawnSync(process.execPath, [
+      "--import", "tsx", "src/app/cli.ts", "init-docs", "demo-change", "--path", tmp,
+    ], { cwd: path.resolve(__dirname, "../.."), encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    expect(existsSync(path.join(changeDir, "proposal.md"))).toBe(true);
+  });
+
+  it("生成器的零数量复杂度统计不触发外部集成合同", () => {
+    initDocsCommand("demo-change", { projectPath: tmp, language: "zh" });
+    const result = spawnSync("bash", [path.resolve(__dirname,
+      "../../assets/skills/superflow/scripts/superflow-guard.sh"), changeDir, "docs"],
+      { encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("SDD guard failed for phase docs");
+    expect(result.stderr).toContain("missing file: .sdd/state.yaml");
+    expect(result.stderr).not.toContain("external integration configuration contract not found in api.md");
+  });
+
   it("在默认工作区生成全部必备文档骨架", () => {
     mkdirSync(path.join(tmp, "openspec", "changes", "demo-change"), { recursive: true });
-    initDocsCommand("demo-change", { projectPath: tmp });
+    initDocsCommand("demo-change", { projectPath: tmp, language: "zh" });
     for (const f of [
       "proposal.md", "design.md", "tasks.md", "api.md", "tests.md",
       "release-sql.md", "source-code-audit.md", "review-checklist.md", "traceability-matrix.md",
@@ -31,17 +62,17 @@ describe("initDocsCommand", () => {
   });
 
   it("已存在文件默认跳过，--force 覆盖", () => {
-    initDocsCommand("demo-change", { projectPath: tmp });
+    initDocsCommand("demo-change", { projectPath: tmp, language: "zh" });
     const proposal = path.join(changeDir, "proposal.md");
     fsWrite(proposal, "custom", "utf-8");
-    initDocsCommand("demo-change", { projectPath: tmp });
+    initDocsCommand("demo-change", { projectPath: tmp, language: "zh" });
     expect(readFileSync(proposal, "utf-8")).toBe("custom");
-    initDocsCommand("demo-change", { projectPath: tmp, force: true });
+    initDocsCommand("demo-change", { projectPath: tmp, force: true, language: "zh" });
     expect(readFileSync(proposal, "utf-8")).not.toBe("custom");
   });
 
   it("模板业务无关：不含任何占位业务词，且嵌入通用质量门声明", () => {
-    initDocsCommand("demo-change", { projectPath: tmp });
+    initDocsCommand("demo-change", { projectPath: tmp, language: "zh" });
     const gate = readFileSync(path.join(changeDir, "sdd-quality-gate.md"), "utf-8");
     expect(gate).toContain("Concurrency And Idempotency Ownership");
     expect(gate).toContain("Money Precision Boundary");

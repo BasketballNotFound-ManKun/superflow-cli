@@ -228,6 +228,21 @@ describe("document delivery readiness", () => {
     await fs.promises.rm(tmp, { recursive: true, force: true });
   });
 
+  it("nested workspace uses change-relative sources despite declared project root", async () => {
+    const nested = path.join(tmp, "docs", "planning", "openspec", "changes", "demo");
+    await fs.promises.mkdir(path.dirname(nested), { recursive: true });
+    await fs.promises.rename(change, nested);
+    change = nested;
+    mutateReview(change, (review) => { review.projectRoot = "../../../../.."; });
+    const reviewText = fs.readFileSync(path.join(change, ".sdd/reviews/document-review.json"));
+    const receipt = JSON.parse(fs.readFileSync(path.join(change, ".sdd/readiness/coding-ready.json"), "utf8"));
+    receipt.reviewHash = createHash("sha256").update(reviewText).digest("hex");
+    await write(".sdd/readiness/coding-ready.json", JSON.stringify(receipt));
+    const audit = await execFileAsync("node", [AUDIT, change, "--json"]);
+    expect(JSON.parse(audit.stdout).ready).toBe(true);
+    await expect(execFileAsync("node", [path.join(ROOT, "assets/scripts/superflow-review-coverage.mjs"), change, "--check-sources"])).resolves.toMatchObject({ stderr: "" });
+  });
+
   it("accepts three closed review lenses and exact prompt links", async () => {
     const result = await execFileAsync("node", [AUDIT, change, "--json"]);
     const parsed = JSON.parse(result.stdout);

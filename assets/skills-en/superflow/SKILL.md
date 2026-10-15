@@ -3,6 +3,26 @@ name: superflow
 description: Superflow user entry — analyze requirements, continue work, implement, verify, or archive. Select the existing workflow from the user goal.
 ---
 
+## Document Delivery Exit
+
+OpenSpec applyRequires completion only finishes the base-artifact stage. For a
+full Superflow document request, continue within the same authorization through
+`$superflow-contracts` → `$superflow-design` → `$superflow-handoff`. Each phase
+owns its existing output contract; do not duplicate its file checklist here.
+`$superflow-handoff` owns implementation prompts, while the existing state
+scripts own transitions. Do not stop after OpenSpec and ask whether to fill in
+Superflow documents that the user already requested.
+
+Before announcing development readiness, run
+`superflow check <change> --level coding-ready` and inspect its real exit status
+and current `.sdd/readiness/coding-ready.json`. Only a successful current gate
+permits "Coding Ready". OpenSpec apply-ready, generated skeletons, a file-count
+check, `phase: implement`, or an old receipt cannot substitute for this result.
+Missing documents, unresolved findings, or failed checks mean `Blocked for docs`:
+report the actual missing items and continue their owning phase when possible.
+If the user requested documentation only, deliver the validated document package
+and stop before coding; readiness itself does not authorize implementation.
+
 ## Start here
 
 Users describe their goal and constraints. Select the existing phase or specialist capability below; do not require users to choose a skill, task size, or OpenSpec versus SDD. For continuation, read current state and handoff first. Discussion and document-only requests do not authorize implementation or managed execution. Read the selected internal skill explicitly. This is the sole user router; all scripts and recovery paths live in this directory.

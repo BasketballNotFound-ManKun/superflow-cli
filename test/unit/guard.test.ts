@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { writeExecutionReceipt } from "../helpers/execution-receipt.js";
+import { makeContractChange, MINIMAL_DESIGN_REVIEW, write, writeRequirementReview } from "../helpers/contract-change.js";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "../..");
@@ -41,167 +42,6 @@ const EXTERNAL_CONFIG_CONTRACT = [
   "Test auto-creation or test readiness does not prove production readiness.",
   "",
 ].join("\n");
-
-const MINIMAL_DESIGN_REVIEW = [
-  "## Minimal Design Review",
-  "",
-  "New-item counts: tables 0; fields 0; APIs 0; services/components 0; caches 0; MQ/events 0; scheduled jobs 0; compatibility layers 0.",
-  "Reuse evidence: extend the existing user service and API.",
-  "Simplest implementation: one direct synchronous write path.",
-  "Removed/rejected complexity: do not add a parallel service, cache, async flow, or compatibility layer.",
-  "",
-].join("\n");
-
-const SOURCE_CODE_AUDIT = [
-  "# Source Code Audit",
-  "",
-  "## Source Fact Freeze Card",
-  "",
-  "| Business conclusion | understand-anything locator | Data model | All writers | Real user entry | Current callers | Legacy conflict | DB check or skip reason | Conclusion level | owner decision |",
-  "|---|---|---|---|---|---|---|---|---|---|",
-  "| One request follows one current route | graph locator only | one route record | API service | frontend mini-program H5 caller | current controller | legacy batch API is unmounted | DB check skipped because source and callers are sufficient | owner-confirmed | owner approved current behavior |",
-  "",
-  "Evidence classifications: current; legacy; unmounted; data-model-only; owner-confirmed; blocked.",
-  "",
-  "## Question Eligibility Gate",
-  "",
-  "Source search: complete. Mapper and SQL search: complete. Frontend mini-program H5 caller search: complete. Sibling repo search: complete. DB check reason recorded above.",
-  "",
-  "## Conflict Audit",
-  "",
-  "List/orderIds/batchInsert/one-to-many signals were compared with the real current entry and did not redefine current behavior.",
-  "",
-].join("\n");
-
-async function write(file: string, content: string) {
-  await fs.promises.mkdir(path.dirname(file), { recursive: true });
-  await fs.promises.writeFile(file, content);
-}
-
-async function writeRequirementReview(change: string) {
-  await write(
-    path.join(change, "requirement-review.md"),
-    [
-      "---",
-      "change: test-change",
-      "review_verdict: PASS",
-      "implementation_readiness: READY",
-      "open_blockers: 0",
-      "open_external_contracts: 0",
-      "open_source_investigations: 0",
-      "open_owner_decisions: 0",
-      "---",
-      "",
-      "# Requirement Review",
-      "",
-      "## Closure Matrix",
-      "",
-      "| Feature | Input/trigger | Processing | Output | Failure | Recovery/repeat | Evidence | Verdict |",
-      "|---|---|---|---|---|---|---|---|",
-      "| F1 | covered | covered | covered | covered | covered | source-backed | PASS |",
-      "",
-      "## Review Findings",
-      "",
-      "No open BLOCKER or IMPORTANT findings.",
-      "",
-      "## Open Blockers",
-      "",
-      "| ID | Category | Affected contract | Owner | Next evidence/question | Status |",
-      "|---|---|---|---|---|---|",
-      "| None | None | None | None | None | Closed |",
-      "",
-    ].join("\n"),
-  );
-}
-
-async function makeCrossServiceChange() {
-  const change = path.join(tmp, "openspec", "changes", "appointment-route");
-  await write(
-    path.join(change, "proposal.md"),
-    "# Proposal\n\nAdd appointment route.\n",
-  );
-  await write(
-    path.join(change, "api.md"),
-    "# API\n\nPOST /internal/appointment-orders\n",
-  );
-  await write(
-    path.join(change, "design.md"),
-    [
-      "# Design",
-      "",
-      "## Superpowers Technical Design Handoff",
-      "",
-      "OpenSpec/SDD remains canonical for WHAT and contracts.",
-      "This change crosses services, gateway, and adapter boundaries.",
-      MINIMAL_DESIGN_REVIEW,
-      "handoff_hash: pending",
-      "",
-    ].join("\n"),
-  );
-  await write(
-    path.join(change, "tasks.md"),
-    "# Tasks\n\n- [ ] P01 route ([prompt/p01.md](prompt/p01.md))\n",
-  );
-  await write(
-    path.join(change, "tests.md"),
-    "# Tests\n\nRED then GREEN. Interface automation command: curl /internal/appointment-orders\n",
-  );
-  await write(
-    path.join(change, "traceability-matrix.md"),
-    "# Traceability\n\n| Requirement | Prompt |\n|---|---|\n| R1 | prompt/p01.md |\n",
-  );
-  await write(path.join(change, "review-checklist.md"), "# Review Checklist\n");
-  await write(path.join(change, "source-code-audit.md"), SOURCE_CODE_AUDIT);
-  await write(
-    path.join(change, "sdd-quality-gate.md"),
-    [
-      "# Quality Gate",
-      "",
-      "Document completeness: proposal.md, api.md, design.md, tasks.md, tests.md.",
-      "Minimal Design Review: PASS.",
-      "technical_design: docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md",
-      "handoff_hash: pending",
-      "",
-    ].join("\n"),
-  );
-  await write(
-    path.join(change, "test-report.md"),
-    [
-      "# Test Report",
-      "",
-      "RED 失败证据: pending.",
-      "GREEN 通过证据: pending.",
-      "接口自动化: curl pending.",
-      "DB 数据库 SELECT pending.",
-      "superflow-verify-integration / superflow-delivery-check / superflow-test-report-lint pending.",
-      "handoff_hash: pending",
-      "",
-    ].join("\n"),
-  );
-  await write(path.join(change, "prompt", "p01.md"), "# Prompt\n");
-  await write(
-    path.join(change, "specs", "appointment-route", "spec.md"),
-    "# Spec\n",
-  );
-  await write(
-    path.join(
-      change,
-      "docs",
-      "superpowers",
-      "specs",
-      "2026-06-22-appointment-route-technical-design.md",
-    ),
-    [
-      "# Superpowers Technical Design",
-      "",
-      "OpenSpec/SDD remains canonical and must not be overwritten.",
-      MINIMAL_DESIGN_REVIEW,
-      "",
-    ].join("\n"),
-  );
-  await writeRequirementReview(change);
-  return change;
-}
 
 async function makeExternalEnumChange() {
   const change = path.join(tmp, "openspec", "changes", "bem-pay-mode");
@@ -347,7 +187,7 @@ const FX_PRECISION_CONTRACT = [
 ].join("\n");
 
 async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
-  const change = await makeCrossServiceChange();
+  const change = await makeContractChange(tmp);
   await write(
     path.join(change, "proposal.md"),
     options.fxChange
@@ -524,7 +364,7 @@ async function prepareDatabaseChange(
     validHash?: boolean;
   } = {},
 ) {
-  const change = await makeCrossServiceChange();
+  const change = await makeContractChange(tmp);
   const append = async (rel: string, content: string) => {
     const file = path.join(change, rel);
     await fs.promises.appendFile(file, content);
@@ -592,8 +432,81 @@ describe("superflow-guard.sh", () => {
     await fs.promises.rm(tmp, { recursive: true, force: true });
   });
 
+  describe.each([["zh", GUARD], ["en", EN_GUARD]])("decision/advisory checks (%s)", (language, guard) => {
+    it.each([
+      "> Record owner-decided <date> <context> after confirmation.",
+      "owner-decided: <date> | owner: reviewer | decision: reject repeats",
+      "```markdown\nowner-decided: 2026-10-15 | owner: reviewer | decision: reject repeats\n```",
+      "> owner-decided: 2026-10-15 | owner: reviewer | decision: reject repeats",
+      "owner-decided: 2026-02-30 | owner: reviewer | decision: reject repeats",
+    ])("does not accept instruction/example as owner confirmation: %s", async (record) => {
+      const change = await prepareDatabaseChange();
+      await fs.promises.appendFile(path.join(change, "source-code-audit.md"), "\nVerification command: rg route src\n");
+      await fs.promises.appendFile(path.join(change, "sdd-quality-gate.md"), [
+        "", "## Concurrency And Idempotency Ownership",
+        "business idempotency key: stable request identity",
+        "application-layer atomic claim: claim before writing",
+        "short transaction boundary: claim and finalize independently",
+        "state machine: claimed -> success / failed",
+        "retry contract: reuse identity after confirmed failure",
+        "external call boundary: outside claim transaction; none in this fixture",
+        "unique index is not the default protection", "",
+      ].join("\n"));
+      await fs.promises.appendFile(path.join(change, "design.md"), `\n${language === "en" ? "Reject duplicate requests." : "错误码：拒绝重复请求。"}\n${record}\n`);
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      await replacePendingHash(change);
+      await expect(execFileAsync("bash", [guard, change, "docs"], {
+        env: { ...process.env, SUPERFLOW_OWNER_DECISION_ENFORCE: "1" },
+      })).rejects.toMatchObject({ stderr: expect.stringContaining("without a valid owner-decided record") });
+    });
+
+    it("accepts a dated owner confirmation outside examples", async () => {
+      const change = await prepareDatabaseChange();
+      await fs.promises.appendFile(path.join(change, "source-code-audit.md"), "\nVerification command: rg route src\n");
+      await fs.promises.appendFile(path.join(change, "sdd-quality-gate.md"), [
+        "", "## Concurrency And Idempotency Ownership",
+        "business idempotency key: stable request identity",
+        "application-layer atomic claim: claim before writing",
+        "short transaction boundary: claim and finalize independently",
+        "state machine: claimed -> success / failed",
+        "retry contract: reuse identity after confirmed failure",
+        "external call boundary: outside claim transaction; none in this fixture",
+        "unique index is not the default protection", "",
+      ].join("\n"));
+      await fs.promises.appendFile(path.join(change, "design.md"), `\n${language === "en" ? "Reject duplicate requests." : "错误码：拒绝重复请求。"}\nowner-decided: 2026-10-15 | owner: product-owner | decision: ${language === "en" ? "Reject duplicate requests with a deterministic business conflict." : "拒绝重复请求并返回确定的业务冲突。"}\n`);
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      await replacePendingHash(change);
+      await expect(execFileAsync("bash", [guard, change, "docs"], {
+        env: { ...process.env, SUPERFLOW_OWNER_DECISION_ENFORCE: "1" },
+      })).resolves.toMatchObject({ stdout: expect.stringContaining("SDD guard passed") });
+    });
+
+    it("leaves potentially conflicting scenario wording advisory even in enforce mode", async () => {
+      const change = await prepareDatabaseChange();
+      await fs.promises.appendFile(path.join(change, "source-code-audit.md"), "\nVerification command: rg route src\n");
+      await fs.promises.appendFile(path.join(change, "sdd-quality-gate.md"), [
+        "", "## Concurrency And Idempotency Ownership",
+        "business idempotency key: stable request identity",
+        "application-layer atomic claim: claim before writing",
+        "short transaction boundary: claim and finalize independently",
+        "state machine: claimed -> success / failed",
+        "retry contract: reuse identity after confirmed failure",
+        "external call boundary: outside claim transaction; none in this fixture",
+        "unique index is not the default protection", "",
+      ].join("\n"));
+      await fs.promises.appendFile(path.join(change, "specs/appointment-route/spec.md"), `\n- **THEN** ${language === "en" ? "Reject invalid requests; do not skip input validation." : "拒绝非法请求，不得跳过输入校验。"}\n`);
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      await replacePendingHash(change);
+      const result = await execFileAsync("bash", [guard, change, "docs"], {
+        env: { ...process.env, SUPERFLOW_OWNER_DECISION_ENFORCE: "1" },
+      });
+      expect(result.stdout).toContain("SDD guard passed");
+      expect(result.stderr).toContain("[WARN]");
+    });
+  });
+
   it("rejects full docs without a closed requirement review", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await fs.promises.rm(path.join(change, "requirement-review.md"));
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [HANDOFF, change, "--write"]);
@@ -607,7 +520,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("accepts state-file-only handoff binding without prose backfill", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     // The tweak workflow keeps this test focused on the hash binding rule;
     // the full workflow additionally freezes technical-design matrices that
     // are unrelated to the handoff hash gate.
@@ -649,7 +562,7 @@ describe("superflow-guard.sh", () => {
       "requirement review has no open owner decisions",
     ],
   ])("rejects full docs with %s", async (_name, from, to, expected) => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     const review = path.join(change, "requirement-review.md");
     await write(review, fs.readFileSync(review, "utf8").replace(from, to));
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
@@ -738,7 +651,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires a complexity reduction review before docs can pass", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     const design = path.join(change, "design.md");
     await write(
       design,
@@ -756,7 +669,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires a complexity budget instead of a title-only review", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     const design = path.join(change, "design.md");
     await write(
       design,
@@ -774,7 +687,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires the same complexity review in the English docs guard", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     const design = path.join(change, "design.md");
     await write(
       design,
@@ -792,7 +705,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("does not force the full complexity matrix onto tweak workflow", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     const design = path.join(change, "design.md");
     const gate = path.join(change, "sdd-quality-gate.md");
     await write(
@@ -817,7 +730,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires source-code-audit for a full existing-system change", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await fs.promises.rm(path.join(change, "source-code-audit.md"));
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [HANDOFF, change, "--write"]);
@@ -847,7 +760,7 @@ describe("superflow-guard.sh", () => {
   ])(
     "blocks docs when source fact audit lacks %s",
     async (_name, removed, expected) => {
-      const change = await makeCrossServiceChange();
+      const change = await makeContractChange(tmp);
       const audit = path.join(change, "source-code-audit.md");
       await write(
         audit,
@@ -864,7 +777,7 @@ describe("superflow-guard.sh", () => {
   );
 
   it("accepts a complete source fact freeze card in both guards", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [HANDOFF, change, "--write"]);
     await replacePendingHash(change);
@@ -882,7 +795,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires an explicit PASS verdict for the review", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     const gate = path.join(change, "sdd-quality-gate.md");
     await write(
       gate,
@@ -904,7 +817,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("blocks docs when the complexity review verdict is BLOCKED", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     const gate = path.join(change, "sdd-quality-gate.md");
     await write(
       gate,
@@ -929,7 +842,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("blocks English docs when the complexity review verdict is BLOCKED", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     const gate = path.join(change, "sdd-quality-gate.md");
     await write(
       gate,
@@ -954,7 +867,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires a minimal design review in the source-level technical design", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     const technicalDesign = path.join(
       change,
       "docs",
@@ -987,7 +900,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires architecture boundary matrix for cross-service design", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [
       STATE,
@@ -1029,7 +942,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires external configuration and deployment contract", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await write(
       path.join(change, "proposal.md"),
       "# Proposal\n\nIntegrate TDMQ RocketMQ Consumer Group for a third-party platform.\n",
@@ -1055,7 +968,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires external configuration contract in the English guard", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await write(
       path.join(change, "proposal.md"),
       "# Proposal\n\nIntegrate TDMQ RocketMQ Consumer Group for a third-party platform.\n",
@@ -1081,7 +994,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires concurrency and idempotency ownership contract", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await write(
       path.join(change, "proposal.md"),
       "# Proposal\n\n批量下发月票需要处理并发、重复提交和幂等。\n",
@@ -1107,7 +1020,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires concurrency ownership contract in the English guard", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await write(
       path.join(change, "proposal.md"),
       "# Proposal\n\nBatch issue monthly tickets with concurrent retries.\n",
@@ -1310,7 +1223,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("blocks direct phase writes outside repair mode", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
 
     await expect(
@@ -1327,7 +1240,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("blocks verify when tasks are not fully checked off", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [STATE, "set", change, "verify_mode", "light"]);
     await execFileAsync("bash", [
@@ -1346,7 +1259,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("requires frozen entry review before a full verify can lint its report", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [STATE, "set", change, "verify_mode", "light"]);
@@ -1439,7 +1352,7 @@ describe("superflow-guard.sh", () => {
   });
 
   it("blocks archive without an explicit PASS closeout marker", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");
     await execFileAsync("bash", [STATE, "init", change, "docs"]);
     await execFileAsync("bash", [STATE, "set", change, "verify_mode", "light"]);
@@ -1557,7 +1470,7 @@ describe("superflow-guard.sh", () => {
   );
 
   it("requires test-environment fingerprint for full verification", async () => {
-    const change = await makeCrossServiceChange();
+    const change = await makeContractChange(tmp);
     await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");
     await write(
       path.join(change, "test-report.md"),

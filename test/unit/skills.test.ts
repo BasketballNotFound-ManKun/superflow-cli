@@ -100,6 +100,16 @@ describe('Superflow 用户入口安装', () => {
         const phase = fs.readFileSync(path.join(destination, 'superflow-build', 'SKILL.md'), 'utf-8');
         expect(phase.includes('user-invocable: false')).toBe(agent === 'claude');
         expect(entry).not.toContain('user-invocable: false');
+        const propose = fs.readFileSync(path.join(destination, 'superflow-propose', 'SKILL.md'), 'utf-8');
+        expect(propose).not.toContain('Ready for implementation.');
+        expect(propose).not.toContain('/opsx:apply');
+        expect(propose).toContain('$superflow-contracts');
+        expect(propose).toContain('OpenSpec applyRequires');
+        const handoff = fs.readFileSync(path.join(destination, 'superflow-handoff', 'SKILL.md'), 'utf-8');
+        for (const content of [entry, propose, phase, handoff]) {
+          expect(content).toContain('superflow check <change> --level coding-ready');
+          expect(content).toContain('Blocked for docs');
+        }
         expect(fs.readFileSync(custom, 'utf-8')).toBe('用户自定义技能');
         expect(fs.readdirSync(destination).some((name) => name.includes('.backup-'))).toBe(false);
       }

@@ -1,6 +1,6 @@
 ---
 name: superflow-propose
-description: Propose a new change with all artifacts generated in one step. Use when the user wants to quickly describe what they want to build and get a complete proposal with design, specs, and tasks ready for implementation.
+description: Superflow internal capability for creating base OpenSpec artifacts before contract completion. Selected by $superflow; excludes implementation dispatch and Coding Ready approval.
 license: MIT
 metadata:
   requires: openspec CLI
@@ -16,7 +16,9 @@ I'll create a change with artifacts:
 - design.md (how)
 - tasks.md (implementation steps)
 
-When ready to implement, run /opsx:apply
+After the base artifacts are complete, continue with `$superflow-contracts`.
+OpenSpec applyRequires completion is an intermediate milestone, not Superflow
+development readiness.
 
 ---
 
@@ -69,7 +71,7 @@ user's original request needs no second confirmation.
    - `applyRequires`: array of artifact IDs needed before implementation (e.g., `["tasks"]`)
    - `artifacts`: list of all artifacts with their status and dependencies
 
-4. **Create artifacts in sequence until apply-ready**
+4. **Create the base OpenSpec artifacts in dependency order**
 
    Use the **TodoWrite tool** to track progress through the artifacts.
 
@@ -95,7 +97,7 @@ user's original request needs no second confirmation.
    b. **Continue until all `applyRequires` artifacts are complete**
       - After creating each artifact, re-run `openspec status --change "<name>" --json`
       - Check if every artifact ID in `applyRequires` has `status: "done"` in the artifacts array
-      - Stop when all `applyRequires` artifacts are done
+      - Finish only this base-artifact loop when all `applyRequires` artifacts are done; continue to the Superflow contract handoff below.
 
    c. **If an artifact requires user input** (unclear context):
       - Use **AskUserQuestion tool** to clarify
@@ -111,8 +113,17 @@ user's original request needs no second confirmation.
 After completing all artifacts, summarize:
 - Change name and location
 - List of artifacts created with brief descriptions
-- What's ready: "All artifacts created! Ready for implementation."
-- Prompt: "Run `/opsx:apply` or ask me to implement to start working on the tasks."
+- Report only the OpenSpec base-artifact milestone; do not declare the full
+  Superflow document delivery complete or offer implementation at this point.
+- Continue with `$superflow-contracts` in the same authorized document task;
+  it owns the remaining contract documents and their completeness checks.
+- Follow [Document Delivery Exit](../superflow/SKILL.md#document-delivery-exit).
+  Only a successful `superflow check <change> --level coding-ready` for the
+  current handoff may justify a Coding Ready declaration. Before that, missing
+  documents or failed checks mean `Blocked for docs`, with the actual missing
+  items and the next responsible phase. Never defer documents to development.
+- If the user explicitly requested only an OpenSpec proposal, report that narrow
+  scope as complete without claiming Superflow development readiness.
 
 **Artifact Creation Guidelines**
 
@@ -131,7 +142,7 @@ After completing all artifacts, summarize:
   - These guide what you write, but should never appear in the output
 
 **Guardrails**
-- Create ALL artifacts needed for implementation (as defined by schema's `apply.requires`)
+- Create all schema-required base artifacts; `apply.requires` does not define the full Superflow delivery contract.
 - Always read dependency artifacts before creating a new one
 - If context is critically unclear, ask the user - but prefer making reasonable decisions to keep momentum
 - If a change with that name already exists, ask if user wants to continue it or create a new one

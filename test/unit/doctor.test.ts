@@ -9,6 +9,20 @@ import {
 import { hasCodexSuperpowerSkill } from '../../src/domains/deps.js';
 
 describe('commands/doctor', () => {
+  it('uses specs from the selected nested workspace', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-doctor-nested-'));
+    const workspace = path.join(root, 'docs', 'openspec');
+    fs.mkdirSync(path.join(workspace, 'changes'), { recursive: true });
+    fs.mkdirSync(path.join(workspace, 'specs'), { recursive: true });
+    fs.writeFileSync(path.join(workspace, 'config.yaml'), 'schema: spec-driven\n');
+    try {
+      const result = await collectDoctor({ agent: 'codex', scope: 'project', projectPath: root });
+      expect(result.checks).toContainEqual(expect.objectContaining({
+        check: 'openspec project', status: 'pass',
+      }));
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
   it('fails closed when the global host still references known missing legacy hooks', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-doctor-legacy-global-'));
     const file = path.join(root, '.codex/hooks.json');

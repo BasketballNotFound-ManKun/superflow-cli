@@ -1,3 +1,5 @@
+import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -41,13 +43,36 @@ describe("check command levels", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 
+  it("emits structured JSON when coding-ready stops on missing documents", () => {
+    fs.rmSync(path.join(change, "api.md"));
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        createRequire(import.meta.url).resolve("tsx/esm"),
+        path.resolve(__dirname, "../../src/app/cli.ts"),
+        "check",
+        "demo",
+        "--level",
+        "coding-ready",
+        "--json",
+      ],
+      { cwd: root, encoding: "utf8" },
+    );
+    expect(result.status).toBe(1);
+    const report = JSON.parse(result.stdout);
+    expect(report.ready).toBe(false);
+    expect(report.failed).toBeGreaterThan(0);
+    expect(report.items).toContainEqual(
+      expect.objectContaining({ file: "api.md", exists: false }),
+    );
+  });
+
   it("treats a missing Understand index as a documented fallback, not a blocker", () => {
     const result = collectCheck(change, "demo");
     expect(result.failed).toBe(0);
     expect(
-      result.items.find(
-        (item) => item.file === ".ua/knowledge-graph.json",
-      ),
+      result.items.find((item) => item.file === ".ua/knowledge-graph.json"),
     ).toMatchObject({ required: false, exists: false });
   });
 
@@ -57,7 +82,8 @@ describe("check command levels", () => {
     fs.writeFileSync(graph, "{}");
 
     const result = collectCheck(change, "demo");
-    expect(result.items.find((item) => item.file === ".ua/knowledge-graph.json"))
-      .toMatchObject({ required: false, exists: true });
+    expect(
+      result.items.find((item) => item.file === ".ua/knowledge-graph.json"),
+    ).toMatchObject({ required: false, exists: true });
   });
 });

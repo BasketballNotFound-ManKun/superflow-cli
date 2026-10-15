@@ -414,10 +414,10 @@ export async function collectDoctor(options: {
 
 function collectOpenSpecProjectChecks(projectPath: string, language: Language): DoctorCheck[] {
   const changesDir = resolveChangesRoot(projectPath);
-  const specsDir = path.join(projectPath, 'openspec', 'specs');
+  const specsDir = path.join(path.dirname(changesDir), 'specs');
   const missing = [
-    existsSync(changesDir) ? '' : 'openspec/changes',
-    existsSync(specsDir) ? '' : 'openspec/specs',
+    existsSync(changesDir) ? '' : path.relative(projectPath, changesDir),
+    existsSync(specsDir) ? '' : path.relative(projectPath, specsDir),
   ].filter(Boolean);
 
   return [{
@@ -425,7 +425,7 @@ function collectOpenSpecProjectChecks(projectPath: string, language: Language): 
     status: missing.length > 0 ? 'fail' : 'pass',
     message: missing.length > 0
       ? managedText(language, `缺少 ${missing.join('、')}；请运行 superflow init 或 openspec init`, `missing ${missing.join(', ')}; run superflow init or openspec init`)
-      : managedText(language, '已检测 openspec/changes 和 openspec/specs', 'openspec/changes and openspec/specs detected'),
+      : managedText(language, `已检测 ${path.relative(projectPath, changesDir)} 和 ${path.relative(projectPath, specsDir)}`, `${path.relative(projectPath, changesDir)} and ${path.relative(projectPath, specsDir)} detected`),
   }];
 }
 

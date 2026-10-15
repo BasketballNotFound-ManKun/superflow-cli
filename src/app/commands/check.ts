@@ -76,8 +76,14 @@ export async function checkCommand(
 
   if (!options.json) {
     printCheck(result);
-  } else if (level === "files") {
-    console.log(JSON.stringify(result, null, 2));
+  } else if (level === "files" || result.failed > 0) {
+    console.log(
+      JSON.stringify(
+        { ...result, ...(result.failed > 0 ? { level, ready: false } : {}) },
+        null,
+        2,
+      ),
+    );
   }
 
   if (result.failed > 0) {

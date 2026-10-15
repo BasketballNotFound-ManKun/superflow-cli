@@ -5,6 +5,16 @@ description: Superflow 内部能力：将冻结合同与技术详设转成分批
 
 # SDD Implement
 
+## Document Delivery Exit
+
+This phase owns implementation prompt generation and the final document handoff.
+After prompts and their cross-links are complete, run
+`superflow check <change> --level coding-ready`. Follow the single
+[Document Delivery Exit](../superflow/SKILL.md#document-delivery-exit) contract.
+Missing documents or a failed gate mean `Blocked for docs`; do not hand missing
+contracts to the development Agent as implementation tasks. Report the current
+gate result and receipt path before saying the document package is Coding Ready.
+
 ## 验证合同继承
 
 生成 Prompt 前读取[测试指南](../superflow/references/test-guide.md)，将 tests.md 的

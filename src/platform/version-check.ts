@@ -11,6 +11,11 @@ let cachedLatest: string | null = null;
  * 非阻塞：失败静默跳过，不影响命令执行。
  */
 export async function checkForUpdates(currentVersion: string): Promise<void> {
+  if (
+    process.env.NO_UPDATE_NOTIFIER ||
+    /^(?:1|true)$/i.test(process.env.CI ?? "")
+  )
+    return;
   if (Date.now() - lastCheck < CHECK_INTERVAL_MS && cachedLatest) {
     if (isNewerVersion(cachedLatest, currentVersion)) {
       printUpdateHint(currentVersion, cachedLatest);

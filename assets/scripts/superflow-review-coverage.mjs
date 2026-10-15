@@ -7,19 +7,6 @@ import { fileURLToPath } from "node:url";
 
 export const reviewPath = ".sdd/reviews/document-review.json";
 
-function readDeclaredProjectRoot(changeDir) {
-  try {
-    const review = JSON.parse(
-      fs.readFileSync(path.join(changeDir, ".sdd", "reviews", "document-review.json"), "utf8"),
-    );
-    if (typeof review.projectRoot === "string" && review.projectRoot.length > 0) {
-      return path.resolve(changeDir, review.projectRoot);
-    }
-  } catch {
-    // 评审文件不可读时退回目录探测
-  }
-  return null;
-}
 export function fileHash(file) {
   return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
@@ -54,7 +41,7 @@ const nonempty = (value) =>
 const list = (value) => (Array.isArray(value) ? value : []);
 
 // This validates trace structure and evidence identity, NOT business semantics.
-export function validateCoverage(root, review, issues, checkCode = true, changeDir) {
+export function validateCoverage(root, review, issues, checkCode = true) {
   const coverage = review?.coverage;
   if (coverage?.schemaVersion !== "superflow.review-coverage.v1") {
     issues.push(
@@ -426,8 +413,6 @@ export function validateCoverage(root, review, issues, checkCode = true, changeD
     entries,
     issues,
     checkCode,
-    changeDir,
-    changeDir,
   );
 }
 
@@ -440,7 +425,6 @@ function validateSourceInvestigation(
   entries,
   issues,
   checkCode,
-  changeDir,
 ) {
   const coverage = review.coverage;
   const configPath = path.join(root, ".openspec.yaml");
@@ -633,7 +617,7 @@ function validateSourceInvestigation(
           );
           const result = spawnSync(
             "python3",
-            [parser, resolveTasksMd(root, changeDir), "--task-index"],
+            [parser, path.join(root, "tasks.md"), "--task-index"],
             { encoding: "utf8", timeout: 30000 },
           );
           if (result.status !== 0) throw new Error("task parser unavailable");
@@ -686,23 +670,7 @@ function validateSourceInvestigation(
   }
 }
 
-function resolveTasksMd(repoRoot, changeDir) {
-  // repoRoot 在本函数语境下即 change 目录（validateCoverage 的 root 语义）。
-  const direct = path.join(repoRoot, "tasks.md");
-  if (fs.existsSync(direct)) return direct;
-  if (changeDir) {
-    const inChange = path.join(changeDir, "tasks.md");
-    if (fs.existsSync(inChange)) return inChange;
-    const declared = readDeclaredProjectRoot(changeDir);
-    if (declared) {
-      const declaredTasks = path.join(declared, "openspec", "changes", path.basename(changeDir), "tasks.md");
-      if (fs.existsSync(declaredTasks)) return declaredTasks;
-    }
-  }
-  return direct;
-}
-
-export function checkReceipt(root, { checkCode = false, changeDir } = {}) {
+export function checkReceipt(root, { checkCode = false } = {}) {
   const issues = [];
   try {
     const receipt = JSON.parse(
@@ -727,7 +695,7 @@ export function checkReceipt(root, { checkCode = false, changeDir } = {}) {
     const review = JSON.parse(
       fs.readFileSync(path.join(root, reviewPath), "utf8"),
     );
-    validateCoverage(root, review, issues, checkCode, changeDir);
+    validateCoverage(root, review, issues, checkCode);
   } catch (receiptError) {
     issues.push(
       `Coding Ready 凭证或当前合同不可验证（${receiptError?.message ?? receiptError}）`,
@@ -740,15 +708,11 @@ if (
   process.argv[1] &&
   fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  // source.path 相对仓库根；change 目录可能在仓库子目录（如 doc/openspec/changes），
-  // 向上探测仓库根标记，找不到时回退 change 目录本身。
-  const changeDirArg = process.argv[2] ? path.resolve(process.argv[2]) : process.argv[2];
-  // coverage 契约：sources path 相对 change 目录，root 即 change 目录。
-  const root = changeDirArg;
+  // Coverage paths are relative to the change directory in every entry point.
+  const root = process.argv[2] ? path.resolve(process.argv[2]) : undefined;
   const issues = root
     ? checkReceipt(path.resolve(root), {
         checkCode: process.argv.includes("--check-sources"),
-        changeDir: changeDirArg,
       })
     : ["缺少 change 目录"];
   if (issues.length) {

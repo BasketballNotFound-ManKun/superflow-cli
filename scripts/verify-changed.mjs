@@ -1,11 +1,37 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { existsSync, realpathSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
+import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 // This maintenance script has a narrow test owner. Production code falls back
 // rather than guessing complete test coverage from source filenames.
+// One catalogue, verified against the same full Vitest execution, not rerun.
+export const BASELINE_SUITES = [
+  ["installation-matrix", "skills"],
+  ["installation-scope", "install-scope"],
+  ["installed-contracts", "workflow-reference-install"],
+  ["document-evidence", "document-readiness"],
+  ["complete-coding-ready", "coding-ready-flow"],
+  ["incomplete-contract-blocking", "change-guard"],
+  ["valid-resume-and-drift", "sdd-readiness"],
+  ["implementation-source-resume", "coding-ready-hook"],
+  ["managed-recovery", "managed-work-mcp"],
+  ["upgrade", "update"],
+  ["runtime-handoff", "update-runtime-handoff"],
+].map(([id, name]) => ({ id, path: `test/unit/${name}.test.ts` }));
+const TEST_REPORT = "<vitest-report>";
+const BUILD_REPORT = "<build-snapshot>";
 const OWNERS = {
   "scripts/verify-changed.mjs": ["verify-changed"],
 };
@@ -99,7 +125,15 @@ export function planChangedVerification(
   if (isFull)
     add(
       "test:full",
-      ["test"],
+      [
+        "test",
+        "--",
+        "--maxWorkers=2",
+        "--minWorkers=2",
+        "--reporter=default",
+        "--reporter=json",
+        `--outputFile.json=${TEST_REPORT}`,
+      ],
       text(
         language,
         "完整 npm test 门禁，含 pretest。",
@@ -116,6 +150,22 @@ export function planChangedVerification(
         "Run changed tests and explicitly mapped tests.",
       ),
     );
+  if (isFull) {
+    add(
+      "build",
+      ["run", "build"],
+      text(language, "构建实际交付产物。", "Build deliverable artifacts."),
+    );
+    add(
+      "package-smoke",
+      ["run", "test:package", "--", "--build-snapshot", BUILD_REPORT],
+      text(
+        language,
+        "真实打包并安装到隔离 consumer。",
+        "Pack and install into an isolated consumer.",
+      ),
+    );
+  }
   return {
     files,
     full: isFull,
@@ -214,98 +264,446 @@ export function resolveNpmInvocation({
   );
 }
 
+export function validateBaselineReport(
+  report,
+  { cwd = process.cwd(), required = BASELINE_SUITES, language = "zh" } = {},
+) {
+  const issues = [];
+  if (
+    report?.success !== true ||
+    report?.numFailedTests !== 0 ||
+    !(report?.numPassedTests > 0)
+  )
+    issues.push(
+      text(
+        language,
+        "Vitest 未报告真实全绿执行。",
+        "Vitest did not report a successful executed run.",
+      ),
+    );
+  const suites = required.map((suite) => {
+    const actual = Array.isArray(report?.testResults)
+      ? report.testResults.filter(
+          (result) =>
+            typeof result?.name === "string" &&
+            path.resolve(cwd, result.name) === path.resolve(cwd, suite.path),
+        )
+      : [];
+    const assertions = actual.flatMap((result) =>
+      Array.isArray(result.assertionResults) ? result.assertionResults : [],
+    );
+    const passed = assertions.filter(
+      (assertion) => assertion.status === "passed",
+    ).length;
+    const valid =
+      actual.length === 1 &&
+      actual[0].status === "passed" &&
+      assertions.length > 0 &&
+      passed === assertions.length;
+    if (!valid)
+      issues.push(
+        text(
+          language,
+          `基线未完整通过：${suite.path}`,
+          `Baseline was not fully executed and passed: ${suite.path}`,
+        ),
+      );
+    return {
+      ...suite,
+      status: valid ? "PASS" : "FAIL",
+      passed,
+      total: assertions.length,
+    };
+  });
+  return { status: issues.length ? "FAIL" : "PASS", suites, issues };
+}
+
+function treeFiles(root, relative) {
+  const full = path.join(root, relative);
+  return readdirSync(full, { withFileTypes: true }).flatMap((entry) => {
+    const file = path.join(relative, entry.name);
+    return entry.isDirectory()
+      ? treeFiles(root, file)
+      : entry.isFile()
+        ? [file]
+        : [];
+  });
+}
+function contentHash(root, files) {
+  const hash = createHash("sha256");
+  for (const file of [...files].sort())
+    hash
+      .update(file)
+      .update("\0")
+      .update(
+        existsSync(path.join(root, file))
+          ? readFileSync(path.join(root, file))
+          : "<missing>",
+      )
+      .update("\0");
+  return hash.digest("hex");
+}
+function buildInputs(root) {
+  return contentHash(root, [
+    ...treeFiles(root, "src"),
+    "package.json",
+    "tsconfig.json",
+    "scripts/clean-dist.js",
+    "scripts/ensure-bin-modes.js",
+  ]);
+}
+// A temporary same-run freshness check, not a persistent build certificate.
+export function captureBuildSnapshot(root) {
+  for (const file of ["dist/app/cli.js", "dist/build-info.json"])
+    if (!existsSync(path.join(root, file)))
+      throw new Error(
+        `Missing build output: ${file}; run the full verification entrypoint.`,
+      );
+  return {
+    inputs: buildInputs(root),
+    outputs: contentHash(root, treeFiles(root, "dist")),
+  };
+}
+export function assertBuildSnapshot(root, snapshot) {
+  const current = captureBuildSnapshot(root);
+  if (
+    snapshot?.inputs !== current.inputs ||
+    snapshot?.outputs !== current.outputs
+  )
+    throw new Error(
+      "Build inputs or outputs changed; rerun full verification before packaging.",
+    );
+}
+
+function verificationInputs(cwd, excluded) {
+  const files = gitOutput(
+    ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+    cwd,
+  )
+    .split("\0")
+    .filter(Boolean);
+  return contentHash(
+    cwd,
+    files.filter((file) => {
+      const absolute = path.resolve(cwd, file);
+      return (
+        !/^(?:dist|node_modules)\//.test(file) &&
+        !excluded.some(
+          (item) =>
+            item && (absolute === item || absolute.startsWith(item + path.sep)),
+        )
+      );
+    }),
+  );
+}
+
 export function runChecks(
   checks,
   invocation,
   spawn = spawnSync,
-  { json = false } = {},
+  {
+    cwd = process.cwd(),
+    testReportPath,
+    buildSnapshotPath,
+    language = "zh",
+    verifyInputs = false,
+    inputExclusions = [],
+  } = {},
 ) {
-  for (const check of checks) {
-    const result = spawn(
-      invocation.executable,
-      [...invocation.argumentPrefix, ...check.args],
-      {
-        stdio: json ? ["inherit", 2, 2] : "inherit",
-        windowsHide: true,
-        shell: false,
-      },
-    );
-    if (result.error) throw result.error;
-    if (result.status !== 0) return result.status ?? 1;
+  const results = checks.map((check) => ({
+    id: check.id,
+    command: check.command,
+    status: "NOT_RUN",
+    exitCode: null,
+  }));
+  let baseline = { status: "NOT_RUN", suites: [], issues: [] };
+  const consistency = { status: "NOT_RUN" };
+  let inputHash;
+  try {
+    if (verifyInputs) inputHash = verificationInputs(cwd, inputExclusions);
+  } catch (error) {
+    return {
+      status: 1,
+      results,
+      baseline,
+      consistency: { status: "FAIL", error: String(error) },
+    };
   }
-  return 0;
+  const finish = (status) => {
+    if (verifyInputs && status === 0) {
+      try {
+        consistency.status =
+          inputHash === verificationInputs(cwd, inputExclusions)
+            ? "PASS"
+            : "FAIL";
+        if (consistency.status === "FAIL")
+          consistency.error = text(
+            language,
+            "验证期间输入发生变化，请重新运行完整验证。",
+            "Verification inputs changed during this run; rerun full verification.",
+          );
+      } catch (error) {
+        consistency.status = "FAIL";
+        consistency.error = String(error);
+      }
+    }
+    return {
+      status: consistency.status === "FAIL" ? 1 : status,
+      results,
+      baseline,
+      consistency,
+    };
+  };
+  for (const [index, check] of checks.entries()) {
+    const item = results[index];
+    const startedAt = Date.now();
+    try {
+      const inputs = check.id === "build" ? buildInputs(cwd) : null;
+      const args = check.args.map((arg) =>
+        arg
+          .replace(TEST_REPORT, () => testReportPath ?? TEST_REPORT)
+          .replace(BUILD_REPORT, () => buildSnapshotPath ?? BUILD_REPORT),
+      );
+      item.command = ["npm", ...args].join(" ");
+      const result = spawn(
+        invocation.executable,
+        [...invocation.argumentPrefix, ...args],
+        {
+          cwd,
+          stdio: ["inherit", 2, 2],
+          windowsHide: true,
+          shell: false,
+        },
+      );
+      if (result.error) throw result.error;
+      item.exitCode = result.status ?? 1;
+      if (item.exitCode === 0 && check.id === "test:full") {
+        baseline = validateBaselineReport(
+          JSON.parse(readFileSync(testReportPath, "utf8")),
+          { cwd, language },
+        );
+        if (baseline.status !== "PASS")
+          throw new Error(baseline.issues.join("\n"));
+      }
+      if (item.exitCode === 0 && check.id === "build") {
+        if (inputs !== buildInputs(cwd))
+          throw new Error(
+            "Build inputs changed during build; rerun verification.",
+          );
+        writeFileSync(
+          buildSnapshotPath,
+          JSON.stringify(captureBuildSnapshot(cwd)),
+        );
+      }
+      item.status = item.exitCode === 0 ? "PASS" : "FAIL";
+    } catch (error) {
+      item.status = "FAIL";
+      item.exitCode = item.exitCode || 1;
+      item.error = error instanceof Error ? error.message : String(error);
+      if (check.id === "test:full")
+        baseline = {
+          ...baseline,
+          status: "FAIL",
+          issues: [...baseline.issues, item.error],
+        };
+    }
+    item.durationMs = Date.now() - startedAt;
+    if (item.status === "FAIL") return finish(item.exitCode);
+  }
+  return finish(0);
+}
+
+export function formatTextResults(report) {
+  if (report.mode === "plan" && report.status === 0) return "";
+  const lines = report.results.map(
+    (result) =>
+      `${result.status} ${result.id}${result.error ? `: ${result.error}` : ""}`,
+  );
+  if (report.consistency?.status === "FAIL")
+    lines.push(`FAIL input-consistency: ${report.consistency.error}`);
+  lines.push(`${report.status === 0 ? "PASS" : "FAIL"} verification`);
+  return lines.join("\n");
+}
+
+function emitReport(report, options) {
+  const target =
+    options.report ??
+    (report.evidenceDirectory &&
+      path.join(report.evidenceDirectory, "verification.json"));
+  if (target) {
+    try {
+      mkdirSync(path.dirname(target), { recursive: true });
+      writeFileSync(target, `${JSON.stringify(report, null, 2)}\n`);
+    } catch (error) {
+      report.status = 1;
+      report.success = false;
+      report.reportWriteError = String(error);
+      console.error(report.reportWriteError);
+    }
+  }
+  if (options.json) console.log(JSON.stringify(report, null, 2));
+  else {
+    const output = formatTextResults(report);
+    if (output) console.log(output);
+  }
+  return report.status;
 }
 
 export function run(argv) {
   const language = languageFrom(argv);
-  if (!["zh", "en"].includes(language))
-    throw new Error(
-      "--language / SUPERFLOW_LANG 必须为 zh 或 en / must be zh or en.",
-    );
   const options = {
     base: "HEAD",
-    full: false,
-    json: false,
-    plan: false,
+    full: argv.includes("--full"),
+    json: argv.includes("--json"),
+    plan: argv.includes("--plan"),
     language,
+    report: undefined,
   };
-  for (let index = 0; index < argv.length; index++) {
-    const argument = argv[index];
-    if (argument === "--base") {
-      if (!argv[index + 1] || argv[index + 1].startsWith("--"))
+  // Recover output destinations even when an earlier argument or startup fails.
+  const reportIndex = argv.indexOf("--report");
+  if (
+    reportIndex >= 0 &&
+    argv[reportIndex + 1] &&
+    !argv[reportIndex + 1].startsWith("--")
+  )
+    options.report = path.resolve(argv[reportIndex + 1]);
+  let plan;
+  let evidenceDirectory;
+  try {
+    if (!["zh", "en"].includes(language))
+      throw new Error(
+        "--language / SUPERFLOW_LANG 必须为 zh 或 en / must be zh or en.",
+      );
+
+    for (let index = 0; index < argv.length; index++) {
+      const argument = argv[index];
+      if (argument === "--base") {
+        if (!argv[index + 1] || argv[index + 1].startsWith("--"))
+          throw new Error(
+            text(
+              language,
+              "--base 需要 Git 引用。",
+              "--base requires a Git revision.",
+            ),
+          );
+        options.base = argv[++index];
+      } else if (argument === "--report") {
+        if (!argv[index + 1] || argv[index + 1].startsWith("--"))
+          throw new Error(
+            text(
+              language,
+              "--report 需要输出文件路径。",
+              "--report requires an output file.",
+            ),
+          );
+        options.report = path.resolve(argv[++index]);
+      } else if (argument === "--language") {
+        index++;
+      } else if (["--full", "--json", "--plan"].includes(argument))
+        options[argument.slice(2)] = true;
+      else if (argument === "--help") {
+        console.log(
+          text(
+            language,
+            "用法：npm run verify:changed -- --base <ref> [--plan] [--json] [--full] [--report <file>] [--language zh|en]\n差异验证保持轻量；--full 执行完整交付验证并核验固定流程基线。",
+            "Usage: npm run verify:changed -- --base <ref> [--plan] [--json] [--full] [--report <file>] [--language zh|en]\nNarrow verification stays lightweight; --full verifies delivery and the fixed workflow baseline.",
+          ),
+        );
+        return 0;
+      } else
         throw new Error(
           text(
             language,
-            "--base 需要 Git 引用。",
-            "--base requires a Git revision.",
+            `未知参数：${argument}`,
+            `Unknown argument: ${argument}`,
           ),
         );
-      options.base = argv[++index];
-    } else if (argument === "--language") {
-      index++;
-    } else if (["--full", "--json", "--plan"].includes(argument))
-      options[argument.slice(2)] = true;
-    else if (argument === "--help") {
+    }
+    plan = planChangedVerification(
+      collectChangedFiles(options.base, process.cwd(), language),
+      options,
+    );
+    if (!options.json)
       console.log(
-        text(
-          language,
-          "用法：npm run verify:changed -- --base <ref> [--plan] [--json] [--full] [--language zh|en]\n日常差异验证；最终交付和发布仍必须执行全量验证。",
-          "Usage: npm run verify:changed -- --base <ref> [--plan] [--json] [--full] [--language zh|en]\nDaily verification aid; final delivery and release still require full verification.",
-        ),
+        [
+          plan.message,
+          ...plan.reasons,
+          ...plan.checks.map((check) => `${check.command} (${check.reason})`),
+        ].join("\n"),
       );
-      return 0;
-    } else
-      throw new Error(
-        text(
-          language,
-          `未知参数：${argument}`,
-          `Unknown argument: ${argument}`,
-        ),
+    if (!options.plan && plan.full) {
+      const parent = options.report ? path.dirname(options.report) : tmpdir();
+      mkdirSync(parent, { recursive: true });
+      evidenceDirectory = mkdtempSync(
+        path.join(parent, "superflow-verification-"),
       );
+    }
+    const execution =
+      options.plan || !plan.checks.length
+        ? {
+            status: 0,
+            results: plan.checks.map((check) => ({
+              id: check.id,
+              command: check.command,
+              status: "NOT_RUN",
+              exitCode: null,
+            })),
+            baseline: { status: "NOT_RUN", suites: [], issues: [] },
+          }
+        : runChecks(
+            plan.checks,
+            resolveNpmInvocation({ language }),
+            spawnSync,
+            {
+              language,
+              verifyInputs: plan.full,
+              inputExclusions: [options.report, evidenceDirectory],
+              testReportPath:
+                evidenceDirectory &&
+                path.join(evidenceDirectory, "vitest.json"),
+              buildSnapshotPath:
+                evidenceDirectory && path.join(evidenceDirectory, "build.json"),
+            },
+          );
+    const status = execution.status;
+    const report = {
+      schemaVersion: "superflow.verification.v1",
+      base: options.base,
+      ...plan,
+      mode: options.plan ? "plan" : "execute",
+      success: options.plan
+        ? null
+        : status === 0 &&
+          execution.results.every((item) => item.status === "PASS"),
+      ...execution,
+      evidenceDirectory,
+    };
+    return emitReport(report, options);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
+    return emitReport(
+      {
+        schemaVersion: "superflow.verification.v1",
+        base: options.base,
+        ...(plan ?? { files: [], full: options.full, checks: [], reasons: [] }),
+        mode: options.plan ? "plan" : "execute",
+        status: 1,
+        success: false,
+        results: (plan?.checks ?? []).map((check) => ({
+          id: check.id,
+          command: check.command,
+          status: "NOT_RUN",
+          exitCode: null,
+        })),
+        baseline: { status: "NOT_RUN", suites: [], issues: [] },
+        consistency: { status: "NOT_RUN" },
+        error: message,
+        evidenceDirectory,
+      },
+      options,
+    );
   }
-  const plan = planChangedVerification(
-    collectChangedFiles(options.base, process.cwd(), language),
-    options,
-  );
-  if (!options.json)
-    console.log(
-      [
-        plan.message,
-        ...plan.reasons,
-        ...plan.checks.map((check) => `${check.command} (${check.reason})`),
-      ].join("\n"),
-    );
-  const status =
-    options.plan || !plan.checks.length
-      ? 0
-      : runChecks(plan.checks, resolveNpmInvocation({ language }), spawnSync, {
-          json: options.json,
-        });
-  if (options.json)
-    console.log(
-      JSON.stringify({ base: options.base, ...plan, status }, null, 2),
-    );
-  return status;
 }
 
 if (

@@ -53,28 +53,8 @@ const review = readJson(
   issues,
 );
 validateReview(review, handoffHash, issues);
-// coverage.sources 的 path 相对仓库根；change 目录可能在仓库子目录
-// （如 doc/openspec/changes/<name>），需以仓库根解析源码锚点。
-function readDeclaredProjectRoot(changeDir) {
-  try {
-    const review = JSON.parse(
-      fs.readFileSync(path.join(changeDir, ".sdd", "reviews", "document-review.json"), "utf8"),
-    );
-    if (typeof review.projectRoot === "string" && review.projectRoot.length > 0) {
-      return path.resolve(changeDir, review.projectRoot);
-    }
-  } catch {
-    // 评审文件不可读时退回目录探测
-  }
-  return null;
-}
-function detectProjectRoot(fromDir) {
-  const declared = readDeclaredProjectRoot(fromDir);
-  if (declared) return declared;
-  // fallback：openspec 默认布局 <repo>/openspec/changes/<name>
-  return path.resolve(fromDir, "..", "..", "..");
-}
-validateCoverage(detectProjectRoot(changeDir), review, issues, true, changeDir);
+// Coverage sources, task indexes and applicability all resolve from the change.
+validateCoverage(changeDir, review, issues, true);
 try {
   if (currentHandoffHash(changeDir) !== handoffHash) {
     issues.push("冻结文档内容已变化，请刷新 handoff 并重新评审");

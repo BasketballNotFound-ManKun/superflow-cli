@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -47,6 +48,28 @@ describe("change command guards", () => {
 
   it("executes the coding-ready gate", () => {
     expect(() => runCodingReady("sample-change")).toThrow();
+  });
+
+  it("does not admit an OpenSpec-only document package to coding", () => {
+    const change = path.join(tmp, "openspec", "changes", "sample-change");
+    for (const file of ["proposal.md", "design.md", "tasks.md", "specs/demo/spec.md"]) {
+      const target = path.join(change, file);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, "# OpenSpec artifact\n");
+    }
+    const script = path.resolve(originalCwd, "assets/scripts/superflow-coding-ready.mjs");
+    const result = spawnSync(process.execPath, [script, change, "--json"], {
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(1);
+    const failure = JSON.parse(result.stderr);
+    expect(failure.codingReady).toBe(false);
+    expect(failure.issues.join("\n")).toContain("api.md");
+    expect(failure.issues.join("\n")).toContain("tests.md");
+    const receipt = JSON.parse(fs.readFileSync(
+      path.join(change, ".sdd/readiness/coding-ready.json"), "utf8",
+    ));
+    expect(receipt.codingReady).toBe(false);
   });
 
   it("executes archive dry-run before loading the archive skill", () => {

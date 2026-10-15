@@ -30,6 +30,10 @@
 - Field semantics
 - Write/read loop
 - No-fallback decisions
+- Record each confirmed behavior decision in the body with an actual date,
+  owner and conclusion: `owner-decided: YYYY-MM-DD | owner: <name/role> | decision: <confirmed conclusion>`.
+  Instructions, block quotes, code examples and unfilled placeholders are not
+  confirmation. Gates check structure/date only; Agents review provenance and adequacy.
 - Superpowers technical design handoff
 
 ## release-sql.md (required for database changes)
