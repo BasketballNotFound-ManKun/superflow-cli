@@ -5,6 +5,7 @@ import {
   realpathSync,
   statSync,
 } from "fs";
+import { resolveChangesRoot } from "../../domains/config/planning-home.js";
 import path from "path";
 import { t } from "../../domains/config/i18n.js";
 import { resolveRuntimeLanguage } from "../../domains/config/cli-help.js";
@@ -110,7 +111,7 @@ export async function collectStatus(
   language: Language = "zh",
 ): Promise<StatusResult> {
   const projectPath = path.resolve(targetPath);
-  const changesRoot = path.join(projectPath, "openspec", "changes");
+  const changesRoot = resolveChangesRoot(projectPath);
   const changes: ChangeStatus[] = [];
   const managedTasks = collectManagedTasks(projectPath, language);
   const service = readServiceState();

@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import path from "path";
 import { ASSETS_DIR } from "../../platform/assets.js";
 import { runChangeGuard, runCodingReady } from "./change-guard.js";
+import { resolveChangeDirByName } from "../../domains/config/planning-home.js";
 
 /**
  * SDD 文档完整性检查。
@@ -58,7 +59,7 @@ export async function checkCommand(
   } = {},
 ): Promise<void> {
   const projectPath = path.resolve(options.projectPath ?? process.cwd());
-  const changeDir = path.join(projectPath, "openspec", "changes", changeName);
+  const changeDir = resolveChangeDirByName(projectPath, changeName);
 
   if (!existsSync(changeDir)) {
     console.error(`错误：change 目录不存在: ${changeDir}`);

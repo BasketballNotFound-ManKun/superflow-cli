@@ -1,4 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
+import { resolveChangesRoot } from "../../domains/config/planning-home.js";
 import { homedir } from 'os';
 import path from 'path';
 import { runCommand } from '../../platform/process.js';
@@ -412,7 +413,7 @@ export async function collectDoctor(options: {
 }
 
 function collectOpenSpecProjectChecks(projectPath: string, language: Language): DoctorCheck[] {
-  const changesDir = path.join(projectPath, 'openspec', 'changes');
+  const changesDir = resolveChangesRoot(projectPath);
   const specsDir = path.join(projectPath, 'openspec', 'specs');
   const missing = [
     existsSync(changesDir) ? '' : 'openspec/changes',
@@ -429,7 +430,7 @@ function collectOpenSpecProjectChecks(projectPath: string, language: Language): 
 }
 
 function collectSddStateChecks(projectPath: string, language: Language): DoctorCheck[] {
-  const changesDir = path.join(projectPath, 'openspec', 'changes');
+  const changesDir = resolveChangesRoot(projectPath);
   if (!existsSync(changesDir)) return [];
   const checks: DoctorCheck[] = [];
 

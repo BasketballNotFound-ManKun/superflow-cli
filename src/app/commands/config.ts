@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { logReviewModeChange, logAutoTransitionToggle } from '../../domains/state-events.js';
 import type { ReviewMode } from '../../domains/workflow-state.js';
+import { resolveChangeDirByName } from '../../domains/config/planning-home.js';
 
 export interface ConfigResult {
   change: string;
@@ -22,7 +23,7 @@ export async function configCommand(
   } = {}
 ): Promise<void> {
   const projectPath = path.resolve(options.projectPath ?? process.cwd());
-  const changeDir = path.join(projectPath, 'openspec', 'changes', changeName);
+  const changeDir = resolveChangeDirByName(projectPath, changeName);
   const stateFile = path.join(changeDir, '.sdd', 'state.yaml');
 
   if (!existsSync(stateFile)) {

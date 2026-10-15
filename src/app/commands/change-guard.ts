@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { ASSETS_DIR } from "../../platform/assets.js";
+import { resolveChangeDirByName } from "../../domains/config/planning-home.js";
 
 const PIPELINE_SCRIPTS = path.resolve(
   ASSETS_DIR,
@@ -14,8 +15,8 @@ export function resolveChangeDir(change: string): string {
   const direct = path.resolve(change);
   if (existsSync(direct)) return direct;
 
-  const openspecChange = path.resolve("openspec", "changes", change);
-  if (existsSync(openspecChange)) return openspecChange;
+  const byName = resolveChangeDirByName(process.cwd(), change);
+  if (existsSync(byName)) return byName;
 
   return direct;
 }

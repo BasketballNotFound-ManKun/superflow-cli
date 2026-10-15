@@ -69,11 +69,25 @@ for (const [label, command, commandArgs] of checks) {
   }
 }
 
+// openspec CLI 以工作区根（含 config.yaml 的目录，如 <repo>/openspec 或
+// <repo>/doc/openspec）为工作目录解析 change；仓库根不一定是工作区。
+function openspecWorkspaceDir(repoRoot) {
+  const declared = readDeclaredProjectRoot(changeDir);
+  const base = declared ?? repoRoot;
+  const candidates = [
+    path.join(base, "openspec"),
+    path.join(base, "doc", "openspec"),
+  ];
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, "config.yaml"))) return dir;
+  }
+  return repoRoot;
+}
 const openspec = spawnSync(
   "openspec",
   ["validate", path.basename(changeDir), "--strict"],
   {
-    cwd: projectRoot(changeDir),
+    cwd: openspecWorkspaceDir(projectRoot(changeDir)),
     encoding: "utf-8",
   },
 );
@@ -160,7 +174,23 @@ function resolvePipelineScripts(currentScriptDir) {
   return found;
 }
 
+function readDeclaredProjectRoot(changeDir) {
+  try {
+    const review = JSON.parse(
+      fs.readFileSync(path.join(changeDir, ".sdd", "reviews", "document-review.json"), "utf8"),
+    );
+    if (typeof review.projectRoot === "string" && review.projectRoot.length > 0) {
+      return path.resolve(changeDir, review.projectRoot);
+    }
+  } catch {
+    // 评审文件不可读时退回目录探测
+  }
+  return null;
+}
 function projectRoot(root) {
+  const declared = readDeclaredProjectRoot(root);
+  if (declared) return declared;
+  // fallback：openspec 默认布局 <repo>/openspec/changes/<name>
   return path.resolve(root, "..", "..", "..");
 }
 
