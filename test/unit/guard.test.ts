@@ -423,7 +423,9 @@ async function prepareDatabaseChange(
   return change;
 }
 
-describe("superflow-guard.sh", () => {
+// Real state/handoff/Bash/Python integration: macOS CI passes reach 4.9s.
+// Keep a local integration budget; unit defaults and CI job limits stay strict.
+describe("superflow-guard.sh", { timeout: 15_000 }, () => {
   beforeEach(async () => {
     tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "superflow-guard-"));
   });

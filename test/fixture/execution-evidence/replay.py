@@ -14,7 +14,13 @@ root = Path(sys.argv[1])
 omit = sys.argv[2] == "omit"
 (root / "logs").mkdir(parents=True, exist_ok=True)
 source = '''from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import TCPServer
 import json, sqlite3
+class LoopbackHTTPServer(HTTPServer):
+    def server_bind(self):
+        # Numeric loopback identity needs no host reverse-DNS lookup.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args): pass
     def do_POST(self):
@@ -55,7 +61,7 @@ def snapshots(db, business_id):
 
 entries, cases, rows = [], [], []
 for entry, service, route in [("E05", "service-a", "POST /a/notify"), ("E11", "service-b", "POST /b/notify")]:
-    server = module.HTTPServer(("127.0.0.1", 0), module.Handler)
+    server = module.LoopbackHTTPServer(("127.0.0.1", 0), module.Handler)
     server.database = str(db_file)
     server.omit = omit and entry == "E11"
     thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
@@ -65,9 +71,9 @@ for entry, service, route in [("E05", "service-a", "POST /a/notify"), ("E11", "s
         before = db.execute("SELECT external_code FROM records WHERE id=? AND round=2", (business_id,)).fetchone()[0]
     url = f"http://127.0.0.1:{server.server_port}" + route.split(" ", 1)[1]
     try:
-        argv = [sys.executable, "-c", "import json,urllib.request,sys; print(urllib.request.urlopen(urllib.request.Request(sys.argv[1],data=sys.argv[2].encode(),headers={'Content-Type':'application/json'})).read().decode())", url,
+        argv = [sys.executable, "-c", "import json,urllib.request,sys; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); print(opener.open(urllib.request.Request(sys.argv[1],data=sys.argv[2].encode(),headers={'Content-Type':'application/json'}),timeout=5).read().decode())", url,
                 json.dumps({"id": business_id, "code": "synthetic-code"})]
-        result = subprocess.run(argv, check=True, capture_output=True, text=True)
+        result = subprocess.run(argv, check=True, capture_output=True, text=True, timeout=10)
         response = json.loads(result.stdout)
         with sqlite3.connect(db_file) as db:
             peer_after = snapshots(db, business_id)

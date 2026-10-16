@@ -10,6 +10,7 @@ import {
 } from "../../src/domains/skill/scripts.js";
 import * as manifest from "../../src/domains/config/manifest.js";
 import { digest } from "../helpers/review-coverage.js";
+import { replayExecutionEvidence } from "../helpers/execution-replay.js";
 
 import {
   fixtureProcessEnv,
@@ -98,11 +99,7 @@ describe("旧 Git 入口的正式提交证据门", () => {
       git(["config", "user.email", "synthetic@example.invalid"]);
       const change = path.join(repo, "openspec/changes/anonymous");
       fs.mkdirSync(change, { recursive: true });
-      execFileSync("python3", [
-        path.join(ROOT, "test/fixture/execution-evidence/replay.py"),
-        change,
-        "omit",
-      ]);
+      replayExecutionEvidence(change, "omit", env);
       fs.writeFileSync(path.join(repo, ".sdd-aggregate-closeout"), "");
       fs.writeFileSync(
         path.join(repo, "custom.sh"),
@@ -205,11 +202,7 @@ describe("旧 Git 入口的正式提交证据门", () => {
       ).toBe(backupCount);
       fs.rmSync(change, { recursive: true, force: true });
       fs.mkdirSync(change);
-      execFileSync("python3", [
-        path.join(ROOT, "test/fixture/execution-evidence/replay.py"),
-        change,
-        "complete",
-      ]);
+      replayExecutionEvidence(change, "complete", env);
       fs.appendFileSync(
         path.join(change, "test-report.md"),
         "\nNew verification summary.\n",

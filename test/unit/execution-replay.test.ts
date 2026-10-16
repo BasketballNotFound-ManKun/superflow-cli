@@ -4,23 +4,61 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { runChangeGuard } from "../../src/app/commands/change-guard.js";
+import { fixtureProcessEnv } from "../helpers/fixture-process-env.js";
+import { replayExecutionEvidence } from "../helpers/execution-replay.js";
 
 const scripts = path.resolve("assets/skills/superflow/scripts");
 describe("anonymous application replay through the actual verify guard", () => {
-  it.each(["omit", "complete"])(
+  it.each(["proxy discovery", "reverse DNS"])(
+    "keeps loopback HTTP independent from host %s",
+    (operation) => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-loopback-"));
+      try {
+        const injection = path.join(dir, "python-startup");
+        fs.mkdirSync(injection);
+        fs.writeFileSync(
+          path.join(injection, "sitecustomize.py"),
+          [
+            "import socket, urllib.request",
+            "def forbidden(*args, **kwargs):",
+            `    raise RuntimeError('host ${operation} must not run for loopback HTTP')`,
+            operation === "proxy discovery"
+              ? "urllib.request.getproxies = forbidden"
+              : "socket.getfqdn = forbidden",
+            "",
+          ].join("\n"),
+        );
+        const env = fixtureProcessEnv(dir);
+        env.PYTHONPATH =
+          injection + (env.PYTHONPATH ? path.delimiter + env.PYTHONPATH : "");
+        const output = replayExecutionEvidence(dir, "complete", env);
+        expect(JSON.parse(output)).toMatchObject({
+          httpRequests: 2,
+          serversStopped: 2,
+        });
+        for (const entry of ["E05", "E11"]) {
+          const receipt = JSON.parse(
+            fs.readFileSync(path.join(dir, "logs", `${entry}.json`), "utf8"),
+          );
+          expect(receipt.status).toBe("PASS");
+          expect(
+            receipt.database.assertions.every(
+              (assertion: { result: string }) => assertion.result === "PASS",
+            ),
+          ).toBe(true);
+        }
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each(["omit", "complete"] as const)(
     "verifies each service write in %s mode",
     (mode) => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-replay-"));
       try {
-        const output = execFileSync(
-          "python3",
-          [
-            path.resolve("test/fixture/execution-evidence/replay.py"),
-            dir,
-            mode,
-          ],
-          { encoding: "utf8" },
-        );
+        const output = replayExecutionEvidence(dir, mode);
         expect(JSON.parse(output)).toMatchObject({
           httpRequests: 2,
           serversStopped: 2,
