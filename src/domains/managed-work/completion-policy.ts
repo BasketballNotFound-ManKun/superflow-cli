@@ -32,12 +32,19 @@ export interface CompletionDecision {
   releaseGaps: string[];
 }
 
+export interface CompletionOptions {
+  /** Only the Runner's verified final Host pass may approve native completion. */
+  hostApproved?: boolean;
+}
+
 export function evaluateCompletion(
   contract: ManagedTaskContract,
   result?: ExecutorResult | null,
+  options: CompletionOptions = {},
 ): CompletionDecision {
-  const tasks = readCompletionTasks(contract, result);
-  const usesCanonicalTasks = Boolean(findOpenSpecTasksFile(contract));
+  const tasks = readCompletionTasks(contract, result, options);
+  const usesCanonicalTasks =
+    contract.profile !== "native" && Boolean(findOpenSpecTasksFile(contract));
   const evidence = new Map(
     (result?.taskEvidence ?? []).map((item) => [item.taskId, item]),
   );
@@ -89,14 +96,18 @@ export function evaluateCompletion(
 export function readCompletionTasks(
   contract: ManagedTaskContract,
   result?: ExecutorResult | null,
+  options: CompletionOptions = {},
 ): CompletionTask[] {
-  const tasksFile = findOpenSpecTasksFile(contract);
+  const tasksFile =
+    contract.profile === "native" ? null : findOpenSpecTasksFile(contract);
   if (!tasksFile) {
     return readManagedExecutionContract(contract).tasks.map((task) => ({
       taskId: task.taskId,
       text: task.text,
       category: "local_required",
-      completed: deriveExecutionTaskCompletion(task, result),
+      completed:
+        (contract.profile !== "native" || options.hostApproved === true) &&
+        deriveExecutionTaskCompletion(task, result),
     }));
   }
   return readFileSync(tasksFile, "utf-8")

@@ -3,6 +3,27 @@ name: superflow
 description: Superflow 用户总入口：日常任务由当前 Agent 持续负责实施、测试、评审整改与交付；也支持需求文档和显式双 Agent 托管。用户无需手动分流。
 ---
 
+## 托管默认原生（新任务优先规则）
+
+用户明确要求托管时，先核对 MCP runtime，再将用户原始请求（技能命令与文档路径
+保持原文）交给 `superflow_managed_start`。省略/auto 的 profile 默认 native；
+不要替换成口头需求摘要，也不要自动追加另一套研发方案、验收脚本或工程 JSON。
+只有用户显式选择兼容工程档位或恢复旧 Task/Run 时，才沿其已冻结合同执行下文
+旧的强工程规则。不要静默改写旧任务。
+
+原生 Agent 继承自己的技能、插件、子代理、记忆、权限审批和配置。模型/推理只有
+用户显式指定才传入，预算默认不填（0 为未设限）；用户正数预算各自生效。
+准入只检查实际执行 CLI；当前 Host 不必为原生 Executor 安装整套另一端技能/MCP。
+原生 Agent 可以自然回复，但必须区分进行中、完成、受阻和提问；框架只包装会话
+和原文，Host 未明确通过前不能宣告交付。Host 复用适用的已有评审，不增添无关
+工程要求。消息、finding、证据与原始任务同时交接，失败恢复不能丢掉未处理指导。
+
+Host 仍拥有语义评审与用户授权判断，Runner 仍拥有状态/事件/证据引用。原生模式
+不要求 JSON 成为 Agent 的工作方式；既有三种结构化消息仍承担跨 Agent 的准确
+通信。独立工作区可并行，重叠工作区排队，框架自己的内部记录不可由 Agent 改写。
+
+
+
 ## Document Delivery Exit
 
 OpenSpec applyRequires completion only finishes the base-artifact stage. For a

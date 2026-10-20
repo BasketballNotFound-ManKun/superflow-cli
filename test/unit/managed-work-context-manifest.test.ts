@@ -29,6 +29,7 @@ describe("managed execution context manifest", () => {
       request: prompt,
       projectRoot: root,
       source: "sdd",
+      profile: "sdd",
       taskPromptPath: prompt,
       language: "zh",
     });

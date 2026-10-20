@@ -1,5 +1,35 @@
 # Superflow Managed Work Design Principles
 
+## Native first: canonical defaults for new tasks
+
+Management connects native Agents. New tasks default to `native` without clipping
+skills, plugins, subagents, memory, permissions, context or user configuration.
+Explicit model/effort/budgets remain user choices. Preserve the original skill
+entry and document paths. Runner imposes no engineering JSON or new business
+plan and cannot infer completion from prose. Persist responses with session
+facts for Host judgement; only explicit approval completes delivery. Discovery,
+invocation and independent internal review remain distinct evidence.
+
+Roles describe responsibilities, not hidden CLI permission overrides. Native
+approvals/project rules remain active. The native Hook protects only framework
+records such as `.superflow/tasks`, including related roots, without adding
+business shell/file restrictions or negating user-authorized actions.
+
+New tasks have no default hard call/time/cost circuit. Zero is unset; each
+positive user limit applies independently. Native correction may continue the
+same session; retire it only for an evidenced incompatibility. Supervision
+reports facts without treating heartbeats or elapsed time as business success.
+
+Independent workspaces run concurrently. Overlapping primary/related/canonical
+roots queue; pending reviews retain ownership and delivery states release it.
+Isolate stopped missing locators but never guess ownership of active/unknown tasks.
+
+Frozen tasks and explicit compatibility profiles retain their contracts. Strict
+engineering gates, short sessions, tool and budget constraints below describe
+that compatibility path; native defaults follow this section and the global
+native boundary without adding another role or state machine.
+
+
 ## Status
 
 This document is the long-term design constitution for Superflow managed work.
@@ -13,6 +43,13 @@ one development Agent delivers continuously, and one expensive Host Agent
 independently reviews quality.
 
 ## Core principles
+
+The Host/Executor separation below applies only to managed Task/Run execution.
+For ordinary work, the current Agent is the Flow Owner and can implement, test,
+and coordinate independent views through existing review capabilities. Reuse
+SDD state and reports without starting managed Task/Run state; see the global
+Flow Owner contract. Never silently switch modes during execution. The three
+JSON protocols and Runner ownership remain unchanged.
 
 1. The Host is the architect and independent reviewer, not a second developer.
 2. The Executor is the only product writer and owns implementation, tests,
@@ -216,6 +253,21 @@ fail diagnostically before consuming a development invocation, not after
 `command not found`.
 
 ## Ownership
+
+Claude Executors retain normal skill/plugin discovery and native delegation;
+minimal mode or a file-only tool allowlist must not reduce a skill entry to plain
+text. Supervisors retain isolated startup and read-only tools. Native subagents
+inherit the frozen scope and resource obligations without creating another
+Superflow Host or Runner. Discovery is not invocation; missing capabilities must
+be reported explicitly.
+
+User guidance travels through the existing message ledger and handoff acknowledgement,
+without synthetic business findings or replacing the canonical Host review and
+valid delivery references. A previous pass/blocked result cannot consume pending
+guidance; needs-fix findings, convergence checks and budgets remain effective.
+Runtime observations distinguish requested from reported model names and absent
+capability reports from reported empty sets. Name differences neither verify the
+underlying model nor authorize an automatic restart.
 
 | Role           | Owns                                                                                                         | Must not                                                                                                                     |
 | -------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -758,3 +810,8 @@ delegate to the same initialization entry and then check MCP status rather than
 registering again. npm lifecycle scripts do not ask terminal questions; interaction
 belongs to CLI init/update. Explicit options, JSON, dry-run and noninteractive calls
 remain scriptable. Managed roles and protocols do not change.
+
+Codex Executors inherit native user feature configuration on fresh and resumed
+calls. They do not force `--disable memories`, turn off delegation/skills, or
+ignore user configuration. Frozen model/effort and role permissions still apply;
+resume binds an explicit session and never uses `--last`.

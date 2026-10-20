@@ -42,7 +42,10 @@ for (const file of [stateFile, journalFile, reportFile]) {
 }
 const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
 
-if (task.budgets?.unlimitedAgentInvocations !== true) {
+if (
+  task.profile !== "native" &&
+  task.budgets?.unlimitedAgentInvocations !== true
+) {
   assertMax("reviewRound", state.reviewRound, 10);
   assertMax(
     "executorInvocations",
@@ -55,6 +58,16 @@ if (task.budgets?.unlimitedAgentInvocations !== true) {
     30 + (state.totalAgentInvocationCredits ?? 0),
   );
   assertMax("reviewInvocations", state.reviewInvocations, 10);
+}
+if (task.profile === "native") {
+  for (const field of [
+    "reviewRound",
+    "executorInvocations",
+    "totalAgentInvocations",
+    "reviewInvocations",
+  ]) {
+    assertMax(field, state[field], Number.MAX_VALUE);
+  }
 }
 if (state.contractHash !== task.contractHash)
   fail("任务合同哈希与运行状态不一致");
@@ -86,6 +99,7 @@ if (deliveryStatuses.has(state.status)) {
   const completion = verifyOpenSpecTasksComplete(task, executor);
   verifyDeliveryStatus(state.status, completion);
   if (
+    task.profile !== "native" &&
     task.source === "sdd" &&
     !review.verificationCommands?.some(
       (item) =>
@@ -126,35 +140,61 @@ function assertMax(name, value, max) {
 
 function verifyContract(contract) {
   const budgets = contract.budgets ?? {};
-  if (
-    budgets.executorPhysicalStopAt !== undefined &&
-    (!Number.isInteger(budgets.executorPhysicalStopAt) ||
-      budgets.executorPhysicalStopAt <= 0)
-  ) {
-    fail("executorPhysicalStopAt 必须是正整数");
-  }
-  assertPositiveMax("maxReviewRounds", budgets.maxReviewRounds, 10, true);
-  assertPositiveMax(
-    "maxExecutorInvocations",
-    budgets.maxExecutorInvocations,
-    20,
-    true,
-  );
-  assertPositiveMax(
-    "maxTotalAgentInvocations",
-    budgets.maxTotalAgentInvocations,
-    30,
-    true,
-  );
-  assertPositiveMax("maxActiveRunHours", budgets.maxActiveRunHours, 24, false);
-  assertPositiveMax(
-    "maxSingleInvocationHours",
-    budgets.maxSingleInvocationHours,
-    3,
-    false,
-  );
-  if (contract.supervisorAgent === contract.executorAgent) {
-    fail("监督 Agent 和执行 Agent 不能相同");
+  if (contract.profile === "native") {
+    const integers = new Set([
+      "maxReviewRounds",
+      "maxExecutorInvocations",
+      "maxTotalAgentInvocations",
+      "maxExecutorTokenUnits",
+      "executorPhysicalStopAt",
+    ]);
+    for (const [field, value] of Object.entries(budgets)) {
+      if (field === "unlimitedAgentInvocations" || value === undefined)
+        continue;
+      if (
+        !Number.isFinite(value) ||
+        value < 0 ||
+        (integers.has(field) && !Number.isInteger(value))
+      ) {
+        fail(`${field} 必须是非负有限数值，调用和轮数字段必须为整数`);
+      }
+    }
+  } else {
+    if (
+      budgets.executorPhysicalStopAt !== undefined &&
+      (!Number.isInteger(budgets.executorPhysicalStopAt) ||
+        budgets.executorPhysicalStopAt <= 0)
+    ) {
+      fail("executorPhysicalStopAt 必须是正整数");
+    }
+    assertPositiveMax("maxReviewRounds", budgets.maxReviewRounds, 10, true);
+    assertPositiveMax(
+      "maxExecutorInvocations",
+      budgets.maxExecutorInvocations,
+      20,
+      true,
+    );
+    assertPositiveMax(
+      "maxTotalAgentInvocations",
+      budgets.maxTotalAgentInvocations,
+      30,
+      true,
+    );
+    assertPositiveMax(
+      "maxActiveRunHours",
+      budgets.maxActiveRunHours,
+      24,
+      false,
+    );
+    assertPositiveMax(
+      "maxSingleInvocationHours",
+      budgets.maxSingleInvocationHours,
+      3,
+      false,
+    );
+    if (contract.supervisorAgent === contract.executorAgent) {
+      fail("监督 Agent 和执行 Agent 不能相同");
+    }
   }
   if (contract.supervisorExecution !== "external_host") {
     fail("监督执行模式只允许 external_host");
@@ -218,6 +258,9 @@ function verifyContract(contract) {
     taskPrompt: contract.taskPrompt,
     supervisorAgent: contract.supervisorAgent,
     executorAgent: contract.executorAgent,
+    ...(contract.executorConfig
+      ? { executorConfig: contract.executorConfig }
+      : {}),
     ...(contract.supervisorExecution
       ? { supervisorExecution: contract.supervisorExecution }
       : {}),
@@ -322,7 +365,11 @@ function assertPositiveMax(name, value, max, integer) {
 }
 
 function verifyOpenSpecTasksComplete(task, executor) {
-  if (task.source !== "sdd" || !task.taskPrompt?.originalPath) {
+  if (
+    task.profile === "native" ||
+    task.source !== "sdd" ||
+    !task.taskPrompt?.originalPath
+  ) {
     return { localPending: [], environmentPending: [], releasePending: [] };
   }
   let current = path.dirname(path.resolve(task.taskPrompt.originalPath));
@@ -535,6 +582,21 @@ function verifyDeliveryStatus(status, completion) {
 }
 
 function verifyExecutorEvidence(task, result, review, runDir) {
+  if (task.profile === "native") {
+    if (
+      result.status !== "ready_for_review" ||
+      typeof result.summary !== "string" ||
+      !result.summary.trim()
+    ) {
+      fail("原生执行结果缺少可供 Host 评审的回复");
+    }
+    for (const evidence of result.evidence ?? []) {
+      if (!taskEvidencePathExists(task, evidence)) {
+        fail(`原生执行结果引用的证据不存在: ${evidence}`);
+      }
+    }
+    return;
+  }
   if (!["ready_for_review", "blocked"].includes(result.status)) {
     fail("最终执行结果既不可检查也不是诚实阻塞状态");
   }

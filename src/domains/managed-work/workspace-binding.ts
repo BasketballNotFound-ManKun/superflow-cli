@@ -11,6 +11,7 @@ import {
 import path from "path";
 import type { ManagedTaskContract } from "./types.js";
 import { managedTaskDir } from "./paths.js";
+import { updateManagedWorkspaceBindingContext } from "./context-manifest.js";
 
 export interface ManagedRepositoryBinding {
   configuredRoot: string;
@@ -19,6 +20,11 @@ export interface ManagedRepositoryBinding {
   worktreeIdentity: string | null;
   branch: string | null;
   headAtStart: string | null;
+  /** Runner-recorded Git identity after native initialization or first commit. */
+  nativeInitialized?: Pick<
+    ManagedRepositoryBinding,
+    "repositoryIdentity" | "worktreeIdentity" | "headAtStart"
+  >;
 }
 
 export interface ManagedWorkspaceBinding {
@@ -35,10 +41,9 @@ export function writeManagedWorkspaceBinding(
     schemaVersion: 1,
     taskId: contract.taskId,
     taskLocator: path.join(".superflow", "tasks", contract.taskId),
-    repositories: [
-      contract.projectRoot,
-      ...contract.relatedProjectRoots,
-    ].map(repositoryBinding),
+    repositories: [contract.projectRoot, ...contract.relatedProjectRoots].map(
+      repositoryBinding,
+    ),
   } satisfies ManagedWorkspaceBinding;
   const taskDir = managedTaskDir(contract.projectRoot, contract.taskId);
   writeJsonAtomic(path.join(taskDir, "workspace-binding.json"), binding);
@@ -61,6 +66,34 @@ export function ensureManagedWorkspaceBinding(
     ? (JSON.parse(readFileSync(file, "utf-8")) as ManagedWorkspaceBinding)
     : writeManagedWorkspaceBinding(contract);
   validateManagedWorkspaceBinding(binding, contract);
+  if (contract.profile === "native") {
+    const updated = structuredClone(binding);
+    let promoted = false;
+    updated.repositories.forEach((frozen) => {
+      if (frozen.worktreeIdentity !== null && frozen.headAtStart !== null)
+        return;
+      const current = repositoryBinding(frozen.configuredRoot);
+      if (!current.worktreeIdentity) return;
+      const identity = frozen.nativeInitialized ?? frozen;
+      if (
+        identity.worktreeIdentity &&
+        (identity.headAtStart || !current.headAtStart)
+      )
+        return;
+      frozen.nativeInitialized = {
+        repositoryIdentity: current.repositoryIdentity,
+        worktreeIdentity: current.worktreeIdentity,
+        headAtStart: current.headAtStart,
+      };
+      promoted = true;
+    });
+    if (promoted) {
+      updateManagedWorkspaceBindingContext(contract, () =>
+        writeJsonAtomic(file, updated),
+      );
+      return updated;
+    }
+  }
   return binding;
 }
 
@@ -96,21 +129,50 @@ export function validateManagedWorkspaceBinding(
         `workspace root changed: ${root}`,
       );
     }
-    if (frozen.repositoryIdentity !== current.repositoryIdentity) {
+    if (frozen.realRoot !== current.realRoot) {
+      throw bindingError(
+        contract,
+        `工作区真实目录已变化：${root}`,
+        `workspace real directory changed: ${root}`,
+      );
+    }
+    // Native Git initialization is allowed only for an originally non-Git
+    // workspace, after both configured and canonical roots were checked.
+    const identity =
+      contract.profile === "native"
+        ? (frozen.nativeInitialized ?? frozen)
+        : frozen;
+    const nativeInitialization =
+      contract.profile === "native" && identity.worktreeIdentity === null;
+    // A newly initialized unborn repository gains its first commit identity;
+    // its already pinned physical Git directory must still match.
+    const nativeFirstCommit =
+      contract.profile === "native" &&
+      identity.headAtStart === null &&
+      identity.worktreeIdentity !== null &&
+      identity.worktreeIdentity === current.worktreeIdentity;
+    if (
+      !nativeInitialization &&
+      !nativeFirstCommit &&
+      identity.repositoryIdentity !== current.repositoryIdentity
+    ) {
       throw bindingError(
         contract,
         `仓库身份已变化：${root}`,
         `repository identity changed: ${root}`,
       );
     }
-    if (frozen.worktreeIdentity !== current.worktreeIdentity) {
+    if (
+      !nativeInitialization &&
+      identity.worktreeIdentity !== current.worktreeIdentity
+    ) {
       throw bindingError(
         contract,
         `Git worktree 已变化：${root}`,
         `Git worktree changed: ${root}`,
       );
     }
-    if (frozen.branch !== current.branch) {
+    if (contract.profile !== "native" && frozen.branch !== current.branch) {
       throw bindingError(
         contract,
         `分支已从 ${frozen.branch ?? "detached"} 变为 ${current.branch ?? "detached"}：${root}`,
@@ -166,9 +228,13 @@ function renderBinding(
   return [
     en ? "# Managed Workspace Binding" : "# 托管工作区绑定",
     "",
-    en
-      ? "Repository identity, worktree, and branch are frozen before execution. The relative task locator supports registry recovery without weakening workspace identity checks."
-      : "执行前冻结仓库身份、worktree 和分支。相对任务定位符用于注册表恢复，不降低工作区身份校验。",
+    contract.profile === "native"
+      ? en
+        ? "Initial repository, worktree, branch, and HEAD are retained for audit. Native tasks allow branch changes and Git initialization in an originally non-Git root while preserving configured and canonical workspace roots and existing worktree identity."
+        : "保留起始仓库、worktree、分支与 HEAD 供审计。原生任务允许切换分支及初始化原非 Git 目录，仍校验配置根、真实根和已有 worktree 身份。"
+      : en
+        ? "Repository identity, worktree, and branch are frozen before execution. The relative task locator supports registry recovery without weakening workspace identity checks."
+        : "执行前冻结仓库身份、worktree 和分支。相对任务定位符用于注册表恢复，不降低工作区身份校验。",
     "",
     `${en ? "Task locator" : "任务定位符"}: ${binding.taskLocator}`,
     ...binding.repositories.map(
@@ -193,11 +259,13 @@ function bindingError(
 
 function gitOutput(root: string, args: string[]): string | null {
   try {
-    return execFileSync("git", args, {
-      cwd: root,
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim() || null;
+    return (
+      execFileSync("git", args, {
+        cwd: root,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim() || null
+    );
   } catch {
     return null;
   }

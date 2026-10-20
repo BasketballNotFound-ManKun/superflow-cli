@@ -1,7 +1,12 @@
 import type { Language } from "../../types.js";
 
 export type ManagedAgent = "codex" | "claude";
-export type ManagedProfile = "quick" | "engineering" | "sdd" | "monitor";
+export type ManagedProfile =
+  | "native"
+  | "quick"
+  | "engineering"
+  | "sdd"
+  | "monitor";
 export type ManagedSupervisorExecution = "external_host";
 export type ManagedExecutionMode = "delegated" | "human_directed";
 export type ManagedRetention = "full" | "compact" | "none";
@@ -143,6 +148,9 @@ export interface AgentRuntimeTelemetry {
   model: string | null;
   reasoningEffort: ManagedReasoningEffort | null;
   tools: string[];
+  capabilitiesReported?: boolean;
+  skills?: string[];
+  slashCommands?: string[];
   toolUses: string[];
   plugins: string[];
   lastOutputAt: string;
@@ -385,6 +393,7 @@ export interface ManagedRegistry {
 }
 
 export interface AgentInvocation {
+  nativeMode?: boolean;
   taskId: string;
   runId: string;
   role: "supervisor" | "executor";

@@ -6,6 +6,106 @@ import {
 } from "../../src/domains/managed-work/contract.js";
 
 describe("managed work contract", () => {
+  it("defaults new auto tasks to native without generated requirements or limits", () => {
+    const contract = createManagedTaskContract({
+      request: "实现数据库 API 并运行服务",
+      projectRoot: ".",
+      profile: "auto",
+      supervisorAgent: "codex",
+      executorAgent: "codex",
+    });
+    expect(contract.profile).toBe("native");
+    expect(contract.taskPrompt).toBeNull();
+    expect(contract.acceptanceContract).toBeUndefined();
+    expect(contract.budgets).toMatchObject({
+      maxActiveRunHours: 0,
+      maxSingleInvocationHours: 0,
+      stalledTimeoutMinutes: 0,
+      maxReviewRounds: 0,
+      maxExecutorInvocations: 0,
+      maxTotalAgentInvocations: 0,
+      unlimitedAgentInvocations: true,
+    });
+    expect(contract.budgets.maxExecutorTokenUnits).toBeUndefined();
+    expect(contract.budgets.maxExecutorCostUsd).toBeUndefined();
+    expect(contract.permissions.gitCommit).toBe(false);
+    expect(contract.permissions.productionWrites).toBe(false);
+    expect(() => validateManagedTaskContract(contract)).not.toThrow();
+  });
+
+  it("retains explicit native limits without legacy ceilings", () => {
+    const contract = createManagedTaskContract({
+      request: "完成目标",
+      projectRoot: ".",
+      profile: "native",
+      budgets: {
+        maxReviewRounds: 100,
+        maxExecutorInvocations: 100,
+        maxTotalAgentInvocations: 200,
+        maxActiveRunHours: 100,
+        maxSingleInvocationHours: 50,
+        maxExecutorTokenUnits: 100_000_000,
+        maxExecutorCostUsd: 1000,
+      },
+    });
+    expect(contract.budgets.maxReviewRounds).toBe(100);
+    expect(contract.budgets.maxExecutorCostUsd).toBe(1000);
+    expect(() => validateManagedTaskContract(contract)).not.toThrow();
+  });
+
+  it.each([-1, Infinity, NaN, 1.5])(
+    "rejects invalid native invocation budgets: %s",
+    (value) => {
+      expect(() =>
+        createManagedTaskContract({
+          request: "完成目标",
+          projectRoot: ".",
+          profile: "native",
+          budgets: { maxExecutorInvocations: value },
+        }),
+      ).toThrow();
+    },
+  );
+
+  it.each([-1, Infinity, NaN])(
+    "rejects invalid native duration budgets: %s",
+    (value) => {
+      expect(() =>
+        createManagedTaskContract({
+          request: "完成目标",
+          projectRoot: ".",
+          profile: "native",
+          budgets: { maxSingleInvocationHours: value },
+        }),
+      ).toThrow();
+    },
+  );
+
+  it.each(["quick", "engineering", "sdd", "monitor"] as const)(
+    "preserves frozen legacy %s contracts",
+    (profile) => {
+      const contract = createManagedTaskContract({
+        request: "完成目标",
+        projectRoot: ".",
+        profile,
+      });
+      const restored = JSON.parse(JSON.stringify(contract));
+      expect(restored.schemaVersion).toBe(1);
+      expect(restored.budgets.maxExecutorTokenUnits).toBe(2_000_000);
+      expect(restored.budgets.maxReviewRounds).toBe(5);
+      expect(() => validateManagedTaskContract(restored)).not.toThrow();
+    },
+  );
+
+  it("detects modified native budgets through the existing contract hash", () => {
+    const contract = createManagedTaskContract({
+      request: "完成目标",
+      projectRoot: ".",
+    });
+    contract.budgets.maxExecutorInvocations = 100;
+    expect(() => validateManagedTaskContract(contract)).toThrow("哈希校验失败");
+  });
+
   it("classifies direct tasks by risk", () => {
     expect(classifyManagedProfile("整理一份结果说明")).toBe("quick");
     expect(classifyManagedProfile("修复登录代码并补充测试")).toBe(
@@ -25,6 +125,7 @@ describe("managed work contract", () => {
     const contract = createManagedTaskContract({
       request: "修复一个代码问题",
       projectRoot: ".",
+      profile: "engineering",
       supervisorAgent: "codex",
     });
 
@@ -45,6 +146,7 @@ describe("managed work contract", () => {
     const contract = createManagedTaskContract({
       request: "修复一个代码问题",
       projectRoot: ".",
+      profile: "engineering",
     });
 
     expect(contract.supervisorExecution).toBe("external_host");
@@ -55,10 +157,12 @@ describe("managed work contract", () => {
     const delegated = createManagedTaskContract({
       request: "修复一个代码问题",
       projectRoot: ".",
+      profile: "engineering",
     });
     const manual = createManagedTaskContract({
       request: "修复一个代码问题",
       projectRoot: ".",
+      profile: "engineering",
       executionMode: "human_directed",
     });
 
@@ -86,6 +190,7 @@ describe("managed work contract", () => {
       createManagedTaskContract({
         request: "测试任务",
         projectRoot: ".",
+        profile: "engineering",
         budgets: { maxReviewRounds: 11 },
       }),
     ).toThrow("硬上限");
@@ -95,6 +200,7 @@ describe("managed work contract", () => {
     const contract = createManagedTaskContract({
       request: "测试任务",
       projectRoot: ".",
+      profile: "engineering",
     });
     contract.budgets.maxReviewRounds = 11;
 
@@ -105,6 +211,7 @@ describe("managed work contract", () => {
     const contract = createManagedTaskContract({
       request: "测试任务",
       projectRoot: ".",
+      profile: "engineering",
     });
     contract.objective = "被改写的目标";
 
@@ -116,6 +223,7 @@ describe("managed work contract", () => {
       createManagedTaskContract({
         request: "测试任务",
         projectRoot: ".",
+        profile: "engineering",
         supervisorAgent: "codex",
         executorAgent: "codex",
       }),

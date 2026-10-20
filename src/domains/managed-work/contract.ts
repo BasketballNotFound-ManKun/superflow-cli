@@ -53,8 +53,9 @@ export interface CreateManagedTaskInput {
 export function createManagedTaskContract(
   input: CreateManagedTaskInput,
 ): ManagedTaskContract {
-  const request = input.request.trim();
-  if (!request) {
+  const native = !input.profile || input.profile === "auto" || input.profile === "native";
+  const request = native ? input.request : input.request.trim();
+  if (!request.trim()) {
     throw new Error(
       managedText(
         input.language,
@@ -72,9 +73,11 @@ export function createManagedTaskContract(
         .filter((root) => root !== projectRoot),
     ),
   ].sort();
+  const profile =
+    input.profile && input.profile !== "auto" ? input.profile : "native";
   const supervisorAgent = input.supervisorAgent ?? "codex";
   const executorAgent = input.executorAgent ?? oppositeAgent(supervisorAgent);
-  if (supervisorAgent === executorAgent) {
+  if (profile !== "native" && supervisorAgent === executorAgent) {
     throw new Error(
       managedText(
         input.language,
@@ -86,12 +89,8 @@ export function createManagedTaskContract(
 
   const taskId = buildTaskId();
   const now = new Date().toISOString();
-  const profile =
-    input.profile && input.profile !== "auto"
-      ? input.profile
-      : classifyManagedProfile(request);
   const source = input.source ?? "direct_prompt";
-  const budgets = resolveBudgets(input.budgets, input.language);
+  const budgets = resolveBudgets(input.budgets, input.language, profile);
   const taskPrompt = input.taskPromptPath
     ? buildTaskPrompt(projectRoot, taskId, input.taskPromptPath)
     : shouldGenerateStandardPrompt(source, profile)
@@ -177,7 +176,10 @@ export function validateManagedTaskContract(
       ),
     );
   }
-  if (contract.supervisorAgent === contract.executorAgent) {
+  if (
+    contract.profile !== "native" &&
+    contract.supervisorAgent === contract.executorAgent
+  ) {
     throw new Error(
       message(
         "监督 Agent 和执行 Agent 不能相同",
@@ -220,7 +222,7 @@ export function validateManagedTaskContract(
       ),
     );
   }
-  validateManagedBudgets(contract.budgets, contract.language);
+  validateManagedBudgets(contract.budgets, contract.language, contract.profile);
   if (
     contract.retention &&
     !["full", "compact", "none"].includes(contract.retention)
@@ -569,16 +571,60 @@ function classifyManagedTaskKind(
 function resolveBudgets(
   overrides: Partial<ManagedBudgets> = {},
   language?: Language,
+  profile?: ManagedProfile,
 ): ManagedBudgets {
-  const budgets = { ...DEFAULT_MANAGED_BUDGETS, ...overrides };
-  validateManagedBudgets(budgets, language);
+  const defaults =
+    profile === "native"
+      ? {
+          maxReviewRounds: 0,
+          maxExecutorInvocations: 0,
+          maxTotalAgentInvocations: 0,
+          unlimitedAgentInvocations: true,
+          activeRunWarningHours: DEFAULT_MANAGED_BUDGETS.activeRunWarningHours,
+          maxActiveRunHours: 0,
+          noProgressWarningMinutes:
+            DEFAULT_MANAGED_BUDGETS.noProgressWarningMinutes,
+          stalledTimeoutMinutes: 0,
+          maxSingleInvocationHours: 0,
+        }
+      : DEFAULT_MANAGED_BUDGETS;
+  const budgets = { ...defaults, ...overrides };
+  validateManagedBudgets(budgets, language, profile);
   return budgets;
 }
 
-function validateManagedBudgets(
+export function validateManagedBudgets(
   budgets: ManagedBudgets,
   language?: Language,
+  profile?: ManagedProfile,
 ): void {
+  if (profile === "native") {
+    const integers = new Set([
+      "maxReviewRounds",
+      "maxExecutorInvocations",
+      "maxTotalAgentInvocations",
+      "maxExecutorTokenUnits",
+      "executorPhysicalStopAt",
+    ]);
+    for (const [field, value] of Object.entries(budgets)) {
+      if (field === "unlimitedAgentInvocations") continue;
+      if (value === undefined) continue;
+      if (
+        !Number.isFinite(value) ||
+        value < 0 ||
+        (integers.has(field) && !Number.isInteger(value))
+      ) {
+        throw new Error(
+          managedText(
+            language,
+            `${field} 必须是非负有限${integers.has(field) ? "整数" : "数值"}`,
+            `${field} must be a non-negative finite ${integers.has(field) ? "integer" : "number"}`,
+          ),
+        );
+      }
+    }
+    return;
+  }
   assertIntegerRange(
     "maxReviewRounds",
     budgets.maxReviewRounds,

@@ -1,8 +1,9 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  pipelineCommand,
   applyExecutorInvocationWindow,
   applyInfrastructureInvocationCredits,
   applyManagedBudgetIncrease,
@@ -30,15 +31,220 @@ import { createManagedTaskFiles } from "../../src/domains/managed-work/storage.j
 import { initManagedRunState } from "../../src/domains/managed-work/state.js";
 import type { ManagedRunState } from "../../src/domains/managed-work/types.js";
 
+import * as pairAdmission from "../../src/domains/managed-work/pair-admission.js";
+import * as managedService from "../../src/domains/managed-work/service.js";
+
 const roots: string[] = [];
 
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const root of roots.splice(0)) {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
 describe("pipeline managed task recovery", () => {
+  it("prepares native raw skill requests without standard artifacts and honors explicit budgets", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "pipeline-native-"));
+    roots.push(root);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const request = `  $custom-task 修复 ${root}  `;
+    await pipelineCommand(request, {
+      managed: true,
+      dryRun: true,
+      project: root,
+      supervisor: "codex",
+      executor: "codex",
+      maxExecutorInvocations: "0",
+      maxReviewRounds: "41",
+      maxTotalAgentInvocations: "72",
+    });
+    const result = JSON.parse(log.mock.calls[0][0]);
+    expect(result.contract.profile).toBe("native");
+    expect(result.contract.request).toBe(request);
+    expect(result.contract.budgets.maxExecutorInvocations).toBe(0);
+    expect(result.contract.budgets.unlimitedAgentInvocations).toBe(false);
+    expect(result.contract.budgets.maxReviewRounds).toBe(41);
+    expect(result.contract.budgets.maxTotalAgentInvocations).toBe(72);
+    expect(fs.readdirSync(root)).toEqual([]);
+  });
+
+  it.each(["-1", "1.5", "invalid", ""])(
+    "rejects invalid native invocation limits: %s",
+    async (limit) => {
+      const root = fs.mkdtempSync(
+        path.join(os.tmpdir(), "pipeline-native-budget-"),
+      );
+      roots.push(root);
+      await expect(
+        pipelineCommand("fixture", {
+          managed: true,
+          dryRun: true,
+          project: root,
+          supervisor: "codex",
+          executor: "claude",
+          maxExecutorInvocations: limit,
+        }),
+      ).rejects.toThrow();
+      expect(fs.readdirSync(root)).toEqual([]);
+    },
+  );
+
+  it("keeps legacy hard bounds for explicit engineering submissions", async () => {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "pipeline-legacy-budget-"),
+    );
+    roots.push(root);
+    await expect(
+      pipelineCommand("fixture", {
+        managed: true,
+        dryRun: true,
+        project: root,
+        profile: "engineering",
+        supervisor: "codex",
+        executor: "claude",
+        maxExecutorInvocations: "0",
+      }),
+    ).rejects.toThrow();
+    expect(fs.readdirSync(root)).toEqual([]);
+  });
+
+  it("passes native admission to the executor-only check before service startup", async () => {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "pipeline-native-admission-"),
+    );
+    roots.push(root);
+    const admission = vi
+      .spyOn(pairAdmission, "assertManagedAgentPair")
+      .mockImplementation(() => {});
+    vi.spyOn(managedService, "ensureManagedService").mockImplementation(() => {
+      throw new Error("fixture startup stop");
+    });
+    await expect(
+      pipelineCommand("$custom-task fix", {
+        managed: true,
+        project: root,
+        supervisor: "codex",
+        executor: "claude",
+      }),
+    ).rejects.toThrow("fixture startup stop");
+    expect(admission).toHaveBeenCalledWith(
+      "codex",
+      "claude",
+      {},
+      { profile: "native" },
+    );
+    expect(fs.readdirSync(root)).toEqual([]);
+  });
+
+  it("enforces native positive invocation budgets even with the unlimited legacy flag", () => {
+    const state = createState("ready_for_review");
+    state.executorInvocations = 1;
+    state.status = "budget_exhausted";
+    const contract = createManagedTaskContract({
+      request: "fixture",
+      projectRoot: path.dirname(state.lastExecutorResult!),
+      budgets: { maxExecutorInvocations: 1, unlimitedAgentInvocations: true },
+    });
+    expect(hasAvailableInvocationBudget(state, contract)).toBe(false);
+    expect(canResumeManagedTask(state, contract, {})).toBe(false);
+    contract.budgets.maxExecutorInvocations = 0;
+    expect(hasAvailableInvocationBudget(state, contract)).toBe(true);
+    expect(canResumeManagedTask(state, contract, {})).toBe(true);
+    expect(hasAvailableReviewBudget(state, contract)).toBe(true);
+  });
+
+  it("checks native review and total limits independently and rejects invalid changes atomically", () => {
+    const state = createState("ready_for_review");
+    state.totalAgentInvocations = 2;
+    state.reviewInvocations = 1;
+    const contract = createManagedTaskContract({
+      request: "fixture",
+      projectRoot: path.dirname(state.lastExecutorResult!),
+      budgets: { maxTotalAgentInvocations: 2, maxReviewRounds: 1 },
+    });
+    expect(hasAvailableInvocationBudget(state, contract)).toBe(false);
+    expect(hasAvailableReviewBudget(state, contract)).toBe(false);
+    state.status = "review_exhausted";
+    expect(canResumeManagedTask(state, contract, {})).toBe(false);
+    const hash = contract.contractHash;
+    expect(() =>
+      applyManagedBudgetIncrease(contract, state, {
+        maxReviewRounds: "-1",
+        budgetOverrideReason: "fixture",
+      }),
+    ).toThrow();
+    expect(contract.budgets.maxReviewRounds).toBe(1);
+    expect(contract.contractHash).toBe(hash);
+    expect(() =>
+      applyManagedBudgetIncrease(contract, state, { maxReviewRounds: "0" }),
+    ).toThrow();
+  });
+
+  it("cancels explicit native invocation limits even when the legacy unlimited flag is already true", () => {
+    const state = createState("ready_for_review");
+    state.executorInvocations = 1;
+    const contract = createManagedTaskContract({
+      request: "fixture",
+      projectRoot: path.dirname(state.lastExecutorResult!),
+      budgets: {
+        maxExecutorInvocations: 1,
+        maxReviewRounds: 2,
+        maxTotalAgentInvocations: 3,
+        executorPhysicalStopAt: 1,
+      },
+    });
+    expect(contract.budgets.unlimitedAgentInvocations).toBe(true);
+    expect(hasAvailableInvocationBudget(state, contract)).toBe(false);
+    expect(() =>
+      applyUnlimitedAgentBudget(contract, state, {
+        unlimitedAgentBudget: true,
+      }),
+    ).toThrow();
+    expect(
+      applyUnlimitedAgentBudget(contract, state, {
+        unlimitedAgentBudget: true,
+        budgetOverrideReason: "用户取消",
+      }),
+    ).toBe(true);
+    expect(contract.budgets.maxExecutorInvocations).toBe(0);
+    expect(contract.budgets.maxReviewRounds).toBe(0);
+    expect(contract.budgets.maxTotalAgentInvocations).toBe(0);
+    expect(contract.budgets.executorPhysicalStopAt).toBe(0);
+    expect(hasAvailableInvocationBudget(state, contract)).toBe(true);
+    expect(hasAvailableReviewBudget(state, contract)).toBe(true);
+    const hash = contract.contractHash;
+    expect(
+      applyUnlimitedAgentBudget(contract, state, {
+        unlimitedAgentBudget: true,
+      }),
+    ).toBe(false);
+    expect(contract.contractHash).toBe(hash);
+  });
+
+  it("allows audited native budget cancellation, reduction and values beyond legacy bounds", () => {
+    const state = createState("ready_for_review");
+    const contract = createManagedTaskContract({
+      request: "fixture",
+      projectRoot: path.dirname(state.lastExecutorResult!),
+      budgets: {
+        maxExecutorInvocations: 4,
+        maxReviewRounds: 3,
+        maxTotalAgentInvocations: 7,
+      },
+    });
+    applyManagedBudgetIncrease(contract, state, {
+      maxExecutorInvocations: "0",
+      maxReviewRounds: "2",
+      maxTotalAgentInvocations: "100000",
+      budgetOverrideReason: "用户调整显式额度",
+    });
+    expect(contract.budgets.maxExecutorInvocations).toBe(0);
+    expect(contract.budgets.maxReviewRounds).toBe(2);
+    expect(contract.budgets.maxTotalAgentInvocations).toBe(100000);
+    expect(state.contractHash).toBe(calculateManagedContractHash(contract));
+  });
+
   it("resolves current and peer from a Codex host environment", () => {
     expect(
       resolveManagedAgents(
@@ -188,9 +394,7 @@ describe("pipeline managed task recovery", () => {
     expect(persistedRun.pendingExternalReview).not.toBeNull();
     expect(persistedTask.status).toBe("queued");
     expect(
-      fs.existsSync(
-        path.join(path.dirname(runFile), "review-result-1.json"),
-      ),
+      fs.existsSync(path.join(path.dirname(runFile), "review-result-1.json")),
     ).toBe(false);
   });
 
@@ -287,9 +491,9 @@ describe("pipeline managed task recovery", () => {
     state.status = "running";
     state.executorSession = activeExecutorSession();
 
-    expect(() =>
-      resetExecutorSessionForRecovery(state, "旧会话异常"),
-    ).toThrow("waiting_for_human");
+    expect(() => resetExecutorSessionForRecovery(state, "旧会话异常")).toThrow(
+      "waiting_for_human",
+    );
   });
 
   it("recovers a stale running executor after a host restart", () => {
@@ -354,9 +558,9 @@ describe("pipeline managed task recovery", () => {
     const state = createState("blocked");
     state.executorSession = activeExecutorSession();
 
-    expect(() =>
-      resetExecutorSessionForRecovery(state, "   "),
-    ).toThrow("审计原因");
+    expect(() => resetExecutorSessionForRecovery(state, "   ")).toThrow(
+      "审计原因",
+    );
   });
 
   it("resets provider failure state after an audited provider switch", () => {
@@ -492,7 +696,8 @@ describe("pipeline managed task recovery", () => {
       JSON.stringify({ result: "pass", summary: "通过", findings: [] }),
     );
     state.lastReviewResult = review;
-    state.blocker = "Host 评审通过，但最后一次执行结果按当前规则重验仍失败：证据泄露";
+    state.blocker =
+      "Host 评审通过，但最后一次执行结果按当前规则重验仍失败：证据泄露";
 
     const retry = retryBlockedExecutorForRecovery(
       state,
@@ -594,6 +799,7 @@ describe("pipeline managed task recovery", () => {
     const contract = createManagedTaskContract({
       request: "同步任务文档",
       projectRoot: root,
+      profile: "engineering",
     });
     const state = initManagedRunState(contract);
     state.status = "repair_pending";
@@ -604,9 +810,13 @@ describe("pipeline managed task recovery", () => {
     expect(canResumeManagedTask(state, contract, {})).toBe(false);
 
     applyManagedBudgetIncrease(contract, state, {
-      maxExecutorInvocations: String(contract.budgets.maxExecutorInvocations + 1),
+      maxExecutorInvocations: String(
+        contract.budgets.maxExecutorInvocations + 1,
+      ),
       maxReviewRounds: String(contract.budgets.maxReviewRounds + 1),
-      maxTotalAgentInvocations: String(contract.budgets.maxTotalAgentInvocations + 2),
+      maxTotalAgentInvocations: String(
+        contract.budgets.maxTotalAgentInvocations + 2,
+      ),
       budgetOverrideReason: "用户批准继续完成文档整改",
     });
 
@@ -634,6 +844,7 @@ describe("pipeline managed task recovery", () => {
     const contract = createManagedTaskContract({
       request: "持续完成任务",
       projectRoot: root,
+      profile: "engineering",
     });
     const state = initManagedRunState(contract);
 

@@ -270,3 +270,51 @@ integration passed. The npm dry-run listed 424 files without temporary review
 reports or editor files. Independent review found and closed an English behavior
 keyword gap; the final full suite covers that fix. Installed local skills and
 running Claude sessions were not updated; real-model compliance remains unproven.
+
+## Native execution capabilities and recovery evidence (2026-10-19)
+
+Observed execution exposed a skill/tool set different from the interactive host;
+guidance recovery replaced canonical review references, and new invocations could
+report previous runtime identities. Owners are host startup adaptation, existing
+message handoff and runtime observations, not business contract rewriting. The
+focused baseline passed 66 tests across two files without covering these breaks.
+
+Hypothesis: normal native executor capabilities with a read-only supervisor, an
+independent guidance ledger, preserved evidence and separate acknowledgement vs
+processing semantics prevent lost entry behavior, stale review replay and repeated
+engineering. Cases cover old pass/blocked/needs-fix results, acknowledged failure
+and retry, explicit Host escalation, absent telemetry and reported empty sets.
+New regressions were observed failing before their fixes.
+
+The final full verification report owns the result. Synthetic tests do not prove
+provider model identity, model compliance or all real plugin/delegation behavior.
+Roll back affected changes if supervisors gain write access, stale results are
+promoted, guidance/evidence is lost, budgets are bypassed, or Host escalation
+starts repeated engineering. Keep raw evidence outside this repository.
+
+Reverse-host review also found forced memory disabling on fresh/resumed Codex
+Executors. They now inherit user features while retaining session, model/effort
+and role sandbox boundaries. Three failing assertions were observed before the
+fix; regressions also reject forced skill/delegation toggles, ignored user
+configuration and writable supervision.
+
+## Native managed convergence (2026-10-19)
+
+Evidence covered rewritten entries, permission overrides, extra engineering
+contracts, the two-hour cutoff, global-asset admission and serialized tasks.
+Default native management reuses profiles and Task/Run without another state
+machine. Agents own requested engineering, Host judges that scope and Runner
+records deterministic facts. Frozen legacy gates remain explicitly covered.
+
+The baseline was 116 files and 1132 passing tests. Cases cover actual CLI inputs
+and permissions, non-completing natural replies, guidance/findings together,
+zero/positive/cancelled budgets, independent concurrency and overlapping roots,
+stopped stale locators, Git initialization identity promotion, internal state
+protection and normal native business operations. Observed regressions precede
+fixes; synthetic tests do not prove provider identity or real model compliance.
+
+Roll back affected changes if requests are lost, responses are promoted without
+approval, positive limits are bypassed, native permissions are overridden,
+workspace exclusion fails, state becomes writable or legacy contracts migrate
+silently. The final same-input report owns full tests, builds and isolated
+installation results; incomplete gates must remain explicit.

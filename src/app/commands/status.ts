@@ -87,6 +87,8 @@ export interface ManagedTaskStatus {
   runtimeReasoningEffort: string;
   executorConfig: string;
   runtimeTools: string;
+  runtimeSkills: string[] | null;
+  runtimeSlashCommands: string[] | null;
   invocationElapsedSeconds: number | null;
   sinceProgressSeconds: number | null;
   executorTokens: string;
@@ -455,8 +457,15 @@ function printStatus(result: StatusResult, language: Language): void {
       console.log(
         managedText(
           language,
-          `  运行遥测：${task.runtimePhase} | 当前阶段 ${task.executorStage} | 已达里程碑 ${task.executorMilestone} | 模型 ${task.runtimeModel} | 推理深度 ${task.runtimeReasoningEffort} | 配置 ${task.executorConfig} | 工具 ${task.runtimeTools} | 调用耗时 ${task.invocationElapsedSeconds ?? "-"}s | 最近进展 ${task.sinceProgressSeconds ?? "-"}s`,
-          `  runtime telemetry: ${task.runtimePhase} | active stage ${task.executorStage} | reached milestone ${task.executorMilestone} | model ${task.runtimeModel} | reasoning effort ${task.runtimeReasoningEffort} | config ${task.executorConfig} | tools ${task.runtimeTools} | invocation elapsed ${task.invocationElapsedSeconds ?? "-"}s | since progress ${task.sinceProgressSeconds ?? "-"}s`,
+          `  运行遥测：${task.runtimePhase} | 当前阶段 ${task.executorStage} | 已达里程碑 ${task.executorMilestone} | 返回模型名 ${task.runtimeModel} | 推理深度 ${task.runtimeReasoningEffort} | 请求配置 ${task.executorConfig} | 工具 ${task.runtimeTools} | 调用耗时 ${task.invocationElapsedSeconds ?? "-"}s | 最近进展 ${task.sinceProgressSeconds ?? "-"}s`,
+          `  runtime telemetry: ${task.runtimePhase} | active stage ${task.executorStage} | reached milestone ${task.executorMilestone} | reported model name ${task.runtimeModel} | reasoning effort ${task.runtimeReasoningEffort} | requested config ${task.executorConfig} | tools ${task.runtimeTools} | invocation elapsed ${task.invocationElapsedSeconds ?? "-"}s | since progress ${task.sinceProgressSeconds ?? "-"}s`,
+        ),
+      );
+      console.log(
+        managedText(
+          language,
+          `  已发现技能：${task.runtimeSkills?.join(",") || (task.runtimeSkills ? "[]" : "未报告")} | 斜杠命令：${task.runtimeSlashCommands?.join(",") || (task.runtimeSlashCommands ? "[]" : "未报告")}（发现不代表已调用；返回名称不证明底层模型身份）`,
+          `  discovered skills: ${task.runtimeSkills?.join(",") || (task.runtimeSkills ? "[]" : "not reported")} | slash commands: ${task.runtimeSlashCommands?.join(",") || (task.runtimeSlashCommands ? "[]" : "not reported")} (discovery does not prove invocation; reported names do not verify model identity)`,
         ),
       );
       console.log(
@@ -652,7 +661,10 @@ function collectManagedTasks(
           executorConfig: task.executorConfig
             ? `${task.executorConfig.model ?? "unknown"}/${task.executorConfig.reasoningEffort ?? "unknown"} (${task.executorConfig.confirmed ? "confirmed" : "pending confirmation"})`
             : "not applicable",
-          runtimeTools: state.runtimeTelemetry?.tools.join(",") || "unknown",
+          runtimeTools: state.runtimeTelemetry?.tools.join(",") ||
+            (state.runtimeTelemetry?.capabilitiesReported ? "[]" : "unknown"),
+          runtimeSkills: state.runtimeTelemetry?.skills ?? null,
+          runtimeSlashCommands: state.runtimeTelemetry?.slashCommands ?? null,
           invocationElapsedSeconds: state.activeSince
             ? Math.round((Date.now() - Date.parse(state.activeSince)) / 1_000)
             : null,
@@ -703,6 +715,8 @@ function collectManagedTasks(
           runtimeReasoningEffort: "unknown",
           executorConfig: "unknown",
           runtimeTools: "unknown",
+          runtimeSkills: null,
+          runtimeSlashCommands: null,
           invocationElapsedSeconds: null,
           sinceProgressSeconds: null,
           executorTokens: "unknown",

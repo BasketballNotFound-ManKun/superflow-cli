@@ -121,7 +121,7 @@ export function createSuperflowMcpServer(
           .string()
           .min(1)
           .describe(
-            "任务描述、implementation prompt 路径或 OpenSpec change 目录",
+            "原生任务原文，可包含 /skill 命令和文档目录；默认保留宿主原生能力 / Native request, including skill commands and document paths",
           ),
         projectRoot: z.string().min(1).describe("主项目绝对路径"),
         relatedProjectRoots: z
@@ -129,9 +129,12 @@ export function createSuperflowMcpServer(
           .optional()
           .describe("允许研发 Agent 读写的关联仓库绝对路径"),
         profile: z
-          .enum(["auto", "quick", "engineering", "sdd", "monitor"])
+          .enum(["auto", "native", "quick", "engineering", "sdd", "monitor"])
           .optional()
-          .default("auto"),
+          .default("auto")
+          .describe(
+            "默认 native：保留原生 Agent 能力；显式旧档位保留冻结合同 / Defaults to native; explicit legacy profiles retain their contracts",
+          ),
         supervisorAgent: z
           .enum(["codex", "claude"])
           .describe("当前主 Agent 类型，必须由 Host 明确传入"),
@@ -139,11 +142,38 @@ export function createSuperflowMcpServer(
           .enum(["codex", "claude"])
           .optional()
           .describe("研发 Agent 类型；默认使用主 Agent 的对端"),
-        executorModel: z.string().min(1).optional().describe("执行 Agent 模型；未提供时启动前展示本机配置并等待确认"),
+        budgets: z
+          .object({
+            maxReviewRounds: z.number().int().nonnegative().optional(),
+            maxExecutorInvocations: z.number().int().nonnegative().optional(),
+            maxTotalAgentInvocations: z.number().int().nonnegative().optional(),
+            unlimitedAgentInvocations: z.boolean().optional(),
+            executorPhysicalStopAt: z.number().int().nonnegative().optional(),
+            maxExecutorTokenUnits: z.number().nonnegative().optional(),
+            maxExecutorCostUsd: z.number().nonnegative().optional(),
+            activeRunWarningHours: z.number().nonnegative().optional(),
+            maxActiveRunHours: z.number().nonnegative().optional(),
+            noProgressWarningMinutes: z.number().nonnegative().optional(),
+            stalledTimeoutMinutes: z.number().nonnegative().optional(),
+            maxSingleInvocationHours: z.number().nonnegative().optional(),
+          })
+          .optional()
+          .describe(
+            "可选托管预算，0 表示不设限；默认原生模式不额外限流 / Optional managed budgets; zero means unlimited",
+          ),
+        executorModel: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "执行 Agent 模型；原生模式未指定时继承原生配置 / Native mode inherits the agent configuration when omitted",
+          ),
         executorReasoningEffort: z
           .enum(["minimal", "low", "medium", "high", "xhigh", "max", "ultra"])
           .optional()
-          .describe("执行 Agent 推理深度；未提供时启动前展示本机配置并等待确认"),
+          .describe(
+            "执行 Agent 推理深度；原生模式未指定时继承原生配置 / Native mode inherits reasoning configuration when omitted",
+          ),
         language: z.enum(["zh", "en"]).optional().default("zh"),
         mandatoryEngineeringRules: z
           .array(z.string().min(1))
@@ -187,6 +217,7 @@ export function createSuperflowMcpServer(
             profile: input.profile,
             supervisorAgent: input.supervisorAgent,
             executorAgent: input.executorAgent,
+            budgets: input.budgets,
             executorModel: input.executorModel,
             executorReasoningEffort: input.executorReasoningEffort,
             language: input.language,

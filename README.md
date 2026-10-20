@@ -3,6 +3,15 @@
   <img src="./assets/brand/superflow-banner.svg" alt="SuperBridge Flow banner">
 </p>
 
+### Native management by default
+
+New pipeline --managed and MCP start calls resolve auto to native: retain native
+Agent settings/permissions and skill entries, transport natural responses with
+structured provenance for Host judgement. Budgets are unset unless chosen;
+independent workspaces run concurrently and overlapping roots queue. Frozen
+legacy tasks and explicit compatibility profiles keep their engineering contracts.
+A response is not completion and grants no release authorization.
+
 <p align="center">
   <a href="https://www.npmjs.com/package/@chenmk/superflow"><img alt="npm version" src="https://img.shields.io/npm/v/@chenmk/superflow?style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@chenmk/superflow"><img alt="monthly downloads" src="https://img.shields.io/npm/dm/@chenmk/superflow?style=flat-square&label=Downloads/mo"></a>
@@ -44,7 +53,7 @@ reports after exit; they do not promise autonomous background operation.
 
 Have **Node.js 20+, Git**, and an installed, signed-in Claude Code or Codex ready.
 Hooks require Bash and Python3; on Windows, use Git Bash or an equivalent shell.
-Ordinary delivery, requirements, and documents need one tool; **dual-Agent managed development requires both CLIs to be installed and authenticated**.
+Ordinary delivery, requirements, and documents need one tool; **managed execution requires the selected Executor CLI to be installed and authenticated**.
 Superflow uses your existing model accounts and permissions. Model usage is billed by the respective platforms.
 
 ### Install the public npm package

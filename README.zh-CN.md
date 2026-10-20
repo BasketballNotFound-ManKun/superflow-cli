@@ -3,6 +3,13 @@
   <img src="./assets/brand/superflow-banner.svg" alt="SuperBridge Flow banner">
 </p>
 
+### 新任务默认原生托管
+
+`pipeline --managed` 与 MCP start 的 auto 默认使用 native：保留用户原生 Agent
+配置/权限和技能入口，自然回复经结构化交接交给 Host 核验。预算默认未设限，
+用户可显式指定；独立工作区并行，重叠根排队。旧任务不迁移，显式旧档位仍按
+其冻结工程合同恢复。Agent 回复不代表任务完成，也不自动授权发布。
+
 <p align="center">
   <a href="https://www.npmjs.com/package/@chenmk/superflow"><img alt="npm version" src="https://img.shields.io/npm/v/@chenmk/superflow?style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@chenmk/superflow"><img alt="monthly downloads" src="https://img.shields.io/npm/dm/@chenmk/superflow?style=flat-square&label=Downloads/mo"></a>
@@ -41,7 +48,7 @@ Superflow（SuperBridge Flow）把需求、源码实现、测试和独立评审�
 
 准备好 **Node.js 20+、Git**，以及已经安装并登录的 Claude Code 或 Codex。
 Hook 脚本需要 Bash 和 Python3；Windows 用户需准备 Git Bash 或等价 shell。
-普通交付、需求梳理和文档工作只需一个工具；**双 Agent 托管开发需要两个 CLI 都可用并完成登录**。
+普通交付、需求梳理和文档工作只需一个工具；**托管执行需要选定的 Executor CLI 可用并完成登录**。
 Superflow 使用你已有的模型账号与权限，对应模型用量按各平台计费。
 
 ### 安装公共 npm 包

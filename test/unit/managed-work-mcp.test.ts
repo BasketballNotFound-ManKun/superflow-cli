@@ -71,6 +71,7 @@ describe("Superflow managed MCP", () => {
     const blockedHome = path.join(fixture.root, "blocked-home");
     fs.writeFileSync(blockedHome, "not a directory", "utf-8");
     const contract = createManagedTaskContract({
+      profile: "engineering",
       request: "registry 写入失败回滚",
       projectRoot: fixture.root,
     });
@@ -97,6 +98,7 @@ describe("Superflow managed MCP", () => {
     expect(() =>
       startManagedTaskFromHost(
         {
+          profile: "engineering",
           request: "服务升级期间启动",
           projectRoot: fixture.root,
         },
@@ -109,6 +111,7 @@ describe("Superflow managed MCP", () => {
   it("reuses the same non-terminal task when start is safely retried", () => {
     const fixture = createFixture();
     const input = {
+      profile: "engineering",
       request: "相同请求安全重试",
       projectRoot: fixture.root,
       supervisorAgent: "codex" as const,
@@ -126,7 +129,11 @@ describe("Superflow managed MCP", () => {
   it("skips stale registry locators while listing healthy tasks", () => {
     const fixture = createFixture();
     const healthy = startManagedTaskFromHost(
-      { request: "健康任务", projectRoot: fixture.root },
+      {
+        profile: "engineering",
+        request: "健康任务",
+        projectRoot: fixture.root,
+      },
       fixture.runtime,
     );
     const registry = loadRegistry(fixture.env);
@@ -159,6 +166,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const snapshot = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "完成任务并真实验证",
         projectRoot: fixture.root,
         supervisorAgent: "codex",
@@ -181,6 +189,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "等待评审",
         projectRoot: fixture.root,
       },
@@ -218,6 +227,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "定时监督研发任务",
         projectRoot: fixture.root,
       },
@@ -262,6 +272,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "监督停滞研发任务",
         projectRoot: fixture.root,
       },
@@ -302,6 +313,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "等待研发完成",
         projectRoot: fixture.root,
       },
@@ -344,6 +356,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "Wait for delivery",
         projectRoot: fixture.root,
         language: "en",
@@ -377,6 +390,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "长任务进展",
         projectRoot: fixture.root,
       },
@@ -412,6 +426,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "等待用户补充",
         projectRoot: fixture.root,
       },
@@ -444,13 +459,272 @@ describe("Superflow managed MCP", () => {
     );
 
     expect(resumed.status).toBe("queued");
-    expect(resumed.lastReviewResult).toMatchObject({
-      result: "needs_fix",
-      summary: "开发环境允许创建独立测试数据",
-    });
+    expect(resumed.lastReviewResult).toBeNull();
     expect(messages).toContain("开发环境允许创建独立测试数据");
     expect(fixture.serviceStarts).toHaveLength(2);
   });
+
+  it("keeps review findings and delivery evidence when guidance resumes a task", () => {
+    const fixture = createFixture();
+    const created = startManagedTaskFromHost(
+      {
+        profile: "engineering",
+        request: "保留整改证据",
+        projectRoot: fixture.root,
+      },
+      fixture.runtime,
+    );
+    const state = loadManagedRun(fixture.root, created.taskId, created.runId);
+    const reviewPath = path.join(fixture.root, ".superflow", "review.json");
+    const deliveryPath = path.join(fixture.root, ".superflow", "delivery.json");
+    const review = {
+      result: "needs_fix",
+      summary: "修复并发问题",
+      findings: [{ id: "R1", blocking: true, severity: "high" }],
+    };
+    fs.writeFileSync(reviewPath, JSON.stringify(review));
+    fs.writeFileSync(deliveryPath, JSON.stringify({ evidence: ["test.log"] }));
+    state.status = "waiting_for_human";
+    state.lastReviewResult = reviewPath;
+    state.lastExecutorResult = deliveryPath;
+    saveManagedRun(state);
+
+    const resumed = addManagedHumanGuidance(
+      created.taskId,
+      "继续",
+      fixture.runtime,
+    );
+    expect(resumed.lastReviewResult).toEqual(review);
+    expect(resumed.lastExecutorResult).toEqual({ evidence: ["test.log"] });
+    const saved = loadManagedRun(fixture.root, created.taskId, created.runId);
+    expect(saved.lastReviewResult).toBe(reviewPath);
+    expect(saved.lastExecutorResult).toBe(deliveryPath);
+    expect(readManagedEvents(saved).at(-1)?.evidencePaths).not.toHaveLength(0);
+  });
+
+  it("shows requested and reported models and absent discovery in compact waits", async () => {
+    const fixture = createFixture();
+    const created = startManagedTaskFromHost(
+      {
+        profile: "engineering",
+        request: "观测运行能力",
+        projectRoot: fixture.root,
+        executorModel: "requested-model",
+        executorReasoningEffort: "low",
+      },
+      fixture.runtime,
+    );
+    const state = loadManagedRun(fixture.root, created.taskId, created.runId);
+    state.runtimeTelemetry = {
+      phase: "model_waiting",
+      model: "reported-model",
+      reasoningEffort: null,
+      tools: ["Read"],
+      toolUses: [],
+      plugins: [],
+      lastOutputAt: "fixed",
+      lastProgressAt: "fixed",
+      lastProgressReason: "system_init",
+    };
+    saveManagedRun(state);
+    const result = await waitForManagedTaskChange(
+      created.taskId,
+      0,
+      1,
+      fixture.runtime,
+    );
+    expect(result.snapshot).toHaveProperty("executorRuntime", {
+      requestedModel: "requested-model",
+      reportedModel: "reported-model",
+      modelNamesMatch: false,
+      tools: ["Read"],
+      skills: null,
+      slashCommands: null,
+      toolUses: [],
+    });
+  });
+
+  it("does not report a previous invocation's capabilities during a new call", async () => {
+    const fixture = createFixture();
+    const created = startManagedTaskFromHost(
+      {
+        profile: "engineering",
+        request: "恢复运行观测",
+        projectRoot: fixture.root,
+        externalModelDataDisclosureApproved: true,
+      },
+      fixture.runtime,
+    );
+    const state = loadManagedRun(fixture.root, created.taskId, created.runId);
+    state.runtimeTelemetry = {
+      phase: "model_waiting",
+      model: "previous-model",
+      reasoningEffort: "high",
+      tools: ["Skill"],
+      skills: ["old-skill"],
+      slashCommands: ["old-skill"],
+      toolUses: ["Skill"],
+      plugins: [],
+      capabilitiesReported: true,
+      lastOutputAt: "old",
+      lastProgressAt: "old",
+      lastProgressReason: "system_init",
+    };
+    saveManagedRun(state);
+    const observed: unknown[] = [];
+    const invoker: AgentInvoker = {
+      invoke: async () => {
+        observed.push(
+          getManagedTaskSnapshot(created.taskId, fixture.env).executorRuntime,
+        );
+        throw new Error("fixture: no runtime report");
+      },
+    };
+    await runManagedTask(fixture.root, created.taskId, invoker, fixture.env);
+    expect(observed).toHaveLength(1);
+    expect(observed[0]).toMatchObject({
+      reportedModel: null,
+      tools: null,
+      skills: null,
+      slashCommands: null,
+      toolUses: [],
+    });
+  });
+
+  it.each(["pass", "blocked"] as const)(
+    "does not replay an old %s after acknowledged guidance fails",
+    async (result) => {
+      const fixture = createFixture();
+      const created = startManagedTaskFromHost(
+        {
+          profile: "engineering",
+          request: "失败后继续指导",
+          projectRoot: fixture.root,
+          externalModelDataDisclosureApproved: true,
+        },
+        fixture.runtime,
+      );
+      const state = loadManagedRun(fixture.root, created.taskId, created.runId);
+      const dir = path.join(
+        fixture.root,
+        ".superflow",
+        "tasks",
+        created.taskId,
+        "runs",
+        created.runId,
+      );
+      state.reviewRound = 1;
+      state.reviewInvocations = 1;
+      state.status = "waiting_for_human";
+      state.lastReviewResult = path.join(dir, "review-result-1.json");
+      state.lastExecutorResult = path.join(dir, "old-delivery.json");
+      fs.writeFileSync(
+        state.lastReviewResult,
+        JSON.stringify({ result, summary: "旧结论", findings: [] }),
+      );
+      fs.writeFileSync(
+        state.lastExecutorResult,
+        JSON.stringify({
+          status: "ready_for_review",
+          summary: "旧交付",
+          commands: [],
+          evidence: [],
+          blockers: [],
+          releasePrerequisites: [],
+        }),
+      );
+      saveManagedRun(state);
+      addManagedHumanGuidance(created.taskId, "继续最新指导", fixture.runtime);
+      let calls = 0;
+      const invoker: AgentInvoker = {
+        invoke: async (invocation) => {
+          calls++;
+          invocation.onSession?.("new-session");
+          throw new Error("fixture: failed after acknowledgement");
+        },
+      };
+      await runManagedTask(fixture.root, created.taskId, invoker, fixture.env);
+      await runManagedTask(fixture.root, created.taskId, invoker, fixture.env);
+      expect(calls).toBe(2);
+      const handoff = JSON.parse(
+        fs.readFileSync(path.join(dir, "executor-handoff-2.json"), "utf8"),
+      );
+      expect(handoff.humanGuidance.messages[0].content).toBe("继续最新指导");
+      expect(fs.existsSync(path.join(dir, "old-delivery.json"))).toBe(true);
+    },
+  );
+
+  it.each(["pass", "blocked", "needs_fix"] as const)(
+    "delivers new guidance without losing the previous %s review",
+    async (result) => {
+      const fixture = createFixture();
+      const created = startManagedTaskFromHost(
+        {
+          profile: "engineering",
+          request: "继续受影响工作",
+          projectRoot: fixture.root,
+          externalModelDataDisclosureApproved: true,
+        },
+        fixture.runtime,
+      );
+      const state = loadManagedRun(fixture.root, created.taskId, created.runId);
+      state.status = "waiting_for_human";
+      state.reviewRound = 1;
+      state.reviewInvocations = 1;
+      const finding = {
+        id: "R-atomic",
+        severity: "high",
+        blocking: true,
+        category: "correctness",
+        target: "src/example.ts",
+        evidence: "write split",
+        risk: "lost update",
+        requiredFix: "atomic write",
+        acceptanceChecks: ["rollback"],
+      };
+      const reviewPath = path.join(
+        fixture.root,
+        ".superflow",
+        "tasks",
+        created.taskId,
+        "runs",
+        created.runId,
+        "review-result-1.json",
+      );
+      fs.writeFileSync(
+        reviewPath,
+        JSON.stringify({
+          result,
+          summary: "原评审",
+          findings: result === "needs_fix" ? [finding] : [],
+        }),
+      );
+      state.lastReviewResult = reviewPath;
+      saveManagedRun(state);
+      addManagedHumanGuidance(
+        created.taskId,
+        "只继续剩余工作",
+        fixture.runtime,
+      );
+      let calls = 0;
+      const invoker: AgentInvoker = {
+        invoke: async () => {
+          calls++;
+          throw new Error("fixture: stop after capturing handoff");
+        },
+      };
+      await runManagedTask(fixture.root, created.taskId, invoker, fixture.env);
+      expect(calls).toBe(1);
+      const handoff = JSON.parse(
+        fs.readFileSync(
+          path.join(path.dirname(reviewPath), "executor-handoff-1.json"),
+          "utf8",
+        ),
+      );
+      expect(handoff.findings).toEqual(result === "needs_fix" ? [finding] : []);
+      expect(handoff.humanGuidance.messages[0].content).toBe("只继续剩余工作");
+    },
+  );
 
   it("exposes the host interaction tools through MCP", async () => {
     const fixture = createFixture();
@@ -479,6 +753,7 @@ describe("Superflow managed MCP", () => {
     const result = await client.callTool({
       name: "superflow_managed_start",
       arguments: {
+        profile: "engineering",
         request: "通过 MCP 启动",
         projectRoot: fixture.root,
         supervisorAgent: "codex",
@@ -506,6 +781,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "通过 MCP 观察长任务阶段",
         projectRoot: fixture.root,
       },
@@ -565,6 +841,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "等待主 Agent 评审",
         projectRoot: fixture.root,
       },
@@ -610,6 +887,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "支持人工暂停",
         projectRoot: fixture.root,
       },
@@ -641,6 +919,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "恢复已完成的研发交付",
         projectRoot: fixture.root,
       },
@@ -737,6 +1016,7 @@ describe("Superflow managed MCP", () => {
     const fixture = createFixture();
     const created = startManagedTaskFromHost(
       {
+        profile: "engineering",
         request: "等待结构化评审",
         projectRoot: fixture.root,
       },

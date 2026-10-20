@@ -6,9 +6,8 @@ function healthyRuntime() {
   return {
     executable: () => true,
     exists: () => true,
-    readFile: (file: string) => hookSettings(
-      file.includes(".claude/") ? "claude" : "codex",
-    ),
+    readFile: (file: string) =>
+      hookSettings(file.includes(".claude/") ? "claude" : "codex"),
     mcpServerPath: "/superflow/dist/mcp/server.js",
     run: () => ({
       status: 0,
@@ -22,16 +21,55 @@ function hookSettings(agent: "codex" | "claude"): string {
   const directory = agent === "claude" ? "/scripts/" : "/hooks/";
   return JSON.stringify({
     hooks: {
-      PreToolUse: [{
-        hooks: hookScriptsForAgent(agent).map((script) => ({
-          command: `${directory}${script}`,
-        })),
-      }],
+      PreToolUse: [
+        {
+          hooks: hookScriptsForAgent(agent).map((script) => ({
+            command: `${directory}${script}`,
+          })),
+        },
+      ],
     },
   });
 }
 
 describe("managed work pair admission", () => {
+  it("native checks only the actual executor CLI", () => {
+    const checked: string[] = [];
+    expect(() =>
+      assertManagedAgentPair(
+        "codex",
+        "claude",
+        {
+          executable: (agent) => {
+            checked.push(agent);
+            return agent === "claude";
+          },
+          exists: () => {
+            throw new Error("must not inspect managed assets");
+          },
+          run: () => {
+            throw new Error("must not inspect MCP");
+          },
+        },
+        { profile: "native" },
+      ),
+    ).not.toThrow();
+    expect(checked).toEqual(["claude"]);
+  });
+
+  it("native rejects an unavailable executor", () => {
+    expect(() =>
+      assertManagedAgentPair(
+        "claude",
+        "codex",
+        {
+          executable: () => false,
+        },
+        { profile: "native" },
+      ),
+    ).toThrow("codex 命令行不可用");
+  });
+
   it("accepts two distinct hosts only when both local installations are healthy", () => {
     expect(() =>
       assertManagedAgentPair("codex", "claude", healthyRuntime()),
@@ -55,7 +93,11 @@ describe("managed work pair admission", () => {
 
   it("rejects an incomplete MCP registration even when files and hooks exist", () => {
     const runtime = healthyRuntime();
-    runtime.run = () => ({ status: 0, stdout: "superflow /old/server.js", stderr: "" });
+    runtime.run = () => ({
+      status: 0,
+      stdout: "superflow /old/server.js",
+      stderr: "",
+    });
 
     expect(() => assertManagedAgentPair("codex", "claude", runtime)).toThrow(
       "未指向当前运行时",

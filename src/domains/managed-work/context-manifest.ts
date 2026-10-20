@@ -140,6 +140,7 @@ export function writeManagedContextManifest(
       protection: "immutable",
     });
     if (
+      contract.profile !== "native" &&
       contract.taskPrompt.origin !== "generated_standard" &&
       path.resolve(contract.taskPrompt.originalPath) !==
         path.resolve(contract.taskPrompt.snapshotPath)
@@ -150,7 +151,9 @@ export function writeManagedContextManifest(
         protection: "immutable",
       });
     }
-    for (const file of referencedLocalFiles(contract)) {
+    for (const file of contract.profile === "native"
+      ? []
+      : referencedLocalFiles(contract)) {
       candidates.push({
         file,
         role: inferRole(file),
@@ -158,7 +161,9 @@ export function writeManagedContextManifest(
       });
     }
   }
-  for (const file of selectManagedRuleFiles(contract).files) {
+  for (const file of contract.profile === "native"
+    ? []
+    : selectManagedRuleFiles(contract).files) {
     candidates.push({ file, role: "rule", protection: "immutable" });
   }
   const entries = [
@@ -217,6 +222,39 @@ export function validateManagedContextManifest(
     ) {
       throw new Error(`${message}: ${entry.path}`);
     }
+  }
+}
+
+/** Update one Runner-owned binding after validating every frozen entry. */
+export function updateManagedWorkspaceBindingContext(
+  contract: ManagedTaskContract,
+  update: () => void,
+): void {
+  const manifestFile = managedContextManifestPath(contract);
+  if (!existsSync(manifestFile)) {
+    update();
+    return;
+  }
+  const manifest = JSON.parse(
+    readFileSync(manifestFile, "utf-8"),
+  ) as ManagedContextManifest;
+  validateManagedContextManifest(manifest, contract);
+  const bindingFile = path.resolve(
+    managedTaskDir(contract.projectRoot, contract.taskId),
+    "workspace-binding.json",
+  );
+  const entry = manifest.entries.find((item) => item.path === bindingFile);
+  if (!entry)
+    throw new Error("Workspace binding is missing from the context manifest");
+  const previous = readFileSync(bindingFile, "utf-8");
+  try {
+    update();
+    entry.sha256 = fileHash(bindingFile);
+    manifest.manifestHash = hashEntries(manifest.entries);
+    writeJsonAtomic(manifestFile, manifest);
+  } catch (error) {
+    writeFileSync(bindingFile, previous, "utf-8");
+    throw error;
   }
 }
 

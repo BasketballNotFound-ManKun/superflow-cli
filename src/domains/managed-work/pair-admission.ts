@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "fs";
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 import path from "path";
-import type { ManagedAgent } from "./types.js";
+import type { ManagedAgent, ManagedProfile } from "./types.js";
 import { getPlatformPaths } from "../../platform/paths.js";
 import {
   ALL_RULES,
@@ -16,7 +16,10 @@ export interface ManagedPairAdmissionRuntime {
   executable?: (agent: ManagedAgent) => boolean;
   exists?: (file: string) => boolean;
   readFile?: (file: string) => string;
-  run?: (agent: ManagedAgent, args: string[]) => {
+  run?: (
+    agent: ManagedAgent,
+    args: string[],
+  ) => {
     status: number | null;
     stdout: string;
     stderr: string;
@@ -25,15 +28,19 @@ export interface ManagedPairAdmissionRuntime {
 }
 
 /**
- * A managed task crosses two local CLI installations.  Native hooks cannot
- * cross that boundary, so both installations must be healthy before Runner
- * creates any persistent task state.
+ * Legacy contracts require both managed installations. Native tasks depend only
+ * on the executor CLI; the active external host already owns its capabilities.
  */
 export function assertManagedAgentPair(
   supervisor: ManagedAgent,
   executor: ManagedAgent,
   runtime: ManagedPairAdmissionRuntime = {},
+  options: { profile?: ManagedProfile } = {},
 ): void {
+  if (options.profile === "native") {
+    assertAgentExecutable(executor, runtime);
+    return;
+  }
   if (supervisor === executor) {
     throw new Error("监工和实现者必须使用不同的智能体");
   }
@@ -47,17 +54,19 @@ function assertAgentInstallation(
   runtime: ManagedPairAdmissionRuntime,
 ): void {
   const exists = runtime.exists ?? existsSync;
-  const readFile = runtime.readFile ?? ((file: string) => readFileSync(file, "utf8"));
-  const executable = runtime.executable ?? canRunAgent;
-  if (!executable(agent)) {
-    throw new Error(`${agent} 命令行不可用；请安装并重启 ${agent}`);
-  }
+  const readFile =
+    runtime.readFile ?? ((file: string) => readFileSync(file, "utf8"));
+  assertAgentExecutable(agent, runtime);
 
   const platform = getPlatformPaths(agent, "global");
   const required = [
-    ...ALL_SKILLS.map((name) => path.join(platform.skillsDir, name, "SKILL.md")),
+    ...ALL_SKILLS.map((name) =>
+      path.join(platform.skillsDir, name, "SKILL.md"),
+    ),
     ...ALL_RULES.map((name) => path.join(platform.rulesDir, name)),
-    ...scriptsForAgent(agent).map((name) => path.join(platform.scriptsDir, name)),
+    ...scriptsForAgent(agent).map((name) =>
+      path.join(platform.scriptsDir, name),
+    ),
     ...(agent === "codex"
       ? CODEX_PROMPTS.map((name) => path.join(platform.promptsDir, name))
       : []),
@@ -89,12 +98,23 @@ function assertAgentInstallation(
   assertManagedMcp(agent, runtime);
 }
 
+function assertAgentExecutable(
+  agent: ManagedAgent,
+  runtime: ManagedPairAdmissionRuntime,
+): void {
+  if (!(runtime.executable ?? canRunAgent)(agent)) {
+    throw new Error(`${agent} 命令行不可用；请安装并重启 ${agent}`);
+  }
+}
+
 function canRunAgent(agent: ManagedAgent): boolean {
-  return spawnSync(agent, ["--version"], {
-    stdio: "ignore",
-    shell: false,
-    timeout: 8_000,
-  }).status === 0;
+  return (
+    spawnSync(agent, ["--version"], {
+      stdio: "ignore",
+      shell: false,
+      timeout: 8_000,
+    }).status === 0
+  );
 }
 
 function assertManagedMcp(
@@ -104,8 +124,10 @@ function assertManagedMcp(
   const run = runtime.run ?? runAgentCommand;
   const result = run(agent, ["mcp", "get", "superflow"]);
   const output = `${result.stdout}\n${result.stderr}`.replaceAll("\\\\", "/");
-  const expected = (runtime.mcpServerPath ?? managedMcpServerPath())
-    .replaceAll("\\\\", "/");
+  const expected = (runtime.mcpServerPath ?? managedMcpServerPath()).replaceAll(
+    "\\\\",
+    "/",
+  );
   if (result.status !== 0 || !/superflow/i.test(output)) {
     throw new Error(
       `${agent} 未注册 Superflow MCP；请运行 superflow mcp install --agent ${agent}，然后重启 ${agent}`,
@@ -144,11 +166,14 @@ function countManagedHooks(content: string, agent: ManagedAgent): number {
   let count = 0;
   for (const entries of Object.values(settings.hooks ?? {})) {
     for (const entry of entries) {
-      const hooks = (entry as { hooks?: Array<{ command?: string }> }).hooks ?? [];
+      const hooks =
+        (entry as { hooks?: Array<{ command?: string }> }).hooks ?? [];
       for (const hook of hooks) {
-        if (hook.command?.includes(`${directory}superflow-`) ||
-            hook.command?.includes(`${directory}sdd-`) ||
-            hook.command?.includes(`${directory}${agent}-auto-backup`)) {
+        if (
+          hook.command?.includes(`${directory}superflow-`) ||
+          hook.command?.includes(`${directory}sdd-`) ||
+          hook.command?.includes(`${directory}${agent}-auto-backup`)
+        ) {
           count += 1;
         }
       }

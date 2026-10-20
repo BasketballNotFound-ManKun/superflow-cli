@@ -31,6 +31,7 @@ describe("managed first-run acceptance contract", () => {
       request: "执行冻结任务",
       projectRoot: root,
       source: "sdd",
+    profile: "sdd",
     });
 
     expect(() => assertManagedAcceptanceContractForStart(contract)).toThrow(
@@ -138,6 +139,7 @@ function createContract(
     request: "执行冻结任务",
     projectRoot: root,
     source: "sdd",
+    profile: "sdd",
     acceptanceContract,
   });
 }

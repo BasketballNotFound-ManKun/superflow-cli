@@ -1,5 +1,37 @@
 # Superflow CLI Global Design Principles
 
+## Default native managed boundary (2026-10-19)
+
+New managed tasks resolve auto to `native`. Management connects native Agents:
+it owns original requests, sessions, messages, evidence references, waiting,
+recovery and reviews, not the Agent's engineering strategy. Native skills,
+plugins, delegation, memory, permissions/approvals, compaction and user settings
+remain owned by the CLI. Pass model/effort only when explicitly selected.
+
+Preserve skill commands and document paths verbatim instead of inventing another
+engineering contract. Runner wraps natural responses in the existing executor
+message with task/round/session provenance; receipt never proves completion.
+Progress advances only after explicit Host approval. Deliver review findings and
+new user guidance together, retain failed-call guidance and never replay stale
+approvals. Explicit user engineering requirements remain effective.
+
+Native management does not mandate engineering JSON, extra acceptance scripts,
+shell syntax or curl destinations. It grants no Git/production approval and
+does not override native permissions. Runner alone owns transport contracts,
+journals and session state; Agents may read handoff but cannot mutate them.
+
+Native budgets default to no hard limits; zero means unset and each positive
+user limit applies independently. Unknown usage is not zero. Independent
+workspaces run concurrently; overlapping roots queue under existing ownership
+and locks. Delivered tasks release workspaces; stopped missing locators are
+isolated rather than blocking healthy work.
+
+Frozen legacy tasks keep their meaning. Explicit quick/engineering/sdd/monitor
+profiles retain compatibility contracts; the strict engineering, tool and budget
+rules below apply to those profiles. Both paths share Task/Run, events and the
+three Agent messages without a parallel state machine.
+
+
 This is the highest maintenance contract for Superflow CLI. Codex, Claude, and
 other supported development agents must read it before changing the CLI,
 skills, hooks, scripts, MCP, managed work, installation, upgrades, or document

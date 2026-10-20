@@ -11,18 +11,20 @@ import sys
 from pathlib import Path
 
 
-def task_language() -> str:
+def task_metadata() -> dict:
     root = os.environ.get("SUPERFLOW_MANAGED_PROJECT_ROOT", "")
     task_id = os.environ.get("SUPERFLOW_MANAGED_TASK_ID", "")
     if not root or not task_id:
-        return "zh"
+        return {}
     task_file = Path(root) / ".superflow" / "tasks" / task_id / "task.json"
     try:
-        return json.loads(task_file.read_text(encoding="utf-8")).get(
-            "language", "zh"
-        )
+        return json.loads(task_file.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return "zh"
+        return {}
+
+
+def task_language() -> str:
+    return task_metadata().get("language", "zh")
 
 
 def block(zh: str, en: str | None = None) -> None:
@@ -325,6 +327,32 @@ def main() -> None:
     root = Path(
         os.environ.get("SUPERFLOW_MANAGED_PROJECT_ROOT", os.getcwd())
     ).resolve(strict=False)
+    if task_metadata().get("profile") == "native":
+        workspace_roots = [root, *[
+            canonical(value, root)
+            for value in task_metadata().get("relatedProjectRoots", [])
+        ]]
+        state_roots = [
+            (workspace / ".superflow" / "tasks").resolve(strict=False)
+            for workspace in workspace_roots
+        ]
+        targets: list[Path] = []
+        if tool_name in {"Edit", "Write", "MultiEdit", "NotebookEdit", "apply_patch"}:
+            if file_path:
+                targets.append(canonical(file_path, root))
+            targets.extend(canonical(value, root) for _, value in patch_target_paths(command))
+        native_shell_write = mutates_files(command) or re.search(
+            r"(?:^|[;&|]\s*)(?:tee|install|apply_patch)\b", command
+        )
+        if command and native_shell_write:
+            targets.extend(path_tokens(command, root))
+        if any(any(left == ".superflow" and right == "tasks"
+                   for left, right in zip(target.parts, target.parts[1:]))
+               or any(target == state or state in target.parents
+                      or target in state.parents for state in state_roots)
+               for target in targets):
+            block("执行角色禁止修改托管状态。", "The executor cannot edit transport-owned state.")
+        return
     immutable, retained = protected_entries()
 
     if role == "supervisor":

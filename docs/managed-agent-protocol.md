@@ -1,5 +1,24 @@
 # Superflow 托管 Agent 通信协议
 
+## 原生通信：保留协议，分开语义与传输
+
+新任务默认 native；旧 profile 及落盘合同不静默迁移。仍使用 Handoff v2、
+Executor Delivery v2、Host Review v2。Agent 可自然回复，Runner 只包装可确定
+事实及原文，不制造“测试通过/任务完成”等业务断言，不要求 Agent 为格式重跑研发。
+
+`ready_for_review` 对原生回复只表示可供 Host 判断。自然回复、提问、阻塞与
+完成声明的语义由 Agent 明确表达并由 Host 核验；未明确则要求补齐沟通，不补造
+成功凭证。未通过时进度 0/1，只有已存在回复且 Host 显式 pass 才能完成。
+
+原始请求、新指导、未决 finding 和证据引用同时交接。Codex 的传输上下文进入
+实际 stdin，Claude 使用附加上下文；不覆盖原生配置、不丢弃入口正文。确认收到
+不等于完成，失败后继续交接；规范交付或明确 Runner→Host 升级才结束重复投递。
+
+native 预算 0 为未设限，用户正数独立生效；原生输出没有工程 Schema 限制。
+任务、轮次、会话、退出码、原始日志、状态链与引用完整性仍由 Runner 校验。
+本节优先于下文兼容档位的工程 JSON、短会话及固定预算要求。
+
+
 ## 目标
 
 托管双方只交换稳定的机器消息，不通过自然语言猜测状态。协议遵循一个所有权原则：
@@ -350,3 +369,28 @@ reviewer-checklist.md 核验。实现、模拟、真实环境、浏览器及提�
 初始化与源码安装器复用同一 MCP 注册 owner；初始化负责完成闭包，安装脚本只核对
 状态。交互选择不新增 Agent 消息或 Task/Run 状态；取消/预览不创建安装状态，注册
 失败可从既有安装步骤恢复，不能宣称完成。
+
+### Executor 能力与恢复消息
+
+Claude Executor 使用正常技能发现与原生工具集合；只读 Supervisor 仍隔离启动。
+原生子代理不能扩大冻结范围或接管 Host/Runner 状态。技能发现不等于执行，缺失技能
+明确记录，不能把入口文本当作调用凭证。
+
+`runtimeTelemetry` 可选增加 `skills`、`slashCommands` 和 `capabilitiesReported`，
+保留旧记录可读。MCP status/wait 的 `executorRuntime` 展示 requestedModel、
+reportedModel、modelNamesMatch、tools、skills、slashCommands、toolUses；未报告值为
+null，已报告空集合为 []。modelNamesMatch 只比较名称，不验证供应商底层模型身份。
+
+恢复消息保留在既有 human-messages.jsonl，经 handoff 独立确认；不替换
+lastReviewResult/lastExecutorResult，不合成 HUMAN-GUIDANCE 业务 finding。
+旧 pass/blocked 有未交付消息时须先执行消息；needs_fix 保留旧问题、收敛检查和预算。
+Handoff、Executor Delivery、Host Review 三个协议版本与字段要求不变。
+
+收到 handoff 的会话确认不等于指导已完成。调用失败/超时后，尚无规范交付或明确
+Runner→Host 升级事实的指导须再次交接；类别歧义或机械退回已经升级 Host 时不能
+因指导未消费而重启完整研发。新物理调用清空当前遥测和当前交付指针，历史文件与
+交接引用保留，避免旧模型/能力或旧交付冒充本次结果。
+
+Codex Executor 启动与 resume 不覆写用户的 memories、多代理或技能功能开关；
+保留任务绑定的模型/推理参数、明确会话 ID 和角色读写边界。此处恢复原生配置，
+不强制启用用户已关闭的能力，也不改变三个消息协议。

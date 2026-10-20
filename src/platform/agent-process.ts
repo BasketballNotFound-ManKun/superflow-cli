@@ -10,6 +10,7 @@ import type {
   ManagedAgent,
   UnresumableSessionFailureReason,
   ManagedReasoningEffort,
+  ExecutorResult,
 } from "../domains/managed-work/types.js";
 import { isCreditableTransientProviderFailure } from "../domains/managed-work/failure.js";
 import { managedText } from "../domains/managed-work/i18n.js";
@@ -199,11 +200,12 @@ async function runAgentProcess<T>(
         })}`,
       );
     }, HOST_SUPERVISION_INTERVAL_MS);
-    let stalledTimer = setTimeout(onStalled, invocation.timeout.stalledMs);
+    let stalledTimer = invocation.timeout.stalledMs > 0
+      ? setTimeout(onStalled, invocation.timeout.stalledMs) : undefined;
     const hardTimer = setInterval(() => {
       if (finished) return;
       accountClockGap();
-      if (activeInvocationMs < invocation.timeout.hardMs) return;
+      if (invocation.timeout.hardMs <= 0 || activeInvocationMs < invocation.timeout.hardMs) return;
       stopChild(child.pid);
       finishError(
         new Error(
@@ -224,7 +226,8 @@ async function runAgentProcess<T>(
       stdout += text;
       lastOutputAt = Date.now();
       clearTimeout(stalledTimer);
-      stalledTimer = setTimeout(onStalled, invocation.timeout.stalledMs);
+      stalledTimer = invocation.timeout.stalledMs > 0
+        ? setTimeout(onStalled, invocation.timeout.stalledMs) : undefined;
       lineBuffer += text;
       const lines = lineBuffer.split(/\r?\n/);
       lineBuffer = lines.pop() ?? "";
@@ -292,7 +295,9 @@ async function runAgentProcess<T>(
         return;
       }
       try {
-        const output = extractStructuredOutput<T>(
+        const output = invocation.nativeMode
+          ? nativeResponse(invocation, stdout, command.outputFile) as T
+          : extractStructuredOutput<T>(
           invocation.agent,
           stdout,
           command.outputFile,
@@ -335,7 +340,7 @@ async function runAgentProcess<T>(
     child.stdin?.end(agentProcessInput(invocation));
 
     function onStalled(): void {
-      if (finished) return;
+      if (finished || invocation.timeout.stalledMs <= 0) return;
       const slept = accountClockGap();
       if (slept) {
         clearTimeout(stalledTimer);
@@ -415,7 +420,7 @@ export function buildAgentEnvironment(
       invocation.taskId,
       "context-manifest.json",
     ),
-    ...(invocation.agent === "claude" && invocation.role === "executor"
+    ...(!invocation.nativeMode && invocation.agent === "claude" && invocation.role === "executor"
       ? {
           CLAUDE_CODE_AUTO_COMPACT_WINDOW:
             baseEnv.CLAUDE_CODE_AUTO_COMPACT_WINDOW ??
@@ -474,12 +479,21 @@ export function updateTelemetry(
       stringValue(event.effort);
     if (
       effort &&
-      ["minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(effort)
+      ["minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(
+        effort,
+      )
     ) {
       next.reasoningEffort = effort as ManagedReasoningEffort;
     }
-    next.tools = stringArray(event.tools);
-    next.plugins = stringArray(event.plugins);
+    if (Array.isArray(event.tools)) {
+      next.tools = stringArray(event.tools);
+      next.capabilitiesReported = true;
+    }
+    if (Array.isArray(event.skills)) next.skills = stringArray(event.skills);
+    if (Array.isArray(event.slash_commands)) {
+      next.slashCommands = stringArray(event.slash_commands);
+    }
+    if (Array.isArray(event.plugins)) next.plugins = stringArray(event.plugins);
     next.lastProgressAt = now;
     next.lastProgressReason = "system_init";
   }
@@ -651,15 +665,13 @@ function buildCodexCommand(invocation: AgentInvocation) {
       args: [
         "exec",
         "resume",
-        ...(invocation.role === "executor" ? ["--disable", "memories"] : []),
         ...(invocation.model ? ["--model", invocation.model] : []),
         ...(invocation.reasoningEffort
           ? ["-c", `model_reasoning_effort=${invocation.reasoningEffort}`]
           : []),
         invocation.sessionId,
         "--json",
-        "--output-schema",
-        invocation.schemaPath,
+        ...(invocation.nativeMode ? [] : ["--output-schema", invocation.schemaPath]),
         "-o",
         outputFile,
         "-",
@@ -676,19 +688,17 @@ function buildCodexCommand(invocation: AgentInvocation) {
     command: "codex",
     args: [
       "exec",
-      ...(invocation.role === "executor" ? ["--disable", "memories"] : []),
       ...(invocation.model ? ["--model", invocation.model] : []),
       ...(invocation.reasoningEffort
         ? ["-c", `model_reasoning_effort=${invocation.reasoningEffort}`]
         : []),
       "-C",
       invocation.projectRoot,
-      "--sandbox",
-      invocation.role === "supervisor" ? "read-only" : "workspace-write",
+      ...(invocation.nativeMode ? [] : ["--sandbox",
+        invocation.role === "supervisor" ? "read-only" : "workspace-write"]),
       ...additionalRoots,
       "--json",
-      "--output-schema",
-      invocation.schemaPath,
+      ...(invocation.nativeMode ? [] : ["--output-schema", invocation.schemaPath]),
       "-o",
       outputFile,
       "-",
@@ -699,8 +709,11 @@ function buildCodexCommand(invocation: AgentInvocation) {
 }
 
 function buildClaudeCommand(invocation: AgentInvocation) {
-  const schema = readFileSync(invocation.schemaPath, "utf-8");
-  const args = ["--bare", "-p"];
+  const schema = invocation.nativeMode ? null : readFileSync(invocation.schemaPath, "utf-8");
+  // Executors need normal skill/plugin discovery and native delegation.
+  // Only the read-only supervisor uses the isolated minimal CLI mode.
+  const args = !invocation.nativeMode && invocation.role === "supervisor"
+    ? ["--bare", "-p"] : ["-p"];
   if (invocation.model) args.push("--model", invocation.model);
   if (invocation.reasoningEffort) {
     args.push("--effort", invocation.reasoningEffort);
@@ -719,12 +732,12 @@ function buildClaudeCommand(invocation: AgentInvocation) {
     "stream-json",
     "--verbose",
     "--include-partial-messages",
-    "--json-schema",
-    schema,
-    "--tools",
-    claudeTools(invocation.role),
+    ...(schema ? ["--json-schema", schema] : []),
+    ...(invocation.nativeMode ? [] : ["--tools", claudeTools(invocation.role)]),
   );
-  if (invocation.role === "executor") {
+  if (invocation.nativeMode) {
+    // Native permissions, hooks and approval choices belong to the user's CLI.
+  } else if (invocation.role === "executor") {
     args.push("--dangerously-skip-permissions");
   } else {
     args.push(
@@ -734,7 +747,7 @@ function buildClaudeCommand(invocation: AgentInvocation) {
       ...claudeAllowedTools(invocation.role),
     );
   }
-  if (invocation.role === "supervisor") {
+  if (!invocation.nativeMode && invocation.role === "supervisor") {
     args.push("--max-turns", "20");
   }
   for (const root of invocation.writableRoots) args.push("--add-dir", root);
@@ -742,6 +755,10 @@ function buildClaudeCommand(invocation: AgentInvocation) {
 }
 
 export function agentProcessInput(invocation: AgentInvocation): string {
+  if (invocation.nativeMode && invocation.agent === "codex" && invocation.systemPromptPath) {
+    return `${invocation.prompt}\n\n<superflow_transport_context>\n${readFileSync(invocation.systemPromptPath, "utf8")}\n</superflow_transport_context>`;
+  }
+  if (invocation.nativeMode) return invocation.prompt;
   if (invocation.agent === "codex") return invocation.prompt;
   if (invocation.agent === "claude" && invocation.promptPath) {
     return `Read ${invocation.promptPath} completely and execute it.`;
@@ -749,10 +766,35 @@ export function agentProcessInput(invocation: AgentInvocation): string {
   return invocation.prompt;
 }
 
+function nativeResponse(
+  invocation: AgentInvocation,
+  stdout: string,
+  outputFile: string | null,
+): ExecutorResult {
+  let response = outputFile && existsSync(outputFile)
+    ? readFileSync(outputFile, "utf8").trim() : "";
+  for (const line of stdout.split(/\r?\n/)) {
+    const event = safeJson(line);
+    if (!event) continue;
+    if (event.type === "result" && event.is_error === true) {
+      throw new Error(formatAgentFailure(invocation.agent, 1, stdout, "", invocation.language));
+    }
+    if (event.type === "result" && typeof event.result === "string") response = event.result;
+    const item = event.item as { type?: string; text?: string } | undefined;
+    if (event.type === "item.completed" && item?.type === "agent_message" && item.text) {
+      response = item.text;
+    }
+  }
+  if (!response.trim()) throw new Error(managedText(invocation.language,
+    "Agent 已退出但没有返回自然回复", "Agent exited without a final response"));
+  // A response is input for Host judgement, never proof of task completion.
+  return { protocolVersion: "superflow.executor.v2", messageType: "executor_delivery",
+    status: "ready_for_review", summary: response, changedFiles: [], commands: [],
+    evidence: [], releasePrerequisites: [], blockers: [] };
+}
+
 function claudeTools(role: AgentInvocation["role"]): string {
-  return role === "supervisor"
-    ? "Read,Grep,Glob,Bash"
-    : "Read,Write,Edit,Grep,Glob,Bash";
+  return role === "supervisor" ? "Read,Grep,Glob,Bash" : "default";
 }
 
 function claudeAllowedTools(role: AgentInvocation["role"]): string[] {

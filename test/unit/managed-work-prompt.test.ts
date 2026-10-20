@@ -30,6 +30,7 @@ describe("managed work prompt snapshot", () => {
       );
       roots.push(root);
       const contract = createManagedTaskContract({
+        profile: "engineering",
         request: "Review the implementation",
         projectRoot: root,
         language,
@@ -82,6 +83,7 @@ describe("managed work prompt snapshot", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-prompt-en-"));
     roots.push(root);
     const contract = createManagedTaskContract({
+        profile: "engineering",
       request: "Implement the task",
       projectRoot: root,
       language: "en",
@@ -139,6 +141,7 @@ describe("managed work prompt snapshot", () => {
     );
     roots.push(root);
     const contract = createManagedTaskContract({
+        profile: "engineering",
       request: "继续实现",
       projectRoot: root,
       language: "zh",

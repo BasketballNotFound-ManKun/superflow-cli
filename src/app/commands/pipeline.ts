@@ -6,6 +6,7 @@ import {
   calculateManagedContractHash,
   createManagedTaskContract,
   validateManagedTaskContract,
+  validateManagedBudgets,
 } from "../../domains/managed-work/contract.js";
 import { appendManagedEvent } from "../../domains/managed-work/journal.js";
 import { ensureManagedService } from "../../domains/managed-work/service.js";
@@ -136,10 +137,15 @@ async function submitManagedTask(
     profile: options.profile,
     language,
   });
-  if (input.source === "sdd" && input.taskPromptPath && !options.dryRun) {
+  if (
+    input.profile !== "native" &&
+    input.source === "sdd" &&
+    input.taskPromptPath &&
+    !options.dryRun
+  ) {
     assertCodingReadyForPrompt(input.taskPromptPath);
   }
-  const agents = resolveManagedAgents(options);
+  const agents = resolveManagedAgents({ ...options, profile: input.profile });
   const acceptanceContract = options.acceptanceContract
     ? parseManagedAcceptanceContractFile(options.acceptanceContract)
     : undefined;
@@ -155,6 +161,7 @@ async function submitManagedTask(
     language,
     executionMode: options.manual ? "human_directed" : "delegated",
     acceptanceContract,
+    budgets: initialManagedBudgets(options),
   });
   assertManagedAcceptanceContractForStart(contract);
   const state = initManagedRunState(contract);
@@ -163,7 +170,12 @@ async function submitManagedTask(
     return;
   }
 
-  assertManagedAgentPair(agents.supervisorAgent, agents.executorAgent);
+  assertManagedAgentPair(
+    agents.supervisorAgent,
+    agents.executorAgent,
+    {},
+    { profile: contract.profile },
+  );
 
   // CLI and MCP share the same control-plane contract: establish the runtime
   // before persistence, then rely on atomic task/registry rollback on failure.
@@ -228,8 +240,28 @@ async function submitManagedTask(
   );
 }
 
+function initialManagedBudgets(
+  options: PipelineCommandOptions,
+): Partial<ManagedBudgets> | undefined {
+  const fields = [
+    "maxExecutorInvocations",
+    "maxReviewRounds",
+    "maxTotalAgentInvocations",
+  ] as const;
+  const budgets: Partial<ManagedBudgets> = {};
+  for (const field of fields) {
+    if (options[field] === undefined) continue;
+    const value = options[field]!.trim();
+    // Contract validation owns profile-specific integer bounds, including native 0.
+    budgets[field] = value ? Number(value) : Number.NaN;
+  }
+  if (!Object.keys(budgets).length) return undefined;
+  budgets.unlimitedAgentInvocations = options.unlimitedAgentBudget === true;
+  return budgets;
+}
+
 export function resolveManagedAgents(
-  options: Pick<PipelineCommandOptions, "supervisor" | "executor">,
+  options: Pick<PipelineCommandOptions, "supervisor" | "executor" | "profile">,
   env: NodeJS.ProcessEnv = process.env,
 ): { supervisorAgent: ManagedAgent; executorAgent: ManagedAgent } {
   const supervisorSelector = options.supervisor ?? "current";
@@ -243,7 +275,7 @@ export function resolveManagedAgents(
   const executorAgent = executorSelector
     ? resolveAgentSelector(executorSelector, current)
     : oppositeManagedAgent(supervisorAgent);
-  if (supervisorAgent === executorAgent) {
+  if (options.profile !== "native" && supervisorAgent === executorAgent) {
     throw new Error(
       managedText(
         undefined,
@@ -799,21 +831,30 @@ export function applyManagedBudgetIncrease(
     );
   }
   const before = { ...contract.budgets };
+  const parseBudget =
+    contract.profile === "native"
+      ? (value: string | undefined, current: number): number =>
+          value === undefined
+            ? current
+            : value.trim()
+              ? Number(value)
+              : Number.NaN
+      : parseIncreasedBudget;
   const next = {
     ...before,
-    maxExecutorInvocations: parseIncreasedBudget(
+    maxExecutorInvocations: parseBudget(
       options.maxExecutorInvocations,
       before.maxExecutorInvocations,
       "maxExecutorInvocations",
       language,
     ),
-    maxReviewRounds: parseIncreasedBudget(
+    maxReviewRounds: parseBudget(
       options.maxReviewRounds,
       before.maxReviewRounds,
       "maxReviewRounds",
       language,
     ),
-    maxTotalAgentInvocations: parseIncreasedBudget(
+    maxTotalAgentInvocations: parseBudget(
       options.maxTotalAgentInvocations,
       before.maxTotalAgentInvocations,
       "maxTotalAgentInvocations",
@@ -821,8 +862,9 @@ export function applyManagedBudgetIncrease(
     ),
   };
   if (
+    contract.profile !== "native" &&
     next.maxTotalAgentInvocations <
-    next.maxExecutorInvocations + next.maxReviewRounds
+      next.maxExecutorInvocations + next.maxReviewRounds
   ) {
     throw new Error(
       managedText(
@@ -832,6 +874,7 @@ export function applyManagedBudgetIncrease(
       ),
     );
   }
+  validateManagedBudgets(next, language, contract.profile);
   contract.budgets = next;
   contract.contractHash = calculateManagedContractHash(contract);
   state.contractHash = contract.contractHash;
@@ -849,7 +892,16 @@ export function applyUnlimitedAgentBudget(
   language: Language = "zh",
 ): boolean {
   if (!options.unlimitedAgentBudget) return false;
-  if (contract.budgets.unlimitedAgentInvocations === true) return false;
+  const native = contract.profile === "native";
+  if (native) {
+    const limits = [
+      contract.budgets.maxExecutorInvocations,
+      contract.budgets.maxReviewRounds,
+      contract.budgets.maxTotalAgentInvocations,
+      contract.budgets.executorPhysicalStopAt ?? 0,
+    ];
+    if (limits.every((limit) => limit === 0)) return false;
+  } else if (contract.budgets.unlimitedAgentInvocations === true) return false;
   const reason = options.budgetOverrideReason?.trim();
   if (!reason) {
     throw new Error(
@@ -863,6 +915,14 @@ export function applyUnlimitedAgentBudget(
   contract.budgets = {
     ...contract.budgets,
     unlimitedAgentInvocations: true,
+    ...(native
+      ? {
+          maxExecutorInvocations: 0,
+          maxReviewRounds: 0,
+          maxTotalAgentInvocations: 0,
+          executorPhysicalStopAt: 0,
+        }
+      : {}),
   };
   contract.contractHash = calculateManagedContractHash(contract);
   state.contractHash = contract.contractHash;
@@ -934,8 +994,27 @@ function parseIncreasedBudget(
 
 export function hasAvailableInvocationBudget(
   state: ManagedRunState,
-  contract: Pick<ReturnType<typeof loadManagedTask>, "budgets">,
+  contract: Pick<ReturnType<typeof loadManagedTask>, "budgets"> &
+    Partial<Pick<ReturnType<typeof loadManagedTask>, "profile">>,
 ): boolean {
+  if (contract.profile === "native") {
+    const available = (used: number, limit: number | undefined): boolean =>
+      !limit || used < limit;
+    return (
+      available(
+        effectiveExecutorInvocations(state),
+        contract.budgets.maxExecutorInvocations,
+      ) &&
+      available(
+        effectiveTotalAgentInvocations(state),
+        contract.budgets.maxTotalAgentInvocations,
+      ) &&
+      available(
+        state.executorInvocations,
+        contract.budgets.executorPhysicalStopAt,
+      )
+    );
+  }
   if (contract.budgets.unlimitedAgentInvocations === true) return true;
   if (
     contract.budgets.executorPhysicalStopAt !== undefined &&
@@ -953,14 +1032,19 @@ export function hasAvailableInvocationBudget(
 
 export function hasAvailableReviewBudget(
   state: ManagedRunState,
-  contract: Pick<ReturnType<typeof loadManagedTask>, "budgets">,
+  contract: Pick<ReturnType<typeof loadManagedTask>, "budgets"> &
+    Partial<Pick<ReturnType<typeof loadManagedTask>, "profile">>,
 ): boolean {
-  return state.reviewInvocations < contract.budgets.maxReviewRounds;
+  return (
+    (contract.profile === "native" && contract.budgets.maxReviewRounds === 0) ||
+    state.reviewInvocations < contract.budgets.maxReviewRounds
+  );
 }
 
 export function canResumeManagedTask(
   state: ManagedRunState,
-  contract: Pick<ReturnType<typeof loadManagedTask>, "budgets">,
+  contract: Pick<ReturnType<typeof loadManagedTask>, "budgets"> &
+    Partial<Pick<ReturnType<typeof loadManagedTask>, "profile">>,
   options: Pick<
     PipelineCommandOptions,
     "creditInfrastructureInvocations" | "unlimitedAgentBudget"
@@ -974,6 +1058,18 @@ export function canResumeManagedTask(
     "running",
   ];
   if (normallyResumable.includes(state.status)) return true;
+  if (contract.profile === "native") {
+    if (state.status === "budget_exhausted")
+      return hasAvailableInvocationBudget(state, contract);
+    if (state.status === "review_exhausted")
+      return hasAvailableReviewBudget(state, contract);
+    if (state.status === "repair_pending")
+      return (
+        hasAvailableInvocationBudget(state, contract) &&
+        hasAvailableReviewBudget(state, contract)
+      );
+    return false;
+  }
   const budgetAvailable =
     Boolean(options.creditInfrastructureInvocations) ||
     hasAvailableInvocationBudget(state, contract) ||

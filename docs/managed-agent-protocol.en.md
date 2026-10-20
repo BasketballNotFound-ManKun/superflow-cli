@@ -1,5 +1,30 @@
 # Superflow Managed Agent Protocol
 
+## Native communication: preserve protocols, separate semantics and transport
+
+New tasks default to native; legacy profiles/contracts are not silently migrated.
+Handoff v2, Executor Delivery v2 and Host Review v2 remain. Agents may reply
+naturally; Runner wraps deterministic facts and original text without inventing
+test/completion claims or asking for engineering reruns to fix formatting.
+
+For native responses, ready_for_review means available for Host judgement only.
+Agents state questions, blockers, progress and completion claims explicitly;
+Host verifies meaning or requests clarification instead of inventing success.
+Progress remains 0/1 until a response exists and Host explicitly returns pass.
+
+Original requests, new guidance, open findings and evidence references travel
+together. Codex receives transport context in actual stdin; Claude receives
+appended context. Preserve native settings and the original entry. Receipt is
+not completion; failed calls redeliver guidance until canonical delivery or an
+explicit Runner-to-Host escalation handles it.
+
+Native budgets use zero for unset and honor positive user limits independently.
+Native output has no engineering Schema constraint. Runner still validates task,
+round, session, exit status, raw logs, journal integrity and evidence references.
+This section overrides compatibility-only engineering JSON, short-session and
+fixed-budget requirements below.
+
+
 ## Goal
 
 Managed participants exchange stable machine messages instead of inferring state
@@ -459,3 +484,35 @@ init completes the closure and installer scripts check status. Interactive choic
 add no Agent messages or Task/Run state. Cancel/preview creates no installation
 state; registration failure resumes through existing installation steps and never
 claims completion.
+
+### Executor capabilities and recovery guidance
+
+Claude Executors use normal skill discovery and the native tool set; read-only
+Supervisors remain isolated. Native subagents cannot expand frozen scope or own
+Host/Runner state. Discovery is not invocation: report a missing skill rather
+than using its name as execution evidence.
+
+`runtimeTelemetry` optionally adds `skills`, `slashCommands` and
+`capabilitiesReported`; old records remain readable. MCP status/wait expose
+`executorRuntime` with requestedModel, reportedModel, modelNamesMatch, tools,
+skills, slashCommands and toolUses. Unreported values are null; reported empty
+sets are []. modelNamesMatch compares names only, not provider model identity.
+
+Recovery guidance remains in human-messages.jsonl and is independently
+acknowledged through handoff. It does not replace lastReviewResult or
+lastExecutorResult or synthesize HUMAN-GUIDANCE business findings. Pending
+guidance is delivered before applying an old pass/blocked decision; needs-fix
+findings, convergence checks and budgets remain effective. The three Handoff,
+Executor Delivery and Host Review protocol versions and requirements do not change.
+
+A handoff acknowledgement does not complete guidance. After failure or timeout,
+redeliver guidance unless the invocation produced a canonical delivery or an
+explicit Runner-to-Host escalation. Metadata ambiguity or mechanical rejection
+already escalated to Host must not trigger another full executor call. A new
+physical invocation clears current telemetry and its current delivery pointer;
+historical files and handoff references remain available.
+
+Codex Executor fresh/resume calls do not override native memory, delegation or
+skill feature settings. Task-bound model/effort, explicit session identity and
+role permissions remain enforced. This inherits user configuration rather than
+enabling features the user disabled, and changes none of the three protocols.

@@ -3,6 +3,32 @@ name: superflow
 description: Superflow user entry — the current Agent owns ordinary implementation, testing, review, repair, and delivery; also supports requirement documents and explicit dual-Agent management.
 ---
 
+## Native managed defaults (priority for new tasks)
+
+For an explicit managed request, check the MCP runtime, then pass the original
+request, skill command and document paths verbatim to superflow_managed_start.
+Omitted/auto profile defaults to native. Do not replace the entry with a summary
+or append another engineering plan, acceptance script or engineering JSON demand.
+The strict rules below apply to explicitly chosen compatibility profiles or
+frozen legacy Task/Run recovery, never by silently converting a new native task.
+
+Native Agents retain their skills, plugins, subagents, memory, permissions,
+approvals and configuration. Pass model/effort only when explicitly selected.
+Leave budgets unset by default; zero is unlimited and each positive user limit
+applies independently. Admission checks the actual executor CLI, not a complete
+global installation of both agent families. Natural responses must distinguish
+progress, completion, blockers and questions; Runner wraps provenance and text,
+and only explicit Host approval completes delivery. Reuse applicable existing
+review evidence rather than inventing engineering requirements. Original goals,
+new guidance, findings and evidence travel together across failure recovery.
+
+Host retains semantic judgement and authorization; Runner retains state, events
+and evidence references. Natural Agent output does not remove the three
+structured transport messages. Independent workspaces may run concurrently;
+overlapping roots queue. Agents do not mutate transport-owned records.
+
+
+
 ## Document Delivery Exit
 
 OpenSpec applyRequires completion only finishes the base-artifact stage. For a

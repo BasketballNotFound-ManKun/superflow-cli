@@ -34,6 +34,7 @@ export interface ManagedExecutionContract {
 export function artifactLevelFor(
   contract: ManagedTaskContract,
 ): ManagedArtifactLevel {
+  if (contract.profile === "native") return "minimal";
   if (
     (contract.taskPrompt &&
       contract.taskPrompt.origin !== "generated_standard") ||
@@ -49,7 +50,8 @@ export function writeManagedExecutionContract(
   contract: ManagedTaskContract,
 ): ManagedExecutionContract {
   const artifactLevel = artifactLevelFor(contract);
-  const canonicalTasksPath = findCanonicalTasks(contract);
+  const canonicalTasksPath =
+    contract.profile === "native" ? null : findCanonicalTasks(contract);
   const execution = {
     schemaVersion: 1,
     taskId: contract.taskId,
@@ -112,6 +114,16 @@ function defaultTasks(
   contract: ManagedTaskContract,
   level: ManagedArtifactLevel,
 ): ManagedExecutionTask[] {
+  if (contract.profile === "native") {
+    return [
+      {
+        taskId: "N01",
+        text: contract.request,
+        requiredCategories: [],
+        requiresChangedFiles: false,
+      },
+    ];
+  }
   if (
     contract.taskKind === "docs-only" ||
     contract.taskKind === "review-only"
@@ -191,6 +203,7 @@ function defaultTasks(
 export function requiresRuntimeAcceptance(
   contract: ManagedTaskContract,
 ): boolean {
+  if (contract.profile === "native") return false;
   if (
     contract.taskKind === "docs-only" ||
     contract.taskKind === "review-only"

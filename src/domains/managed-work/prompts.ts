@@ -1,5 +1,5 @@
 import path from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { ASSETS_DIR } from "../../platform/assets.js";
 import type {
   ManagedRunState,
@@ -18,6 +18,20 @@ export function buildExecutorPrompt(
   repairFindings: ReviewFinding[] = [],
   handoffPath?: string,
 ): string {
+  if (contract.profile === "native") {
+    const parts: string[] = [];
+    if (handoffPath) {
+      const file = handoffPath.replace(/\.md$/, ".json");
+      if (existsSync(file)) {
+        const handoff = JSON.parse(readFileSync(file, "utf8"));
+        const messages = handoff.humanGuidance?.messages ?? [];
+        if (messages.length) parts.push(messages.map((item: { content: string }) => item.content).join("\n\n"));
+      }
+    }
+    if (repairFindings.length) parts.push(repairFindings.map(finding =>
+      `${finding.id} [${finding.target}]: ${finding.requiredFix}\n${finding.acceptanceChecks.join("; ")}`).join("\n"));
+    return parts.length ? parts.join("\n\n") : contract.request;
+  }
   if (contract.language === "en") {
     return buildExecutorPromptEnglish(
       contract,
@@ -163,6 +177,16 @@ export function buildReviewPrompt(
   state: ManagedRunState,
   factsPath?: string,
 ): string {
+  if (contract.profile === "native") return [
+    contract.language === "en"
+      ? "Review the native Agent response and actual artifacts against the original user request. A response is not automatic task completion. Reuse applicable existing review evidence; add no unrelated engineering workflow."
+      : "按用户原始请求核对原生 Agent 的回复与实际产物；回复不代表任务已完成。复用适用的已有评审证据，不额外规定无关研发流程。",
+    `Task: ${contract.taskId}; run: ${state.runId}`,
+    `Request: ${contract.request}`,
+    `Response: ${state.lastExecutorResult ?? "not yet available"}`,
+    `Facts: ${factsPath ?? "not yet available"}`,
+    "Return the existing Host review protocol: pass, needs_fix, or blocked, with concrete findings tied to the user's scope.",
+  ].join("\n\n");
   if (contract.language === "en") {
     return buildReviewPromptEnglish(contract, state, factsPath);
   }

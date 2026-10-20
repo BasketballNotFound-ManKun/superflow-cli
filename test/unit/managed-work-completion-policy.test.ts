@@ -124,6 +124,7 @@ function createFixture() {
     request: prompt,
     projectRoot: root,
     source: "sdd",
+    profile: "sdd",
     taskPromptPath: prompt,
   });
   const result: ExecutorResult = {

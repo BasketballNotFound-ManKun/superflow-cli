@@ -9,6 +9,10 @@ import {
 } from '../../src/domains/config/cli-help.js';
 
 describe('core/cli-help', () => {
+  it('documents native as the automatic managed profile in both languages', () => {
+    expect(cliText('zh').managedProfileOption).toContain('默认 native');
+    expect(cliText('en').managedProfileOption).toContain('defaults to native');
+  });
   it('uses SUPERFLOW_LANG as the default help language', () => {
     expect(resolveCliLanguage(['node', 'superflow'], { SUPERFLOW_LANG: 'en' }))
       .toBe('en');

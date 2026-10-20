@@ -132,6 +132,7 @@ describe("managed task retention cleanup", () => {
         request: taskKind === "docs-only" ? "只更新文档" : "只做源码评审",
         projectRoot: root,
         taskKind,
+        profile: "engineering",
       });
       const execution = writeManagedExecutionContract(contract);
       expect(execution.tasks.map((task) => task.taskId)).toEqual([

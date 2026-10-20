@@ -1865,8 +1865,9 @@ describe("managed work runner", () => {
     expect(result.changedFiles).toContain("result.txt");
   });
 
-  it("escalates a repeated mechanical rejection to the host", async () => {
+  it.each([false, true])("escalates a repeated mechanical rejection to the host (guidance=%s)", async withGuidance => {
     const fixture = createFixture("engineering");
+    if (withGuidance) appendManagedHumanMessage(fixture.contract, "继续", "user");
     const incomplete = executorReady("只运行了单元测试");
     incomplete.commands = [
       { command: "npm test", exitCode: 0, result: "测试通过" },
@@ -2294,8 +2295,9 @@ describe("managed work runner", () => {
     ).toBe(true);
   });
 
-  it("routes an invocation-category ambiguity to Host without another executor call", async () => {
+  it.each([false, true])("routes an invocation-category ambiguity to Host without another executor call (guidance=%s)", async withGuidance => {
     const fixture = createFixture("engineering");
+    if (withGuidance) appendManagedHumanMessage(fixture.contract, "继续", "user");
     fs.writeFileSync(
       path.join(fixture.root, "pom.xml"),
       "<project><artifactId>spring-boot-starter-web</artifactId></project>",

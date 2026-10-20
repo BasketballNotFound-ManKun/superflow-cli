@@ -14,6 +14,136 @@ afterEach(() => {
 });
 
 describe("managed work pre-tool guard", () => {
+  it("leaves native business permissions to the CLI while protecting transport state", () => {
+    const f = createFixture();
+    fs.writeFileSync(
+      path.join(f.root, ".superflow", "tasks", f.taskId, "task.json"),
+      JSON.stringify({ profile: "native" }),
+    );
+    expect(() =>
+      invokeGuard(f, {
+        tool_name: "Bash",
+        tool_input: { command: "git commit -m user-approved" },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      invokeGuard(f, {
+        tool_name: "Write",
+        tool_input: { file_path: f.design },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      invokeGuard(f, {
+        tool_name: "Write",
+        tool_input: {
+          file_path: path.join(
+            f.root,
+            ".superflow",
+            "tasks",
+            f.taskId,
+            "task.json",
+          ),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      invokeGuard(f, {
+        tool_name: "Read",
+        tool_input: {
+          file_path: path.join(
+            f.root,
+            ".superflow",
+            "tasks",
+            f.taskId,
+            "task.json",
+          ),
+        },
+      }),
+    ).not.toThrow();
+  });
+  it("protects native transport state in related roots and shell writes", () => {
+    const f = createFixture();
+    const related = fs.mkdtempSync(
+      path.join(os.tmpdir(), "native-related-state-"),
+    );
+    roots.push(related);
+    fs.writeFileSync(
+      path.join(f.root, ".superflow", "tasks", f.taskId, "task.json"),
+      JSON.stringify({ profile: "native", relatedProjectRoots: [related] }),
+    );
+    expect(() =>
+      invokeGuard(f, {
+        tool_name: "Write",
+        tool_input: {
+          file_path: path.join(related, ".superflow/tasks/other/task.json"),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      invokeGuard(f, {
+        tool_name: "Bash",
+        tool_input: {
+          command: "printf '{}' | tee .superflow/tasks/task-test/task.json",
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      invokeGuard(f, {
+        tool_name: "Bash",
+        tool_input: { command: "cat .superflow/tasks/task-test/task.json" },
+      }),
+    ).not.toThrow();
+  });
+  it("blocks native patch targets and related state ancestors without matching sibling names", () => {
+    const fixture = createFixture();
+    const related = fs.mkdtempSync(
+      path.join(os.tmpdir(), "native-related-state-"),
+    );
+    roots.push(related);
+    fs.writeFileSync(
+      path.join(fixture.root, ".superflow/tasks", fixture.taskId, "task.json"),
+      JSON.stringify({ profile: "native", relatedProjectRoots: [related] }),
+    );
+    for (const action of ["Update", "Add", "Delete"]) {
+      expect(() =>
+        invokeGuard(fixture, {
+          tool_name: "apply_patch",
+          tool_input: {
+            command: [
+              "*** Begin Patch",
+              `*** ${action} File: ${path.join(fixture.root, ".superflow/tasks", fixture.taskId, "task.json")}`,
+              "*** End Patch",
+            ].join("\n"),
+          },
+        }),
+      ).toThrow("禁止修改托管状态");
+    }
+    for (const target of [related, path.join(related, ".superflow")]) {
+      expect(() =>
+        invokeGuard(fixture, {
+          tool_name: "Bash",
+          tool_input: { command: `rm -rf ${target}` },
+        }),
+      ).toThrow("禁止修改托管状态");
+    }
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "Write",
+        tool_input: {
+          file_path: path.join(fixture.root, ".superflow/tasks-backup.json"),
+        },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      invokeGuard(fixture, {
+        tool_name: "apply_patch",
+        tool_input: {
+          command: `*** Begin Patch\n*** Update File: ${fixture.design}\n*** End Patch`,
+        },
+      }),
+    ).not.toThrow();
+  });
+
   it("blocks supervisor writes", () => {
     const fixture = createFixture();
     expect(() =>
@@ -169,9 +299,12 @@ describe("managed work pre-tool guard", () => {
       invokeGuard(fixture, {
         tool_name: "apply_patch",
         tool_input: {
-          command: ["*** Begin Patch", "@@", "-const a = 1;", "*** End Patch"].join(
-            "\n",
-          ),
+          command: [
+            "*** Begin Patch",
+            "@@",
+            "-const a = 1;",
+            "*** End Patch",
+          ].join("\n"),
         },
       }),
     ).toThrow("写入工具缺少目标路径");

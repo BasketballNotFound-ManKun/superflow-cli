@@ -1,5 +1,30 @@
 # Managed Work Rules
 
+## Native managed defaults (priority for new tasks)
+
+For an explicit managed request, check the MCP runtime, then pass the original
+request, skill command and document paths verbatim to superflow_managed_start.
+Omitted/auto profile defaults to native. Do not replace the entry with a summary
+or append another engineering plan, acceptance script or engineering JSON demand.
+The strict rules below apply to explicitly chosen compatibility profiles or
+frozen legacy Task/Run recovery, never by silently converting a new native task.
+
+Native Agents retain their skills, plugins, subagents, memory, permissions,
+approvals and configuration. Pass model/effort only when explicitly selected.
+Leave budgets unset by default; zero is unlimited and each positive user limit
+applies independently. Admission checks the actual executor CLI, not a complete
+global installation of both agent families. Natural responses must distinguish
+progress, completion, blockers and questions; Runner wraps provenance and text,
+and only explicit Host approval completes delivery. Reuse applicable existing
+review evidence rather than inventing engineering requirements. Original goals,
+new guidance, findings and evidence travel together across failure recovery.
+
+Host retains semantic judgement and authorization; Runner retains state, events
+and evidence references. Natural Agent output does not remove the three
+structured transport messages. Independent workspaces may run concurrently;
+overlapping roots queue. Agents do not mutate transport-owned records.
+
+
 ## Design-constitution gate
 
 Before changing Superflow managed work itself, read
@@ -215,3 +240,19 @@ and coverage boundaries; the Runner decides deterministic facts, never semantic
 completion. Close out using [test-guide.md](test-guide.md), separating implementation,
 simulation, real environment, browser, commit, and release; counts must match final
 effective evidence.
+
+### Skill entry and recovery observations
+
+Claude Executors retain native skill and subagent tools; read-only supervisor
+boundaries remain unchanged. Delegates stay within the frozen task scope and
+cannot start another Superflow Supervisor/Runner. Missing discovery or invocation
+evidence must be reported, not treated as success because a prompt names a skill.
+Status/wait distinguish requested and reported model names, discovery and actual
+tool use. An absent report is not an empty list; different names do not verify
+underlying model identity. Recovery guidance is appended independently without
+replacing review findings or valid delivery references. Old passes cannot skip
+pending guidance; repairs retain their budget and convergence checks.
+
+Codex Executors likewise inherit native memory, skill and multi-agent settings
+on fresh/resumed calls without forcing feature toggles. Read-only supervision,
+frozen model/effort and explicit session binding remain effective.

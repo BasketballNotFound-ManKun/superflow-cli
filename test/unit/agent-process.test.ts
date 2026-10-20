@@ -37,8 +37,66 @@ afterEach(() => {
 });
 
 describe("agent process command", () => {
+  it("delivers the native Codex transport context without replacing the user entry", () => {
+    const invocation = fixture("codex", "executor"); invocation.nativeMode = true;
+    invocation.prompt = "/sample-workflow\ndocs/example";
+    invocation.systemPromptPath = path.join(path.dirname(invocation.schemaPath), "native-policy.md");
+    fs.writeFileSync(invocation.systemPromptPath, "Explicit user rule: preserve records\nHandoff: current.json");
+    const input = agentProcessInput(invocation);
+    expect(input.startsWith(invocation.prompt)).toBe(true);
+    expect(input).toContain("preserve records");
+    expect(input).toContain("Handoff: current.json");
+  });
+  it("inherits native Claude compaction configuration without injected overrides", () => {
+    const invocation = fixture("claude", "executor"); invocation.nativeMode = true;
+    const env = buildAgentEnvironment(invocation, {});
+    expect(env.CLAUDE_CODE_AUTO_COMPACT_WINDOW).toBeUndefined();
+    expect(env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE).toBeUndefined();
+    expect(buildAgentEnvironment(invocation, { CLAUDE_CODE_AUTO_COMPACT_WINDOW: "custom" })
+      .CLAUDE_CODE_AUTO_COMPACT_WINDOW).toBe("custom");
+  });
+  it.each([["codex", "executor"], ["claude", "executor"], ["codex", "supervisor"], ["claude", "supervisor"]] as const)("keeps native %s/%s launch permissions and output unconstrained", (agent, role) => {
+    const invocation = fixture(agent, role);
+    invocation.nativeMode = true;
+    invocation.prompt = "/sample-workflow\ndocs/example";
+    invocation.promptPath = "/tmp/transport-only.md";
+    const command = buildAgentCommand(invocation);
+    for (const flag of ["--sandbox", "--tools", "--bare", "--dangerously-skip-permissions",
+      "--dangerously-bypass-approvals-and-sandbox", "--json-schema", "--output-schema"]) {
+      expect(command.args).not.toContain(flag);
+    }
+    expect(agentProcessInput(invocation)).toBe(invocation.prompt);
+    invocation.sessionId = "00000000-0000-4000-8000-000000000001";
+    const resume = buildAgentCommand(invocation);
+    expect(resume.args).toContain(invocation.sessionId);
+    expect(resume.args).not.toContain("--sandbox");
+    expect(resume.args).not.toContain("--output-schema");
+  });
+
+  it.each(["codex", "claude"] as const)("transports natural %s responses without JSON requirements or implicit deadlines", async agent => {
+    vi.useFakeTimers();
+    try {
+      const child = fakeChild();
+      vi.mocked(spawn).mockReturnValue(child as ReturnType<typeof spawn>);
+      const invocation = fixture(agent, "executor");
+      invocation.nativeMode = true;
+      invocation.timeout = { warningMs: 0, stalledMs: 0, hardMs: 0 };
+      const pending = new LocalAgentInvoker().invoke(invocation).catch(error => error);
+      const session = "00000000-0000-4000-8000-000000000001";
+      emit(child, agent === "claude" ? { type: "system", subtype: "init", session_id: session }
+        : { type: "thread.started", thread_id: session });
+      await vi.advanceTimersByTimeAsync(5000);
+      emit(child, agent === "claude" ? { type: "result", result: "请确认下一步", session_id: session }
+        : { type: "item.completed", item: { type: "agent_message", text: "请确认下一步" } });
+      child.emit("close", 0);
+      expect(await pending).toMatchObject({ sessionId: session,
+        output: { status: "ready_for_review", summary: "请确认下一步", commands: [] } });
+    } finally { vi.useRealTimers(); }
+  });
   it("reads the current Codex model and reasoning effort without changing config", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-codex-config-"));
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "superflow-codex-config-"),
+    );
     roots.push(root);
     fs.writeFileSync(
       path.join(root, "config.toml"),
@@ -53,16 +111,23 @@ describe("agent process command", () => {
   });
 
   it("reads Claude model and effort from its settings without changing them", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-claude-config-"));
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "superflow-claude-config-"),
+    );
     roots.push(root);
     fs.writeFileSync(
       path.join(root, "settings.json"),
       JSON.stringify({
         model: "opus",
-        env: { ANTHROPIC_MODEL: "provider-opus", CLAUDE_CODE_EFFORT_LEVEL: "max" },
+        env: {
+          ANTHROPIC_MODEL: "provider-opus",
+          CLAUDE_CODE_EFFORT_LEVEL: "max",
+        },
       }),
     );
-    expect(resolveClaudeExecutorConfig({ CLAUDE_CONFIG_DIR: root })).toMatchObject({
+    expect(
+      resolveClaudeExecutorConfig({ CLAUDE_CONFIG_DIR: root }),
+    ).toMatchObject({
       model: "provider-opus",
       reasoningEffort: "max",
       source: "claude_config",
@@ -80,9 +145,9 @@ describe("agent process command", () => {
       stdout?: string;
       stderr?: string;
     }) => string | null;
-    expect(
-      classifier({ message: "failed to resume: session not found" }),
-    ).toBe("session_not_found");
+    expect(classifier({ message: "failed to resume: session not found" })).toBe(
+      "session_not_found",
+    );
     expect(
       classifier({
         message: "resume rejected: invalid session id",
@@ -93,11 +158,11 @@ describe("agent process command", () => {
         message: "resume history exceeds the context window",
       }),
     ).toBe("resume_context_limit");
+    expect(classifier({ message: "connection reset by peer" })).toBeNull();
     expect(
-      classifier({ message: "connection reset by peer" }),
-    ).toBeNull();
-    expect(
-      classifier({ message: "unit test failed: assertion error session not found" }),
+      classifier({
+        message: "unit test failed: assertion error session not found",
+      }),
     ).toBeNull();
     expect(
       classifier({ message: "test output: resume session not found" }),
@@ -128,8 +193,7 @@ describe("agent process command", () => {
     expect(command.args).toContain(invocation.sessionId);
     expect(command.args).not.toContain("--last");
     expect(command.args).not.toContain("--ephemeral");
-    expect(command.args).toContain("--disable");
-    expect(command.args).toContain("memories");
+    expect(command.args).not.toContain("--disable");
     expect(command.args).not.toContain("--ignore-user-config");
   });
 
@@ -158,20 +222,22 @@ describe("agent process command", () => {
     expect(command.args).toContain("max");
   });
 
-  it(
-    "disables native Codex memory for a new managed executor without bypassing user configuration",
-    () => {
-      const invocation = fixture("codex", "executor");
-      const command = buildAgentCommand(invocation);
+  it.each([null, "00000000-0000-4000-8000-000000000001"])("inherits Codex native capabilities without feature overrides (session=%s)", sessionId => {
+    const invocation = fixture("codex", "executor");
+    invocation.sessionId = sessionId;
+    const command = buildAgentCommand(invocation);
 
-      expect(command.args).toContain("--disable");
-      expect(command.args).toContain("memories");
-      expect(command.args).toContain("--sandbox");
-      expect(command.args).toContain("--output-schema");
-      expect(command.args).not.toContain("--ignore-user-config");
-      expect(command.args).not.toContain("--ephemeral");
-    },
-  );
+    expect(command.args).not.toContain("--disable");
+    expect(command.args).not.toContain("--enable");
+    expect(command.args.join(" ")).not.toMatch(/features\.|--ignore-rules|--tools/);
+    if (!sessionId) {
+      const sandbox = command.args.indexOf("--sandbox");
+      expect(command.args[sandbox + 1]).toBe("workspace-write");
+    }
+    expect(command.args).toContain("--output-schema");
+    expect(command.args).not.toContain("--ignore-user-config");
+    expect(command.args).not.toContain("--ephemeral");
+  });
 
   it("creates a continuous non-interactive Claude executor session", () => {
     const invocation = fixture("claude", "executor");
@@ -180,7 +246,7 @@ describe("agent process command", () => {
     const command = buildAgentCommand(invocation);
 
     expect(command.args).toContain("--session-id");
-    expect(command.args).toContain("--bare");
+    expect(command.args).not.toContain("--bare");
     expect(command.initialSessionId).toMatch(/^[0-9a-f-]{36}$/);
     expect(command.args).toContain("--tools");
     expect(command.args).not.toContain("--allowedTools");
@@ -324,32 +390,70 @@ describe("agent process command", () => {
     ).toBe(false);
   });
 
-  it.each(["usage limit reached", "usage limit exceeded", "usage limit exhausted",
-    "usage limit has been reached", "payment required", "用量上限", "套餐"])(
-    "does not turn permanent provider failure %s into a temporary circuit", reason => {
-      expect(shouldStopClaudeRetry({ type: "system", subtype: "api_retry",
-        attempt: 3, error_status: 429, error: reason })).toBe(false);
+  it.each([
+    "usage limit reached",
+    "usage limit exceeded",
+    "usage limit exhausted",
+    "usage limit has been reached",
+    "payment required",
+    "用量上限",
+    "套餐",
+  ])(
+    "does not turn permanent provider failure %s into a temporary circuit",
+    (reason) => {
+      expect(
+        shouldStopClaudeRetry({
+          type: "system",
+          subtype: "api_retry",
+          attempt: 3,
+          error_status: 429,
+          error: reason,
+        }),
+      ).toBe(false);
     },
   );
 
-  it.each(["concurrent request limit reached", "concurrent requests limit reached"])(
-    "stops a confirmed temporary 403 concurrency failure %s", reason => {
-      expect(shouldStopClaudeRetry({ type: "system", subtype: "api_retry",
-        attempt: 3, error_status: 403, error: reason })).toBe(true);
-    },
-  );
+  it.each([
+    "concurrent request limit reached",
+    "concurrent requests limit reached",
+  ])("stops a confirmed temporary 403 concurrency failure %s", (reason) => {
+    expect(
+      shouldStopClaudeRetry({
+        type: "system",
+        subtype: "api_retry",
+        attempt: 3,
+        error_status: 403,
+        error: reason,
+      }),
+    ).toBe(true);
+  });
 
-  it.each(["credit balance exhausted", "insufficient credit balance", "token_plan exhausted"])(
-    "keeps %s permanent after sharing the provider classifier", reason => {
-      expect(shouldStopClaudeRetry({ type: "system", subtype: "api_retry",
-        attempt: 3, error_status: 429, error: reason })).toBe(false);
-    },
-  );
+  it.each([
+    "credit balance exhausted",
+    "insufficient credit balance",
+    "token_plan exhausted",
+  ])("keeps %s permanent after sharing the provider classifier", (reason) => {
+    expect(
+      shouldStopClaudeRetry({
+        type: "system",
+        subtype: "api_retry",
+        attempt: 3,
+        error_status: 429,
+        error: reason,
+      }),
+    ).toBe(false);
+  });
 
   it("does not treat a temporary concurrency quota as billing exhaustion", () => {
-    expect(shouldStopClaudeRetry({ type: "system", subtype: "api_retry",
-      attempt: 3, error_status: 429,
-      error: "concurrent request quota temporarily rate limited" })).toBe(true);
+    expect(
+      shouldStopClaudeRetry({
+        type: "system",
+        subtype: "api_retry",
+        attempt: 3,
+        error_status: 429,
+        error: "concurrent request quota temporarily rate limited",
+      }),
+    ).toBe(true);
   });
 
   it("does not classify permanent quota as a transient Claude retry", () => {
@@ -416,9 +520,16 @@ describe("agent process command", () => {
     const child = fakeChild();
     vi.mocked(spawn).mockReturnValue(child as ReturnType<typeof spawn>);
     const invocation = fixture("claude", "executor");
-    const pending = new LocalAgentInvoker().invoke(invocation).catch(error => error);
-    emit(child, { type: "system", subtype: "api_retry", attempt: 3,
-      error_status: 429, error: "usage limit reached" });
+    const pending = new LocalAgentInvoker()
+      .invoke(invocation)
+      .catch((error) => error);
+    emit(child, {
+      type: "system",
+      subtype: "api_retry",
+      attempt: 3,
+      error_status: 429,
+      error: "usage limit reached",
+    });
     child.emit("close", 1);
     const error = await pending;
     expect(error).toBeInstanceOf(AgentInvocationFailure);
@@ -595,7 +706,40 @@ describe("agent process command", () => {
     const command = buildAgentCommand(invocation);
 
     expect(command.args).toContain("--dangerously-skip-permissions");
-    expect(command.args).toContain("Read,Write,Edit,Grep,Glob,Bash");
+    expect(command.args[command.args.indexOf("--tools") + 1]).toBe("default");
+  });
+
+  it("keeps Claude supervisors isolated from write and delegation tools", () => {
+    const command = buildAgentCommand(fixture("claude", "supervisor"));
+    expect(command.args).toContain("--bare");
+    expect(command.args[command.args.indexOf("--tools") + 1]).toBe(
+      "Read,Grep,Glob,Bash",
+    );
+    expect(command.args).not.toContain("--dangerously-skip-permissions");
+  });
+
+  it("preserves reported skill discovery separately from actual tool use", () => {
+    const telemetry = updateTelemetry(initialTelemetry(), {
+      type: "system",
+      subtype: "init",
+      model: "provider-model",
+      tools: ["Read", "Skill", "Agent"],
+      skills: ["sample-workflow"],
+      slash_commands: ["sample-workflow"],
+    });
+    expect(telemetry).toMatchObject({
+      model: "provider-model",
+      skills: ["sample-workflow"],
+      slashCommands: ["sample-workflow"],
+      toolUses: [],
+    });
+    expect(
+      updateTelemetry(telemetry, { type: "system", subtype: "init" }),
+    ).toMatchObject({
+      skills: ["sample-workflow"],
+      tools: ["Read", "Skill", "Agent"],
+    });
+    expect(initialTelemetry()).not.toHaveProperty("skills");
   });
 
   it("extracts redacted failure details from JSONL stdout", () => {

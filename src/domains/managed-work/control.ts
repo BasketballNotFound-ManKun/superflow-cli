@@ -23,13 +23,13 @@ import {
   saveManagedRun,
   saveManagedTask,
   upsertRegistryEntry,
-  writeJsonAtomic,
 } from "./storage.js";
 import type {
   AgentInvocation,
   AgentInvocationResult,
   AgentInvoker,
   ManagedAgent,
+  ManagedBudgets,
   AgentUsage,
   ManagedEvent,
   ManagedProfile,
@@ -82,6 +82,7 @@ export interface StartManagedTaskInput {
   externalModelDataDisclosureApproved?: boolean;
   externalModelDataDisclosureApprovedBy?: string;
   acceptanceContract?: ManagedTaskContract["acceptanceContract"];
+  budgets?: Partial<ManagedBudgets>;
   executorModel?: string;
   executorReasoningEffort?: ManagedReasoningEffort;
 }
@@ -150,17 +151,20 @@ export async function resumeHumanDirectedAfterReview(
   contract.status = state.status;
   saveManagedRun(state);
   saveManagedTask(contract);
-  upsertRegistryEntry({
-    taskId,
-    projectRoot: contract.projectRoot,
-    status: state.status,
-    profile: contract.profile,
-    language: contract.language,
-    activeRunId: state.runId,
-    createdAt: contract.createdAt,
-    updatedAt: state.updatedAt,
-    servicePid: null,
-  }, env);
+  upsertRegistryEntry(
+    {
+      taskId,
+      projectRoot: contract.projectRoot,
+      status: state.status,
+      profile: contract.profile,
+      language: contract.language,
+      activeRunId: state.runId,
+      createdAt: contract.createdAt,
+      updatedAt: state.updatedAt,
+      servicePid: null,
+    },
+    env,
+  );
   appendTaskReport(
     state,
     `\n## Host review R${state.reviewRound}\n\n${review.summary}\n`,
@@ -183,7 +187,9 @@ export async function resumeHumanDirectedAfterReview(
 }
 
 class NoFurtherManualInvocation implements AgentInvoker {
-  async invoke<T>(_invocation: AgentInvocation): Promise<AgentInvocationResult<T>> {
+  async invoke<T>(
+    _invocation: AgentInvocation,
+  ): Promise<AgentInvocationResult<T>> {
     throw new Error("人工执行任务不能在 Host 评审后自动调用研发 Agent");
   }
 }
@@ -246,6 +252,7 @@ export interface ManagedTaskSnapshot {
   updatedAt: string;
   deliveryProgress: ManagedRunState["deliveryProgress"];
   runtimeTelemetry: ManagedRunState["runtimeTelemetry"];
+  executorRuntime: ManagedExecutorRuntime;
   executorUsage: ManagedRunState["executorUsage"];
   hostUsage: ManagedRunState["hostUsage"];
   timing: {
@@ -257,6 +264,16 @@ export interface ManagedTaskSnapshot {
   };
   dataDisclosure: ManagedTaskContract["permissions"]["externalModelDataDisclosure"];
   frozenTaskPrompt: ManagedTaskContract["taskPrompt"];
+}
+
+export interface ManagedExecutorRuntime {
+  requestedModel: string | null;
+  reportedModel: string | null;
+  modelNamesMatch: boolean | null;
+  tools: string[] | null;
+  skills: string[] | null;
+  slashCommands: string[] | null;
+  toolUses: string[];
 }
 
 export interface ManagedTaskWaitSnapshot {
@@ -276,6 +293,7 @@ export interface ManagedTaskWaitSnapshot {
   reviewRound: number;
   latestSequence: number;
   updatedAt: string;
+  executorRuntime: ManagedExecutorRuntime;
 }
 
 export interface ManagedTaskWaitProgress {
@@ -341,15 +359,26 @@ export function startManagedTaskFromHost(
     startService(runtime, language);
     return getManagedTaskSnapshot(existingTaskId, env);
   }
-  if (resolved.source === "sdd" && resolved.taskPromptPath) {
+  if (
+    resolved.profile !== "native" &&
+    resolved.source === "sdd" &&
+    resolved.taskPromptPath
+  ) {
     assertCodingReadyForPrompt(resolved.taskPromptPath);
   }
   (runtime.assertManagedAgentPair ?? assertManagedAgentPair)(
     supervisorAgent,
     executorAgent,
+    undefined,
+    { profile: resolved.profile === "auto" ? undefined : resolved.profile },
   );
 
-  const executorConfig = resolveExecutorConfig(input, executorAgent, env);
+  const executorConfig = resolveExecutorConfig(
+    input,
+    executorAgent,
+    env,
+    resolved.profile === "native",
+  );
 
   const contract = createManagedTaskContract({
     request: resolved.request,
@@ -367,6 +396,7 @@ export function startManagedTaskFromHost(
       approvedBy: input.externalModelDataDisclosureApprovedBy,
     },
     acceptanceContract: input.acceptanceContract,
+    budgets: input.budgets,
     executorConfig,
   });
   if (executorConfig && !executorConfig.confirmed) {
@@ -404,6 +434,7 @@ function resolveExecutorConfig(
   input: StartManagedTaskInput,
   executorAgent: ManagedAgent,
   env: NodeJS.ProcessEnv,
+  native = false,
 ): ManagedExecutorConfig | undefined {
   if (
     executorAgent === "claude" &&
@@ -414,13 +445,28 @@ function resolveExecutorConfig(
   ) {
     throw new Error("Claude 推理深度只支持 low、medium、high、xhigh 或 max");
   }
+  if (native) {
+    return {
+      model: input.executorModel?.trim() || null,
+      reasoningEffort: input.executorReasoningEffort ?? null,
+      provider: null,
+      source:
+        input.executorModel || input.executorReasoningEffort
+          ? "explicit"
+          : "unknown",
+      confirmed: true,
+    };
+  }
   const defaults =
     executorAgent === "codex"
       ? resolveCodexExecutorConfig(env)
       : resolveClaudeExecutorConfig(env);
   const model = input.executorModel?.trim() || defaults.model;
-  const reasoningEffort = input.executorReasoningEffort ?? defaults.reasoningEffort;
-  const explicit = Boolean(input.executorModel && input.executorReasoningEffort);
+  const reasoningEffort =
+    input.executorReasoningEffort ?? defaults.reasoningEffort;
+  const explicit = Boolean(
+    input.executorModel && input.executorReasoningEffort,
+  );
   return {
     model,
     reasoningEffort,
@@ -473,7 +519,14 @@ function findRetryReusableTask(
         sameStrings(contract.relatedProjectRoots, relatedRoots) &&
         sameStrings(contract.mandatoryEngineeringRules ?? [], mandatoryRules) &&
         executorConfigMatches(contract.executorConfig, input) &&
-        (contract.taskPrompt?.originalPath ?? null) ===
+        Object.entries(input.budgets ?? {}).every(
+          ([key, value]) =>
+            value === undefined ||
+            contract.budgets[key as keyof ManagedBudgets] === value,
+        ) &&
+        (contract.taskPrompt?.origin === "generated_standard"
+          ? null
+          : (contract.taskPrompt?.originalPath ?? null)) ===
           (resolved.taskPromptPath ?? null)
       ) {
         return contract.taskId;
@@ -558,11 +611,34 @@ export function getManagedTaskSnapshot(
     updatedAt: state.updatedAt,
     deliveryProgress: state.deliveryProgress,
     runtimeTelemetry: state.runtimeTelemetry ?? null,
+    executorRuntime: executorRuntimeSnapshot(contract, state),
     executorUsage: state.executorUsage,
     hostUsage: state.hostUsage,
     timing: timingSnapshot(contract, state),
     dataDisclosure: contract.permissions.externalModelDataDisclosure,
     frozenTaskPrompt: contract.taskPrompt,
+  };
+}
+
+function executorRuntimeSnapshot(
+  contract: ManagedTaskContract,
+  state: ManagedRunState,
+): ManagedExecutorRuntime {
+  const telemetry = state.runtimeTelemetry;
+  const requestedModel = contract.executorConfig?.model ?? null;
+  const reportedModel = telemetry?.model ?? null;
+  return {
+    requestedModel,
+    reportedModel,
+    modelNamesMatch:
+      requestedModel && reportedModel ? requestedModel === reportedModel : null,
+    tools:
+      telemetry?.capabilitiesReported || telemetry?.tools.length
+        ? telemetry.tools
+        : null,
+    skills: telemetry?.skills ?? null,
+    slashCommands: telemetry?.slashCommands ?? null,
+    toolUses: telemetry?.toolUses ?? [],
   };
 }
 
@@ -685,6 +761,7 @@ function compactWaitSnapshot(
     reviewRound: snapshot.reviewRound,
     latestSequence: snapshot.latestSequence,
     updatedAt: snapshot.updatedAt,
+    executorRuntime: snapshot.executorRuntime,
   };
 }
 
@@ -935,7 +1012,10 @@ export function confirmManagedExecutor(
   }
   saveManagedTask(contract);
   saveManagedRun(state);
-  upsertRegistryEntry({ ...entry, status: state.status, updatedAt: new Date().toISOString() }, env);
+  upsertRegistryEntry(
+    { ...entry, status: state.status, updatedAt: new Date().toISOString() },
+    env,
+  );
   appendManagedEvent(state, {
     eventType: "executor.config_confirmed",
     actor: approvedBy,
@@ -989,18 +1069,8 @@ export function addManagedHumanGuidance(
       "repair_pending",
     ].includes(state.status)
   ) {
-    const review = humanGuidanceReview(
-      state,
-      message.content,
-      contract.language,
-    );
-    const resultPath = path.join(
-      managedRunDir(state.projectRoot, state.taskId, state.runId),
-      `human-guidance-${Date.now()}.json`,
-    );
-    writeJsonAtomic(resultPath, review);
-    state.lastReviewResult = resultPath;
-    state.lastExecutorResult = null;
+    // Guidance has its own persisted channel and delivery acknowledgement.
+    // Keep the canonical review and delivery pointers intact across recovery.
     state.status = "queued";
     state.currentStep = "human_guidance_received";
     state.blocker = null;
@@ -1026,7 +1096,15 @@ export function addManagedHumanGuidance(
         `用户补充要求并恢复任务：${message.content}`,
         `User guidance resumed the task: ${message.content}`,
       ),
-      evidencePaths: [resultPath],
+      evidencePaths: [
+        path.join(
+          state.projectRoot,
+          ".superflow",
+          "tasks",
+          state.taskId,
+          "human-messages.jsonl",
+        ),
+      ],
     });
     startService(runtime, contract.language);
   }
@@ -1155,34 +1233,6 @@ function startService(
 ): void {
   const ensure = runtime.ensureService ?? ensureManagedService;
   ensure(runtime.cliPath, runtime.env ?? process.env, language);
-}
-
-function humanGuidanceReview(
-  state: ManagedRunState,
-  content: string,
-  language: Language = "zh",
-): ReviewResult {
-  return {
-    result: "needs_fix",
-    summary: content,
-    findings: [
-      {
-        id: `HUMAN-GUIDANCE-${state.reviewRound + 1}`,
-        severity: "high",
-        blocking: true,
-        category: "human_guidance",
-        target: "当前托管任务",
-        evidence: content,
-        risk: managedText(
-          language,
-          "忽略用户最新补充会导致交付偏离当前目标",
-          "Ignoring the latest user guidance would make the delivery diverge from the current goal",
-        ),
-        requiredFix: content,
-        acceptanceChecks: [content],
-      },
-    ],
-  };
 }
 
 function readJsonIfExists(file: string | null): unknown {

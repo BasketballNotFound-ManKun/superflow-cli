@@ -5,6 +5,7 @@ const STABLE_POLICY_LINES = [
   "# Superflow Managed Executor Policy",
   "",
   "Read the frozen task prompt, context manifest, handoff, selected project rules, and current workspace before acting.",
+  "Use the requested skill through the host's native skill mechanism when available. Native subagents may assist within the same frozen scope and resource ownership; they do not become another Superflow Host or Runner. If the requested skill cannot be loaded, report that capability gap instead of treating its name as proof of execution. Skill discovery, skill invocation, and completed independent review are distinct evidence.",
   "# Compact Instructions",
   "When the Agent compacts this session, preserve the task ID, frozen prompt path and hash, all unfinished requirements and findings, changed files, active process/resource ownership, successful validation evidence, failed attempts that still need repair, and cleanup obligations. Re-read the frozen prompt and current handoff after compaction before continuing.",
   "This executor invocation has no Superflow max-turn limit. Keep working in this process until all locally executable work is complete, then return one structured result to notify the Host.",
@@ -31,6 +32,10 @@ const STABLE_POLICY_LINES = [
 ] as const;
 
 export interface ExecutorPolicyContext {
+  nativeMode?: boolean;
+  handoffPath?: string;
+  userRules?: string[];
+  originalRequest?: string;
   ruleSelection: ManagedRuleSelection;
   toolchainFacts: string[];
   ownerTemplate: string;
@@ -40,15 +45,30 @@ export interface ExecutorPolicyContext {
   deliveryProtocolRecovery: boolean;
 }
 
-export function stableExecutorPolicy(): string {
+export function stableExecutorPolicy(nativeMode = false): string {
+  if (nativeMode) return [
+    "# Superflow Native Transport",
+    "Execute the user's original request using your normal skills, plugins, native subagents, memory and project configuration.",
+    "Your CLI's own permission and approval settings remain authoritative; this transport grants no new authorization.",
+    "Reply naturally, including any real questions or blockers. No engineering JSON or additional workflow is required by the transport.",
+    "State clearly whether work is complete, still in progress, blocked, or awaiting a decision; identify unresolved items and actual evidence references. Receipt of your response is not proof of completion. Clarify missing communication fields without rerunning completed engineering work.",
+    "Use the existing task documents and evidence as requested. Do not invent acceptance scripts, tests or cleanup work merely because the task is transported.",
+    "Superflow owns only its internal task state, journal and handoff records; do not edit those records or start a nested Superflow supervisor.",
+    "On continuation, preserve completed work and valid evidence; use the current handoff for unresolved review items and user guidance.",
+    "",
+  ].join("\n");
   return `${STABLE_POLICY_LINES.join("\n")}\n`;
 }
 
-export function stableExecutorPolicyHash(): string {
-  return createHash("sha256").update(stableExecutorPolicy()).digest("hex");
+export function stableExecutorPolicyHash(nativeMode = false): string {
+  return createHash("sha256").update(stableExecutorPolicy(nativeMode)).digest("hex");
 }
 
 export function buildExecutorPolicy(context: ExecutorPolicyContext): string {
+  if (context.nativeMode) return stableExecutorPolicy(true) +
+    (context.originalRequest ? `\nOriginal user request:\n${context.originalRequest}\n` : "") +
+    (context.handoffPath ? `\nTransport handoff: ${context.handoffPath}\n` : "") +
+    (context.userRules?.length ? `\nExplicit user requirements:\n${context.userRules.map(rule => `- ${rule}`).join("\n")}\n` : "");
   const dynamic = [
     "# Task-specific context",
     `Stable policy SHA-256: ${stableExecutorPolicyHash()}`,

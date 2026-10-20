@@ -9,9 +9,13 @@ import type {
 import { managedText } from "./i18n.js";
 
 export function requiresManagedAcceptanceContract(
-  contract: Pick<ManagedTaskContract, "source">,
+  contract: Pick<ManagedTaskContract, "source"> &
+    Partial<Pick<ManagedTaskContract, "profile">>,
 ): boolean {
-  return contract.source === "task_file" || contract.source === "sdd";
+  return (
+    contract.profile !== "native" &&
+    (contract.source === "task_file" || contract.source === "sdd")
+  );
 }
 
 export function parseManagedAcceptanceContractFile(

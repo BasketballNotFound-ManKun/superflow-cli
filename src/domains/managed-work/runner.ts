@@ -32,7 +32,10 @@ import { isAcceptedEvidenceCommand } from "./execution-contract.js";
 import { writeManagedSchemas } from "./schemas.js";
 import { verificationCategories } from "./verification-categories.js";
 import { assessReviewConvergence } from "./review-convergence.js";
-import { executeManagedTaskCleanup, planManagedTaskCleanup } from "./cleanup.js";
+import {
+  executeManagedTaskCleanup,
+  planManagedTaskCleanup,
+} from "./cleanup.js";
 import {
   ensureManagedWorkspaceBinding,
   managedWorkspaceBindingFingerprint,
@@ -599,6 +602,14 @@ function reconcileCompletedReview(
       evidencePaths: [state.lastReviewResult],
     });
   }
+  if (
+    result.result !== "needs_fix" &&
+    hasUndeliveredHumanGuidance(contract, state)
+  ) {
+    // A prior pass/blocked review cannot consume newly queued user guidance.
+    // Needs-fix reviews still enforce convergence and the existing budgets.
+    return state;
+  }
   if (result.result === "pass") {
     try {
       state = promoteRevalidatedExecutorResult(contract, state);
@@ -620,7 +631,7 @@ function reconcileCompletedReview(
     return finishBlocked(contract, state, result.summary, env);
   }
   const convergence = assessReviewConvergence(readReviewHistory(state));
-  if (!convergence.shouldContinue) {
+  if (contract.profile !== "native" && !convergence.shouldContinue) {
     state.blocker = mt(
       contract,
       `连续 ${convergence.stagnantTransitions} 次评审转换没有关闭既有阻断项，已提前止损并保留整改证据`,
@@ -642,8 +653,7 @@ function reconcileCompletedReview(
     return state;
   }
   if (
-    !hasUnlimitedAgentBudget(contract) &&
-    state.reviewRound >= contract.budgets.maxReviewRounds
+    budgetReached(contract, state.reviewRound, contract.budgets.maxReviewRounds)
   ) {
     state.blocker = mt(
       contract,
@@ -809,6 +819,7 @@ async function executeWorker(
     state.currentStep === "executor_delivery_protocol_recovery_queued";
   if (
     contract.budgets.executorPhysicalStopAt !== undefined &&
+    (contract.profile !== "native" || contract.budgets.executorPhysicalStopAt > 0) &&
     state.executorInvocations >= contract.budgets.executorPhysicalStopAt
   ) {
     return finishBudgetExhausted(
@@ -823,13 +834,13 @@ async function executeWorker(
     );
   }
   const hasActiveExecutorWindow =
+    contract.profile !== "native" &&
     contract.budgets.executorPhysicalStopAt !== undefined &&
     state.executorInvocations < contract.budgets.executorPhysicalStopAt;
   if (
     !hasActiveExecutorWindow &&
-    !hasUnlimitedAgentBudget(contract) &&
-    effectiveExecutorInvocations(state) >=
-      contract.budgets.maxExecutorInvocations
+    budgetReached(contract, effectiveExecutorInvocations(state),
+      contract.budgets.maxExecutorInvocations)
   ) {
     return finishBudgetExhausted(
       contract,
@@ -840,9 +851,8 @@ async function executeWorker(
   }
   if (
     !hasActiveExecutorWindow &&
-    !hasUnlimitedAgentBudget(contract) &&
-    effectiveTotalAgentInvocations(state) >=
-      contract.budgets.maxTotalAgentInvocations
+    budgetReached(contract, effectiveTotalAgentInvocations(state),
+      contract.budgets.maxTotalAgentInvocations)
   ) {
     return finishBudgetExhausted(
       contract,
@@ -856,7 +866,8 @@ async function executeWorker(
     );
   }
 
-  const resumableSessionId = maxTurnSessionToResume(state);
+  const resumableSessionId = contract.profile === "native"
+    ? state.executorSession.sessionId : maxTurnSessionToResume(state);
   if (!resumableSessionId) {
     state.executorSession = rolloverSession(state.executorSession);
   }
@@ -866,6 +877,8 @@ async function executeWorker(
   };
   state.executorInvocations += 1;
   state.totalAgentInvocations += 1;
+  // Runtime identity belongs to this physical invocation, not its predecessor.
+  state.runtimeTelemetry = null;
   state.executorStage = initialExecutorStage(findings, state.executorStage);
   state.executorActiveStage = state.executorStage;
   state.currentStep =
@@ -907,6 +920,10 @@ async function executeWorker(
     evidencePaths: [handoffFile, promptFile],
   });
   const started = Date.now();
+  // The prior file remains historical evidence, but is not this call's result.
+  // Its contents have already been captured in the current handoff.
+  state.lastExecutorResult = null;
+  saveManagedRun(state);
   const result = await invokeWithFailureEvidence<ExecutorResult>(
     state,
     invoker,
@@ -1017,21 +1034,23 @@ async function executeWorker(
   }
   let finalPreflightLogs: string[] = [];
   appendManagedEvent(state, {
-    eventType: "executor.delivery_received",
+    eventType: contract.profile === "native" ? "executor.response_received" : "executor.delivery_received",
     actor: "managed-runner",
     role: "runner",
     summary: mt(
       contract,
-      `Runner 已接收第 ${state.executorInvocations} 次交付，开始确定性校验`,
-      `Runner received executor delivery ${state.executorInvocations} and started deterministic validation`,
+      contract.profile === "native" ? `已收到第 ${state.executorInvocations} 次原生回复，待 Host 核验任务进展` : `Runner 已接收第 ${state.executorInvocations} 次交付，开始确定性校验`,
+      contract.profile === "native" ? `Native response ${state.executorInvocations} received; task progress awaits Host judgement` : `Runner received executor delivery ${state.executorInvocations} and started deterministic validation`,
     ),
   });
   try {
     result.output = redactManagedValue(
       normalizeExecutorResult(contract, state, result.output),
     );
-    validateInvocationTelemetry(contract, state, result, result.output);
-    validateWorkspaceSecrets(contract, state);
+    if (contract.profile !== "native") {
+      validateInvocationTelemetry(contract, state, result, result.output);
+      validateWorkspaceSecrets(contract, state);
+    }
     validateExecutorResult(contract, state, result.output);
     finalPreflightLogs = runExecutorFinalPreflight(
       contract,
@@ -1675,8 +1694,7 @@ function prepareExternalHostReview(
   env: NodeJS.ProcessEnv,
 ): ManagedRunState {
   if (
-    !hasUnlimitedAgentBudget(contract) &&
-    state.reviewInvocations >= contract.budgets.maxReviewRounds
+    budgetReached(contract, state.reviewInvocations, contract.budgets.maxReviewRounds)
   ) {
     return finishReviewExhausted(contract, state, env);
   }
@@ -1904,7 +1922,7 @@ export function writeManagedExecutorHandoff(
       : null,
     workspace: { changedFiles, diffStat: diffStat || null },
     executionHints: {
-      stablePolicySha256: stableExecutorPolicyHash(),
+      stablePolicySha256: stableExecutorPolicyHash(contract.profile === "native"),
       contextManifest: {
         path: managedContextManifestPath(contract),
         sha256: contextManifest.manifestHash,
@@ -2076,8 +2094,23 @@ function deliveredHumanGuidanceIds(state: ManagedRunState): Set<string> {
   const runDir = managedRunDir(state.projectRoot, state.taskId, state.runId);
   if (!existsSync(runDir)) return new Set();
   const delivered = new Set<string>();
+  const escalatedResults = new Set(readManagedEvents(state)
+    .filter(event => [
+      "executor.verification_metadata_escalated_to_host",
+      "executor.rejection_escalated_to_host",
+    ].includes(event.eventType))
+    .flatMap(event => event.evidencePaths));
   for (const file of readdirSync(runDir)) {
     if (!/^executor-guidance-delivery-\d+\.json$/.test(file)) continue;
+    const invocationNumber = file.match(/-(\d+)\.json$/)?.[1];
+    // A session acknowledgement proves receipt, not completion. Failed calls
+    // must receive the guidance again. A canonical delivery or an explicit
+    // Runner escalation to Host consumes it, even if metadata is ambiguous.
+    if (!existsSync(path.join(runDir, `executor-result-${invocationNumber}.json`)) &&
+        !escalatedResults.has(path.join(runDir,
+          `executor-result-${invocationNumber}-invalid.json`))) {
+      continue;
+    }
     try {
       const receipt = JSON.parse(
         readFileSync(path.join(runDir, file), "utf-8"),
@@ -2271,8 +2304,13 @@ function invocation(
   writeFileSync(
     policyPath,
     buildExecutorPolicy({
+      nativeMode: contract.profile === "native",
+      userRules: contract.mandatoryEngineeringRules,
+      originalRequest: contract.request,
+      handoffPath: path.join(managedRunDir(state.projectRoot, state.taskId, state.runId),
+        `executor-handoff-${state.executorInvocations}.md`),
       ruleSelection,
-      toolchainFacts: managedToolchainFacts(),
+      toolchainFacts: contract.profile === "native" ? [] : managedToolchainFacts(),
       ownerTemplate,
       preflightCommand,
       compatibilityContinuation: Boolean(sessionId),
@@ -2282,6 +2320,7 @@ function invocation(
     "utf-8",
   );
   return {
+    nativeMode: contract.profile === "native",
     taskId: state.taskId,
     runId: state.runId,
     role: "executor",
@@ -2341,6 +2380,7 @@ function frozenRuleSelection(
   contract: ManagedTaskContract,
   manifest: ReturnType<typeof ensureManagedContextManifest>,
 ): ReturnType<typeof selectManagedRuleFiles> {
+  if (contract.profile === "native") return { scenarios: [], files: [] };
   const selected = selectManagedRuleFiles(contract);
   const frozenRules = new Set(
     manifest.entries
@@ -2515,12 +2555,13 @@ function finishDeliveryReady(
   const decision = evaluateCompletion(
     contract,
     completionResultWithHistory(state, executorResult),
+    { hostApproved: true },
   );
   if (!decision.localReady) {
     return finishBlocked(contract, state, decision.localGaps.join("；"), env);
   }
   state.deliveryProgress = decision.progress;
-  const status = !decision.environmentReady
+  const status = contract.profile === "native" ? "local_delivery_ready" : !decision.environmentReady
     ? "environment_validation_blocked"
     : !decision.releaseReady
       ? "local_delivery_ready"
@@ -2760,11 +2801,12 @@ function enforceBudgets(
   state: ManagedRunState,
   env: NodeJS.ProcessEnv,
 ): ManagedRunState {
-  if (!hasUnlimitedAgentBudget(contract)) {
+  if (contract.profile === "native" || !hasUnlimitedAgentBudget(contract)) {
     const usage = state.executorUsage;
     const outputTokens = executorOutputTokenUnits(state);
     if (
       contract.budgets.maxExecutorTokenUnits !== undefined &&
+      contract.budgets.maxExecutorTokenUnits > 0 &&
       outputTokens !== null &&
       outputTokens >= contract.budgets.maxExecutorTokenUnits
     ) {
@@ -2781,6 +2823,7 @@ function enforceBudgets(
     }
     if (
       contract.budgets.maxExecutorCostUsd !== undefined &&
+      contract.budgets.maxExecutorCostUsd > 0 &&
       usage?.costUsd !== null &&
       usage?.costUsd !== undefined &&
       usage.costUsd >= contract.budgets.maxExecutorCostUsd
@@ -2815,7 +2858,7 @@ function enforceBudgets(
       ),
     });
   }
-  if (activeHours >= contract.budgets.maxActiveRunHours) {
+  if (contract.budgets.maxActiveRunHours > 0 && activeHours >= contract.budgets.maxActiveRunHours) {
     state = transition(
       contract,
       state,
@@ -2841,6 +2884,12 @@ function enforceBudgets(
 
 function hasUnlimitedAgentBudget(contract: ManagedTaskContract): boolean {
   return contract.budgets.unlimitedAgentInvocations === true;
+}
+
+function budgetReached(contract: ManagedTaskContract, count: number, limit: number): boolean {
+  return contract.profile === "native"
+    ? limit > 0 && count >= limit
+    : !hasUnlimitedAgentBudget(contract) && count >= limit;
 }
 
 function closeActiveTime(
@@ -3691,7 +3740,10 @@ function recordExecutorConnectivityFailure(
     (state.consecutiveTransientProviderFailures ?? 0) + 1;
   state.connectivityRetryCount = (state.connectivityRetryCount ?? 0) + 1;
   let stopAt: number | null = null;
-  if (credited && contract.budgets.executorPhysicalStopAt !== undefined) {
+  if (
+    credited && contract.budgets.executorPhysicalStopAt !== undefined &&
+    (contract.profile !== "native" || contract.budgets.executorPhysicalStopAt > 0)
+  ) {
     stopAt = contract.budgets.executorPhysicalStopAt + 1;
     contract.budgets = {
       ...contract.budgets,
@@ -3798,6 +3850,7 @@ function runExecutorFinalPreflight(
   state: ManagedRunState,
   result: ExecutorResult,
 ): string[] {
+  if (contract.profile === "native") return [];
   if (
     result.status !== "ready_for_review" ||
     safeGitOutput(contract.projectRoot, [

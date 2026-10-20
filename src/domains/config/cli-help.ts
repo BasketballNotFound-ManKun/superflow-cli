@@ -94,7 +94,8 @@ export interface CliHelpText {
 
 const CLI_TEXT: Record<Language, CliHelpText> = {
   en: {
-    initDocsDescription: "Generate SDD document skeletons; fill and review before Coding Ready",
+    initDocsDescription:
+      "Generate SDD document skeletons; fill and review before Coding Ready",
     initDocsChangeArgument: "Change name in the selected OpenSpec workspace",
     initDocsPathOption: "Project directory",
     initDocsForceOption: "Overwrite existing documents",
@@ -112,7 +113,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     clarifyDescription: "Check SuperBridge Flow clarify skill deployment",
     requirementReviewDescription:
       "Check SuperBridge Flow requirement review skill deployment",
-    docsDescription: "Run the docs gate and check delivery-contract skill deployment",
+    docsDescription:
+      "Run the docs gate and check delivery-contract skill deployment",
     designDescription: "Check SuperBridge Flow design skill deployment",
     implementDescription:
       "Require a Coding Ready receipt before implementation",
@@ -137,8 +139,7 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "Apply deterministic retention to stopped managed-task process artifacts",
     cleanupProjectOption: "Project directory that owns the managed task",
     cleanupRetentionOption: "Retention policy: full | compact | none",
-    updateDescription:
-      "Update Superflow (interactive wizard with no options)",
+    updateDescription: "Update Superflow (interactive wizard with no options)",
     doctorDescription:
       "Diagnose installation content and effective Git Hook sources",
     hookMigrateDescription:
@@ -184,7 +185,7 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "Create a controlled manual-execution task without starting an executor",
     managedProjectOption: "Managed task project directory",
     managedProfileOption:
-      "Task profile: auto | quick | engineering | sdd | monitor",
+      "Task profile: auto (defaults to native) | native | quick | engineering | sdd | monitor",
     managedSupervisorOption: "Supervisor: current | peer | codex | claude",
     managedSubmitHostReviewOption:
       "Submit the current Codex host review JSON and resume the task",
@@ -297,7 +298,7 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     manualOption: "创建受控人工执行任务，不自动启动实现者",
     managedProjectOption: "托管任务项目目录",
     managedProfileOption:
-      "任务档位：auto | quick | engineering | sdd | monitor",
+      "任务档位：auto（默认 native）| native | quick | engineering | sdd | monitor",
     managedSupervisorOption: "监督 Agent：current | peer | codex | claude",
     managedSubmitHostReviewOption:
       "提交当前 Host Codex 的结构化评审 JSON 并恢复任务",

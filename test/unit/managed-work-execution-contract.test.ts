@@ -187,6 +187,7 @@ describe("managed artifact levels", () => {
       request: prompt,
       projectRoot: root,
       source: "sdd",
+    profile: "sdd",
       taskPromptPath: prompt,
       language: "en",
     });

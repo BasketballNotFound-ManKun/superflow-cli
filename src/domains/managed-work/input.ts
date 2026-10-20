@@ -36,6 +36,13 @@ export function resolveManagedInput(
     );
   }
   const configuredRoot = canonicalRoot(options.projectRoot ?? process.cwd());
+  if (
+    !options.profile ||
+    options.profile === "auto" ||
+    options.profile === "native"
+  ) {
+    return resolveNativeInput(rawInput, configuredRoot, options);
+  }
   const embeddedPath = extractExistingPromptPath(
     request,
     configuredRoot,
@@ -72,14 +79,49 @@ export function resolveManagedInput(
     request: promptPath,
     projectRoot,
     relatedProjectRoots,
-    profile:
-      options.profile && options.profile !== "auto"
-        ? options.profile
-        : isSdd
-          ? "sdd"
-          : "engineering",
+    profile: options.profile,
     source: isSdd ? "sdd" : "task_file",
     taskPromptPath: promptPath,
+  };
+}
+
+function resolveNativeInput(
+  request: string,
+  projectRoot: string,
+  options: ResolveManagedInputOptions,
+): ResolvedManagedInput {
+  const relatedProjectRoots = normalizeRoots(options.relatedProjectRoots);
+  const candidates = new Set([request.trim()]);
+  for (const match of request.matchAll(
+    /\[[^\]]*\]\(([^)]+)\)|["'“‘`]([^"'”’`]+)["'”’`]|([^\s，。；;]+)/g,
+  )) {
+    candidates.add(match[1] ?? match[2] ?? match[3]);
+  }
+  for (const candidate of candidates) {
+    const resolved = path.resolve(
+      projectRoot,
+      candidate.replace(/[，。；;：:]+$/, ""),
+    );
+    if (existsSync(resolved)) {
+      assertPromptInsideAllowedRoots(
+        realpathSync(resolved),
+        [projectRoot, ...relatedProjectRoots],
+        options.language,
+      );
+    }
+  }
+  const directPath = path.resolve(projectRoot, request.trim());
+  const taskPromptPath =
+    existsSync(directPath) && statSync(directPath).isFile()
+      ? realpathSync(directPath)
+      : undefined;
+  return {
+    request,
+    projectRoot,
+    relatedProjectRoots,
+    profile: "native",
+    source: taskPromptPath ? "task_file" : "direct_prompt",
+    ...(taskPromptPath ? { taskPromptPath } : {}),
   };
 }
 
