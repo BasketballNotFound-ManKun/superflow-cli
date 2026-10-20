@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import ts from "typescript";
 import { digest } from "../helpers/review-coverage.js";
 import { writeExecutionReceipt } from "../helpers/execution-receipt.js";
 
@@ -30,6 +31,107 @@ function run(environment: NodeJS.ProcessEnv = {}, complete = false) {
 }
 function save(receipt: any) {
   fs.writeFileSync(path.join(dir, "logs/C1.json"), JSON.stringify(receipt));
+}
+function record(
+  plan: object,
+  script = path.join(dir, "capture-package/assets/scripts/lint.py"),
+  environment = process.env,
+) {
+  const file = path.join(dir, "capture-plan.json");
+  fs.writeFileSync(file, JSON.stringify(plan));
+  try {
+    return {
+      code: 0,
+      output: execFileSync("python3", [script, "--record-execution", file], {
+        encoding: "utf8",
+        env: environment,
+      }),
+    };
+  } catch (error: any) {
+    return { code: error.status, output: error.stdout };
+  }
+}
+
+function prepareCapturedCase(fail = false) {
+  // Compile the real canonical redactor in an isolated package. This suite
+  // also runs before build and must not depend on stale repository dist.
+  const packageRoot = path.join(dir, "capture-package");
+  const scriptDir = path.join(packageRoot, "assets/scripts");
+  const moduleDir = path.join(packageRoot, "dist/domains/managed-work");
+  fs.mkdirSync(scriptDir, { recursive: true });
+  fs.mkdirSync(moduleDir, { recursive: true });
+  fs.copyFileSync(lint, path.join(scriptDir, "lint.py"));
+  fs.writeFileSync(path.join(packageRoot, "package.json"), '{"type":"module"}');
+  const redactor = fs.readFileSync(
+    "src/domains/managed-work/redaction.ts",
+    "utf8",
+  );
+  fs.writeFileSync(
+    path.join(moduleDir, "redaction.js"),
+    ts.transpileModule(redactor, {
+      compilerOptions: { module: ts.ModuleKind.ES2022 },
+    }).outputText,
+  );
+  fs.writeFileSync(
+    path.join(dir, "build.cjs"),
+    `
+    const fs = require('node:fs');
+    fs.writeFileSync('artifact.json', JSON.stringify({
+      answer: fs.readFileSync('application.ts', 'utf8').includes('true')
+    }));
+  `,
+  );
+  fs.writeFileSync(
+    path.join(dir, "case.cjs"),
+    `
+    const fs = require('node:fs');
+    const build = JSON.parse(fs.readFileSync('logs/build.json', 'utf8'));
+    const actual = JSON.parse(fs.readFileSync('artifact.json', 'utf8')).answer;
+    fs.writeFileSync('invoked.txt', 'real child invocation');
+    console.error('retained diagnostic API_TOKEN=private-fixture-value');
+    console.log(JSON.stringify({event: 'superflow.measurement.v1',
+      caseId: 'C1', executed: 1, persistence: [],
+      assertions: ['response', 'state', 'forbiddenEffects'].map(id => ({
+        id, expected: true, actual, result: actual ? 'PASS' : 'FAIL'
+      })), target: {service: 'E11', route: 'POST /E11', kind: 'api',
+        buildId: build.id, buildSha256: build.sha256,
+        sourceFingerprint: build.sourceFingerprint}
+    }));
+    process.exit(${fail ? 7 : 0});
+  `,
+  );
+  const reviewFile = path.join(dir, "review.json");
+  const review = JSON.parse(fs.readFileSync(reviewFile, "utf8"));
+  Object.assign(review.coverage.cases[0], {
+    executionEvidence: "runner-captured.v1",
+    executionContext: {
+      argv: [process.execPath, "case.cjs"],
+      cwd: ".",
+      environmentKeys: [],
+    },
+  });
+  fs.writeFileSync(reviewFile, JSON.stringify(review));
+}
+
+function captureBuild() {
+  return record({
+    kind: "build",
+    argv: [process.execPath, "build.cjs"],
+    cwd: ".",
+    sources: ["application.ts", "build.cjs", "case.cjs"],
+    artifact: "artifact.json",
+    output: "logs/build.json",
+  });
+}
+
+function captureCase() {
+  return record({
+    kind: "case",
+    review: "review.json",
+    caseId: "C1",
+    build: "logs/build.json",
+    output: "logs/C1.json",
+  });
 }
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-receipt-"));
@@ -72,6 +174,287 @@ beforeEach(() => {
 });
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 describe("execution receipt boundary", () => {
+  it.each(["delete", "empty", "directory"])(
+    "retains process facts when a build makes its source unreadable: %s",
+    (mutation) => {
+      prepareCapturedCase();
+      const operation =
+        mutation === "delete"
+          ? "fs.unlinkSync('application.ts')"
+          : mutation === "empty"
+            ? "fs.writeFileSync('application.ts', '')"
+            : "fs.unlinkSync('application.ts'); fs.mkdirSync('application.ts')";
+      fs.writeFileSync(
+        path.join(dir, "build.cjs"),
+        `const fs=require('node:fs'); ${operation}; console.log('failure observed'); process.exit(7);`,
+      );
+      expect(captureBuild().code).toBe(2);
+      const capture = JSON.parse(
+        fs.readFileSync(path.join(dir, "logs/build.capture.json"), "utf8"),
+      );
+      expect(capture.exitCode).toBe(7);
+      expect(capture.argv).toEqual([process.execPath, "build.cjs"]);
+      expect(capture.cwd).toBe(fs.realpathSync(dir));
+      expect(capture.finishedNs).toBeGreaterThanOrEqual(capture.startedNs);
+      expect(capture.sourceObservationError).toBeTruthy();
+      expect(
+        fs.readFileSync(path.join(dir, "logs", capture.stdout.path), "utf8"),
+      ).toContain("failure observed");
+      const build = JSON.parse(
+        fs.readFileSync(path.join(dir, "logs/build.json"), "utf8"),
+      );
+      expect(build.status).toBe("PARTIAL");
+      expect(build.command.exitCode).toBe(7);
+    },
+  );
+  it("checks that the canonical redactor can run before launching the build", () => {
+    prepareCapturedCase();
+    fs.writeFileSync(
+      path.join(dir, "capture-package/dist/domains/managed-work/redaction.js"),
+      "throw new Error('broken installed module');",
+    );
+    const result = captureBuild();
+    expect(result.code).toBe(2);
+    expect(fs.existsSync(path.join(dir, "artifact.json"))).toBe(false);
+  });
+  it("fails closed before execution when the canonical redactor is unavailable", () => {
+    prepareCapturedCase();
+    fs.rmSync(path.join(dir, "capture-package/dist"), { recursive: true });
+    const bin = path.join(dir, "private-bin");
+    fs.mkdirSync(bin);
+    const python = execFileSync(
+      "python3",
+      ["-c", "import sys; print(sys.executable)"],
+      { encoding: "utf8" },
+    ).trim();
+    fs.symlinkSync(python, path.join(bin, "python3"));
+    const result = record(
+      {
+        kind: "build",
+        argv: [process.execPath, "build.cjs"],
+        cwd: ".",
+        sources: ["application.ts", "build.cjs", "case.cjs"],
+        artifact: "artifact.json",
+        output: "logs/build.json",
+      },
+      undefined,
+      { ...process.env, PATH: bin },
+    );
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("脱敏器");
+    expect(fs.existsSync(path.join(dir, "artifact.json"))).toBe(false);
+  });
+  it("loads the canonical package redactor for a separately installed script", () => {
+    prepareCapturedCase();
+    const scripts = path.join(dir, "installed/scripts");
+    const bin = path.join(dir, "bin");
+    const app = path.join(dir, "capture-package/dist/app");
+    fs.mkdirSync(scripts, { recursive: true });
+    fs.mkdirSync(bin);
+    fs.mkdirSync(app, { recursive: true });
+    fs.writeFileSync(path.join(app, "cli.js"), "#!/usr/bin/env node\n");
+    fs.chmodSync(path.join(app, "cli.js"), 0o755);
+    fs.symlinkSync(path.join(app, "cli.js"), path.join(bin, "superflow"));
+    const script = path.join(scripts, "lint.py");
+    fs.copyFileSync(lint, script);
+    const result = record(
+      {
+        kind: "build",
+        argv: [process.execPath, "build.cjs"],
+        cwd: ".",
+        sources: ["application.ts", "build.cjs", "case.cjs"],
+        artifact: "artifact.json",
+        output: "logs/build.json",
+      },
+      script,
+      { ...process.env, PATH: bin + path.delimiter + process.env.PATH },
+    );
+    expect(result.code).toBe(0);
+    expect(captureCase().code).toBe(0);
+    expect(run().code).toBe(0);
+  });
+  it("resolves the npm package behind a regular executable shim", () => {
+    prepareCapturedCase();
+    const prefix = path.join(dir, "prefix");
+    const packageRoot = path.join(prefix, "node_modules/@chenmk/superflow");
+    fs.mkdirSync(path.dirname(packageRoot), { recursive: true });
+    fs.renameSync(path.join(dir, "capture-package"), packageRoot);
+    const script = path.join(dir, "installed/lint.py");
+    fs.mkdirSync(path.dirname(script));
+    fs.copyFileSync(lint, script);
+    fs.writeFileSync(path.join(prefix, "superflow"), "#!/usr/bin/env node\n");
+    fs.chmodSync(path.join(prefix, "superflow"), 0o755);
+    const result = record(
+      {
+        kind: "build",
+        argv: [process.execPath, "build.cjs"],
+        cwd: ".",
+        sources: ["application.ts", "build.cjs", "case.cjs"],
+        artifact: "artifact.json",
+        output: "logs/build.json",
+      },
+      script,
+      { ...process.env, PATH: prefix + path.delimiter + process.env.PATH },
+    );
+    expect(result.code).toBe(0);
+  });
+  it("captures actual build and case processes with retained raw output", () => {
+    prepareCapturedCase();
+    expect(captureBuild().code).toBe(0);
+    expect(captureCase().code).toBe(0);
+    expect(fs.readFileSync(path.join(dir, "invoked.txt"), "utf8")).toBe(
+      "real child invocation",
+    );
+    const receipt = JSON.parse(
+      fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
+    );
+    expect(receipt.command.argv).toEqual([process.execPath, "case.cjs"]);
+    expect(receipt.command.exitCode).toBe(0);
+    expect(receipt.assertions[0].actual).toBe(true);
+    const capture = JSON.parse(
+      fs.readFileSync(path.join(dir, "logs", receipt.capture.path), "utf8"),
+    );
+    const stderr = fs.readFileSync(
+      path.join(dir, "logs", capture.stderr.path),
+      "utf8",
+    );
+    expect(stderr).toContain("retained diagnostic");
+    expect(stderr).toContain("<redacted>");
+    expect(stderr).not.toContain("private-fixture-value");
+    expect(run().code).toBe(0);
+  });
+  it("does not manufacture measured assertions for a successful empty command", () => {
+    prepareCapturedCase();
+    fs.writeFileSync(
+      path.join(dir, "case.cjs"),
+      "console.log('no measured assertions');",
+    );
+    expect(captureBuild().code).toBe(0);
+    expect(captureCase().code).toBe(2);
+    const receipt = JSON.parse(
+      fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
+    );
+    expect(receipt.status).toBe("PARTIAL");
+    expect(receipt.assertions).toBeUndefined();
+    expect(run().code).toBe(2);
+  });
+  it("rejects source mutation during the actual case command", () => {
+    prepareCapturedCase();
+    const file = path.join(dir, "case.cjs");
+    fs.writeFileSync(
+      file,
+      fs
+        .readFileSync(file, "utf8")
+        .replace(
+          "process.exit(0)",
+          "fs.appendFileSync('application.ts', '// drift'); process.exit(0)",
+        ),
+    );
+    expect(captureBuild().code).toBe(0);
+    expect(captureCase().code).toBe(2);
+    const receipt = JSON.parse(
+      fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
+    );
+    expect(receipt.status).toBe("PARTIAL");
+    expect(run().code).toBe(2);
+  });
+  it("rejects altered observations even with updated stdout and capture hashes", () => {
+    prepareCapturedCase();
+    expect(captureBuild().code).toBe(0);
+    expect(captureCase().code).toBe(0);
+    const receipt = JSON.parse(
+      fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
+    );
+    const captureFile = path.join(dir, "logs", receipt.capture.path);
+    const capture = JSON.parse(fs.readFileSync(captureFile, "utf8"));
+    const stdoutFile = path.join(dir, "logs", capture.stdout.path);
+    const event = JSON.parse(fs.readFileSync(stdoutFile, "utf8"));
+    event.assertions[0].actual = false;
+    fs.writeFileSync(stdoutFile, JSON.stringify(event));
+    capture.stdout.sha256 = digest(fs.readFileSync(stdoutFile));
+    fs.writeFileSync(captureFile, JSON.stringify(capture));
+    receipt.capture.sha256 = digest(fs.readFileSync(captureFile));
+    save(receipt);
+    expect(run().code).toBe(2);
+  });
+  it.each(["case", "build", "cwd", "source"])(
+    "rejects capture reuse after %s binding drift",
+    (binding) => {
+      prepareCapturedCase();
+      expect(captureBuild().code).toBe(0);
+      expect(captureCase().code).toBe(0);
+      const receipt = JSON.parse(
+        fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
+      );
+      if (binding === "source") {
+        fs.appendFileSync(path.join(dir, "application.ts"), "// new source\n");
+      } else {
+        const captureFile = path.join(dir, "logs", receipt.capture.path);
+        const capture = JSON.parse(fs.readFileSync(captureFile, "utf8"));
+        if (binding === "cwd") capture.cwd = path.join(dir, "other");
+        else {
+          const stdoutFile = path.join(dir, "logs", capture.stdout.path);
+          const event = JSON.parse(fs.readFileSync(stdoutFile, "utf8"));
+          if (binding === "case") event.caseId = "C2";
+          else event.target.buildId = "unrelated-build";
+          fs.writeFileSync(stdoutFile, JSON.stringify(event));
+          capture.stdout.sha256 = digest(fs.readFileSync(stdoutFile));
+        }
+        fs.writeFileSync(captureFile, JSON.stringify(capture));
+        receipt.capture.sha256 = digest(fs.readFileSync(captureFile));
+        save(receipt);
+      }
+      expect(run().code).toBe(2);
+    },
+  );
+  it("retains a nonzero child result without promoting emitted PASS", () => {
+    prepareCapturedCase(true);
+    expect(captureBuild().code).toBe(0);
+    expect(captureCase().code).not.toBe(0);
+    expect(fs.readFileSync(path.join(dir, "invoked.txt"), "utf8")).toBe(
+      "real child invocation",
+    );
+    const receipt = JSON.parse(
+      fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
+    );
+    expect(receipt.command.exitCode).toBe(7);
+    expect(receipt.status).not.toBe("PASS");
+    expect(run().code).toBe(2);
+  });
+  it("rejects a self-consistent synthetic PASS when capture was frozen", () => {
+    const file = path.join(dir, "review.json");
+    const review = JSON.parse(fs.readFileSync(file, "utf8"));
+    review.coverage.cases[0].executionEvidence = "runner-captured.v1";
+    fs.writeFileSync(file, JSON.stringify(review));
+    // This fixture copies expected into actual without running command.argv.
+    // The opted-in gate must distinguish consistency from observed execution.
+    const result = run();
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("capture");
+  });
+  it("does not treat an unsupported capture declaration as legacy evidence", () => {
+    const file = path.join(dir, "review.json");
+    const review = JSON.parse(fs.readFileSync(file, "utf8"));
+    review.coverage.cases[0].executionEvidence = "runner-captured.unknown";
+    fs.writeFileSync(file, JSON.stringify(review));
+    expect(run().code).toBe(2);
+  });
+  it("preserves legacy partial under a newly declared capture requirement", () => {
+    const file = path.join(dir, "review.json");
+    const review = JSON.parse(fs.readFileSync(file, "utf8"));
+    review.coverage.cases[0].executionEvidence = "runner-captured.v1";
+    fs.writeFileSync(file, JSON.stringify(review));
+    const report = path.join(dir, "report.md");
+    fs.writeFileSync(
+      report,
+      fs
+        .readFileSync(report, "utf8")
+        .replace("| PASS |", "| PARTIAL |")
+        .replace("验证结果: PASS", "验证结果: PARTIALLY_VERIFIED"),
+    );
+    expect(run().code).toBe(0);
+    expect(run({}, true).code).toBe(2);
+  });
   it.each([
     ["-\t```markdown", "    ```"],
     ["1.\t~~~markdown", "    ~~~"],

@@ -19,8 +19,11 @@ import json
 import ntpath
 import os
 import re
+import shutil
 import subprocess
 import sys
+import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -556,6 +559,8 @@ def validate_execution_context(receipt: dict, event: dict, case: dict, change: P
 
 
 def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: Path) -> None:
+    if "executionEvidence" in case and case["executionEvidence"] != "runner-captured.v1":
+        raise ValueError("不支持的 executionEvidence capture 声明")
     receipt = json.loads(file.read_text(encoding="utf-8"))
     if receipt.get("schemaVersion") != "superflow.execution-receipt.v1":
         raise ValueError("缺少 execution-receipt.v1；旧证据应保留为 PARTIAL")
@@ -585,6 +590,9 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
     if len(events) != 1:
         raise ValueError("原始输出缺少唯一用例执行事件；未知 ID/零执行不可 PASS")
     event = events[0]
+    if case.get("executionEvidence") == "runner-captured.v1":
+        validate_capture(file.parent, receipt, "case")
+        validate_capture(file.parent, receipt["build"], "build")
     for key in ["caseId", "entryId", "level", "status", "executed", "assertions", "persistence",
                 "evidenceKind", "sources", "build", "target"]:
         if not json_equal(event.get(key), receipt.get(key)):
@@ -664,6 +672,230 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
                 or (after["value"] is None and not expected.get("allowNull", False))
                 or actual.get("result") != "PASS"):
             raise ValueError("持久化值未达到预期；结构存在/全 NULL/跨业务 ID 不能替代写入")
+
+
+def sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def captured_sources(cwd: Path, sources: list, base: Path) -> list:
+    if not isinstance(sources, list) or not sources or len(set(sources)) != len(sources):
+        raise ValueError("capture 需要完整且不重复的显式源码清单")
+    return [{"path": os.path.relpath(verified_file(cwd, source), base),
+             "sha256": sha256_bytes(verified_file(cwd, source).read_bytes())}
+            for source in sources]
+
+
+def source_fingerprint(sources: list) -> str:
+    return sha256_bytes("\n".join(sorted(s["path"] + ":" + s["sha256"]
+                                        for s in sources)).encode())
+
+
+def capture_redactor() -> Path:
+    # Reuse the installed canonical redactor; never ship a second regex policy.
+    executable = shutil.which("superflow")
+    roots = list(Path(__file__).resolve().parents)
+    if executable:
+        roots += list(Path(executable).resolve().parents)
+    for root in roots:
+        # npm's Windows shim is a regular .cmd file, not a Unix symlink.
+        for package in (root, root / "node_modules/@chenmk/superflow"):
+            candidate = package / "dist/domains/managed-work/redaction.js"
+            if candidate.is_file():
+                return candidate
+    raise ValueError("capture 缺少已构建的规范脱敏器；请修复 Superflow 安装")
+
+
+def redact_capture(values: list, redactor: Path) -> list:
+    script = """import fs from 'node:fs';
+import {pathToFileURL} from 'node:url';
+const {redactManagedLog,redactManagedValue}=await import(pathToFileURL(process.argv[1]));
+const values=JSON.parse(fs.readFileSync(0,'utf8'));
+console.log(JSON.stringify(values.map(v=>typeof v==='string'?redactManagedLog(v):redactManagedValue(v))));"""
+    result = subprocess.run(["node", "--input-type=module", "-e", script, str(redactor)],
+                            input=json.dumps(values), capture_output=True, text=True)
+    if result.returncode:
+        raise ValueError("capture 规范脱敏失败；未写入原始敏感内容")
+    return json.loads(result.stdout)
+
+
+def observe_command(argv: list, cwd: Path, output: Path, kind: str,
+                    sources: list, redactor: Path) -> dict:
+    if (not isinstance(argv, list) or not argv
+            or any(not isinstance(arg, str) or not arg.strip() for arg in argv)):
+        raise ValueError("capture 需要非空 argv 数组，不使用隐式 Shell")
+    before = captured_sources(output.parent, [s["path"] for s in sources], output.parent)
+    started = time.time_ns()
+    try:
+        child = subprocess.run(argv, cwd=cwd, capture_output=True)
+        exit_code, stdout, stderr = child.returncode, child.stdout, child.stderr
+    except OSError as error:
+        exit_code, stdout, stderr = 127, b"", str(error).encode()
+    finished = time.time_ns()
+    stdout_text, stderr_text, safe_argv = redact_capture(
+        [stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace"), argv], redactor)
+    # The first persisted bytes already pass the same redactor as Runner logs.
+    captured = {"schemaVersion": "superflow.execution-capture.v1", "kind": kind,
+                "argv": safe_argv, "cwd": str(cwd), "exitCode": exit_code,
+                "startedNs": started, "finishedNs": finished, "sourcesBefore": before}
+    for key, value in [("stdout", stdout_text), ("stderr", stderr_text)]:
+        file = output.with_suffix("." + key + ".log")
+        file.write_text(value, encoding="utf-8")
+        captured[key] = {"path": file.name, "sha256": sha256_bytes(file.read_bytes())}
+    try:
+        captured["sourcesAfter"] = captured_sources(
+            output.parent, [s["path"] for s in sources], output.parent)
+    except (OSError, ValueError) as error:
+        # A failed after-snapshot must not erase the process that already ran.
+        captured["sourcesAfter"] = None
+        captured["sourceObservationError"] = redact_capture([str(error)], redactor)[0]
+    file = output.with_suffix(".capture.json")
+    file.write_text(json.dumps(captured, ensure_ascii=False), encoding="utf-8")
+    return {"path": file.name, "sha256": sha256_bytes(file.read_bytes())}
+
+
+def validate_capture(base: Path, record: dict, kind: str) -> dict:
+    reference = record.get("capture")
+    if not isinstance(reference, dict):
+        raise ValueError("缺少 runner capture；旧/合成凭证应保留为 PARTIAL")
+    file = hashed_file(base, reference["path"], reference["sha256"])
+    captured = json.loads(file.read_text(encoding="utf-8"))
+    if (captured.get("schemaVersion") != "superflow.execution-capture.v1"
+            or captured.get("kind") != kind
+            or type(captured.get("exitCode")) is not int or captured["exitCode"] != 0
+            or not json_equal(captured.get("argv"), record["command"]["argv"])
+            or captured.get("exitCode") != record["command"]["exitCode"]
+            or type(captured.get("startedNs")) is not int
+            or type(captured.get("finishedNs")) is not int
+            or captured["finishedNs"] < captured["startedNs"]):
+        raise ValueError("capture 命令、退出码或执行时间不一致")
+    sources = captured.get("sourcesBefore")
+    if not sources or not json_equal(sources, captured.get("sourcesAfter")):
+        raise ValueError("capture 执行期间源码发生变化")
+    for source in sources:
+        hashed_file(base, source["path"], source["sha256"])
+    if not json_equal(sources, record.get("sources")):
+        raise ValueError("capture 源码清单与凭证不一致")
+    if kind == "build" and source_fingerprint(sources) != record.get("sourceFingerprint"):
+        raise ValueError("capture 构建源码清单与构建指纹不一致")
+    streams = {}
+    for key in ("stdout", "stderr"):
+        stream = captured[key]
+        stream_file = (base / stream["path"]).resolve()
+        # Empty stderr/stdout are valid captured process facts.
+        if not stream_file.is_file() or sha256_bytes(stream_file.read_bytes()) != stream["sha256"]:
+            raise ValueError("capture 原始输出缺失或指纹不一致")
+        streams[key] = stream_file.read_text(encoding="utf-8")
+    if kind == "case":
+        if captured.get("cwd") != record.get("executionContext", {}).get("cwd"):
+            raise ValueError("capture 实际工作目录与冻结执行上下文不一致")
+        measured = measurement_event(streams["stdout"], record["caseId"])
+        for key in ("executed", "assertions", "persistence", "target", "database", "mockBoundary", "testLayer"):
+            if not json_equal(measured.get(key), record.get(key)):
+                raise ValueError(f"capture 实测 {key} 与凭证不一致")
+        if not json_equal(sources, record.get("sources")):
+            raise ValueError("capture 用例源码清单与凭证不一致")
+    return captured
+
+
+def measurement_event(stdout: str, case_id: str) -> dict:
+    events = []
+    for line in stdout.splitlines():
+        try:
+            value = json.loads(line)
+            if isinstance(value, dict) and value.get("event") == "superflow.measurement.v1":
+                events.append(value)
+        except ValueError:
+            continue
+    if len(events) != 1 or events[0].get("caseId") != case_id:
+        raise ValueError("capture 缺少唯一实测事件；不能按 expected 生成 actual")
+    return events[0]
+
+
+def write_capture_record(output: Path, record: dict, event: dict) -> None:
+    event_file = output.with_suffix(".events.jsonl")
+    event_file.write_text(json.dumps(event, ensure_ascii=False) + "\n", encoding="utf-8")
+    record["command"].update(output=event_file.name, sha256=sha256_bytes(event_file.read_bytes()))
+    output.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
+
+
+def record_execution(plan_file: Path) -> int:
+    plan = json.loads(plan_file.read_text(encoding="utf-8"))
+    base = plan_file.parent
+    output = (base / plan["output"]).resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    redactor = capture_redactor()
+    # Validate executable/module availability before running a side-effecting
+    # command whose output would otherwise have no safe persistence path.
+    redact_capture([], redactor)
+    if plan.get("kind") == "build":
+        cwd = (base / plan["cwd"]).resolve()
+        sources = captured_sources(cwd, plan["sources"], output.parent)
+        capture = observe_command(plan["argv"], cwd, output, "build", sources, redactor)
+        facts = json.loads((output.parent / capture["path"]).read_text())
+        artifact = (cwd / plan["artifact"]).resolve()
+        record = {"id": "build-" + uuid.uuid4().hex, "sources": sources, "status": "PARTIAL",
+                  "sourceFingerprint": source_fingerprint(sources), "capture": capture,
+                  "artifact": os.path.relpath(artifact, output.parent),
+                  "sha256": sha256_bytes(artifact.read_bytes()) if artifact.is_file() else None,
+                  "command": {"argv": facts["argv"], "exitCode": facts["exitCode"]}}
+        event = {"event": "build", "buildId": record["id"],
+                 "sourceFingerprint": record["sourceFingerprint"], "artifactSha256": record["sha256"],
+                 "argv": facts["argv"], "exitCode": facts["exitCode"]}
+        write_capture_record(output, record, event)
+        validate_capture(output.parent, record, "build")
+        if not record["sha256"]:
+            raise ValueError("capture 构建未生成产物")
+        record["status"] = "PASS"
+        output.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
+    elif plan.get("kind") == "case":
+        review_file = (base / plan["review"]).resolve()
+        coverage = json.loads(review_file.read_text())["coverage"]
+        case = next(c for c in coverage["cases"] if c["id"] == plan["caseId"])
+        if case.get("executionEvidence") != "runner-captured.v1":
+            raise ValueError("capture 用例未冻结 runner-captured.v1")
+        context = case["executionContext"]
+        cwd = (review_file.parent / context["cwd"]).resolve()
+        observed_context = {"cwd": str(cwd), "environmentSha256": {
+            key: sha256_bytes(json.dumps(os.environ.get(key), ensure_ascii=False).encode())
+            for key in context["environmentKeys"]}}
+        validate_execution_context(
+            {"command": {"argv": context["argv"]}, "executionContext": observed_context},
+            {"executionContext": observed_context}, case, review_file.parent)
+        build_file = (base / plan["build"]).resolve()
+        if build_file.parent != output.parent:
+            raise ValueError("capture 构建和用例凭证须保存在同一证据目录")
+        build = json.loads(build_file.read_text())
+        validate_capture(output.parent, build, "build")
+        hashed_file(output.parent, build["artifact"], build["sha256"])
+        capture = observe_command(context["argv"], cwd, output, "case", build["sources"], redactor)
+        facts = json.loads((output.parent / capture["path"]).read_text())
+        stdout = (output.parent / facts["stdout"]["path"]).read_text()
+        record = {"schemaVersion": "superflow.execution-receipt.v1", "caseId": case["id"],
+                  "entryId": case["entryId"], "level": case["level"], "status": "PARTIAL",
+                  "evidenceKind": case.get("evidenceKind", "real"), "sources": build["sources"],
+                  "build": build, "capture": capture,
+                  "command": {"argv": facts["argv"], "exitCode": facts["exitCode"]},
+                  "executionContext": observed_context}
+        try:
+            measured = measurement_event(stdout, case["id"])
+            for key in ("executed", "assertions", "persistence", "target", "database", "mockBoundary", "testLayer"):
+                if key in measured:
+                    record[key] = measured[key]
+            if facts["exitCode"] == 0:
+                record["status"] = "PASS"
+            event = {**record, "command": dict(record["command"])}
+            write_capture_record(output, record, event)
+            validate_execution_receipt(output, case, coverage, review_file.parent)
+        except (ValueError, KeyError, TypeError):
+            record["status"] = "PARTIAL"
+            write_capture_record(output, record, {**record, "command": {
+                "argv": facts["argv"], "exitCode": facts["exitCode"]}})
+            raise
+    else:
+        raise ValueError("capture plan.kind 必须为 build 或 case")
+    print("capture 已记录；业务充分性仍须独立评审")
+    return 0
 
 
 def check_git_index_files(root: Path, files: list[Path]) -> None:
@@ -929,7 +1161,9 @@ def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None,
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lint SuperBridge Flow test-report evidence")
-    parser.add_argument("reports", nargs="+")
+    parser.add_argument("reports", nargs="*")
+    parser.add_argument("--record-execution", metavar="PLAN", default="",
+                        help="实际执行冻结 build/case plan 并保留脱敏 stdout/stderr")
     parser.add_argument("--tests", default="")
     parser.add_argument("--review", default="")
     parser.add_argument("--repo-root", default="")
@@ -938,6 +1172,15 @@ def main() -> int:
     parser.add_argument("--warn-only", action="store_true")
     parser.add_argument("--task-index", action="store_true")
     args = parser.parse_args()
+
+    if args.record_execution:
+        try:
+            return record_execution(Path(args.record_execution).resolve())
+        except (OSError, ValueError, KeyError, TypeError, StopIteration) as error:
+            print(f"FAIL capture: {error}")
+            return 2
+    if not args.reports:
+        parser.error("需要报告路径或 --record-execution PLAN")
 
     if args.task_index:
         # The coverage checker uses this canonical body parser, not a second

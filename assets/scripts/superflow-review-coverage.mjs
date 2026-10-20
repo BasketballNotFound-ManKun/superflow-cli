@@ -157,6 +157,18 @@ export function validateCoverage(root, review, issues, checkCode = true) {
   }
   for (const test of cases.values()) {
     const entry = entries.get(test.entryId);
+    if (
+      test.executionEvidence !== undefined &&
+      test.executionEvidence !== "runner-captured.v1"
+    ) {
+      issues.push(`用例 ${test.id} 的 executionEvidence 无效`);
+    }
+    if (
+      test.executionEvidence === "runner-captured.v1" &&
+      !Object.hasOwn(test, "executionContext")
+    ) {
+      issues.push(`用例 ${test.id} 的捕获执行缺少冻结 executionContext`);
+    }
     if (!entry || !nonempty(test.action) || test.level !== entry.kind) {
       issues.push(`用例 ${test.id} 未对应真实入口及验收等级`);
     }
