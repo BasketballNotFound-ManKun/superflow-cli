@@ -154,3 +154,28 @@ describe("ordinary Flow Owner installed lifecycle", () => {
     30_000,
   );
 });
+
+
+describe("Flow Owner review and delivery evidence contract", () => {
+  it.each(["skills", "skills-en"])(
+    "%s keeps independence, current fixes, and delivery facts observable",
+    (directory) => {
+      const read = (file: string) =>
+        fs.readFileSync(path.join(root, "assets", directory, file), "utf8");
+      const review = read("superflow/references/reviewer-checklist.md");
+      const owner = read("superflow/references/flow-owner.md");
+      const verify = read("superflow-verify/SKILL.md");
+      // These are observable report slots, not a new state or machine protocol.
+      for (const slot of [
+        "Reviewer identity", "Dispatch evidence", "Reviewed diff",
+        "Finding closure", "Post-review changes",
+      ]) expect(review, slot).toContain(slot);
+      for (const slot of [
+        "User goal", "Current implementation", "Mock / real",
+        "Open items", "External coordination",
+      ]) expect(owner, slot).toContain(slot);
+      expect(verify).toContain("reviewer-checklist.md");
+      expect(verify).not.toContain("ask the user to install or enable it");
+    },
+  );
+});

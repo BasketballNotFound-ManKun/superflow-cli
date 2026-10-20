@@ -43,6 +43,13 @@ before deciding. Use isolated native subagents for medium+ when supported, addin
 focused views by independent high-risk clusters without fixed counts or models.
 Report unavailable independent review honestly.
 
+Independent review requires actual dispatch, Reviewer identity, exact diff, and
+report under the checklist. Reuse review_mode/state/test-report without new state.
+After review changes, actually rerun affected signals and have an isolated Reviewer
+recheck fixes and regressions. Old PASS cannot cover new diffs. Use the Flow Owner
+facts matrix for delivery; phase=archive cannot replace goal acceptance or hide
+external coordination and open items.
+
 ## Review response discipline
 
 When receiving a finding, read all feedback before responding, restate the
@@ -140,8 +147,10 @@ Immediately load and apply these Superpowers when available:
 - `requesting-code-review` after local verification has evidence.
 - `finishing-a-development-branch` before branch/worktree closeout.
 
-If a required Superpower is unavailable, mark the verification `Blocked` and
-ask the user to install or enable it. Do not replace it with ordinary prose.
+If a required Superpower or independent Reviewer capability is unavailable,
+record the missing capability and keep verification PARTIAL/Blocked. Complete
+all authorized work independent of that capability; self-review cannot substitute
+for independent review.
 
 ## Failure Decision
 

@@ -58,6 +58,26 @@
 与当前源码/合同漂移时返回 NEEDS_CONTEXT，不凭旧包评当前代码。Reviewer 只读，不改
 源码、运行应用、查写业务库或启动嵌套监督；需要新的运行证据交回实施方。
 
+### 独立评审与修复的可核验记录
+
+中高档只有真实隔离 Reviewer 的实际派发和返回才算独立评审；Owner 自查、
+角色扮演和准备好评审包不算已执行。沿现有 reviewer 报告和 test-report 记录，
+不新增长期状态、review_mode 值或 JSON 协议字段：
+
+| 记录 | 必需事实 |
+|---|---|
+| Reviewer identity | 实际 reviewer 身份/会话 ID 与只读职责；自评另列 |
+| Dispatch evidence | 实际派发工具/调用引用、隔离方式和返回报告路径；未派发明确写未执行 |
+| Reviewed diff | baseline/head 或工作树快照、准确 diff 与文件范围、合同版本 |
+| Finding closure | 原 finding ID、accepted/rejected/needs-evidence 及依据、修复位置、重测证据、Reviewer 复核结论 |
+| Post-review changes | 评审后新增 diff、影响面、失效测试/结论、实际重测和复评报告 |
+
+代码、SQL、配置或入口在评审后改变时，由 Owner 分析影响，真实重跑受影响的冻结
+信号，并把修复 diff 和相关调用链交回隔离 Reviewer 复评。保留仍有效的证据；原 PASS
+不能覆盖新增改动，修复一个 finding 不能掩盖对原功能的回归。缺复评或未决阻断项
+保持 PARTIAL/Blocked，不能靠关闭旧 ID 或 phase=archive 宣称完整交付。
+子代理不可用时完成不依赖它的授权实施、测试、报告和清理，记录能力缺口及待独立评审包。
+
 ### 主 Agent 复核和合并
 
 读取全部 reviewer 的覆盖表、原始 finding 与 concern；逐条重读 file:line、调用方、
@@ -97,6 +117,13 @@ DONE
 字段容量冲突、旧用例入口或本轮/下轮终止冲突。记录源码依据、反例和实际结论；
 无法查明保留 SOURCE_INVESTIGATION，不转问用户。正常已证实合同不因关键词被阻断。
 
+## Review provenance
+Reviewer identity: 实际身份/会话 ID 与职责；自评另列
+Dispatch evidence: 工具/调用引用、隔离方式与返回报告；未执行如实注明
+Reviewed diff: baseline/head 或工作树快照、准确 diff/文件范围、合同版本
+## Repair verification
+Finding closure: 原 ID、处置依据、修复位置、重测与 Reviewer 复核证据
+Post-review changes: 新增 diff、影响、失效证据、实际重测和复评报告
 ## Impact
 路径提示 / 实际深度 / 源码依据 / 调整理由 / diff 与合同版本
 ## Axes

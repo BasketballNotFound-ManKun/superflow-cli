@@ -24,6 +24,10 @@ superflow-contracts，缺环境记录阻塞。普通 OpenSpec 使用项目自己
 按所选执行模式持续覆盖全部任务、验证和整改；阶段进度用过程消息汇报后继续。
 当前 Owner 可编码和测试，独立评审按现有清单执行，不能用自评冒充。
 
+中高风险按 Reviewer 清单记录实际派发、身份、评审 diff、报告及 finding 闭环。
+评审后的实现变更按影响重测并交隔离 Reviewer 复评；无此能力时完成其余授权工作，
+保留 PARTIAL，交付沿 Flow Owner 事实矩阵对账。
+
 **Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
 
 **Steps**

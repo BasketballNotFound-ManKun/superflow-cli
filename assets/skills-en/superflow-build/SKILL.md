@@ -26,6 +26,11 @@ Follow the selected mode through all tasks, verification, and repair. Progress
 updates are intermediate; the Owner may implement/test, obtaining required
 independent views through the existing checklist without claiming self-review is independent.
 
+For medium/high risk, record actual dispatch, reviewer identity, reviewed diff,
+report, and finding closure under the Reviewer checklist. Rerun affected signals
+and obtain isolated rereview after implementation changes. Without that capability,
+finish other authorized work, retain PARTIAL, and use the Flow Owner delivery matrix.
+
 **Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
 
 **Steps**

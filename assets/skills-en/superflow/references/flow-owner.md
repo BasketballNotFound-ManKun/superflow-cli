@@ -117,3 +117,24 @@ Claim full delivery only when all mandatory items hold. Git commit, push,
 release, and archive still require their own authorization. Honor authorization
 already given without asking again. Never commit or rewrite Git history merely
 to save progress.
+
+### Delivery facts matrix
+
+Record this matrix in the existing test-report and final delivery. Checked tasks,
+verify_result, and phase=archive describe process facts, not achievement of the
+user goal. Check independent conclusions against reviewer-checklist identity,
+dispatch, diff, finding, and rereview records; never relabel self-review independent.
+
+| Fact | Required account |
+|---|---|
+| User goal | Desired outcome, authorized scope, acceptance goal |
+| Current implementation | Entries/call paths actually covered by current source and missing implementation |
+| Mock / real | Actual counts and scope for mocks, real backend/database, browser, external devices/services; explicitly list unrun coverage |
+| Open items | Open findings, missing proof, changes without rerun/rereview and impact; blockers remain PARTIAL/Blocked |
+| External coordination | Other repository/frontend/deployment/permission owner, status, completion criteria; do not relabel unfinished local work external |
+
+Substitute entries and simulations support only their actual scope. Distinguish
+local implementation from end-to-end usability when external coordination is
+pending; archive or strong PASS cannot hide gaps. Explicit native managed work
+inherits native Host capabilities and project contracts; this document adds no
+SDD documents, mandatory team, or business test strategy to that profile.

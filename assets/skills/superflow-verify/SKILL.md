@@ -36,6 +36,11 @@ anchors, a fresh reading of the affected call path, and independent judgment.
 DONE_WITH_CONCERNS 先调查全部 concern，再决定。原生子代理支持时，中档以上以隔离上下文
 派发；高档按独立风险簇追加专项视角，不固定代理数或模型。无法独立评审时如实记录缺口。
 
+独立评审须沿清单留下真实派发、Reviewer 身份、准确 diff 和报告；复用现有
+review_mode/state/test-report，不新增状态。评审后修改先按影响真实重测，再由隔离
+Reviewer 复核修复及原功能回归；旧 PASS 不能覆盖新 diff。交付用 Flow Owner 的
+事实矩阵对账，phase=archive 不能替代目标验收或抹去外部协同和未关闭项。
+
 ## 评审回应纪律
 
 收到 finding 后先通读全部反馈，复述要求，再对照当前源码、项目规则、调用方和测试验证。
@@ -124,8 +129,10 @@ Immediately load and apply these Superpowers when available:
 - `requesting-code-review` after local verification has evidence.
 - `finishing-a-development-branch` before branch/worktree closeout.
 
-If a required Superpower is unavailable, mark the verification `Blocked` and
-ask the user to install or enable it. Do not replace it with ordinary prose.
+If a required Superpower or independent Reviewer capability is unavailable,
+record the missing capability and keep verification PARTIAL/Blocked. Complete
+all authorized work independent of that capability; self-review cannot substitute
+for independent review.
 
 ## Failure Decision
 

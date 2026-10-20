@@ -74,6 +74,30 @@ against current code. Reviewers are read-only: no source edits, application
 management, business DB operations, or nested supervision. New runtime evidence
 returns to the implementer.
 
+### Observable independence and repair records
+
+Medium/high review counts as independent only after an actual isolated Reviewer
+is dispatched and returns. Owner self-checks, role-play, and prepared bundles are
+not executed independent review. Record these facts in existing reviewer reports
+and test-report; add no persistent state, review_mode values, or JSON protocol fields:
+
+| Record | Required facts |
+|---|---|
+| Reviewer identity | Actual reviewer identity/session ID and read-only role; separate self-review |
+| Dispatch evidence | Actual dispatch tool/call reference, isolation, returned report path; explicitly state not run when absent |
+| Reviewed diff | Baseline/head or worktree snapshot, exact diff/file scope, contract version |
+| Finding closure | Original finding ID, accepted/rejected/needs-evidence with reasons, repair location, rerun proof, Reviewer recheck verdict |
+| Post-review changes | New diff after review, impact, invalidated tests/verdicts, actual reruns and rereview reports |
+
+For source, SQL, configuration, or entry changes after review, the Owner assesses
+impact, actually reruns affected frozen signals, and returns repair diffs and
+related call paths to an isolated Reviewer. Retain still-valid evidence; old PASS
+cannot cover new changes, and closing one finding cannot conceal regressions in
+previous behavior. Missing rereview or open blockers remain PARTIAL/Blocked;
+closing old IDs or phase=archive cannot establish full delivery. If subagents are
+unavailable, complete independent authorized implementation, tests, reports, and
+cleanup, recording the capability gap and pending independent-review bundle.
+
 ### Main Agent verification and merge
 
 Read all reports, coverage, findings, and concerns. Re-read each file:line, callers,
@@ -126,6 +150,13 @@ back messages, column capacity, stale case entries and current/next-run terminat
 Record actual evidence, counterexamples and conclusions; unresolved facts stay
 SOURCE_INVESTIGATION, never user questions. Do not block an evidenced normal contract by keywords.
 
+## Review provenance
+Reviewer identity: Actual identity/session ID and role; separate self-review
+Dispatch evidence: Tool/call reference, isolation, returned report; state not run if absent
+Reviewed diff: Baseline/head or worktree snapshot, exact diff/file scope, contract version
+## Repair verification
+Finding closure: Original ID, disposition reasons, repair location, rerun and Reviewer proof
+Post-review changes: New diff, impact, invalidated evidence, actual reruns/rereview report
 ## Impact
 Path hint / actual depth / source evidence / adjustment / diff and contract version
 ## Axes
