@@ -1,5 +1,68 @@
 # 测试选择与验证闭环
 
+## Runner-Captured Execution
+
+新用例需要捕获实际构建/用例进程时，在既有 document-review coverage 用例冻结
+`executionEvidence: "runner-captured.v1"` 与
+`executionContext: {"argv":["node","case.js"],"cwd":".","environmentKeys":[]}`。
+argv 是参数数组，不经 shell；cwd 相对 review 文件目录，environmentKeys 仅声明受支持
+的非秘密环境键。历史凭证保留，不静默升级为本模式；完整字段以
+[执行证据合同](document-review-coverage.md)和既有 receipt 校验为准。
+
+在项目根目录准备两个最小 plan（以下文件均放在项目根目录）：
+
+```json
+{"kind":"build","argv":["node","build.js"],"cwd":".","sources":["app.js","build.js","case.js"],"artifact":"dist/app.js","output":"evidence/build.json"}
+```
+
+```json
+{"kind":"case","review":"review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
+```
+
+使用当前宿主已安装脚本运行；下列 installed-script-path 替换为安装位置：
+
+```sh
+python3 <installed-script-path>/superflow-test-report-lint.py --record-execution build-plan.json
+python3 <installed-script-path>/superflow-test-report-lint.py --record-execution case-plan.json
+```
+
+plan 的 output/review/build/cwd 相对 plan 所在目录；build 的 sources/artifact 相对
+build cwd。build.sources 覆盖实际相关源码、构建和验收脚本，不仅列无关小文件。
+build/case 输出必须在同一证据目录；case 命令只从冻结 executionContext 读取。
+
+验收命令 stdout 输出且仅输出一个匹配该 caseId 的 JSON 测量事件；其他诊断输出可保留：
+
+```json
+{"event":"superflow.measurement.v1","caseId":"C1","executed":1,"assertions":[{"id":"response","expected":true,"actual":true,"result":"PASS"},{"id":"state","expected":true,"actual":true,"result":"PASS"},{"id":"forbiddenEffects","expected":true,"actual":true,"result":"PASS"}],"persistence":[],"target":{"service":"<observed>","route":"<observed>","kind":"<observed>","buildId":"<observed>","buildSha256":"<observed>","sourceFingerprint":"<observed>"}}
+```
+
+这只是事件外形，不是可交付的已通过证据。assertions 至少包含 response/state/forbiddenEffects
+并覆盖冻结断言 ID；数据库
+用例还输出适用 database/testLayer/mockBoundary/persistence 实测字段。actual 来自真实
+响应/状态/查询，target 来自实际被调用目标的观测，不能照抄预期目标或填占位值。
+Runner 通过规范脱敏器保留 stdout/stderr、退出码、执行前后源码指纹及构建绑定，不按 expected 补 actual；
+缺少实测来源、非零退出或源码漂移保留 PARTIAL。脱敏日志不是原始秘密字节；
+同目录保留 *.stdout.log / *.stderr.log / *.capture.json / *.events.jsonl。构建标识与指纹由捕获入口生成，Agent 不手填。
+本地可写文件只支持可审计一致性，不保证抵抗恶意篡改；Host 仍独立判断真实入口、
+覆盖充分性和业务正确性。捕获通过不能代替测试合同，也不把 helper 单测升级成生产验收。
+
+
+## Production Entry State Assertions
+
+在 tests.md 冻结以下用例合同，技术详设逐入口边界以 Case ID 回链；执行报告记录原始
+结果，不在报告临时改变预期。只为适用的生产路径填写，不为纯函数虚构 HTTP/数据库。
+
+| Case ID / Decision ID | 真实生产入口/调用链 | Before state | 输入快照/版本 | 动作/故障注入点 | After state | Concurrency/rollback | 响应/外部副作用断言 | 证据位置 |
+|---|---|---|---|---|---|---|---|---|
+| <C/D-ID> | <E-ID + 生产绑定> | <同业务 ID 的完整相关值> | <加载时绑定> | <真实步骤> | <期望变化或严格不变> | <适用风险/依据> | <精确结果与次数> | <已有回执/日志> |
+
+内容变更、状态变更和混合入口分别证明；幂等重复请求没有新增行不证明正确的状态变化。
+并发风险冻结受控交错、胜负结果、最终内容与版本/状态；回滚风险在首个写入之后注入
+失败，核对所有受影响记录/字段及外部副作用，而非仅看数量。代理、异常捕获或异步
+可能改变事务结果时从真实生产入口运行；直接调用 helper 或 mock 单测仅证明其隔离层。
+跨仓/前端用例缺环境保持 BLOCKED/PARTIAL，不以服务端模拟替代整体交付。
+
+
 ## 适用范围与唯一 owner
 
 在生成 tests.md、实现任务开始、整改和交付核验时读取本指南。输入是已确认需求、

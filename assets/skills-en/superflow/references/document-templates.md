@@ -1,5 +1,40 @@
 # Document Templates
 
+## Behavior Decision Matrix
+
+Before generation, the Agent determines domains from actual changes, call chains and read/write
+impact. Freeze true/false in existing `.openspec.yaml` applicability.money / applicability.concurrency
+with document evidence; do not create a second applicability file. For false domains, generated
+documents/Prompts omit those domain sections and repeated N/A keywords. Deleting prose, rewording
+or declaring false cannot hide real money/concurrency risks. Existing domain guards and Agent
+semantic review still assess applicable risks; unknown remains under investigation, not false.
+
+Maintain one behavior decision matrix in design.md. proposal/spec/api/technical design/tasks/tests
+reference its Decision ID and canonical section while retaining their necessary details.
+superflow-clarify owns confirmed goals/scope; superflow-contracts owns WHAT/API/data/acceptance;
+superflow-design owns source HOW; superflow-handoff generates handoff only. This indexes existing
+document owners, without new state, approval or truth sources. Before design exists, record decision
+IDs in proposal; move them into the matrix with backlinks when design is written.
+
+| Decision ID | Confirmed behavior/exclusion | Canonical owner (file#section) | Requirement/entry ID | Consumer references (proposal/api/HOW/tasks/tests) | Confirmation evidence/status |
+|---|---|---|---|---|---|
+| <D-ID> | <condition→behavior→side effects> | <single owner> | <R/E-ID> | <section or task/case ID> | <actual evidence or unresolved> |
+
+### Conflict resolution
+
+Before generating or refreshing handoff, the current document owner compares scope, defaults,
+rejection policy, write timing, transactions/rollback and acceptance row by row. Repair stale
+summaries, non-goals, tasks and examples within confirmed scope; return to clarification when
+confirmed behavior would change. Unresolved conflicts, unknown source facts or new decisions
+remain not ready. Saying “document X wins” does not resolve a contradiction for implementers.
+Repair every consumer reference, then refresh handoff and rerun existing review gates.
+
+Activate concurrency, money, database and external-integration domains independently from confirmed
+scope and source evidence. Record inapplicability once with its canonical owner; consumers reference
+it. Empty tables, placeholders, examples and template defaults are not decisions. A template does
+not create domain obligations or reduce applicable mandatory verification gates.
+
+
 ## proposal.md
 
 - Problem

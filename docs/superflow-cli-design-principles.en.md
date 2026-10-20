@@ -220,3 +220,31 @@ into managed orchestration.
 Done means more than written code: sources of truth agree, responsibilities do
 not leak, verification passes, installation is complete, evaluation is
 explainable, and no regression remains undeclared.
+
+## Document continuity and observed execution (2026-10-20)
+
+Assign one canonical prose owner per spec/API/design/tests decision. Source-level HOW
+references those decisions and records snapshot/version provenance, content versus state
+writes, per-entry transaction/proxy/exception/async boundaries and failure side effects.
+Resolve contradictions with the document owner and refresh review/readiness references
+before implementation. Prompts navigate task/file/case IDs; release-sql alone owns SQL
+payload and digest. Existing applicability controls specialist contracts rather than
+copying unrelated financial boilerplate as proof of completeness.
+
+New changes default handoff projection to references: canonical paths, roles and existing
+normalized fingerprints. Explicit off/beta and old state retain their behavior. Projection
+does not change identity; checkbox/report progress stays outside frozen requirements,
+while task meaning and design changes invalidate prior readiness evidence.
+
+New execution contracts may freeze executionEvidence: runner-captured.v1. The existing
+report linter actually runs build/case commands and records redacted-before-persistence
+output, exit codes, observed values and version binding. Legacy evidence is not upgraded;
+missing execution remains PARTIAL. Consistent hashes, handwritten PASS and copied expected
+values do not alone prove execution. Capture proves neither semantic sufficiency nor
+resistance to a malicious local writer.
+
+Record actual isolated Reviewer dispatch, diff scope, report and finding re-review in
+existing reports. Identity fields do not authenticate independence. Missing delegation
+capability remains an explicit gap while other authorized work continues. Prior PASS
+cannot cover new repair impacts; delivery reconciles goals, observations, re-review,
+external coordination and owned resources.

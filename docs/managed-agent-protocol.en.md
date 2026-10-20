@@ -516,3 +516,12 @@ Codex Executor fresh/resume calls do not override native memory, delegation or
 skill feature settings. Task-bound model/effort, explicit session identity and
 role permissions remain enforced. This inherits user configuration rather than
 enabling features the user disabled, and changes none of the three protocols.
+
+### Captured task evidence provenance
+
+An existing coverage case may select executionEvidence: runner-captured.v1, requiring
+the existing report linter to record canonical redacted output and provenance during
+actual build/case execution. This is a project acceptance contract field, not a new
+Handoff, Executor Delivery or Host Review field. Legacy contracts keep their boundary;
+missing capture never invents a pass. Host still judges real state changes and independent
+review. Native users without an SDD request do not acquire an engineering contract.

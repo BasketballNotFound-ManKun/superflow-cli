@@ -318,3 +318,31 @@ approval, positive limits are bypassed, native permissions are overridden,
 workspace exclusion fails, state becomes writable or legacy contracts migrate
 silently. The final same-input report owns full tests, builds and isolated
 installation results; incomplete gates must remain explicit.
+
+## Document-first continuity and captured evidence (2026-10-20)
+
+Two runs with identical business source baselines exposed decision/HOW/prompt drift,
+redundant projections, idempotency substituted for state changes, synthesized receipts
+and missing independent review. Raw evaluation stays outside this repository. Owners
+are existing document contracts, handoff, report linter and Flow Owner review, not new
+skills/hooks or business instructions in generic management.
+
+Baseline: 1233 tests across 120 files passed; isolated npm installation was blocked by
+official-registry connection resets. The hypothesis is to first converge canonical
+decisions/per-entry HOW/real acceptance, then capture actual commands and record
+independent review while preserving native capability, frozen legacy semantics and gates.
+
+Cases observed eight missing document structures RED, independently found conflicting
+short-transaction defaults, reference projection under half legacy size with unchanged
+identity and explicit off retained, synthesized PASS rejected for new capture contracts,
+actual build/case measurements GREEN and failures/drift/missing measurements retained.
+Clean-source execution, isolated host/language installation and npm shim layouts are
+covered separately. Existing Owner prohibitions on self-review are not claimed as new;
+new review provenance and repair/retest/re-review slots make the obligation auditable.
+
+Pressure reasoning and structural tests do not prove population compliance, Windows
+execution or a rerun of real business acceptance. The external full report owns final
+results; unknown usage is not zero. Roll back affected owners if projections replace
+canonical decisions, legacy contracts migrate, synthesized PASS advances, unredacted
+output persists, absent reviewers are called independent, stale repair conclusions are
+reused or installation damages unknown assets. Never weaken assertions to evade failure.

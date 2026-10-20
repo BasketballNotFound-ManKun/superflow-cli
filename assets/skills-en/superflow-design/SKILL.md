@@ -3,6 +3,11 @@ name: superflow-design
 description: Use when OpenSpec/SDD contract documents exist and source-level technical design, reverse impact analysis, TDD strategy, or Superpowers design handoff must be produced before implementation prompts.
 ---
 
+Apply [behavior decision continuity](../superflow/references/document-templates.md#behavior-decision-matrix)
+to this phase owner and consumer references; resolve conflicts before handoff rather than
+leaving implementers to guess.
+
+
 # SDD Design
 
 Use this after `$superflow-contracts` has produced the OpenSpec/SDD contract documents and

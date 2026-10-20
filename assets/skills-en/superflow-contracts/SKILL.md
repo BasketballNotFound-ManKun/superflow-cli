@@ -3,6 +3,11 @@ name: superflow-contracts
 description: Use when confirmed requirements or OpenSpec artifacts need SDD contract documents, API-first checks, traceability, quality gates, tests, test-report skeletons, and handoff before source-level design.
 ---
 
+Apply [behavior decision continuity](../superflow/references/document-templates.md#behavior-decision-matrix)
+to this phase owner and consumer references; resolve conflicts before handoff rather than
+leaving implementers to guess.
+
+
 # SDD Docs
 
 ## Targeted source research and current contracts

@@ -815,3 +815,11 @@ Codex Executors inherit native user feature configuration on fresh and resumed
 calls. They do not force `--disable memories`, turn off delegation/skills, or
 ignore user configuration. Frozen model/effort and role permissions still apply;
 resume binds an explicit session and never uses `--last`.
+
+### Converging document and evidence ownership
+
+Existing document owners resolve canonical prose/HOW/prompt conflicts. The existing
+report linter captures execution using canonical redaction, without new hooks, durable
+state or Agent message protocols. executionEvidence is an optional frozen coverage field;
+legacy contracts do not migrate silently. Deterministic provenance and semantic sufficiency
+remain separate, preserving Host/Executor/Runner roles and native Agent capabilities.

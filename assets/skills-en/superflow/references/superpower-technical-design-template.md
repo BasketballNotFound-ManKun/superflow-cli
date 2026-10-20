@@ -49,6 +49,50 @@ existing approval rules remain; this inventory creates no parallel state.
 | Deleted | None / `<path>` | | |
 | Not created | None / `<candidate>` | | |
 
+## Input Snapshot Binding
+
+List consumed proposal/api/design/tasks/tests and source-audit paths, current revision/snapshot
+identities, read time and existing handoff references. This input inventory detects stale HOW;
+it introduces no hash algorithm or readiness state. When contracts or source snapshots change,
+the document owner rechecks affected HOW/cases and refreshes existing handoff. Historical
+compatibility branches, transaction examples or SQL values are not current decisions.
+
+| Input/load entry ID | Content snapshot source | Version/revision token source | Same-read binding | Cache/refresh/retry propagation | Missing/stale handling | Decision ID / Case ID |
+|---|---|---|---|---|---|---|
+| <E-ID> | <actual source> | <contract or inapplicability evidence> | <prevent new token with old content> | <data flow> | <confirmed behavior> | <D/C-ID> |
+
+Fill for mutable inputs, caches or concurrent editing. Bind content and revision to one consistent
+snapshot; a fresh pre-save version cannot replace the version the user actually loaded. Otherwise
+record source evidence without introducing version control solely because this template mentions it.
+
+## Write Classification
+
+| Entry/branch ID | Content writes | State/derived writes | Decision applicability and reason | Direct/indirect writers and consumers | Decision ID / Case ID |
+|---|---|---|---|---|---|
+| <E-ID/branch> | <fields/operations> | <fields/operations> | <confirmed classification> | <source anchors> | <D/C-ID> |
+
+Classify branches: a mixed entry cannot be excluded wholesale. Cover scattered writers, indirect
+calls and state-only branches.
+
+## Entry Execution Boundaries
+
+| Production entry ID / call chain | Transaction owner/propagation/commit | Proxy path/self-invocation | Exception catch/translation/rollback | Async/thread/event boundary | Case ID |
+|---|---|---|---|---|---|
+| <E-ID + source anchors> | <actual framework mechanism> | <effective-path evidence> | <exception path> | <synchronous or actual boundary> | <C-ID> |
+
+Prove each entry boundary rather than annotating only a shared helper. Inapplicable cells name the
+actual execution mechanism and evidence. Inherit transaction decisions from design; this template
+does not prescribe short transactions, whole-operation transactions or a propagation level.
+
+## Failure Side-Effect Order
+
+| Entry/failure point | Validate→claim→write→external effect order | Effects already performed | Rollback/retention/compensation boundary | Observable response and complete state assertions | Case ID |
+|---|---|---|---|---|---|
+| <E-ID/failure point> | <actual order> | <including nested and async effects> | <contract decision> | <before/after state and effect counts> | <C-ID> |
+
+Bind every failure risk to executable cases. Zero writes covers all affected state, not just row
+counts or one revision value.
+
 ## Source-Level HOW
 
 | Requirement/Scenario | Code anchor | Current behavior | Target HOW | Files/methods | Risk |
@@ -132,6 +176,11 @@ creation timing, readiness check, and rollback path. Missing production
 provisioning evidence is a blocker.
 
 ## Concurrency And Idempotency Ownership
+
+Distinguish content-save revision conflicts/whole-operation rollback from repeated external
+operation claims by Decision ID. The PENDING/short-transaction pattern below applies only to
+external actions whose contract confirms independent claims; it cannot override transactions
+for other entries. Examples are not confirmed designs; missing decisions return to the owner.
 
 Complete this section for concurrent requests, batch issue/activation/renewal,
 duplicate callbacks, duplicate consumption, or repeated external delivery.

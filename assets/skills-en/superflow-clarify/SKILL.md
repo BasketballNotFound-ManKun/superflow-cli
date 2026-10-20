@@ -3,6 +3,11 @@ name: superflow-clarify
 description: Use when reading PRDs, online documents, local requirement files, screenshots, prototypes, or oral requirements and the agent must clarify one feature at a time before producing OpenSpec/SDD artifacts.
 ---
 
+Apply [behavior decision continuity](../superflow/references/document-templates.md#behavior-decision-matrix)
+to this phase owner and consumer references; resolve conflicts before handoff rather than
+leaving implementers to guess.
+
+
 # SDD Clarify
 
 Use this skill for the first phase of SDD: understand one feature, bind text to images,

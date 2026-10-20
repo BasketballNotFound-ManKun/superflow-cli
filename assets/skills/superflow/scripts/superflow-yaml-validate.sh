@@ -99,7 +99,7 @@ validate_enum verify_result "pending pass fail"
 validate_enum branch_status "pending handled"
 validate_enum archived "true false"
 validate_enum direct_override "true false"
-validate_enum context_compression "off beta"
+validate_enum context_compression "references off beta"
 
 handoff_hash="$(value_of handoff_hash 2>/dev/null || true)"
 if [[ -n "$handoff_hash" && "$handoff_hash" != "null" && ! "$handoff_hash" =~ ^[a-f0-9]{64}$ ]]; then

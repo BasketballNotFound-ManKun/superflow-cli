@@ -1,5 +1,27 @@
 # Implementation Prompt Template
 
+## Thin Prompt Contract
+
+Every execution mode uses this thin Prompt structure. Long scripts below are applicability
+references, not text to copy wholesale. The main Prompt is the sole contract navigator; batch
+Prompts link to it and contain only their incremental scope:
+
+| Part | Generated content |
+|---|---|
+| Canonical links | Current handoff, Decision ID matrix, technical design, tasks/tests and applicable gates |
+| Execution policy | Inherited mode/isolation/TDD/review, authorization, stopping and recovery boundaries |
+| Incremental goals/files | Batch task IDs, dependencies, exact file scope, order and exclusions |
+| Acceptance IDs | Batch entry/case IDs and tests.md command/assertion/evidence section links |
+| Delivery reconciliation | Task/case outcomes, independent review, blockers and recovery location |
+
+Inherit matrices by link and ID instead of copying tables; maintain actual commands/assertions only
+in tests.md. Keep applicability reasons with their canonical owner, without repeating “money not
+applicable” in every batch. Read and verify SQL content, target path and sql_sha256 only from
+release-sql.md; do not hard-code their values in Prompts. Existing handoff/hash checks still apply.
+The current document owner resolves contract conflicts and refreshes handoff before execution;
+implementers cannot choose a competing design inside the Prompt.
+
+
 ## Execution mode inheritance
 
 Read [Flow Owner](flow-owner.md) and inherit the selected technical-design/state
@@ -113,16 +135,14 @@ refreshed handoff; never design SQL inside the implementation prompt.
   evidence, rollback, secret handling, and blockers. Do not hard-code
   environment-dependent external values or treat test auto-creation as
   production readiness evidence.
-- Concurrency And Idempotency Ownership copied from the technical design for
-  concurrent requests, batch issue/activation/renewal, duplicate callbacks or
-  consumption, and repeated external delivery. Define a stable business
-  idempotency key, application-layer atomic claim owner, short transaction
-  boundary, PENDING/SUCCESS/FAILED state machine, retry reuse of the original
-  business code, external-call boundary, and uncertain-result reconciliation.
-  Release database locks before external calls. A unique index is not the
-  default; it is only an optional fallback with explicit natural uniqueness,
-  historical cleanup, NULL/soft-delete behavior, and conflict handling.
-- Money Precision Boundary copied from the technical design when monetary
+- Link frozen Concurrency And Idempotency Ownership decisions, per-entry transaction
+  boundaries and Case IDs; verify applicability and effective source paths. The Prompt
+  does not select PENDING states, short transactions or an atomic-claim design.
+  Repeated external actions inherit their idempotency contract; content saves inherit
+  their revision-conflict/whole-operation rollback contract. Missing decisions return
+  to the document owner, not template examples. Required concurrency, idempotency,
+  rollback and real-entry verification still execute.
+- Money Precision Boundary linked from the canonical technical design when monetary
   behavior changes. Keep calculation-state precision until the confirmed
   settlement/display boundary, record scale and rounding mode, forbid early
   rounding, and define deterministic residual allocation. For additive

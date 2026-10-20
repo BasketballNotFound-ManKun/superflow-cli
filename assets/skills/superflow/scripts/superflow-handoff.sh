@@ -133,8 +133,9 @@ OUT_DIR="$CHANGE_DIR/.sdd/handoff"
 TMP_LIST="$(mktemp)"
 trap 'rm -f "$TMP_LIST"' EXIT
 
-context_compression="$(config_value context_compression off SDD_CONTEXT_COMPRESSION)"
+context_compression="$(config_value context_compression references SDD_CONTEXT_COMPRESSION)"
 case "$context_compression" in
+  references) excerpt_limit=0 ;;
   off) excerpt_limit=220 ;;
   beta) excerpt_limit=80 ;;
   *) die "invalid context_compression: $context_compression" ;;
@@ -189,7 +190,10 @@ write_markdown() {
     printf '%s\n' '- Superpowers owns source-level HOW: technical design, execution strategy, plan, TDD order, reviewer/tester split, worktree/port orchestration, and verification ownership.'
     printf '%s\n' '- Superpowers must not replace OpenSpec/SDD design, API, database, field semantics, SQL, or tests.'
     printf '%s\n\n' '- If source documents conflict or are incomplete, mark `Blocked` and return to SDD docs instead of inventing a second design.'
-    if [[ "$context_compression" == "beta" ]]; then
+    if [[ "$context_compression" == "references" ]]; then
+      printf '## Canonical Reading Index\n\n'
+      printf '%s\n\n' 'Read the canonical files listed above for the current task: API/spec define behavior, design/technical-design define HOW, tasks define scope and tests define acceptance. This index carries identity and paths, not a second copy of their content.'
+    elif [[ "$context_compression" == "beta" ]]; then
       printf '## Canonical Projection\n\n'
       printf '%s\n\n' 'Beta mode projects API/spec/test sources verbatim and references supporting docs by hash. Read original supporting files when a design, task, or requirement detail is unclear.'
     else
@@ -199,7 +203,7 @@ write_markdown() {
       rel="${file#"$CHANGE_DIR"/}"
       role="$(source_role "$rel")"
       printf '### `%s`\n\n' "$rel"
-      if [[ "$context_compression" == "beta" ]] && ! is_beta_projected_role "$role"; then
+      if [[ "$context_compression" == "references" ]] || { [[ "$context_compression" == "beta" ]] && ! is_beta_projected_role "$role"; }; then
         printf '%s\n' "- Role: \`$role\`"
         printf '%s\n' "- SHA256: \`$(sha_file "$file")\`"
         printf '%s\n\n' "- Full source remains canonical. Read \`$rel\` directly if needed."
@@ -238,7 +242,7 @@ write_json() {
       [[ "$first" -eq 0 ]] && printf ',\n'
       first=0
       projected=false
-      if [[ "$context_compression" == "off" ]] || is_beta_projected_role "$role"; then
+      if [[ "$context_compression" == "off" ]] || { [[ "$context_compression" == "beta" ]] && is_beta_projected_role "$role"; }; then
         projected=true
       fi
       printf '    {"path": "%s", "sha256": "%s", "lines": %s, "role": "%s", "projected": %s}' \

@@ -62,6 +62,45 @@ Not created 记录已考虑但不新增的模块、工具、缓存、状态或�
 | Deleted | None / `<path>` | | |
 | Not created | None / `<candidate>` | | |
 
+## Input Snapshot Binding
+
+先列本详设消费的 proposal/api/design/tasks/tests 与源码调查的路径、当前修订/快照标识、
+读取时间和既有 handoff 引用；该输入清单用于识别陈旧 HOW，不另造 hash 算法或就绪状态。
+规范合同或源码快照改变时，文档 owner 重核受影响 HOW/用例并刷新既有交接；不得把
+旧详设中的兼容分支、事务示例或历史 SQL 值当本轮决定。
+
+| 输入/加载入口 ID | 内容快照来源 | 版本/修订令牌来源 | 同次读取绑定方式 | 缓存/刷新/重试传递 | 缺失/陈旧处理 | Decision ID / Case ID |
+|---|---|---|---|---|---|---|
+| <E-ID> | <实际来源> | <合同定义或不适用依据> | <防止新版本配旧内容> | <数据流> | <已确认行为> | <D/C-ID> |
+
+涉及可变输入、缓存或并发编辑时填写，冻结内容与版本的一致快照；不得用保存前新读取的
+版本替代用户实际加载版本。无此语义时记录源码依据，不凭模板引入版本控制。
+
+## Write Classification
+
+| 入口/分支 ID | 内容写入 | 状态/派生写入 | 是否受本决策约束及原因 | 直接/间接写点与消费者 | Decision ID / Case ID |
+|---|---|---|---|---|---|
+| <E-ID/branch> | <字段/操作> | <字段/操作> | <已确认分类> | <源码锚点> | <D/C-ID> |
+
+按分支分类，混合入口不能整段排除；覆盖散点写入、间接调用和仅状态分支。
+
+## Entry Execution Boundaries
+
+| 生产入口 ID / 调用链 | 事务 owner/传播/提交点 | 代理生效路径/自调用 | 异常捕获/翻译/回滚 | 异步/线程/事件边界 | Case ID |
+|---|---|---|---|---|---|
+| <E-ID + 源码锚点> | <实际框架机制> | <生效证据> | <异常路径> | <同步或真实边界> | <C-ID> |
+
+逐入口证明边界而非只给共享 helper 加注解；不适用项写实际执行机制与依据。事务方案
+继承 design 的决策，模板不预设短事务、整体事务或特定传播级别。
+
+## Failure Side-Effect Order
+
+| 入口/失败点 | 校验→占用→写入→外部副作用顺序 | 失败前已发生副作用 | 回滚/保留/补偿边界 | 可验收响应与完整状态断言 | Case ID |
+|---|---|---|---|---|---|
+| <E-ID/失败点> | <实际顺序> | <含嵌套与异步> | <合同决定> | <前后状态/副作用次数> | <C-ID> |
+
+每个失败风险绑定可执行用例；零写入须覆盖全部受影响状态，不能仅查行数或单个版本值。
+
 ## Source-Level HOW
 
 | Requirement/Scenario | Code anchor     | Current behavior | Target HOW                | Files/methods | Risk   |
@@ -143,6 +182,10 @@ creation timing, readiness check, and rollback path. Missing production
 provisioning evidence is a blocker.
 
 ## Concurrency And Idempotency Ownership
+
+先按 Decision ID 区分内容保存的版本冲突/整体回滚与重复外部动作的幂等占用。
+下述 PENDING/短事务方案仅用于合同已确认需要独立占用的外部动作；不覆盖其他
+入口的事务设计。示例不是已确认方案，缺决策回文档 owner。
 
 批量开通、批量续费、并发请求、重复回调、重复消费或重复外部下发时必须填写。
 

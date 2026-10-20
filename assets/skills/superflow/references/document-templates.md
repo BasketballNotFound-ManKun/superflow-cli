@@ -1,5 +1,35 @@
 # 文档格式模板
 
+## Behavior Decision Matrix
+
+生成前由 Agent 依据真实改动、调用链与读写影响判断适用域，在现有 `.openspec.yaml`
+的 `applicability.money` / `applicability.concurrency` 冻结 true/false 及对应文档依据；
+复用既有配置，不新增适用性文件。false 时实际交付文档/Prompt 不复制该领域章节或
+反复 N/A 关键词；不通过删正文、改措辞或设 false 掩盖真实金额/并发风险。已确认的
+适用风险仍由现有领域检查与 Agent 语义评审核验，未知保留待调查而非 false。
+
+在 design.md 维护唯一行为决策矩阵；proposal/spec/api/技术详设/tasks/tests 仅以 Decision ID
+引用归属段落并保留各自必要细节。superflow-clarify 确认目标与范围，superflow-contracts
+维护 WHAT/API/数据/验收，superflow-design 维护源码 HOW，superflow-handoff 只生成交接。
+这是现有文档 owner 的索引，不新增状态、审批或事实源；需求尚未设计时先在 proposal
+记录决策 ID，design 形成后迁入矩阵并回链。
+
+| Decision ID | 已确认行为/排除边界 | Canonical owner（文件#段落） | 需求/入口 ID | Consumer references（proposal/api/HOW/tasks/tests） | 确认来源/状态 |
+|---|---|---|---|---|---|
+| <D-ID> | <条件→行为→副作用> | <唯一归属> | <R/E-ID> | <段落或任务/用例 ID> | <实际证据或未决> |
+
+### Conflict resolution
+
+生成或刷新交接前，当前文档 owner 逐行核对范围、默认值、拒绝策略、写入时点、事务与
+回滚、验收。已确认范围内的陈旧摘要/非目标/任务/示例由该 owner 同步修复；改变用户
+确认的行为才回澄清。冲突未消解、源码事实未知或需要新决策时保持未就绪，不能只写
+“以某文档为准”后让执行者选一份。修复所有消费引用后，走既有交接刷新和评审门禁。
+
+领域适用性从已确认范围和源码证据判断：并发、金额、数据库、外部集成各自独立激活。
+不适用理由只在其 canonical owner 记录一次，其余引用；空表、占位值、示例和模板默认
+均不构成决策，不因模板存在而新增该领域义务，既有适用的必测门禁不得降低。
+
+
 ## Proposal 格式
 
 ```markdown

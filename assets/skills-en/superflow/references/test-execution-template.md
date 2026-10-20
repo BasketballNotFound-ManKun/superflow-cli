@@ -1,5 +1,10 @@
 # Test Execution Template
 
+Capture actual build/case processes through [Runner-Captured Execution](test-guide.md#runner-captured-execution).
+Reports link generated build/case receipts and raw stdout/stderr; never hand-fill capture fields or
+copy the example event as evidence. Legacy undeclared evidence retains its level; missing measured
+provenance remains PARTIAL.
+
 Read [test-guide.md](test-guide.md) first and inherit frozen tests.md / Quick Spec
 signals. Fill applicable cases; give source reasons for inapplicable fields and
 BLOCKED/PARTIAL for unavailable required environments. Existing coverage/receipts

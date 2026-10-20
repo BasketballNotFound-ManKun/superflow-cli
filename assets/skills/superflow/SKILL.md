@@ -376,7 +376,7 @@ context_compression | created_at | verified_at | updated_at`
 
 **上下文压缩模式：**
 
-- 默认 `context_compression: off`，handoff 保留较长文档摘录，适合单仓或中等变更。
+- 新任务默认 `context_compression: references`，handoff 只保留路径、角色和规范指纹，按任务读取原文；不再复制整套正文。已有显式 `off`/`beta` 配置不自动切换；`off` 仍保留较长摘录。
 - 可在 `<change-dir>/.sdd/config.yaml` 设置 `context_compression: beta`，
   handoff 会压缩摘录长度并在 `.sdd/state.yaml`、`.sdd/handoff/sdd-context.*`
   中记录该模式，适合超长会话、多 agent、多 worktree 交接。

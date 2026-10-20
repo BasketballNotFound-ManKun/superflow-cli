@@ -394,3 +394,11 @@ Runner→Host 升级事实的指导须再次交接；类别歧义或机械退回
 Codex Executor 启动与 resume 不覆写用户的 memories、多代理或技能功能开关；
 保留任务绑定的模型/推理参数、明确会话 ID 和角色读写边界。此处恢复原生配置，
 不强制启用用户已关闭的能力，也不改变三个消息协议。
+
+### 任务证据的捕获来源
+
+既有 coverage case 可选 executionEvidence: runner-captured.v1，要求现有报告
+linter 在实际构建/用例执行时记录规范脱敏输出和来源。该字段属于项目验收合同，
+不是 Handoff、Executor Delivery 或 Host Review 的新增字段。旧合同保留旧边界，
+未捕获证据不补造通过。捕获不证明业务充分性，Host 仍核对真实状态变化与独立评审；
+native 用户未要求 SDD 时不因此被强制生成研发合同。

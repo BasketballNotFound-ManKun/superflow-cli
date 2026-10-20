@@ -301,3 +301,13 @@ and their conclusions, without claiming this new context verification. Declared
 contracts with missing/malformed/mismatched observations need evidence, not editing
 old observations to expectations. Contract changes return to the document owner
 for renewed review rather than weakening execution checks.
+
+## Runner-Captured Execution
+
+New executable cases freeze `executionEvidence: "runner-captured.v1"` together with
+`executionContext` (argv, relative cwd and non-secret environment keys). Use the existing
+report linter capture mode documented in [test-guide.md](test-guide.md); do not handwrite
+PASS receipts. The document reviewer checks this choice before freezing new contracts.
+Legacy v1 cases without this field keep their boundary and are not silently upgraded.
+Capture establishes observed process/output provenance, not business sufficiency or
+independence; preserve PARTIAL when execution or required measurements are missing.

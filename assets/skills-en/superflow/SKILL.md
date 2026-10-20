@@ -515,3 +515,7 @@ Use the reference files in this skill directory as templates:
 - references/subagent-progress.md
 - references/superpower-technical-design-template.md
 - references/money-precision-algorithms.md
+
+## Handoff projection
+
+New changes default to `context_compression: references`: retain canonical paths, roles and fingerprints, then read the original documents for the current task. Existing explicit `off`/`beta` values keep their behavior; changing projection does not change contract identity.

@@ -7,42 +7,131 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "../..");
-const SCRIPT_DIR = path.join(
-  ROOT,
-  "assets",
-  "skills",
-  "superflow",
-  "scripts",
-);
+const SCRIPT_DIR = path.join(ROOT, "assets", "skills", "superflow", "scripts");
 const HANDOFF = path.join(SCRIPT_DIR, "superflow-handoff.sh");
 const STATE = path.join(SCRIPT_DIR, "superflow-state.sh");
 
 describe("handoff contract fingerprint boundaries", () => {
-  it.each(["skills", "skills-en"])("%s ignores progress but detects task semantics and pending business rules", async (language) => {
-    const change = await fs.promises.mkdtemp(path.join(os.tmpdir(), "handoff-boundary-"));
-    const script = path.join(ROOT, "assets", language, "superflow", "scripts", "superflow-handoff.sh");
-    const hash = async () => (await execFileAsync("bash", [script, change, "--hash-only"])).stdout.trim();
-    try {
-      await write(path.join(change, "tasks.md"), "- [ ] Reject unauthorized users\n");
-      await write(path.join(change, "design.md"), "pending policy: deny unauthorized users\n");
-      await write(path.join(change, "test-report.md"), "Not run\n");
-      const initial = await hash();
-      await write(path.join(change, "tasks.md"), "- [x] Reject unauthorized users\n");
-      await write(path.join(change, "test-report.md"), "Tests: 10 passed\n");
-      expect(await hash()).toBe(initial);
-      await write(path.join(change, "tasks.md"), "- [x] Allow unauthorized users\n");
-      expect(await hash()).not.toBe(initial);
-      const changedTask = await hash();
-      await write(path.join(change, "design.md"), "pending policy: allow unauthorized users\n");
-      expect(await hash()).not.toBe(changedTask);
-      await write(path.join(change, "design.md"), `Artifact ${"a".repeat(64)}: reject unsigned input\n`);
-      const withDigest = await hash();
-      await write(path.join(change, "design.md"), `Artifact ${"a".repeat(64)}: allow unsigned input\n`);
-      expect(await hash()).not.toBe(withDigest);
-    } finally {
-      await fs.promises.rm(change, { recursive: true, force: true });
-    }
-  });
+  it.each(["skills", "skills-en"])(
+    "%s defaults new packs to references without changing contract identity",
+    async (language) => {
+      const change = await fs.promises.mkdtemp(
+        path.join(os.tmpdir(), "handoff-index-"),
+      );
+      const script = path.join(
+        ROOT,
+        "assets",
+        language,
+        "superflow",
+        "scripts",
+        "superflow-handoff.sh",
+      );
+      const context = path.join(change, ".sdd/handoff/sdd-context.json");
+      try {
+        await write(
+          path.join(change, "api.md"),
+          "# API\n" + "Original contract statement.\n".repeat(300),
+        );
+        await write(
+          path.join(change, "tasks.md"),
+          "- [ ] Preserve the contract\n",
+        );
+        await execFileAsync("bash", [script, change, "--write"]);
+        const index = JSON.parse(await fs.promises.readFile(context, "utf8"));
+        expect(index.contextCompression).toBe("references");
+        expect(
+          index.sources.every(
+            (source: { projected: boolean }) => !source.projected,
+          ),
+        ).toBe(true);
+        const compact = await fs.promises.readFile(
+          path.join(change, ".sdd/handoff/sdd-context.md"),
+          "utf8",
+        );
+        expect(compact).not.toContain("Original contract statement.");
+        await execFileAsync("bash", [script, change, "--write"], {
+          env: { ...process.env, SDD_CONTEXT_COMPRESSION: "off" },
+        });
+        const legacy = JSON.parse(await fs.promises.readFile(context, "utf8"));
+        expect(legacy.contextCompression).toBe("off");
+        expect(legacy.contextHash).toBe(index.contextHash);
+        const expanded = await fs.promises.readFile(
+          path.join(change, ".sdd/handoff/sdd-context.md"),
+          "utf8",
+        );
+        expect(expanded).toContain("Original contract statement.");
+        expect(compact.length).toBeLessThan(expanded.length / 2);
+        await execFileAsync("bash", [script, change, "--write"]);
+        expect(
+          JSON.parse(await fs.promises.readFile(context, "utf8"))
+            .contextCompression,
+        ).toBe("off");
+      } finally {
+        await fs.promises.rm(change, { recursive: true, force: true });
+      }
+    },
+  );
+  it.each(["skills", "skills-en"])(
+    "%s ignores progress but detects task semantics and pending business rules",
+    async (language) => {
+      const change = await fs.promises.mkdtemp(
+        path.join(os.tmpdir(), "handoff-boundary-"),
+      );
+      const script = path.join(
+        ROOT,
+        "assets",
+        language,
+        "superflow",
+        "scripts",
+        "superflow-handoff.sh",
+      );
+      const hash = async () =>
+        (
+          await execFileAsync("bash", [script, change, "--hash-only"])
+        ).stdout.trim();
+      try {
+        await write(
+          path.join(change, "tasks.md"),
+          "- [ ] Reject unauthorized users\n",
+        );
+        await write(
+          path.join(change, "design.md"),
+          "pending policy: deny unauthorized users\n",
+        );
+        await write(path.join(change, "test-report.md"), "Not run\n");
+        const initial = await hash();
+        await write(
+          path.join(change, "tasks.md"),
+          "- [x] Reject unauthorized users\n",
+        );
+        await write(path.join(change, "test-report.md"), "Tests: 10 passed\n");
+        expect(await hash()).toBe(initial);
+        await write(
+          path.join(change, "tasks.md"),
+          "- [x] Allow unauthorized users\n",
+        );
+        expect(await hash()).not.toBe(initial);
+        const changedTask = await hash();
+        await write(
+          path.join(change, "design.md"),
+          "pending policy: allow unauthorized users\n",
+        );
+        expect(await hash()).not.toBe(changedTask);
+        await write(
+          path.join(change, "design.md"),
+          `Artifact ${"a".repeat(64)}: reject unsigned input\n`,
+        );
+        const withDigest = await hash();
+        await write(
+          path.join(change, "design.md"),
+          `Artifact ${"a".repeat(64)}: allow unsigned input\n`,
+        );
+        expect(await hash()).not.toBe(withDigest);
+      } finally {
+        await fs.promises.rm(change, { recursive: true, force: true });
+      }
+    },
+  );
 });
 
 let tmp: string;
@@ -314,28 +403,24 @@ describe("superflow-handoff.sh", () => {
     expect(designDoc.stdout.trim()).toBe("design.md");
   }, 15_000);
 
-  it(
-    "refreshes docs-only handoff without a technical design directory",
-    async () => {
-      const change = await makeChangeDir();
-      await fs.promises.rm(path.join(change, "docs"), {
-        recursive: true,
-        force: true,
-      });
-      await execFileAsync("bash", [HANDOFF, change, "--write"]);
-      await replacePendingHash(change);
+  it("refreshes docs-only handoff without a technical design directory", async () => {
+    const change = await makeChangeDir();
+    await fs.promises.rm(path.join(change, "docs"), {
+      recursive: true,
+      force: true,
+    });
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    await replacePendingHash(change);
 
-      const result = await execFileAsync("bash", [HANDOFF, change, "--refresh"]);
+    const result = await execFileAsync("bash", [HANDOFF, change, "--refresh"]);
 
-      expect(result.stdout).toContain("guard docs passed");
-      const technicalDesign = await execFileAsync("bash", [
-        STATE,
-        "get",
-        change,
-        "technical_design",
-      ]);
-      expect(technicalDesign.stdout.trim()).toBe("null");
-    },
-    15_000,
-  );
+    expect(result.stdout).toContain("guard docs passed");
+    const technicalDesign = await execFileAsync("bash", [
+      STATE,
+      "get",
+      change,
+      "technical_design",
+    ]);
+    expect(technicalDesign.stdout.trim()).toBe("null");
+  }, 15_000);
 });

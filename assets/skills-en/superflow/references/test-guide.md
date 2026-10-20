@@ -1,5 +1,75 @@
 # Test Selection and Verification Loop
 
+## Runner-Captured Execution
+
+For new cases requiring capture of actual build/case processes, freeze
+`executionEvidence: "runner-captured.v1"` and
+`executionContext: {"argv":["node","case.js"],"cwd":".","environmentKeys":[]}`
+in the existing document-review coverage case. argv is an argument array without a shell; cwd is
+relative to the review file. environmentKeys declares supported non-secret keys only. Preserve
+legacy receipts without silently upgrading them. Full fields remain owned by the
+[execution evidence contract](document-review-coverage.md) and existing receipt validation.
+
+Place these two minimal plans at the project root:
+
+```json
+{"kind":"build","argv":["node","build.js"],"cwd":".","sources":["app.js","build.js","case.js"],"artifact":"dist/app.js","output":"evidence/build.json"}
+```
+
+```json
+{"kind":"case","review":"review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
+```
+
+Use the current Host's installed script; replace installed-script-path with its installed location:
+
+```sh
+python3 <installed-script-path>/superflow-test-report-lint.py --record-execution build-plan.json
+python3 <installed-script-path>/superflow-test-report-lint.py --record-execution case-plan.json
+```
+
+Plan output/review/build/cwd paths are relative to the plan directory; build sources/artifact are
+relative to build cwd. build.sources covers relevant source, build and acceptance scripts, not
+unrelated small files. Build/case outputs must share one evidence directory. The case command
+comes only from frozen executionContext.
+
+The acceptance command emits exactly one JSON measurement event matching caseId on stdout;
+other diagnostic output may be retained:
+
+```json
+{"event":"superflow.measurement.v1","caseId":"C1","executed":1,"assertions":[{"id":"response","expected":true,"actual":true,"result":"PASS"},{"id":"state","expected":true,"actual":true,"result":"PASS"},{"id":"forbiddenEffects","expected":true,"actual":true,"result":"PASS"}],"persistence":[],"target":{"service":"<observed>","route":"<observed>","kind":"<observed>","buildId":"<observed>","buildSha256":"<observed>","sourceFingerprint":"<observed>"}}
+```
+
+This illustrates event shape, not valid passing evidence. assertions must cover frozen assertion
+IDs and include response/state/forbiddenEffects; database cases also emit applicable measured database/testLayer/mockBoundary/persistence
+fields. actual comes from real responses/state/queries; target is observed from the invoked target,
+not copied from expectations or placeholders. The Runner retains stdout/stderr through the canonical redactor, exit code,
+before/after source fingerprints and build bindings; it never fills actual from expected. Missing
+measurements, nonzero exits or source drift remain PARTIAL. Redacted logs are not raw secret bytes;
+retain *.stdout.log / *.stderr.log / *.capture.json / *.events.jsonl in the same directory. Capture generates build IDs/fingerprints, not Agent-authored values.
+Locally writable files support auditable consistency, not resistance to malicious rewriting. The
+Host still independently judges real entries, coverage and business correctness. Capture success
+cannot replace tests.md or promote helper units into production acceptance.
+
+
+## Production Entry State Assertions
+
+Freeze these case contracts in tests.md; source HOW links entry boundaries by Case ID. Reports
+record raw results without changing expectations. Fill applicable production paths only; pure
+functions do not acquire invented HTTP/database obligations.
+
+| Case ID / Decision ID | Real production entry/call chain | Before state | Input snapshot/revision | Action/failure injection | After state | Concurrency/rollback | Response/external effect assertions | Evidence location |
+|---|---|---|---|---|---|---|---|---|
+| <C/D-ID> | <E-ID + production binding> | <complete relevant same-business-ID values> | <load-time binding> | <actual steps> | <expected changes or strict invariance> | <applicable risk/evidence> | <exact outcome/count> | <existing receipts/logs> |
+
+Prove content, state and mixed-entry changes separately. No additional rows under an idempotent
+repeat does not prove the required state transition. For concurrency freeze controlled interleaving,
+winner/conflict outcomes and final content/revision/state. For rollback inject failure after the first
+write and compare every affected record/field and external effect, not only counts. Where proxies,
+exception catches or async boundaries can alter transactions, exercise the real production entry;
+direct helper calls or mocked units prove only their isolated layer. Missing cross-repository/browser
+environments remain BLOCKED/PARTIAL; backend simulation cannot prove the whole delivery.
+
+
 ## Scope and ownership
 
 Read when generating tests.md, starting implementation, repairing findings, or

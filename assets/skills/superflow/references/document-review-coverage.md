@@ -257,3 +257,11 @@ cwd 对应当前 change 的冻结相对目录；已选环境摘要与运行 lint
 未声明新字段的历史合同继续按已有源码/构建/入口规则核验，保留其原结论，不能声称
 已按此新增上下文要求核验。声明后缺观测、形状错误或错配必须补证据，不能把旧记录改成
 预期值。若需要修订冻结合同，返回文档 owner 重新评审，而非执行者放宽检查。
+
+## Runner-Captured Execution
+
+新编写的可执行用例应冻结 `executionEvidence: "runner-captured.v1"` 与既有
+`executionContext`（argv、相对cwd、非秘密环境键），调用现有报告linter采集，
+见 [test-guide.md](test-guide.md)，不手填PASS回执。文档评审在新合同冻结前核对
+该选择。未声明该字段的旧v1用例保留边界，不静默升级；缺运行/实测值保留PARTIAL。
+捕获仅证明过程/输出来源，不证明业务充分性、Reviewer独立性或抵抗本机恶意篡改。

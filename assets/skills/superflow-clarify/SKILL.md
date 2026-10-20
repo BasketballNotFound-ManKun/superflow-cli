@@ -3,6 +3,10 @@ name: superflow-clarify
 description: Superflow 内部能力：读取需求与原型，核实源码事实，逐功能澄清并冻结需求和接口草案。由 $superflow 选择，用户无需手动分流。
 ---
 
+先按[行为决策连续性](../superflow/references/document-templates.md#behavior-decision-matrix)
+核对本阶段 owner 与消费引用；交接前收敛冲突，不交给执行者猜测。
+
+
 # SDD Clarify
 
 Use this skill for the first phase of SDD: understand one feature, bind text to images,

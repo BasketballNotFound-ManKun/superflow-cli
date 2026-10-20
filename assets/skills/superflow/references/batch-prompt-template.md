@@ -1,5 +1,24 @@
 # 分批 Implementation Prompt 模板
 
+## Thin Prompt Contract
+
+所有执行模式使用同一薄 Prompt 结构；后文长剧本仅供查阅适用要求，不整段复制到实际
+Prompt。主 Prompt 是唯一合同导航，批次 Prompt 引用它并只列本批增量：
+
+| 部分 | 生成内容 |
+|---|---|
+| Canonical links | 当前 handoff、Decision ID 矩阵、技术详设、tasks/tests、适用门禁的有效链接 |
+| 执行策略 | 继承已冻结 mode/isolation/TDD/review 与授权、停止、恢复边界 |
+| 增量目标/文件 | 本批任务 ID、依赖、精确文件范围、实现顺序与排除边界 |
+| Acceptance IDs | 本批入口/用例 ID、tests.md 中命令/断言/证据段落链接 |
+| 交付对账 | 任务与用例结果、独立评审、阻塞与恢复位置 |
+
+合同矩阵以链接和 ID 继承，不复制整表；实际命令/断言只在 tests.md 维护。适用性理由
+在唯一 owner 维护，不在各批反复写“金额不适用”等。SQL 内容、目标路径和 sql_sha256
+仅从 release-sql.md 读取并核对，Prompt 不硬编码其值。现有 handoff/hash 校验照常执行。
+消费合同冲突时先由当前文档 owner 收敛并刷新交接；执行者不在 Prompt 另选实现方案。
+
+
 ## 执行模式继承
 
 读取 [Flow Owner](flow-owner.md)，继承技术详设和 state 中已选模式。普通新任务
@@ -31,8 +50,8 @@ Team/Subagent 执行剧本。必需合同、适用测试和独立核验义务仍
    quality gate、review checklist、technical_design 及适用 release-sql.md。
 3. **状态机执行决策**：记录 `build_mode: owner`、isolation、tdd_mode、review_mode、
    implementation_prompt；记录当前 Agent 实施/测试与必要独立 Reviewer/Tester 的实际职责。
-4. **合同继承**：按本技能要求带入所有适用的语义、写入闭环、影响面与真实入口合同，
-   以及冻结用例 ID、命令、断言和证据路径；不新增业务方案、不复制原始 handoff hash。
+4. **合同继承**：链接适用的语义、写入闭环、影响面与真实入口合同；以冻结用例 ID
+   链接 tests.md 的命令、断言和证据段落；不新增业务方案、不复制原始 handoff hash。
 5. **持续执行**：依赖就绪任务→适用 RED/GREEN 与真实验证→必要独立评审→有效问题
    整改重测复审→现有 verify 门禁。进度更新后继续；只在真实停止边界返回。
 6. **恢复与交付**：test-report 的 Owner Recovery、资源身份与清理、最终证据及剩余项
@@ -174,7 +193,7 @@ SQL 已在详设阶段冻结。本批只有原样复制权：禁止新增、删�
 
 ## Superpower 技术详设继承（强制）
 
-从 [Superpowers 技术详设](../docs/superpowers/specs/YYYY-MM-DD-{change-id}-technical-design.md) 复制或摘要本批次相关内容。
+从 [Superpowers 技术详设](../docs/superpowers/specs/YYYY-MM-DD-{change-id}-technical-design.md) 链接本批次相关段落与 Decision ID。
 本章节继承源码级 HOW 和执行策略，不定义新的需求、API、DB、字段语义或验收标准。
 
 | 执行模式 | 团队角色 | 拆分建议 | TDD/RED切入点 | 独立Tester验证点 | 高风险猜测点 | 禁止自由发挥项 | 进入prompt的强制要求 |
@@ -189,7 +208,7 @@ SQL 已在详设阶段冻结。本批只有原样复制权：禁止新增、删�
 ## 字段/状态反向影响面核实（强制）
 
 如果本批涉及字段值、状态/枚举、在线离线、删除恢复、同步标记、支付退款状态、
-第三方状态或任何会被其他代码读取的值，必须先从 Superpowers 技术详设复制
+第三方状态或任何会被其他代码读取的值，必须先从 Superpowers 技术详设链接
 `Field And Status Reverse Impact` 矩阵，并按矩阵完成反向核实。
 
 必须执行并记录：
@@ -215,7 +234,7 @@ rg -n "<setter>|<getter>|<mapper column>|<dto field>" src test
 
 如果本批涉及第三方、SDK、BEM/停车、支付退款、财务展示、来源字段、状态同步、
 外部字典或外部枚举，必须从 api.md / sdd-quality-gate.md /
-Superpowers 技术详设复制 `外部枚举绑定确认` / `External Enum Binding`，并在编码前复核。
+Superpowers 技术详设链接 `外部枚举绑定确认` / `External Enum Binding`，并在编码前复核。
 
 | 业务字段 | 本系统真源字段/枚举 | 外部系统字段 | 外部枚举/字典值 | 展示文案/业务语义/财务语义 | 取值来源                    | owner/确认时间 | 不确定项/阻塞处理      | 覆盖测试 |
 | -------- | ------------------- | ------------ | --------------- | -------------------------- | --------------------------- | -------------- | ---------------------- | -------- |
@@ -227,7 +246,7 @@ Superpowers 技术详设复制 `外部枚举绑定确认` / `External Enum Bindi
 ## 外部集成配置与部署合同（强制）
 
 如果本批涉及第三方平台/工具、SDK、MQ/Kafka、回调、支付渠道或云服务，必须从
-api.md / sdd-quality-gate.md / Superpowers 技术详设复制
+api.md / sdd-quality-gate.md / Superpowers 技术详设链接
 `外部集成配置与部署合同` / `External Integration Configuration And Deployment Contract`。
 
 | 外部依赖/资源 | 配置项/资源名 | 本地来源/创建方式 | 测试来源/创建方式 | 生产来源/创建方式 | 注入/创建方式 | 运行 owner | 创建 owner/时点 | 就绪证据 | 回滚 | 密钥处理 | 阻塞项 |
@@ -240,22 +259,18 @@ api.md / sdd-quality-gate.md / Superpowers 技术详设复制
 ## 并发与幂等归属（强制）
 
 如果本批涉及并发、批量下发/开通/续费、重复提交/回调/消费或重复外部调用，必须从
-sdd-quality-gate.md / Superpowers 技术详设复制 `Concurrency And Idempotency Ownership`。
+sdd-quality-gate.md / Superpowers 技术详设链接 `Concurrency And Idempotency Ownership`。
 
-| 场景 | 业务幂等键 | 原子占用 owner | 应用层原子占用 | 短事务边界 | 状态流转 | 重试复用编码 | 外部调用边界 | 不确定结果处理 | 唯一索引角色 | 测试证据 |
-| ---- | ---------- | -------------- | ---------------- | ---------- | -------- | ------------ | ------------ | -------------- | ------------ | -------- |
-| ____ | ____ | ____ | 锁定 owner 后写 PENDING | 独立提交 | PENDING/SUCCESS/FAILED | 复用原业务单号 | 提交后调用 | 阻止重复并对账 | 非默认/可选兜底 | 并发/重复/重试 |
-
-默认采用应用层原子占用：稳定业务幂等键、短事务占用并落 `PENDING`、提交并释放锁后
-再调用外部系统。禁止“先查再插”、单进程锁、随机单号和外部调用期间持有长事务。
-唯一索引不是默认方案，只有自然唯一、历史清理、NULL/软删除和冲突合同明确后才可
-作为数据库兜底。结果不确定时必须阻止重复调用并进入可追踪对账。
+链接已冻结的并发/幂等决策、逐入口事务边界和 Case ID；复核适用性及源码生效路径。
+Prompt 不另定 PENDING 状态机、短事务或原子占用方案；重复外部动作的幂等占用与
+内容保存的版本冲突/整体回滚分别继承各自合同。没有明确方案时退回文档 owner，
+不从模板示例推断。既有并发、幂等、回滚和真实入口必测要求仍须执行。
 
 ## 金额精度边界继承（强制）
 
 如果本批涉及金额、费用、优惠、抵扣、退款、分账、支付、发票、余额、电费、
 服务费、套餐结算、比例分摊、明细分配、对账或财务展示，必须从 Superpowers
-技术详设复制 `Money Precision Boundary`。
+技术详设链接 `Money Precision Boundary`。
 
 | 恒等式/权威总额 | 精确类型/构造 | 币种/渠道最小单位 | 舍入层级/mode/来源 | 分配策略/tie-breaker | 差额反推 | 审计证据 | 正负边界测试 |
 | ---------------- | ------------- | ----------------- | -------------------- | --------------------- | -------- | -------- | ------------ |

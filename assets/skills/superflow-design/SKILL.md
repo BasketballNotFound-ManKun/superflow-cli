@@ -3,6 +3,10 @@ name: superflow-design
 description: Superflow 内部能力：根据冻结合同和现有源码明确复用点、实现方案、影响范围与验证策略。由 $superflow 选择，用户无需手动分流。
 ---
 
+先按[行为决策连续性](../superflow/references/document-templates.md#behavior-decision-matrix)
+核对本阶段 owner 与消费引用；交接前收敛冲突，不交给执行者猜测。
+
+
 # SDD Design
 
 Use this after `$superflow-contracts` has produced the OpenSpec/SDD contract documents and

@@ -613,3 +613,10 @@ reviewer-checklist.md 核验。实现、模拟、真实环境、浏览器及提�
 Codex Executor 新建与恢复均继承用户原生功能配置，不通过 `--disable memories`、
 关闭多代理/技能或忽略用户配置来降级能力。冻结模型/推理参数及读写权限仍按任务合同
 执行；恢复绑定明确会话，禁止用 `--last` 接错会话。
+
+### 文档与证据 owner 的收敛
+
+文档正文、详设与 Prompt 的冲突由既有文档 owner 收敛；任务证据捕获由既有报告
+linter 执行，复用规范 redaction 模块，不新增 Hook、长期状态或三消息协议。
+executionEvidence 为 coverage 的可选冻结项，旧合同不自动迁移。确定性来源与
+语义充分性分别核验，Host/Executor/Runner 的责任及 native 原生能力保持不变。

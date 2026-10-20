@@ -1,5 +1,9 @@
 # 测试执行与结果记录模板
 
+实际构建与用例进程捕获按 [Runner-Captured Execution](test-guide.md#runner-captured-execution)
+执行；报告链接生成的 build/case 凭证及原始 stdout/stderr，不手填捕获字段或复制事件示例
+作为证据。未声明该模式的历史证据保留原等级，缺实测来源标记 PARTIAL。
+
 先读 [test-guide.md](test-guide.md)，继承 tests.md / Quick Spec 已冻结的验证信号。
 下列模板按适用用例填写，不适用项写源码依据；必测项缺环境记录 BLOCKED/PARTIAL。
 沿既有 coverage/receipt 核对事实，不用模板示例新建测试策略或降低冻结门禁。

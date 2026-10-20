@@ -3,7 +3,22 @@ name: superflow-handoff
 description: Superflow 内部能力：将冻结合同与技术详设转成分批研发指令、整改任务和验证交接材料。由 $superflow 选择，用户无需手动分流。
 ---
 
+先按[行为决策连续性](../superflow/references/document-templates.md#behavior-decision-matrix)
+核对本阶段 owner 与消费引用；交接前收敛冲突，不交给执行者猜测。
+
+
 # SDD Implement
+
+## Prompt 合同的表达方式
+
+执行前自检、角色/资源身份、启动端口和测试结果属于运行事实：Prompt 链接冻结策略，
+实施者在既有 test-report.md 记录实际值与证据，不在各批生成另一份合同表。
+
+生成主/批次 Prompt 时执行 [Thin Prompt Contract](../superflow/references/implementation-prompt-template.md#thin-prompt-contract)。
+下文“必须包含”的语义章节保留同名标题与精确 canonical 段落/Decision ID/Case ID 链接，
+不要求复制合同正文、整表或命令；“copy/extract”指定位并继承事实，不建立第二份事实源。
+主 Prompt 记录公共导航与执行策略，批次只列增量目标、文件和验收 ID。适用的检查、
+独立评审、真实入口与现有门禁仍须执行；链接缺失或未解决的合同冲突不能交接。
 
 ## Document Delivery Exit
 
@@ -147,7 +162,7 @@ Before implementation phase can exit:
 - When a task changes money, fees, discounts, deductions, refunds, sharing,
   payments, invoices, balances, electricity/service fees, package settlement,
   proration, allocation, reconciliation, or financial display, every prompt
-  must include "金额精度边界继承". It must copy the technical design
+  must include "金额精度边界继承". It must link the canonical technical design
   `Money Precision Boundary`, keep calculation-state precision until the
   confirmed settlement/display boundary, forbid early `setScale(2)` before
   later slicing or aggregation, and require deterministic residual allocation.
@@ -224,7 +239,7 @@ Before implementation phase can exit:
   field names or graph output, and must require the agent to stop and ask the
   user when the relationship is still unclear after those checks.
 - Every implementation prompt must include a "字段语义合同" section when risky
-  fields are present. The Worker must copy the contract from `design.md` and
+  fields are present. The Worker must read the linked contract in `design.md` and
   verify it against current source/Mapper/DB before coding:
   `字段 | 来源表/DTO/事件 | 真实语义 | 目标字段 | 目标语义 | 是否可等价 |
   证据锚点 | 禁止用法 | 不确定项/owner`.
@@ -282,7 +297,7 @@ Before implementation phase can exit:
 - Every implementation prompt for API, CRUD, Mapper/XML, database-backed,
   configuration-driven, MQ, scheduled-job, payment/refund, device, applet, or
   third-party behavior must include an "接口自动化执行清单" section. It must
-  extract all relevant L3/L4 cases from `tests.md` and include complete command
+  reference all relevant L3/L4 case IDs and their complete command sections in `tests.md`; command
   templates: token/cookie setup, curl/Postman/Newman/pytest/RestAssured command,
   request payload source, response assertions, DB SELECT, log keywords, and
   evidence fields to paste into `test-report.md`.
@@ -296,7 +311,7 @@ Before implementation phase can exit:
   proof without consumer path, and changing tests to match an implementation
   without updating SDD docs and getting review.
 - Every implementation prompt must include an "Agent 执行前自检" section before
-  edit permissions. The Worker must fill:
+  edit permissions. The Worker must record runtime preflight facts in `test-report.md`:
   `真实入口已定位 | 字段语义合同已核对 | 写入闭环已核对 |
   禁止兜底边界已确认 | RED 测试已执行 | 允许修改文件 | 禁止修改文件 |
   阻塞项`.
@@ -317,8 +332,8 @@ Before implementation phase can exit:
   file. Keep code/source file paths as plain inline code when line precision is
   more useful, but any referenced `.md` handoff document must be clickable.
 - Each prompt must state allowed files, forbidden files, dependencies, exact API contract, DB fields, tests, and report format.
-- Database-backed prompts must include this table in the prompt and require it
-  to be filled in `test-report.md`:
+- Database-backed prompts link the canonical write/consumer contract and require
+  actual execution facts to be filled in `test-report.md` (not copied into the prompt):
   `表/字段 | 写入方 | 读取/过滤方 | 跨仓/外部消费方 | 真实入口 | 反向状态场景 | 验证证据`.
 - If a prompt touches sibling repos, SDKs, public jars, protocol DTOs, enums,
   validation annotations, serialization field types, or Maven/Gradle dependencies,

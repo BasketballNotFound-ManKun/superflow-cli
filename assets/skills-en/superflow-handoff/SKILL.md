@@ -3,7 +3,26 @@ name: superflow-handoff
 description: Use when SDD/OpenSpec contract docs and Superpowers technical design exist and implementation prompts, batch plans, worktree plans, TDD strategy, reviewer/tester checkpoints, validation plans, or test-report updates are needed.
 ---
 
+Apply [behavior decision continuity](../superflow/references/document-templates.md#behavior-decision-matrix)
+to this phase owner and consumer references; resolve conflicts before handoff rather than
+leaving implementers to guess.
+
+
 # SuperFlow Implement
+
+## Prompt contract representation
+
+Preflight, role/resource identities, startup ports and test outcomes are runtime facts: Prompts
+link frozen policy; implementers record actual values and evidence in existing test-report.md,
+without generating another contract table in every batch.
+
+Generate main/batch Prompts with the [Thin Prompt Contract](../superflow/references/implementation-prompt-template.md#thin-prompt-contract).
+For mandatory semantic sections below, retain the named heading and precise canonical section,
+Decision ID and Case ID links instead of duplicated prose, tables or commands. “Copy/extract” means
+locate and inherit facts, not another source of truth. The main Prompt records shared navigation
+and execution policy; batches list incremental goals, files and acceptance IDs. Applicable checks,
+independent review, real entries and existing gates still execute. Missing links or unresolved
+contract contradictions prevent handoff.
 
 ## Document Delivery Exit
 

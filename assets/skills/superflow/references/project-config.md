@@ -7,7 +7,7 @@ changes in the repo.
 
 ```yaml
 auto_transition: true        # true|false
-context_compression: off     # off|beta
+context_compression: references # references|off|beta
 review_mode: standard        # off|standard|thorough
 ```
 
@@ -29,6 +29,7 @@ Runtime scripts resolve configuration in this order:
 
 - Use `auto_transition: false` when the user wants manual review between SDD
   phases.
+- New changes default to `context_compression: references`: paths, roles and hashes only; read canonical documents for content. Existing explicit `off`/`beta` values are retained.
 - Use `context_compression: beta` for large changes, long sessions, multi-agent
   work, or repeated context compression risk.
 - Use `review_mode: standard` for normal full workflow. Use `thorough` when the

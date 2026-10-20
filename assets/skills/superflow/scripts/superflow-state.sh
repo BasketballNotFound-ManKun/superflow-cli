@@ -185,9 +185,9 @@ cmd_init() {
   esac
 
   mkdir -p "$(dirname "$STATE_FILE")"
-  context_compression="$(sdd_config_value context_compression off SDD_CONTEXT_COMPRESSION)"
+  context_compression="$(sdd_config_value context_compression references SDD_CONTEXT_COMPRESSION)"
   auto_transition="$(sdd_config_value auto_transition true SDD_AUTO_TRANSITION)"
-  validate_config_enum context_compression "$context_compression" "off beta"
+  validate_config_enum context_compression "$context_compression" "references off beta"
   validate_config_enum auto_transition "$auto_transition" "true false"
   if [[ "$workflow" == "hotfix" || "$workflow" == "tweak" ]]; then
     review_mode="off"
