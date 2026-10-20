@@ -29,6 +29,7 @@ import {
   type ProcessIdentity,
 } from "../../platform/process-liveness.js";
 import { managedText } from "./i18n.js";
+import type { ManagedRegistryEntry } from "./types.js";
 import type { Language } from "../../types.js";
 import { stopProcessTree } from "../../platform/process-tree.js";
 import { classifyManagedFailure } from "./failure.js";
@@ -47,6 +48,7 @@ export interface ManagedServiceState {
 export async function runManagedService(
   options: { once?: boolean; pollMilliseconds?: number } = {},
   env: NodeJS.ProcessEnv = process.env,
+  execution: { runTask?: typeof runManagedTask } = {},
 ): Promise<void> {
   const serviceFile = managedServicePath(env);
   const processIdentity = readProcessIdentity(process.pid);
@@ -70,33 +72,113 @@ export async function runManagedService(
         ? { startupToken: env.SUPERFLOW_SERVICE_STARTUP_TOKEN }
         : {}),
     } satisfies ManagedServiceState);
-    do {
-      const registry = loadRegistry(env);
-      const runnable = registry.tasks.find((entry) => isRunnable(entry));
-      if (runnable) {
-        try {
-          await runManagedTask(
-            runnable.projectRoot,
-            runnable.taskId,
-            invoker,
-            env,
-          );
-        } catch (error) {
-          recordServiceFailure(runnable.taskId, error, env);
-          upsertRegistryEntry(
-            {
-              ...runnable,
-              status: "waiting_for_human",
-              updatedAt: new Date().toISOString(),
-              servicePid: process.pid,
-            },
-            env,
-          );
+    const active = new Map<
+      string,
+      { roots: string[]; promise: Promise<void> }
+    >();
+    const reportedUnreadable = new Set<string>();
+    const execute = execution.runTask ?? runManagedTask;
+    const fail = (entry: ManagedRegistryEntry, error: unknown): void => {
+      recordServiceFailure(entry.taskId, error, env);
+      upsertRegistryEntry(
+        {
+          ...entry,
+          status: "waiting_for_human",
+          updatedAt: new Date().toISOString(),
+          servicePid: process.pid,
+        },
+        env,
+      );
+    };
+    try {
+      do {
+        const entries = loadRegistry(env).tasks;
+        const roots = new Map<string, string[]>();
+        const unreadable = new Set<string>();
+        const staleLocators = new Set<string>();
+        for (const entry of entries) {
+          if (releasesWorkspace(entry.status)) continue;
+          try {
+            const task = loadManagedTask(entry.projectRoot, entry.taskId);
+            roots.set(
+              entry.taskId,
+              [entry.projectRoot, ...task.relatedProjectRoots].map(
+                canonicalWorkspace,
+              ),
+            );
+          } catch (error) {
+            unreadable.add(entry.taskId);
+            if (
+              !active.has(entry.taskId) &&
+              isStoppedTaskLocator(entry.status)
+            ) {
+              // Unreadable stopped entries are stale locators, not workspace owners.
+              staleLocators.add(entry.taskId);
+            }
+            roots.set(entry.taskId, [canonicalWorkspace(entry.projectRoot)]);
+            if (!reportedUnreadable.has(entry.taskId)) {
+              if (entry.status !== "running" && isRunnable(entry)) {
+                fail(entry, error);
+                entry.status = "waiting_for_human";
+              } else {
+                recordServiceFailure(entry.taskId, error, env);
+              }
+              reportedUnreadable.add(entry.taskId);
+            }
+          }
         }
-        continue;
-      }
-      if (!options.once) await delay(pollMilliseconds);
-    } while (!options.once);
+        const reserved = entries.filter(
+          (entry) =>
+            !releasesWorkspace(entry.status) &&
+            !staleLocators.has(entry.taskId) &&
+            entry.status !== "queued",
+        );
+        for (const entry of entries) {
+          const taskRoots = roots.get(entry.taskId);
+          if (
+            unreadable.has(entry.taskId) ||
+            !taskRoots ||
+            !isRunnable(entry) ||
+            active.has(entry.taskId)
+          )
+            continue;
+          const blocked =
+            reserved.some(
+              (owner) =>
+                owner.taskId !== entry.taskId &&
+                workspacesOverlap(taskRoots, roots.get(owner.taskId) ?? []),
+            ) ||
+            [...active.values()].some((owner) =>
+              workspacesOverlap(taskRoots, owner.roots),
+            );
+          if (blocked) continue;
+          reserved.push(entry);
+          // Schedule every independent task before awaiting any invocation.
+          const promise = Promise.resolve()
+            .then(() => execute(entry.projectRoot, entry.taskId, invoker, env))
+            .catch((error) => fail(entry, error))
+            .then(() => undefined)
+            .finally(() => {
+              active.delete(entry.taskId);
+            });
+          active.set(entry.taskId, { roots: taskRoots, promise });
+        }
+        if (options.once) {
+          await Promise.allSettled(
+            [...active.values()].map((item) => item.promise),
+          );
+          break;
+        }
+        await Promise.race([
+          delay(pollMilliseconds),
+          ...[...active.values()].map((item) => item.promise),
+        ]);
+      } while (true);
+    } finally {
+      await Promise.allSettled(
+        [...active.values()].map((item) => item.promise),
+      );
+    }
   } finally {
     try {
       const current = readServiceState(env);
@@ -455,4 +537,58 @@ function isHumanDirectedTask(entry: {
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function releasesWorkspace(status: string): boolean {
+  return [
+    "completed",
+    "failed",
+    "cancelled",
+    "local_delivery_ready",
+    "release_ready",
+    "environment_validation_blocked",
+    "awaiting_git_approval",
+  ].includes(status);
+}
+
+function isStoppedTaskLocator(status: string): boolean {
+  return [
+    "queued",
+    "waiting_for_connectivity",
+    "waiting_for_provider_change",
+    "waiting_for_host_review",
+    "waiting_for_human",
+    "paused",
+    "review_exhausted",
+    "budget_exhausted",
+    "deadline_exhausted",
+    "repair_pending",
+  ].includes(status);
+}
+
+function canonicalWorkspace(root: string): string {
+  const resolved = path.resolve(root);
+  try {
+    return realpathSync(resolved);
+  } catch {
+    const parent = path.dirname(resolved);
+    return parent === resolved
+      ? resolved
+      : path.join(canonicalWorkspace(parent), path.basename(resolved));
+  }
+}
+
+function workspacesOverlap(left: string[], right: string[]): boolean {
+  return left.some((a) =>
+    right.some((b) => {
+      const relative = path.relative(a, b);
+      const reverse = path.relative(b, a);
+      const contains = (value: string): boolean =>
+        value === "" ||
+        (value !== ".." &&
+          !value.startsWith(`..${path.sep}`) &&
+          !path.isAbsolute(value));
+      return contains(relative) || contains(reverse);
+    }),
+  );
 }

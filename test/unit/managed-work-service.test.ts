@@ -60,6 +60,171 @@ function startupFixture(broken: boolean) {
 }
 
 describe("managed work service", () => {
+  it("starts independent workspaces together and awaits the whole once batch", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "managed-parallel-"));
+    const env = { ...process.env, SUPERFLOW_HOME: path.join(root, "home") };
+    const started: string[] = [];
+    const releases: Array<() => void> = [];
+    try {
+      for (const name of ["one", "two"]) {
+        const projectRoot = path.join(root, name);
+        fs.mkdirSync(projectRoot);
+        const task = createManagedTaskContract({
+          request: "fixture",
+          projectRoot,
+        });
+        createManagedTaskFiles(task, initManagedRunState(task), env);
+      }
+      let finished = false;
+      const service = runManagedService({ once: true }, env, {
+        runTask: async (_root, taskId) => {
+          started.push(taskId);
+          await new Promise<void>((resolve) => releases.push(resolve));
+          if (taskId === started[0])
+            throw new Error("isolated fixture failure");
+          const registry = loadRegistry(env);
+          registry.tasks.find((entry) => entry.taskId === taskId)!.status =
+            "completed";
+          saveRegistry(registry, env);
+          return undefined as never;
+        },
+      }).then(() => {
+        finished = true;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(started).toHaveLength(2);
+      expect(finished).toBe(false);
+      releases[0]();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(finished).toBe(false);
+      releases[1]();
+      await service;
+      expect(loadRegistry(env).tasks.map((item) => item.status)).toEqual([
+        "waiting_for_human",
+        "completed",
+      ]);
+    } finally {
+      releases.forEach((release) => release());
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["nested", "symlink", "related", "host-review"])(
+    "reserves overlapping workspaces: %s",
+    async (kind) => {
+      const root = fs.mkdtempSync(
+        path.join(os.tmpdir(), "managed-reservation-"),
+      );
+      const env = { ...process.env, SUPERFLOW_HOME: path.join(root, "home") };
+      try {
+        const firstRoot = path.join(root, "workspace");
+        fs.mkdirSync(firstRoot);
+        let secondRoot = path.join(firstRoot, "nested");
+        if (kind === "symlink") {
+          secondRoot = path.join(root, "alias");
+          fs.symlinkSync(firstRoot, secondRoot);
+        } else fs.mkdirSync(secondRoot);
+        if (kind === "related") {
+          secondRoot = path.join(root, "independent");
+          fs.mkdirSync(secondRoot);
+        }
+        for (const projectRoot of [firstRoot, secondRoot]) {
+          const task = createManagedTaskContract({
+            request: "fixture",
+            projectRoot,
+          });
+          if (kind === "related" && projectRoot === firstRoot)
+            task.relatedProjectRoots = [secondRoot];
+          createManagedTaskFiles(task, initManagedRunState(task), env);
+        }
+        if (kind === "host-review") {
+          const registry = loadRegistry(env);
+          registry.tasks[0].status = "waiting_for_host_review";
+          saveRegistry(registry, env);
+        }
+        const started: string[] = [];
+        await runManagedService({ once: true }, env, {
+          runTask: async (_root, taskId) => {
+            started.push(taskId);
+            return undefined as never;
+          },
+        });
+        expect(started).toHaveLength(kind === "host-review" ? 0 : 1);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([
+    "local_delivery_ready",
+    "release_ready",
+    "environment_validation_blocked",
+    "awaiting_git_approval",
+    "missing-stopped",
+    "missing-running",
+    "host-review",
+    "paused",
+  ])(
+    "allows new work only after the previous workspace owner releases: %s",
+    async (status) => {
+      const root = fs.mkdtempSync(
+        path.join(os.tmpdir(), "managed-owner-release-"),
+      );
+      const env = {
+        ...process.env,
+        SUPERFLOW_HOME: path.join(root, "home"),
+        SUPERFLOW_DISABLE_OS_NOTIFICATIONS: "1",
+      };
+      try {
+        for (const name of ["previous", "next"]) {
+          const contract = createManagedTaskContract({
+            request: name,
+            projectRoot: root,
+          });
+          createManagedTaskFiles(contract, initManagedRunState(contract), env);
+        }
+        const registry = loadRegistry(env);
+        registry.tasks[0].status = (
+          status === "missing-stopped"
+            ? "waiting_for_human"
+            : status === "missing-running"
+              ? "running"
+              : status === "host-review"
+                ? "waiting_for_host_review"
+                : status
+        ) as (typeof registry.tasks)[0]["status"];
+        saveRegistry(registry, env);
+        if (status.startsWith("missing-"))
+          fs.rmSync(
+            path.join(root, ".superflow/tasks", registry.tasks[0].taskId),
+            { recursive: true },
+          );
+        const started: string[] = [];
+        await runManagedService({ once: true }, env, {
+          runTask: async (_root, taskId) => {
+            started.push(taskId);
+            return undefined as never;
+          },
+        });
+        expect(started).toEqual(
+          ["missing-running", "host-review", "paused"].includes(status)
+            ? []
+            : [registry.tasks[1].taskId],
+        );
+        if (status === "missing-stopped")
+          expect(
+            fs.readFileSync(
+              path.join(root, "home/managed/service-errors.jsonl"),
+              "utf8",
+            ),
+          ).toContain(registry.tasks[0].taskId);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("releases its service lock when ready-state persistence fails", async () => {
     const root = fs.mkdtempSync(
       path.join(os.tmpdir(), "managed-ready-write-failure-"),
