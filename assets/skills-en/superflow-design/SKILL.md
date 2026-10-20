@@ -19,6 +19,14 @@ Superpowers own source-level HOW without weakening OpenSpec/SDD contracts.
 - If HOW conflicts with WHAT, stop and return to `$superflow-contracts`; do not carry the
   conflict into prompts.
 
+## Execution ownership
+
+Read [Flow Owner](../superflow/references/flow-owner.md). For a new ordinary task,
+select `build_mode: owner` and describe the current Agent's implementation/test
+responsibility plus the required independent review. Reuse frozen execution
+modes and actual isolation; no mandatory peer CLI, team, or worktree for a single
+writer. Independently required test/review evidence is retained in every mode.
+
 ## Preconditions
 
 - When the change modifies a database schema, index, constraint, seed data, or

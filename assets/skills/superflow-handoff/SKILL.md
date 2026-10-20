@@ -114,12 +114,16 @@ Before implementation phase can exit:
   locally executable task to an external category.
 - Use P0 for baseline only: worktree, branch, compile, SQL/entity/mapper/DTO consistency.
 - Keep business prompts small and explicit.
-- Every implementation prompt must begin with the mandatory superpower/team
-  prefix from `../superflow/references/implementation-prompt-template.md`:
-  `使用superpower技能，开启合适的团队，最少包含一名开发和一名测试交叉验证进行需求开发，测试验证闭环交付，更新测试文档和api.md：`
-  It must also state that missing superpower blocks normal development, and must
-  name at least Worker, independent Tester, Reviewer, and Leader responsibilities.
-  Do not generate "single-agent only" prompts for implementation work.
+- Every implementation prompt inherits the selected execution mode from
+  [Flow Owner](../superflow/references/flow-owner.md) and the existing
+  implementation-prompt-template.md. New ordinary work uses `build_mode: owner`:
+  the current Agent may implement/test and coordinates required independent
+  review. Preserve frozen team/subagent modes and independent-Tester obligations;
+  do not require a team or peer CLI merely because implementation was requested.
+  Record actual Worker/Tester/Reviewer/Owner responsibilities without inventing
+  agents or counting self-review as independent. Missing required Superpowers or
+  independent verification remains blocked. After Coding Ready, continue build
+  only within existing implementation authorization; docs-only requests stop.
 - Every implementation prompt must include a "Superpower 技术详设继承" section.
   It must link and summarize `.sdd/state.yaml` `technical_design`
   (`docs/superpowers/specs/*-technical-design.md`) as the source-level HOW

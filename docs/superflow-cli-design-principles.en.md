@@ -23,10 +23,36 @@ or owner choice that changes implementation direction, the Host upgrades it to
 clarification/documents first. Runner keyword matching and Executor improvisation
 must never create a second contract.
 
-The Host owns objectives, clarification, supervision, and review. The Executor
+In managed mode, the Host owns objectives, clarification, supervision, and review. The Executor
 owns coding, startup, testing, and repair. The Runner decides only deterministic
 facts and persists state. Never launch a nested Supervisor CLI or replace Agent
 semantic judgment with Runner string matching.
+
+### Flow Owner for Ordinary Delivery
+
+The current Codex or Claude is the Flow Owner for ordinary authorized work,
+continuously owning implementation, testing, independent-review coordination,
+repair, and delivery. The Owner can edit and run verification. The read-only
+Host restriction applies to managed mode; explicit managed requests retain the
+existing Host/Executor/Runner split.
+
+Reuse the public superflow entry, SDD phases, build_mode, tasks, and test report.
+Ordinary SDD uses `build_mode: owner`; add no parallel Task/Run, persona merger,
+or background service. Preserve existing execution modes and frozen contracts;
+select an unset mode from current authorization and design, never switch silently.
+Quick retains its approved spec instead of requiring managed task state.
+
+Continue dependency-ready tasks and check them off only after their signals pass.
+Progress updates, repairable failures, and context compaction do not end an
+authorized objective. Obtain required independent views through the existing
+reviewer-checklist, verify all feedback, repair within contract, retest, and
+review again. Self-review is not independent review; real acceptance and gates
+must not be weakened. Stop for actual decisions, unavailable permissions, user
+pause, or stalled convergence. Persist recovery points, open findings, valid
+evidence, and resource identities in existing reports. An exited ordinary
+session cannot promise autonomous background continuation. Delivery, environment
+acceptance, archive, and Git/release follow their existing authorizations;
+missing required verification never permits a complete-delivery claim.
 
 ## 2. Sources of Truth and Responsibility Layers
 

@@ -154,6 +154,37 @@ changes if missing/skipped baselines pass, reports and outputs come from differe
 assets are overwritten, or installation touches real global configuration; preserve external failure
 evidence and rerun the same full owner after repair.
 
+## Continuous Ordinary Delivery with Flow Owner
+
+Evidence: a practical run ended after intermediate progress, requested repeated
+continuation for repairable failures, and treated context pressure as delivery
+termination. Source comparison found ordinary routing mixed with managed Host
+read-only restrictions, mandatory teams, and stop-on-verification-failure rules.
+Deterministic baseline: an existing implementation prompt still routed to handoff;
+Owner mode could not enter the existing verification phase. Ownership belongs to
+Agent execution contracts, existing SDD routing, and recovery, not a new scheduler.
+
+Hypothesis: extend superflow/build/verify continuity and `build_mode: owner`,
+retaining contracts, state, independent review, real acceptance, and authorization
+to reduce human relay between stages. Representative cases cover both hosts,
+languages, project/global installations, missing/present prompts, manual control,
+legacy modes, verify-fail return, the complete Coding Ready chain, and Agent
+scenarios for docs-only scope, environment blockers, and context recovery.
+Independent review caught Quick approval invalidation from mutable spec progress;
+progress now lives in the adjacent report. English risk terms retain their original
+meaning. Declare the exact task report in Quick file scope while foreign dirty
+files still block. Real CLI regression also repaired spec read/write resolution
+under the selected project and continuation hints for valid in-progress/done specs.
+A zero-match scale baseline first reproduced a nonzero exit, then became
+a valid zero count; read errors still fail without weakening risk or required gates.
+
+Before/after commands, scenario behavior, an actual synthetic delivery, full
+verification, and package installation results live outside the repository. A
+single sample proves that sample only, not population compliance, background
+continuation, or Windows execution. Roll back if ordinary routing creates managed
+Tasks, docs-only work edits source, modes change silently, missing required evidence
+becomes full delivery, custom assets are damaged, or a parallel state owner appears.
+
 ## Multica mechanism adoption verification (2026-10-12)
 
 Evidence: quota can be obscured by token-refresh/403 messages; failed calls lose usage; unknown cumulative values revive; duplicate retry events pollute sequences; HOME-only isolation misses Windows profiles; version numbers cannot identify startup builds. The preceding Comet baseline passed 855 tests across 104 files.

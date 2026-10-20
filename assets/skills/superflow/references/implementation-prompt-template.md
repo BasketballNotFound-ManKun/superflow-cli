@@ -1,5 +1,14 @@
 # Implementation Prompt 模板
 
+## 执行模式继承
+
+读取 [Flow Owner](flow-owner.md)，继承技术详设和 state 中已选模式。普通新任务
+默认 `owner`：当前 Agent 负责开发与测试执行，按风险及冻结合同协调独立核验；
+team/subagent 模式继续按原角色与隔离要求执行。下文团队角色是责任清单，只有
+合同要求独立 Tester 时才固定独立测试角色；不能把自测写成独立核验。阶段更新后
+继续全部任务、验证、整改和交付，不为保存进度自动提交；文档模式不执行代码。
+
+
 验证方案只继承 tests.md，并先读 [test-guide.md](test-guide.md)。模板中的启动、
 接口、DB 和团队 checklist 按已冻结的适用项执行，不适用项给出源码依据；缺失必测
 环境保持阻塞。当前构建与健康实例一致时复用；新代码/配置必须加载后才可验证。
@@ -9,12 +18,34 @@
 
 ---
 
+## Owner 模式 Prompt 生成合同
+
+本文件的模式段用于生成实际 Prompt，不复制整个文件。
+当已选 `build_mode: owner` 时，按以下结构生成本批实际 Prompt；不要复制后面的
+Team/Subagent 执行剧本。必需合同、适用测试和独立核验义务仍完整继承。
+
+1. **目标与边界**：用户授权、任务 ID、精确文件范围、前置任务、排除项与真实隔离方式。
+2. **必读与源码级 HOW**：链接 handoff、api.md、design.md、tasks.md、tests.md、
+   quality gate、review checklist、technical_design 及适用 release-sql.md。
+3. **状态机执行决策**：记录 `build_mode: owner`、isolation、tdd_mode、review_mode、
+   implementation_prompt；记录当前 Agent 实施/测试与必要独立 Reviewer/Tester 的实际职责。
+4. **合同继承**：按本技能要求带入所有适用的语义、写入闭环、影响面与真实入口合同，
+   以及冻结用例 ID、命令、断言和证据路径；不新增业务方案、不复制原始 handoff hash。
+5. **持续执行**：依赖就绪任务→适用 RED/GREEN 与真实验证→必要独立评审→有效问题
+   整改重测复审→现有 verify 门禁。进度更新后继续；只在真实停止边界返回。
+6. **恢复与交付**：test-report 的 Owner Recovery、资源身份与清理、最终证据及剩余项
+   对账；Git/发布/归档继承已确认授权，无授权时不执行。
+
+## Team/Subagent 模式模板
+
+以下执行剧本仅用于已选 team/subagent 模式；普通 owner 使用上面的生成合同。
+
 ## Copy-Paste 版本
 
 ````
-使用superpower技能，开启合适的团队，最少包含一名开发和一名测试交叉验证进行需求开发，测试验证闭环交付，更新测试文档和api.md：
+使用 Superpowers 技能，按冻结执行模式持续完成开发、测试、必要独立评审与整改，闭环交付并更新测试文档和 api.md：
 
-你是本次开发任务的 Leader Agent，负责指挥一个 Agent Team 完成编码实现。
+你是本次任务的 Flow Owner，按冻结执行模式负责完整交付。owner 模式可以自己开发和测试；team/subagent 模式按既定分工协调。
 
 ## 核心原则（强制执行）
 
@@ -40,10 +71,10 @@ Worker 自测通过 ≠ 完成任务
 3. 编译通过（clean compile 无 ERROR）
 4. 运行实例匹配当前构建/配置、owner 与健康检查通过；需要时重新启动
 5. **RED-GREEN 证据完整**（编码前同一用例失败，编码后同一用例通过）
-6. **独立 Tester 测试通过**（Tester 独立核验全部用例，重跑失效或合同指定路径，客观报告）
+6. **独立核验成立**（按风险取得独立评审；合同指定独立 Tester 时必须落实，重跑失效或合同指定路径）
 7. 数据库状态验证通过（mysql 查询确认）
 8. 日志检查通过（无 ERROR，关键日志出现）
-9. Leader 已独立验证（不信任 Worker/Tester 报告）
+9. Owner 已核实原始证据与独立报告，自评与独立核验分别记录
 10. 涉及数据库的任务已完成版本总 SQL 收口对账（源码/Mapper、开发库、测试库现状+总 SQL）
 11. 涉及跨仓共享表/复制实体/外部集成链路时，已完成全部消费仓的实体/Mapper/SQL 与真实库字段对账
 12. 涉及第三方/设备/支付/客户端/外部集成时，已区分 mock、测试端点和真实入口证据；mock-only 不得标记真实链路完成

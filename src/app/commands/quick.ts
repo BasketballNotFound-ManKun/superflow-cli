@@ -15,6 +15,10 @@ export interface QuickCommandOptions {
 
 export function quickCommand(request: string, options: QuickCommandOptions = {}): void {
   const project = options.project ?? process.cwd();
+  const specPath = options.spec ? path.resolve(project, options.spec) : undefined;
+  const specRelative = specPath
+    ? path.relative(project, specPath).replaceAll("\\", "/")
+    : undefined;
   const baselineCommit = gitHead(project);
   const dirty = changedFiles(project);
   const files = options.path?.length ? options.path : dirty;
@@ -23,7 +27,7 @@ export function quickCommand(request: string, options: QuickCommandOptions = {})
     changedFiles: files,
     testSeam: options.seam,
     dirtyWorktree: dirty.some((file) =>
-      !files.includes(file) && file !== options.spec &&
+      !files.includes(file) && file !== specRelative &&
       !isManagedGitignoreOnly(project, file)),
     activeSddChange: options.activeSdd ?? false,
   });
@@ -34,7 +38,6 @@ export function quickCommand(request: string, options: QuickCommandOptions = {})
     }
   }
   if (result.reasons.length > 0) result.verdict = "STOP";
-  const specPath = options.spec;
   const specValidPath = specPath ? validProjectFile(project, specPath) : false;
   if (specPath && !specValidPath) {
     result.reasons.push(`Quick Spec 不在项目内或不可读取: ${specPath}`);
@@ -69,8 +72,11 @@ export function quickCommand(request: string, options: QuickCommandOptions = {})
     specResult.status = "ready-for-dev";
     result.next = "Quick Spec 已批准；按测试先行实施，并保留 RED/GREEN 证据";
   }
-  if (result.verdict === "QUICK" && specResult?.status === "ready-for-dev") {
-    result.next = "Quick Spec 当前版本有效；按测试先行实施";
+  if (result.verdict === "QUICK" && specResult?.ok &&
+    ["ready-for-dev", "in-progress"].includes(specResult.status ?? "")) {
+    result.next = "Quick Spec 当前版本有效；继续实施、测试、评审整改与交付";
+  } else if (result.verdict === "QUICK" && specResult?.ok && specResult.status === "done") {
+    result.next = "Quick Spec 批准仍有效；核对任务报告中的实际交付与剩余项";
   }
   if (result.verdict === "STOP") {
     result.nextSkill = "superflow-clarify";

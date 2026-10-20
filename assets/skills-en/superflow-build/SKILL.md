@@ -19,6 +19,13 @@ tests. Execute inherited RED/GREEN and required real verification per task; mark
 complete only with evidence. Missing contracts return to superflow-contracts; missing
 environments remain blocked. Plain OpenSpec work follows project verification rules.
 
+## Continuous delivery ownership
+
+For authorized ordinary implementation, read [Flow Owner](../superflow/references/flow-owner.md).
+Follow the selected mode through all tasks, verification, and repair. Progress
+updates are intermediate; the Owner may implement/test, obtaining required
+independent views through the existing checklist without claiming self-review is independent.
+
 **Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
 
 **Steps**
@@ -30,7 +37,7 @@ environments remain blocked. Plain OpenSpec work follows project verification ru
    - Auto-select if only one active change exists
    - If ambiguous, run `openspec list --json` to get available changes and use the **AskUserQuestion tool** to let the user select
 
-   Always announce: "Using change: <name>" and how to override (e.g., `/opsx:apply <other>`).
+   Always announce: "Using change: <name>" and how to override (e.g., `$superflow <other>`) .
 
 **Superflow pre-coding gate (before reading apply readiness as permission)**
 
@@ -70,7 +77,7 @@ environments remain blocked. Plain OpenSpec work follows project verification ru
 
    **Handle states:**
    - If `state: "blocked"` (missing artifacts): show message, suggest using openspec-continue-change
-   - If `state: "all_done"`: congratulate, suggest archive
+   - If `state: "all_done"`: in Superflow continue to verification and delivery reconciliation; plain OpenSpec follows project closeout.
    - Otherwise: proceed to implementation
 
 4. **Read context files**
@@ -94,13 +101,13 @@ environments remain blocked. Plain OpenSpec work follows project verification ru
    - Show which task is being worked on
    - Make the code changes required
    - Keep changes minimal and focused
-   - Mark task complete in the tasks file: `- [ ]` → `- [x]`
+   - Run the task's frozen signals; only after they pass, mark the task `- [ ]` → `- [x]`. Select only tasks whose actual predecessors are complete.
    - Continue to next task
 
    **Pause if:**
    - Task is unclear → ask for clarification
    - Implementation reveals a design issue → suggest updating artifacts
-   - Error or blocker encountered → report and wait for guidance
+   - Repairable error within authorization → diagnose, repair, and rerun affected signals; actual decision/permission/environment blocker → persist evidence and stop dependent work.
    - User interrupts
 
 7. **On completion or pause, show status**
@@ -108,7 +115,7 @@ environments remain blocked. Plain OpenSpec work follows project verification ru
    Display:
    - Tasks completed this session
    - Overall progress: "N/M tasks complete"
-   - If all done: suggest archive
+   - If all implementation tasks are done: run required signals and continue `$superflow-verify`; do not end authorized delivery at checkbox completion.
    - If paused: explain why and wait for guidance
 
 **Output During Implementation**
@@ -139,7 +146,7 @@ Working on task 4/7: <task description>
 - [x] Task 2
 ...
 
-All tasks complete! Ready to archive this change.
+Implementation signals complete. Continuing verification, review, repair, and delivery reconciliation.
 ```
 
 **Output On Pause (Issue Encountered)**
@@ -166,10 +173,10 @@ What would you like to do?
 - Keep going through tasks until done or blocked
 - Always read context files before starting (from the apply instructions output)
 - If task is ambiguous, pause and ask before implementing
-- If implementation reveals issues, pause and suggest artifact updates
+- If implementation reveals a confirmed design/contract gap, return to its document owner; repair ordinary defects within authorization.
 - Keep code changes minimal and scoped to each task
 - Update task checkbox immediately after completing each task
-- Pause on errors, blockers, or unclear requirements - don't guess
+- Diagnose ordinary errors within authorization; pause only for actual decisions, unavailable prerequisites, user pause, or the existing convergence limit.
 - Use contextFiles from CLI output, don't assume specific file names
 
 **Fluid Workflow Integration**

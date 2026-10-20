@@ -1,6 +1,6 @@
 ---
 name: superflow
-description: Superflow user entry — analyze requirements, continue work, implement, verify, or archive. Select the existing workflow from the user goal.
+description: Superflow user entry — the current Agent owns ordinary implementation, testing, review, repair, and delivery; also supports requirement documents and explicit dual-Agent management.
 ---
 
 ## Document Delivery Exit
@@ -47,6 +47,21 @@ the unified evaluation framework.
 This is the main router and stateful workflow orchestrator for SuperBridge Flow.
 
 ## Role ownership and mutual exclusions
+
+### Ordinary work: Flow Owner
+
+For authorized ordinary implementation, repair, or complete delivery, read
+[Flow Owner](references/flow-owner.md). The current Agent continuously owns
+execution and delivery, may implement/test/clean up its resources, and obtains
+required independent views using the existing Reviewer checklist. New ordinary
+SDD uses `build_mode: owner`; Quick reuses its approved spec without managed
+Task/Run state. Preserve frozen modes and discussion/docs/review-only scope.
+Continue after progress updates; repair, retest, and review valid findings within
+contract. Stop dependent work only for real decisions, unavailable permissions,
+user pause, or existing convergence limits. Explicit managed work follows the
+managed protocol below.
+
+### Managed role separation (managed Task/Run only)
 
 | Role | Sole owner | May do | Must not do |
 |---|---|---|---|
@@ -184,8 +199,9 @@ hotfix:
 ## Routing
 
 - One clear, low-blast-radius code change with an existing test seam: use
-  superflow-quick-dev before editing, then reuse the existing quick managed
-  profile after Quick Spec approval. API, DB, security, transaction,
+  superflow-quick-dev before editing, then use the current Flow Owner after
+  Quick Spec approval. Use the existing quick managed profile only for an
+  explicitly managed request. API, DB, security, transaction,
   concurrency, payment, cross-module, active-SDD, or ownership uncertainty
   routes to superflow-clarify instead; do not add a second managed state machine.
 - When the user explicitly asks for rigorous questioning, or a bounded feature

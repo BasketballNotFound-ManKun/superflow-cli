@@ -26,6 +26,20 @@ chooses that workflow.
 
 ## Quick Spec
 
+Before first approval, create test-report.md beside the spec and declare its
+exact path in the frozen file scope. Subsequent admission/continuation commands
+pass the frozen source/test files and this exact task report via `--path`.
+Do not absorb the entire dirty tree or ignore unrelated files/reports. Keep the
+approved spec body unchanged.
+
+After approval, the current [Flow Owner](../superflow/references/flow-owner.md)
+continuously implements, tests, obtains risk-appropriate independent review,
+repairs, and delivers. Keep step progress/evidence/recovery in test-report.md beside the spec without
+managed Task/Run state. Preserve approved spec content, including checkboxes;
+change only its allowed status. Mark verified steps in the report and repair
+ordinary failures within scope;
+a review-only request does not authorize edits.
+
 Write and show the current disk version at
 `.sdd/tasks/<YYYY-MM-DD>-<slug>/spec.md` with Intent / Non-goals, current and
 target behavior, confirmed test seam, applicable signals/commands/assertions/evidence paths from
@@ -40,7 +54,7 @@ Criteria change, return to `draft` and obtain approval again. Read the [test gui
 signals, commands, assertions, and evidence paths are already frozen in the approved
 Quick Spec (repair omissions and reapprove before edits), then
 run TDD RED/GREEN and close with `superflow review-coverage`
-and `superflow eval` evidence.
+and the existing report evidence format. Use `superflow eval` only for an existing managed Run.
 
 Quick work creates no OpenSpec checkpoint and never commits, pushes, or releases.
 When scope expands, keep the spec as a lead and switch to formal SDD.

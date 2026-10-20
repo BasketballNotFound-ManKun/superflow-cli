@@ -1,6 +1,6 @@
 ---
 name: superflow
-description: Superflow 用户总入口：分析需求、继续任务、实施、验证或归档。根据用户目标选择现有流程，无需用户判断阶段和任务规模。
+description: Superflow 用户总入口：日常任务由当前 Agent 持续负责实施、测试、评审整改与交付；也支持需求文档和显式双 Agent 托管。用户无需手动分流。
 ---
 
 ## Document Delivery Exit
@@ -36,7 +36,17 @@ and stop before coding; readiness itself does not authorize implementation.
 
 This is the lightweight SDD router. Do not load the whole SDD process when a smaller phase skill is enough.
 
-## 角色 owner 与互斥边界
+## 日常任务：Flow Owner
+
+用户授权普通任务实施、修复或闭环交付时，读取
+[Flow Owner](references/flow-owner.md)。当前 Agent 持续负责执行和交付，可以亲自
+编码、测试与清理自己启动的资源，按现有 Reviewer 清单取得必要独立视角。
+新普通 SDD 使用 `build_mode: owner`；Quick 复用已批准 spec，不创建托管 Task/Run。
+已冻结执行模式不静默切换；只讨论、只写文档和只评审保持原范围。
+阶段汇报后继续，合同内有效 finding 自动整改重测复审；真实决策、权限阻塞、
+用户暂停或既有熔断才停止依赖工作。明确要求托管时执行下节托管协议。
+
+## 托管角色 owner 与互斥边界（仅托管 Task/Run）
 
 | 角色 | 唯一 owner | 可以做 | 不可以做 |
 |---|---|---|---|
@@ -132,8 +142,9 @@ JSON，再用 `--resume-task <task-id> --submit-host-review <json>` 恢复。监
   an existing test seam. Run its narrow gate before editing; API, DB, security,
   transactions, concurrency, payments, cross-module work, a related active SDD
   change, or uncertain ownership goes to `$superflow-clarify` instead. Reuse
-  the current quick managed profile after the Quick Spec is approved; do not
-  create a second managed-task state machine.
+  the Flow Owner loop after the Quick Spec is approved; use the existing quick
+  managed profile only for an explicitly managed request. Do not create a
+  second managed-task state machine.
 - Use `$superflow-explore` when the user is still thinking through a requirement,
   wants to compare options, or needs codebase investigation before a change.
 - Route to `$superflow-clarify` in embedded deep-clarification mode when the

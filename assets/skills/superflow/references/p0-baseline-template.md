@@ -1,5 +1,14 @@
 # P0 基线任务模板
 
+## 执行模式继承
+
+读取 [Flow Owner](flow-owner.md)，继承技术详设和 state 中已选模式。普通新任务
+默认 `owner`：当前 Agent 负责开发与测试执行，按风险及冻结合同协调独立核验；
+team/subagent 模式继续按原角色与隔离要求执行。下文团队角色是责任清单，只有
+合同要求独立 Tester 时才固定独立测试角色；不能把自测写成独立核验。阶段更新后
+继续全部任务、验证、整改和交付，不为保存进度自动提交；文档模式不执行代码。
+
+
 ## 为什么需要 P0
 
 复杂跨仓库需求中，实现 agent 经常在以下基线问题上出错：
@@ -13,18 +22,40 @@ P0 的目标：**在写任何业务代码之前，先把地基打牢**。
 
 ---
 
+## Owner 模式 Prompt 生成合同
+
+本文件的模式段用于生成实际 Prompt，不复制整个文件。
+当已选 `build_mode: owner` 时，按以下结构生成本批实际 Prompt；不要复制后面的
+Team/Subagent 执行剧本。必需合同、适用测试和独立核验义务仍完整继承。
+
+1. **目标与边界**：用户授权、任务 ID、精确文件范围、前置任务、排除项与真实隔离方式。
+2. **必读与源码级 HOW**：链接 handoff、api.md、design.md、tasks.md、tests.md、
+   quality gate、review checklist、technical_design 及适用 release-sql.md。
+3. **状态机执行决策**：记录 `build_mode: owner`、isolation、tdd_mode、review_mode、
+   implementation_prompt；记录当前 Agent 实施/测试与必要独立 Reviewer/Tester 的实际职责。
+4. **合同继承**：按本技能要求带入所有适用的语义、写入闭环、影响面与真实入口合同，
+   以及冻结用例 ID、命令、断言和证据路径；不新增业务方案、不复制原始 handoff hash。
+5. **持续执行**：依赖就绪任务→适用 RED/GREEN 与真实验证→必要独立评审→有效问题
+   整改重测复审→现有 verify 门禁。进度更新后继续；只在真实停止边界返回。
+6. **恢复与交付**：test-report 的 Owner Recovery、资源身份与清理、最终证据及剩余项
+   对账；Git/发布/归档继承已确认授权，无授权时不执行。
+
+## Team/Subagent 模式模板
+
+以下执行剧本仅用于已选 team/subagent 模式；普通 owner 使用上面的生成合同。
+
 ## P0 Prompt 模板
 
 ```
-使用superpower技能，开启合适的团队，最少包含一名开发和一名测试交叉验证进行需求开发，测试验证闭环交付，更新测试文档和api.md：
+使用 Superpowers 技能，按冻结执行模式持续完成开发、测试、必要独立评审与整改，闭环交付并更新测试文档和 api.md：
 
 # P0 Prompt：基线核查与开发准备
 
 你是 P0 基线 Agent，负责为后续业务开发建立干净、一致、可编译的基线。
 
 ## 团队要求
-- 至少 1 名开发 Worker
-- 至少 1 名独立 Tester
+- owner 模式：当前 Agent 负责开发与测试，按风险及合同取得独立视角
+- team/subagent 模式：按冻结角色分配 Worker 与独立 Tester
 - P0 完成后由 Tester 独立复核基线和编译结果
 
 ## 本批目标
@@ -32,7 +63,7 @@ P0 的目标：**在写任何业务代码之前，先把地基打牢**。
 
 ## 并行开发要求（Worktree 隔离）
 
-本任务必须使用独立 git worktree 开分支开发，避免多个 agent 在同一工作树并行修改互相覆盖。
+按冻结 isolation 执行；单写入者可使用专用 branch，多个写入者并行时必须隔离工作区。以下为已选 worktree 模式的示例：
 
 ```bash
 git status --short
@@ -47,7 +78,7 @@ git worktree add ../{project}-p0-worktree feature/{change-id}-p0-baseline
 cd ../{project}-p0-worktree
 ```
 
-所有基线核查、文档更新和提交都必须在该 worktree 内完成。不要在主工作树直接开发，不要回滚或删除其他 agent 的改动。完成后在报告中写明 worktree 路径、分支名和提交号。
+选择 worktree 时，所有基线核查、文档更新及已授权提交均在该 worktree 内完成。不要在主工作树直接开发，不要回滚或删除其他 agent 的改动。完成后在报告中写明 worktree 路径、分支名和提交号。
 
 ## 允许修改的仓库
 {repository-name}

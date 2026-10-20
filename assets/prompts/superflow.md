@@ -5,6 +5,12 @@ argument-hint: requirement or change description
 
 Use the `superflow` skill for this request.
 
+For ordinary authorized implementation, the current Agent is the Flow Owner:
+read references/flow-owner.md within the installed superflow skill and continue
+implementation, tests, independent review as required, repair, and delivery.
+Use managed work only when explicitly requested; preserve existing execution
+modes, documentation/review-only boundaries, and operation authorizations.
+
 Route the work through the correct SuperBridge Flow phase. OpenSpec owns WHAT
 and contracts; Superpowers owns source-level HOW. Preserve handoff state and run
 the required SuperBridge Flow guards before phase transitions.

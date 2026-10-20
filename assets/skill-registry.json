@@ -5,13 +5,14 @@
       "name": "superflow",
       "owner": "pipeline",
       "triggers": [
-        "Superflow user entry"
+        "Superflow user entry",
+        "ordinary task closed-loop delivery"
       ],
       "excludes": [
         "unrelated general questions"
       ],
       "outputs": [
-        "state.yaml handoff"
+        "state.yaml handoff delivery summary"
       ],
       "neighbors": [
         "superflow-clarify",
@@ -33,9 +34,13 @@
         "test plan design or signal selection; inherit frozen project/Superflow contracts"
       ],
       "outputs": [
-        "tasks.md progress"
+        "tasks.md progress and verification handoff"
       ],
-      "neighbors": [],
+      "neighbors": [
+        "superflow-verify",
+        "superflow-handoff",
+        "superflow-contracts"
+      ],
       "visibility": "internal"
     },
     {
@@ -242,7 +247,8 @@
         "verification report"
       ],
       "neighbors": [
-        "superflow-handoff",
+        "superflow-build",
+        "superflow-contracts",
         "superflow-archive"
       ],
       "visibility": "internal"

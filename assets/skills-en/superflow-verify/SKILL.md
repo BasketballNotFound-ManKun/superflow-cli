@@ -77,10 +77,10 @@ callers, error behavior, side effects, and reason for existing. If that reason
 is unclear, leave it in place. Simplification is optional; clean code needs no
 ceremonial edit.
 
-Apply one small simplification at a time. Run the same tests and build signals
+The implementation owner applies one small simplification at a time; the reviewer stays read-only. Run the same tests and build signals
 without changing their assertions; if behavior, errors, or side effects change,
-revert that simplification. Keep simplification in a separate commit from the
-feature, and stop if it reaches files outside the original change. This is a
+revert that simplification. Keep simplification separately reviewable from the
+feature; commit only when authorized, and stop if it reaches files outside the original change. This is a
 readability pass, not a second code review or a license for unrelated cleanup.
 
 ## Entry Check (SDD only)
@@ -145,22 +145,27 @@ ask the user to install or enable it. Do not replace it with ordinary prose.
 
 ## Failure Decision
 
-When verification fails, stop at a decision point. Present:
+When verification finds a defect, first verify the finding against current
+source, contracts, and raw evidence. Read [Flow Owner](../superflow/references/flow-owner.md).
+For an ordinary task with implementation/repair authorization, return all valid
+findings to its implementation owner and continue repair automatically within the
+frozen contract. The review step itself remains read-only; do not restart an
+unrelated environment or ask whether to continue for an ordinary code defect.
+A review-only request returns findings without authorizing edits.
 
-- failed check and evidence path;
-- whether failure is CRITICAL, IMPORTANT, WARNING, or SUGGESTION;
-- recommended fix path;
-- risk if the user accepts deviation.
-
-CRITICAL or IMPORTANT failures cannot be accepted silently. If the user chooses
-to fix, run:
+For implementation drift, run:
 
 ```bash
 ~/.codex/skills/superflow/scripts/superflow-state.sh transition <change-dir> verify-fail
 ```
 
-Then return to `$superflow-handoff` or `$superflow-contracts` depending on whether the failure
-is implementation drift or design/spec drift.
+Then return to `$superflow-build` for repair, affected verification, and review
+again. Design/spec drift returns to `$superflow-contracts` and refreshed handoff,
+review, and Coding Ready; changed confirmed intent requires a user decision.
+Managed tasks retain their Host/Executor/Runner protocol. Real decision,
+permission, environment, or non-convergence blockers record evidence, attempted
+repairs, severity, and the concrete assistance needed. Never accept CRITICAL or
+IMPORTANT deviations without authorization.
 
 After three consecutive verify-fail cycles, do not auto-continue fixing. Ask
 the user whether to continue fixing or accept the remaining deviations with
@@ -211,8 +216,10 @@ This advances to `phase: archive`, sets `verify_result: pass`, and records
 
 ## Archive Boundary
 
-Passing verification does not authorize automatic archive. Enter `$superflow-archive`
-and wait for explicit user confirmation.
+Passing verification does not itself authorize archive. If archive was already
+explicitly authorized, continue `$superflow-archive` under that authorization;
+otherwise report validated delivery and pending archive without blocking delivery
+or repeatedly asking for continuation. Git and release retain their own authorization.
 
 
 Per-case PASS requires retained local execution receipts. Freeze service/entry, source write chains and before/after persistence assertions using pipeline/references/document-review-coverage.md and execution-receipt.v1. Keep legacy evidence PARTIAL. Independent review checks the exact Mapper statement and raw output; full delivery runs the current installation's lint --require-complete. Hashes do not prove authenticity or business sufficiency.

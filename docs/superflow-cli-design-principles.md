@@ -17,9 +17,27 @@ Superflow 不是新的通用 Agent，也不替代 Codex 或 Claude。它提供�
 实现方向的 API、数据、并发、跨仓或 owner 决策，Host 必须先升级到澄清/文档流程，不能
 让 Runner 靠关键词猜方案，也不能让 Executor 临场补第二套合同。
 
-Host 是任务目标、澄清、监督和评审的 owner；Executor 是编码、启动、测试和整改的
+托管模式中，Host 是任务目标、澄清、监督和评审的 owner；Executor 是编码、启动、测试和整改的
 owner；Runner 只裁决确定性事实并持久化状态。不得启动嵌套 Supervisor CLI，也不得让
 Runner 用字符串规则替代 Agent 的语义判断。
+
+### 日常交付的 Flow Owner
+
+普通已授权任务默认由当前 Codex 或 Claude 担任 Flow Owner，连续负责实施、测试、
+独立评审协调、整改和交付。Owner 可以编码与运行验证；托管 Host 的只读限制只在
+托管模式生效。明确要求托管时仍使用原 Host/Executor/Runner 分工。
+
+复用 superflow 唯一入口、既有 SDD phase、build_mode、任务与测试报告；普通 SDD
+使用 `build_mode: owner`，不创建第二套 Task/Run、persona 合并器或后台服务。
+已有执行模式和冻结合同必须保持；缺失模式时由当前授权与设计确定，不能静默切换。
+Quick 继续以已批准 spec 为事实源，不为普通闭环任务强制创建托管状态。
+
+Owner 从已满足依赖的任务继续，信号成立才勾选；阶段汇报、可修复测试失败和上下文
+压缩不终止已授权目标。按既有 reviewer-checklist 取得必要独立视角，核实全部反馈后
+在合同内整改、重测和复审。不能把自评称为独立评审，不能降低真实验收或门禁。
+真实决策、不可获得权限、用户暂停和无进展熔断才需要中断；复用报告保留恢复点、
+未决 finding、有效证据与资源身份。普通会话退出后不能承诺后台自动继续。
+交付、环境验收、归档及 Git/发布分别遵循已有授权；未通过必测项不能宣称完整交付。
 
 ## 2. 事实源与职责分层
 

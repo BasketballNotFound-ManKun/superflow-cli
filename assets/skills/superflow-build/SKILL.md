@@ -18,6 +18,12 @@ Implement tasks from an OpenSpec change.
 逐任务按既有用例执行 RED/GREEN 与必要真实验证，证据成立才勾选完成；缺合同回
 superflow-contracts，缺环境记录阻塞。普通 OpenSpec 使用项目自己的验证规则。
 
+## 持续交付责任
+
+普通已授权实施必须先读取 [Flow Owner](../superflow/references/flow-owner.md)。
+按所选执行模式持续覆盖全部任务、验证和整改；阶段进度用过程消息汇报后继续。
+当前 Owner 可编码和测试，独立评审按现有清单执行，不能用自评冒充。
+
 **Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
 
 **Steps**
@@ -29,7 +35,7 @@ superflow-contracts，缺环境记录阻塞。普通 OpenSpec 使用项目自己
    - Auto-select if only one active change exists
    - If ambiguous, run `openspec list --json` to get available changes and use the **AskUserQuestion tool** to let the user select
 
-   Always announce: "Using change: <name>" and how to override (e.g., `/opsx:apply <other>`).
+   Always announce: "Using change: <name>" and how to override (e.g., `$superflow <other>`) .
 
 **Superflow pre-coding gate (before reading apply readiness as permission)**
 
@@ -69,7 +75,7 @@ superflow-contracts，缺环境记录阻塞。普通 OpenSpec 使用项目自己
 
    **Handle states:**
    - If `state: "blocked"` (missing artifacts): show message, suggest using openspec-continue-change
-   - If `state: "all_done"`: congratulate, suggest archive
+   - If `state: "all_done"`: in Superflow continue to verification and delivery reconciliation; plain OpenSpec follows project closeout.
    - Otherwise: proceed to implementation
 
 4. **Read context files**
@@ -93,13 +99,13 @@ superflow-contracts，缺环境记录阻塞。普通 OpenSpec 使用项目自己
    - Show which task is being worked on
    - Make the code changes required
    - Keep changes minimal and focused
-   - Mark task complete in the tasks file: `- [ ]` → `- [x]`
+   - Run the task's frozen signals; only after they pass, mark the task `- [ ]` → `- [x]`. Select only tasks whose actual predecessors are complete.
    - Continue to next task
 
    **Pause if:**
    - Task is unclear → ask for clarification
    - Implementation reveals a design issue → suggest updating artifacts
-   - Error or blocker encountered → report and wait for guidance
+   - Repairable error within authorization → diagnose, repair, and rerun affected signals; actual decision/permission/environment blocker → persist evidence and stop dependent work.
    - User interrupts
 
 7. **On completion or pause, show status**
@@ -107,7 +113,7 @@ superflow-contracts，缺环境记录阻塞。普通 OpenSpec 使用项目自己
    Display:
    - Tasks completed this session
    - Overall progress: "N/M tasks complete"
-   - If all done: suggest archive
+   - If all implementation tasks are done: run required signals and continue `$superflow-verify`; do not end authorized delivery at checkbox completion.
    - If paused: explain why and wait for guidance
 
 **Output During Implementation**
@@ -138,7 +144,7 @@ Working on task 4/7: <task description>
 - [x] Task 2
 ...
 
-All tasks complete! Ready to archive this change.
+Implementation signals complete. Continuing verification, review, repair, and delivery reconciliation.
 ```
 
 **Output On Pause (Issue Encountered)**
@@ -165,10 +171,10 @@ What would you like to do?
 - Keep going through tasks until done or blocked
 - Always read context files before starting (from the apply instructions output)
 - If task is ambiguous, pause and ask before implementing
-- If implementation reveals issues, pause and suggest artifact updates
+- If implementation reveals a confirmed design/contract gap, return to its document owner; repair ordinary defects within authorization.
 - Keep code changes minimal and scoped to each task
 - Update task checkbox immediately after completing each task
-- Pause on errors, blockers, or unclear requirements - don't guess
+- Diagnose ordinary errors within authorization; pause only for actual decisions, unavailable prerequisites, user pause, or the existing convergence limit.
 - Use contextFiles from CLI output, don't assume specific file names
 
 **Fluid Workflow Integration**

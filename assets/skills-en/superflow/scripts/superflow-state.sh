@@ -295,7 +295,7 @@ require_implement_decisions() {
   case "$isolation" in branch|worktree|null) ;; *) die "invalid isolation: $isolation" ;; esac
   [[ "$isolation" != "null" ]] || die "isolation must be branch or worktree before verify"
 
-  case "$build_mode" in subagent-driven-development|executing-plans|team-prompt|direct|null) ;; *) die "invalid build_mode: $build_mode" ;; esac
+  case "$build_mode" in owner|subagent-driven-development|executing-plans|team-prompt|direct|null) ;; *) die "invalid build_mode: $build_mode" ;; esac
   [[ "$build_mode" != "null" ]] || die "build_mode must be selected before verify"
 
   if [[ "$build_mode" == "subagent-driven-development" && "$subagent_dispatch" != "confirmed" ]]; then
@@ -373,7 +373,7 @@ cmd_status() {
 
 cmd_next() {
   [[ -f "$STATE_FILE" ]] || die "state not found: $STATE_FILE"
-  local phase workflow auto archived skill
+  local phase workflow auto archived skill prompt
   phase="$(field_value phase 2>/dev/null || printf 'docs')"
   workflow="$(field_value workflow 2>/dev/null || printf 'full')"
   auto="$(field_value auto_transition 2>/dev/null || printf 'true')"
@@ -388,7 +388,16 @@ cmd_next() {
   case "$phase" in
     docs) skill="superflow-contracts" ;;
     design) skill="superflow-design" ;;
-    implement) skill="superflow-handoff" ;;
+    implement)
+      prompt="$(field_value implementation_prompt 2>/dev/null || printf 'null')"
+      skill="superflow-handoff"
+      if [[ "$prompt" != "null" && -n "$prompt" ]]; then
+        if [[ "$prompt" == /* && -f "$prompt" ]] ||
+           [[ "$prompt" != /* && -f "$CHANGE_DIR/$prompt" ]]; then
+          skill="superflow-build"
+        fi
+      fi
+      ;;
     verify) skill="superflow-verify" ;;
     archive) skill="superflow-archive" ;;
     *) skill="superflow" ;;
@@ -461,6 +470,8 @@ cmd_recover() {
         else
           printf 'Recovery action: plan-ready pause is corrupt because plan is missing. Return to superflow-handoff to repair or regenerate the plan before coding.\n'
         fi
+      elif [[ "$build_mode" == "owner" ]]; then
+        printf 'Recovery action: reload references/flow-owner.md, the frozen handoff/prompt and test-report recovery checkpoint; verify contracts, reconcile unfinished tasks/findings and owned resources, then continue build/test/review/repair without another continuation request.\n'
       elif [[ "$build_mode" == "subagent-driven-development" ]]; then
         printf 'Recovery action: act as coordinator only; reload Superpowers subagent-driven-development, read .sdd/subagent-progress.md, and resume the exact checkpoint without coding in the main session.\n'
       else
@@ -483,18 +494,30 @@ cmd_recover() {
   esac
 }
 
+count_markdown_matches() (
+  # No match is a valid count; unreadable input remains a command failure.
+  shopt -s nullglob
+  local files=("$CHANGE_DIR"/*.md "$CHANGE_DIR"/*/*.md)
+  if [[ "${#files[@]}" -eq 0 ]]; then
+    printf '0\n'
+    return
+  fi
+  { grep -Eih -- "$1" "${files[@]}" || [[ "$?" -eq 1 ]]; } |
+    wc -l | tr -d ' '
+)
+
 cmd_scale() {
   [[ -f "$STATE_FILE" ]] || cmd_init init "$CHANGE_DIR" docs >/dev/null
   local task_count capability_count changed_files risk_hits mode
 
-  task_count="$(grep -RE '^- \[[ xX]\]' "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null | wc -l | tr -d ' ')"
+  task_count="$(count_markdown_matches '^- \[[ xX]\]')"
   capability_count="$(find "$CHANGE_DIR" -path '*/specs/*/spec.md' -type f 2>/dev/null | wc -l | tr -d ' ')"
   changed_files=0
   if git -C "$CHANGE_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     changed_files="$(git -C "$CHANGE_DIR" diff --name-only HEAD 2>/dev/null | wc -l | tr -d ' ')"
   fi
 
-  risk_hits="$(grep -REi 'api|api|curl|SQL|database|Mapper|XML|cross-repo|status field|enum|real entry|payment|refund|MQ|scheduled job|third party|SDK' "$CHANGE_DIR"/*.md "$CHANGE_DIR"/**/*.md 2>/dev/null | wc -l | tr -d ' ')"
+  risk_hits="$(count_markdown_matches 'api|api|curl|SQL|database|Mapper|XML|cross-repo|status field|enum|real entry|payment|refund|MQ|scheduled job|third party|SDK')"
 
   mode="light"
   if [[ "$task_count" -gt 3 || "$capability_count" -gt 1 || "$changed_files" -gt 4 || "$risk_hits" -gt 0 ]]; then

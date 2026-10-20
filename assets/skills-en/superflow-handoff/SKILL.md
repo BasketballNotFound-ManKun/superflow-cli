@@ -66,6 +66,14 @@ If docs changed, run:
 
 ## Prompt Contract
 
+Inherit the selected execution mode through [Flow Owner](../superflow/references/flow-owner.md).
+New ordinary work uses `build_mode: owner`: the current Agent implements/tests
+and coordinates required independent views. Preserve frozen team/subagent modes
+and independent-Tester obligations. Do not require a team or peer CLI for every
+implementation request or count self-review as independent. Missing required
+Superpowers or independent verification remains blocked. After Coding Ready,
+continue build within existing implementation authorization; docs-only stops.
+
 Every implementation prompt must include these sections:
 
 - Required reading: handoff, API contract, design, tests, quality gate,

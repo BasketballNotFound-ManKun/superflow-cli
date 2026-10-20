@@ -1,4 +1,5 @@
 <p align="center">
+
   <img src="./assets/brand/superflow-banner.svg" alt="SuperBridge Flow banner">
 </p>
 
@@ -31,11 +32,16 @@ Superflow（SuperBridge Flow）把需求、源码实现、测试和独立评审�
 **日常只需记住一个入口：Claude Code 用 `/superflow`，Codex 用 `$superflow`。**
 阶段技能由总入口按需选择，你不用先学习 OpenSpec、SDD 或内部技能名称。
 
+普通任务默认由当前 Claude／Codex 担任 **Flow Owner**，在已授权范围内连续推进
+编码、测试、必要的独立评审、整改与交付。只写文档或只评审的请求保持原范围；
+涉及新决策、缺失权限或必需环境时会说明阻塞。需要独立后台执行时明确要求“双 Agent 托管”。
+普通会话退出后通过保存的任务、状态和报告续接，不承诺后台自动运行。
+
 ## 快速开始
 
 准备好 **Node.js 20+、Git**，以及已经安装并登录的 Claude Code 或 Codex。
 Hook 脚本需要 Bash 和 Python3；Windows 用户需准备 Git Bash 或等价 shell。
-需求梳理和文档工作可以从一个工具开始；**双 Agent 托管开发需要两个 CLI 都可用并完成登录**。
+普通交付、需求梳理和文档工作只需一个工具；**双 Agent 托管开发需要两个 CLI 都可用并完成登录**。
 Superflow 使用你已有的模型账号与权限，对应模型用量按各平台计费。
 
 ### 安装公共 npm 包

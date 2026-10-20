@@ -223,6 +223,11 @@ already-rounded money.
 
 ## Execution Architecture
 
+- Execution mode: `owner` for new ordinary work; preserve an explicitly selected
+  team/subagent or managed mode. See installed flow-owner.md.
+- Current Agent implementation/test responsibility and required independent views:
+- Existing authorization, stop boundary, and recovery in test-report/spec:
+
 - Worker boundaries:
 - Tester boundaries:
 - Reviewer boundaries:

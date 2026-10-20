@@ -1,4 +1,4 @@
 interface:
   display_name: "Superflow · 总入口"
-  short_description: "描述目标即可，由 Superflow 选择阶段并推进需求、开发、验证或归档"
+  short_description: "描述目标，由当前 Flow Owner 持续推进开发、测试、评审整改与交付"
   default_prompt: "使用 $superflow 帮我完成这个目标。"

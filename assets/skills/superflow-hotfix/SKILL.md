@@ -31,14 +31,14 @@ If any condition fails, set `workflow: full` and return to full SDD docs.
    `tasks.md`, `tests.md`, `sdd-quality-gate.md`, `test-report.md`, and
    prompt.
 3. Generate handoff and run docs guard.
-4. Set implementation decisions:
+4. For a new hotfix with unset decisions, read [Flow Owner](../superflow/references/flow-owner.md) and set the following. Preserve decisions already frozen:
    ```bash
-   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> build_mode team-prompt
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> build_mode owner
    ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> isolation worktree
-   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> tdd_mode direct
-   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> review_mode off
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> tdd_mode tdd
+   ~/.codex/skills/superflow/scripts/superflow-state.sh set <change-dir> review_mode standard
    ```
-5. Run implement and verify guards. If `scale` reports `full`, upgrade to full.
+5. Continue `$superflow-build` and `$superflow-verify` through repair and delivery. Run implement and verify guards. If `scale` reports `full`, upgrade to full.
 
 ## Upgrade Conditions
 

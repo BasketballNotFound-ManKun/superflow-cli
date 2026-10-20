@@ -1,4 +1,4 @@
 interface:
   display_name: "Superflow · Start here"
-  short_description: "Describe your goal; Superflow selects and continues the workflow"
+  short_description: "The current Flow Owner drives implementation, tests, review, repair, and delivery"
   default_prompt: "Use $superflow to complete this goal."

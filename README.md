@@ -1,4 +1,5 @@
 <p align="center">
+
   <img src="./assets/brand/superflow-banner.svg" alt="SuperBridge Flow banner">
 </p>
 
@@ -31,11 +32,19 @@ Describe your goal; it chooses the next step from your project and existing prog
 **For everyday use, remember one entry: `/superflow` in Claude Code or `$superflow` in Codex.**
 The router selects phase skills as needed. You can start without learning OpenSpec, SDD, or internal skill names.
 
+For ordinary tasks, the current Claude/Codex is the **Flow Owner**, continuously
+implementing, testing, obtaining required independent review, repairing, and
+delivering within authorization. Documentation-only and review-only requests
+keep their scope. Real decisions, missing permissions, or required environments
+surface as explicit blockers. Request dual-Agent managed work for independent
+background execution. Ordinary sessions resume from saved tasks, state, and
+reports after exit; they do not promise autonomous background operation.
+
 ## Quickstart
 
 Have **Node.js 20+, Git**, and an installed, signed-in Claude Code or Codex ready.
 Hooks require Bash and Python3; on Windows, use Git Bash or an equivalent shell.
-Requirements and document work can start in one tool; **dual-Agent managed development requires both CLIs to be installed and authenticated**.
+Ordinary delivery, requirements, and documents need one tool; **dual-Agent managed development requires both CLIs to be installed and authenticated**.
 Superflow uses your existing model accounts and permissions. Model usage is billed by the respective platforms.
 
 ### Install the public npm package

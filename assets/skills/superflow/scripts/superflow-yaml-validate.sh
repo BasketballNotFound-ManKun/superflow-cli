@@ -87,7 +87,7 @@ done
 
 validate_enum workflow "full hotfix tweak"
 validate_enum phase "docs design implement verify archive done"
-validate_enum build_mode "subagent-driven-development executing-plans team-prompt direct"
+validate_enum build_mode "owner subagent-driven-development executing-plans team-prompt direct"
 validate_enum build_pause "plan-ready"
 validate_enum subagent_dispatch "confirmed"
 validate_enum tdd_mode "tdd direct"

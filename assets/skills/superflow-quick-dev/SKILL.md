@@ -22,6 +22,15 @@ metadata:
 
 ## Quick Spec
 
+首次批准前创建同目录 test-report.md，并在 spec 精确文件范围中声明该报告。
+后续准入/续跑命令的 `--path` 使用冻结源码/测试文件及这个任务报告的精确路径；
+不把整个脏工作树列入，不忽略其它报告或无关文件。批准后不改 spec 正文。
+
+获准实施后由当前 [Flow Owner](../superflow/references/flow-owner.md) 连续负责
+编码、适用测试、按风险独立评审、整改与交付。步骤进度、证据和恢复点写入 spec 同目录的
+test-report.md，不新建托管 Task/Run。已批准 spec 正文（包括步骤 checkbox）保持
+不变，只更新允许的 status；逐项验证后在报告标记，普通失败在授权内修复。
+
 在 `.sdd/tasks/<YYYY-MM-DD>-<slug>/spec.md` 写入并展示当前磁盘版本，内容必须包含：
 
 - Intent / Non-goals；
@@ -36,7 +45,7 @@ metadata:
 `superflow quick "<request>" --path <files...> --seam <existing-file> --spec <spec> --approve`。
 CLI 将当前内容摘要绑定到批准状态。Intent、Non-goals 或 Acceptance Criteria 变化时回到
 `draft`，重新批准后才实施。先读取[测试指南](../superflow/references/test-guide.md)，核对当前批准的 Quick Spec 已冻结适用信号、命令、
-断言和证据位置；缺项先补齐并重新批准；按 TDD 逐项跑 RED/GREEN，完成后复用 `superflow review-coverage` 和 `superflow eval` 的证据格式收口。
+断言和证据位置；缺项先补齐并重新批准；按 TDD 逐项跑 RED/GREEN，完成后复用 `superflow review-coverage` 和 既有测试报告的证据格式收口；只有已有托管 Run 时才使用 `superflow eval`。
 
 Quick 路径不创建 OpenSpec checkpoint，也不自动提交、推送或发布；一旦范围扩大，保留
 spec 作为线索并转正式 SDD。

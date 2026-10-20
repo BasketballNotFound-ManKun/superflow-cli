@@ -18,6 +18,14 @@ phase-changing commands.
 
 ## Required Checkpoints
 
+- For ordinary authorized implementation, the current Flow Owner may implement
+  and test under `build_mode: owner`; read the installed flow-owner.md contract.
+  Existing team/subagent modes remain authoritative. Only managed Task/Run uses
+  the read-only Host versus writing Executor separation.
+- Continue build → verify → in-contract repair after progress updates. A normal
+  test failure needs diagnosis, not a fresh continuation request. Review-only
+  work does not authorize edits; missing required evidence remains blocked.
+
 - Use `.sdd/handoff/brainstorm-summary.md` during changing requirements or
   design discussion; separate confirmed, candidate, pending, and rejected
   content.
