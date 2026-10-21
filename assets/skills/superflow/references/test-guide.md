@@ -173,3 +173,23 @@ owner 校验与清理入口，不能用宽泛 pkill/killall。纯函数不要求
 每组数量标明用例集合、执行层级、源码/配置版本、通过/失败/跳过/阻塞，不能复用同一个
 “全通过”数字表示不同集合。接口模拟用户操作不等于浏览器联调；未取得用量或调用数写
 不可观测，不写零。最终汇报的数字和范围须与最终有效报告一致。
+
+## 当前交付策略
+
+本节适用于 `workflowPolicy: "observed-delivery.v1"`；新发准入与旧冻结续跑边界由 [document-readiness.md](document-readiness.md#当前交付策略) 维护。
+
+该策略的完整验证在test-report.md引用当前实际独评/复评报告，使用纯相对路径表：
+
+```markdown
+## Independent Review
+| Report |
+|---|
+| reviews/current-review.md |
+```
+
+实际报告沿Reviewer规范四状态形状，以 `## Reviewed Sources` 的
+`| Path | SHA-256 |` 表记录输入身份。当前唯一 `## Findings` 正文须明确为
+`None` 或 `无`，前提是真实核验后已无当前未决项；历史报告、处置依据和授权延期
+保留在历史/Notes，不删除未决finding换通过。清单覆盖登记代码及用例/构建来源，
+不能缩减完整构建来源过门；它不声称每个依赖全文已读，真实diff/读取范围写Impact，
+充分性由独立判断。修后源码变化需受影响重测和实际复评，不只刷新hash。

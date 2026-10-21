@@ -107,6 +107,7 @@ describe("document contract installation continuity", () => {
               "implementation-prompt-template",
               "batch-prompt-template",
               "test-guide",
+              "routing-contract",
             ]) {
               const installed = fs.readFileSync(
                 path.join(references, `${file}.md`),
@@ -123,7 +124,9 @@ describe("document contract installation continuity", () => {
                 read(language, `superflow/references/${file}.md`),
               );
               expect(installed).toContain(
-                file === "test-guide"
+                file === "routing-contract"
+                  ? (language === "skills" ? "## Non-Negotiable Rules" : "## Quality Gates")
+                  : file === "test-guide"
                   ? "## Production Entry State Assertions"
                   : file === "document-templates"
                     ? "## Behavior Decision Matrix"
@@ -157,4 +160,28 @@ describe("document contract installation continuity", () => {
       }
     }
   }
+});
+
+describe.each(["skills", "skills-en"])("%s phase reading and refreeze", (language) => {
+  it("routes using the full current phase instead of the owner summary", () => {
+    const entry = read(language, "superflow/SKILL.md");
+    expect(entry).toContain("Full phase read");
+    expect(entry.split("\n").length).toBeLessThan(130);
+    expect(entry).toContain("references/routing-contract.md");
+    const detail = read(language, "superflow/references/routing-contract.md");
+    expect(detail).not.toMatch(/^---\nname:/);
+    expect(detail).toContain(language === "skills" ? "## Non-Negotiable Rules" : "## Quality Gates");
+    expect(detail).toContain("../scripts/superflow-handoff.sh");
+    expect(detail).not.toContain("(references/");
+    expect(entry).toContain("reviewer-checklist.md");
+  });
+
+  it("repairs canonical bodies before refreshing readiness", () => {
+    for (const phase of ["contracts", "design", "handoff"]) {
+      const skill = read(language, `superflow-${phase}/SKILL.md`);
+      expect(skill, phase).toContain("Canonical body repair");
+      expect(skill, phase).toContain("observed-delivery.v1");
+      expect(skill, phase).toContain("runner-captured.v1");
+    }
+  });
 });

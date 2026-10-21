@@ -311,3 +311,7 @@ PASS receipts. The document reviewer checks this choice before freezing new cont
 Legacy v1 cases without this field keep their boundary and are not silently upgraded.
 Capture establishes observed process/output provenance, not business sufficiency or
 independence; preserve PARTIAL when execution or required measurements are missing.
+
+## Current delivery policy
+
+New/invalidated readiness follows [document-readiness.md](document-readiness.md#current-delivery-policy); actual capture and complete review closure follow [test-guide.md](test-guide.md#current-delivery-policy). Coverage remains the existing machine index, not another contract or lifecycle owner.

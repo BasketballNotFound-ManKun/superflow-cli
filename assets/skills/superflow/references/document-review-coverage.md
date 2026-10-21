@@ -265,3 +265,7 @@ cwd 对应当前 change 的冻结相对目录；已选环境摘要与运行 lint
 见 [test-guide.md](test-guide.md)，不手填PASS回执。文档评审在新合同冻结前核对
 该选择。未声明该字段的旧v1用例保留边界，不静默升级；缺运行/实测值保留PARTIAL。
 捕获仅证明过程/输出来源，不证明业务充分性、Reviewer独立性或抵抗本机恶意篡改。
+
+## 当前交付策略
+
+新发/失效重发准入见 [document-readiness.md](document-readiness.md#当前交付策略)；实际采集及完整复评收口见 [test-guide.md](test-guide.md#当前交付策略)。coverage继续是既有机器索引，不另持有正文合同或生命周期。

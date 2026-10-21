@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { deploySkill } from "../../src/domains/skill/deploy.js";
+import { auditReviewReport } from "../../src/domains/review/report.js";
 import { fixtureProcessEnv } from "../helpers/fixture-process-env.js";
 
 const root = path.resolve(__dirname, "../..");
@@ -178,4 +179,39 @@ describe("Flow Owner review and delivery evidence contract", () => {
       expect(verify).not.toContain("ask the user to install or enable it");
     },
   );
+});
+
+describe("Flow Owner actionable review handoff", () => {
+  it.each(["skills", "skills-en"])(
+    "%s supplies read-only review artifacts and distinguishes outcomes",
+    (directory) => {
+      const read = (file: string) =>
+        fs.readFileSync(path.join(root, "assets", directory, file), "utf8");
+      const review = read("superflow/references/reviewer-checklist.md");
+      for (const field of [
+        "diff.patch", "source-manifest", "baseline", "current",
+        "FIXED", "MITIGATED", "DEFERRED", "NOT_A_DEFECT",
+        "Re-review evidence",
+      ]) expect(review, field).toContain(field);
+      const owner = read("superflow/references/flow-owner.md");
+      expect(owner).toContain("Re-review evidence");
+      expect(owner).toContain("Control actions");
+    },
+  );
+});
+
+
+describe("installed entry and final rereview example", () => {
+  it.each(["skills", "skills-en"])("%s resolves paths and clears only actual final findings", directory => {
+    const read = (file: string) => fs.readFileSync(
+      path.join(root, "assets", directory, file), "utf8",
+    );
+    expect(read("superflow/SKILL.md")).toContain("Installed path resolution");
+    const review = read("superflow/references/reviewer-checklist.md");
+    const example = review.match(/### Final re-review example[\s\S]*?```markdown\n([\s\S]*?)```/);
+    expect(example).not.toBeNull();
+    expect(auditReviewReport(example![1], root).findingsClear).toBe(true);
+    expect(review).toContain("source-manifest");
+    expect(review).toContain("SHA-256");
+  });
 });

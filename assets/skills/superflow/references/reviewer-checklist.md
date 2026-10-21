@@ -58,6 +58,21 @@
 与当前源码/合同漂移时返回 NEEDS_CONTEXT，不凭旧包评当前代码。Reviewer 只读，不改
 源码、运行应用、查写业务库或启动嵌套监督；需要新的运行证据交回实施方。
 
+### 可直接读取的评审包
+
+派发前由 Owner 实际生成并打开核对以下文件；交给只有 Read 的 Reviewer 也可复核：
+
+| 文件 | 内容 |
+|---|---|
+| diff.patch | 准确 baseline→current unified diff，含新增、删除和未跟踪文件；不是 stat 或待执行的 Git 命令 |
+| source-manifest | 每个评审文件的仓库相对路径、baseline/current 版本与摘要、可读快照位置；新增/删除明确标记缺失端 |
+| 既有合同及证据 | 规范路径/版本、适用规则、原始运行证据；只提供必要源码及调用方快照 |
+
+Git 基线可用时 Owner 导出实际 patch；无 Git 时用冻结文件快照生成对比。不复制
+无关仓库或凭据。派发消息列出包的实际绝对路径与读取顺序，Reviewer 先读 diff.patch
+和 source-manifest，再沿 manifest 读取两端及必要调用链；不要求 Reviewer 有 Bash
+或自己生成 diff。包缺失、不可读或 current 漂移时先返回 NEEDS_CONTEXT 补包。
+
 ### 独立评审与修复的可核验记录
 
 中高档只有真实隔离 Reviewer 的实际派发和返回才算独立评审；Owner 自查、
@@ -71,12 +86,29 @@
 | Reviewed diff | baseline/head 或工作树快照、准确 diff 与文件范围、合同版本 |
 | Finding closure | 原 finding ID、accepted/rejected/needs-evidence 及依据、修复位置、重测证据、Reviewer 复核结论 |
 | Post-review changes | 评审后新增 diff、影响面、失效测试/结论、实际重测和复评报告 |
+| Re-review evidence | 原 Reviewer 或新的隔离 Reviewer 身份、实际派发/返回、修复 diff 版本、逐 finding 复核与回归结论 |
 
 代码、SQL、配置或入口在评审后改变时，由 Owner 分析影响，真实重跑受影响的冻结
 信号，并把修复 diff 和相关调用链交回隔离 Reviewer 复评。保留仍有效的证据；原 PASS
 不能覆盖新增改动，修复一个 finding 不能掩盖对原功能的回归。缺复评或未决阻断项
 保持 PARTIAL/Blocked，不能靠关闭旧 ID 或 phase=archive 宣称完整交付。
 子代理不可用时完成不依赖它的授权实施、测试、报告和清理，记录能力缺口及待独立评审包。
+
+### Finding 处置与关闭
+
+在现有 Finding closure 下分别记录“有效性裁决”与“实际处置”，复用原 ID：
+
+| 处置 | 关闭依据 |
+|---|---|
+| FIXED | 原错误路径已改变，受影响重测通过，并有 Re-review evidence |
+| MITIGATED | 只降低概率/影响或补可观测性；保留原缺陷、剩余风险和后续条件 |
+| DEFERRED | 接受延期的明确授权、理由、owner 与完成条件；不得伪称已修复 |
+| NOT_A_DEFECT | 当前源码/合同反证及独立 Reviewer 复核，不因实现者不同意而关闭 |
+
+只增加日志、告警或说明，不能把仍会错误写入/抛错/丢状态的问题标为 FIXED。
+accepted/rejected/needs-evidence 仅为有效性裁决，不替代上述处置。整改后将原 finding、
+修复 diff、受影响证据与剩余风险交回原 Reviewer；其不可用时使用新隔离上下文。
+未复评不称修复已闭环；未获延期授权的阻断项继续 Blocked。
 
 ### 主 Agent 复核和合并
 
@@ -104,11 +136,9 @@ finding ID / acceptanceContractRefs，协议、预算和状态 owner 不变；�
 ### Reviewer 报告形状
 
 沿用现有四状态报告，不另建机器协议；托管只在临时报告完成这些记录，最终投影进原
-Host review JSON 的 summary/findings/coverage。`--report` 只检查原状态与锚点，五维完整性、
-实际风险与结论仍由主 Agent 核实。历史未带五维记录的报告保留，但不能称已按本规范全查。
+Host review JSON 的 summary/findings/coverage。`--report` 检查原状态、锚点及可选声明的源码 hash；
+它不证明实际独立评审或充分性，五维完整性、实际风险与结论仍由主 Agent 核实。历史未带五维记录的报告保留，但不能称已按本规范全查。
 
-```markdown
-DONE
 ### 源码结论的独立复核
 
 复用[源码调查规范](document-review-coverage.md)的关键结论核验，不另建 claim 账本。
@@ -117,23 +147,48 @@ DONE
 字段容量冲突、旧用例入口或本轮/下轮终止冲突。记录源码依据、反例和实际结论；
 无法查明保留 SOURCE_INVESTIGATION，不转问用户。正常已证实合同不因关键词被阻断。
 
+Reviewed Sources 表是评审输入身份 source-manifest，不证明每个依赖全文已读。
+保留冻结的生产/构建 sources 全集，不得缩减 sources 来通过门禁。实际 diff 读取范围、
+因风险扩查的源码及理由在 Impact 记录；五维逐项填写。当前 Findings 真正为空时，
+唯一 `## Findings` 正文仅写 None 或“无”，说明性注释放在报告围栏外。实际未决
+条目继续保留并阻断；原 finding ID 和处置历史保留于历史报告，实际复评确认关闭
+后才生成 None，不得清空未决项换取 PASS。
+
+```markdown
+DONE
 ## Review provenance
 Reviewer identity: 实际身份/会话 ID 与职责；自评另列
 Dispatch evidence: 工具/调用引用、隔离方式与返回报告；未执行如实注明
 Reviewed diff: baseline/head 或工作树快照、准确 diff/文件范围、合同版本
+## Reviewed Sources
+| Path | SHA-256 |
+|---|---|
+| 仓库相对源码路径 | 实际 SHA-256；逐项列出冻结生产/构建源码输入 |
 ## Repair verification
 Finding closure: 原 ID、处置依据、修复位置、重测与 Reviewer 复核证据
+Re-review evidence: 实际 Reviewer 派发/返回、修复版本及逐 finding/回归结论
 Post-review changes: 新增 diff、影响、失效证据、实际重测和复评报告
 ## Impact
 路径提示 / 实际深度 / 源码依据 / 调整理由 / diff 与合同版本
 ## Axes
 维度 | CHECKED / NOT_APPLICABLE / BLOCKED | 文件范围与依据
-# 逐项填写 security / performance / correctness / maintainability / architecture
 ## Findings
 - src/example.ts:12: [维度][严重度] 根因、后果、证据、修复与验收建议
-# 无 finding 时写 None；不要用带 - 的占位 finding
 ## Concerns
 未解决问题与缺少证据；DONE_WITH_CONCERNS 必须提供此段
+```
+
+### Final re-review example
+
+以下仅示例真实闭环后的 Findings/Concerns；完整报告仍需派发身份、输入指纹、
+修复证据、Impact 与五维记录：
+
+```markdown
+DONE
+## Findings
+None
+## Concerns
+None
 ```
 
 旧专项检查按适用路径继续使用；不能用任一不适用项强加运行要求，也不能删减冻结的

@@ -7,7 +7,8 @@ const EN_SKILLS_DIR = path.join(ROOT, "assets", "skills-en");
 const EN_PIPELINE_SKILL = path.join(
   EN_SKILLS_DIR,
   "superflow",
-  "SKILL.md",
+  "references",
+  "routing-contract.md",
 );
 const EN_CLARIFY_SKILL = path.join(
   EN_SKILLS_DIR,

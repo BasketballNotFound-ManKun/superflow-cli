@@ -222,3 +222,27 @@ case set, execution layer, source/config version, passed/failed/skipped/blocked;
 one all-passed number cannot represent different sets. API simulation is not
 browser integration. Unavailable usage or call counts are unobservable, never
 zero. Final summary counts and scope must match the final effective report.
+
+## Current delivery policy
+
+This section applies to `workflowPolicy: "observed-delivery.v1"`. Fresh admission and legacy continuation are owned by [document-readiness.md](document-readiness.md#current-delivery-policy).
+
+For this policy, complete verification references current independent rereview reports
+in test-report.md using the plain relative-path table below (no link syntax):
+
+```markdown
+## Independent Review
+| Report |
+|---|
+| reviews/current-review.md |
+```
+
+The actual report uses the canonical four-state shape and `## Reviewed Sources`
+`| Path | SHA-256 |` input identity manifest from the Reviewer checklist. It must have
+one current `## Findings` whose body is exactly `None` only after real review
+finds no remaining unresolved issues. Preserve prior reports and disposition rationale
+in history/Notes; never erase an unresolved finding to pass. The manifest must cover
+registered code and case/build source inputs; do not trim build provenance to satisfy
+coverage. Input identity is not a claim that every dependency was read: actual diff,
+read scope and sufficiency belong in Impact and independent judgment. Source changes
+after review require affected retesting and actual rereview, not just refreshed hashes.

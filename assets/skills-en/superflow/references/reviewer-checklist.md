@@ -74,6 +74,23 @@ against current code. Reviewers are read-only: no source edits, application
 management, business DB operations, or nested supervision. New runtime evidence
 returns to the implementer.
 
+### Directly readable review bundle
+
+Before dispatch the Owner actually writes and opens the artifacts below, allowing
+review with Read alone. The dispatch message provides actual absolute paths:
+
+| Artifact | Contents |
+|---|---|
+| diff.patch | Exact baseline→current unified diff including additions, deletions and untracked files; not stat or a command to execute later |
+| source-manifest | Repository-relative path, baseline/current versions and SHA-256, readable snapshots; explicitly mark an absent side |
+| Existing contracts/evidence | Canonical paths and versions, applicable rules, raw evidence and necessary caller snapshots |
+
+The Owner exports the patch from Git or compares frozen snapshots without Git.
+Exclude unrelated repositories and secrets. The Reviewer starts with diff.patch
+and source-manifest, then reads both sides and necessary call paths. Bash is not
+required. Missing/unreadable artifacts or current-source drift mean NEEDS_CONTEXT;
+the Owner supplies a valid bundle before review resumes.
+
 ### Observable independence and repair records
 
 Medium/high review counts as independent only after an actual isolated Reviewer
@@ -87,6 +104,7 @@ and test-report; add no persistent state, review_mode values, or JSON protocol f
 | Dispatch evidence | Actual dispatch tool/call reference, isolation, returned report path; explicitly state not run when absent |
 | Reviewed diff | Baseline/head or worktree snapshot, exact diff/file scope, contract version |
 | Finding closure | Original finding ID, accepted/rejected/needs-evidence with reasons, repair location, rerun proof, Reviewer recheck verdict |
+| Re-review evidence | Original or new isolated Reviewer identity, actual dispatch/return, repair version and finding/regression verdict |
 | Post-review changes | New diff after review, impact, invalidated tests/verdicts, actual reruns and rereview reports |
 
 For source, SQL, configuration, or entry changes after review, the Owner assesses
@@ -97,6 +115,23 @@ previous behavior. Missing rereview or open blockers remain PARTIAL/Blocked;
 closing old IDs or phase=archive cannot establish full delivery. If subagents are
 unavailable, complete independent authorized implementation, tests, reports, and
 cleanup, recording the capability gap and pending independent-review bundle.
+
+### Finding disposition and closure
+
+Under existing Finding closure separate validity from actual disposition; keep IDs:
+
+| Disposition | Evidence |
+|---|---|
+| FIXED | Original error path changed, affected checks passed and Re-review evidence exists |
+| MITIGATED | Probability/impact reduced or observability added; retain original defect, residual risk and follow-up conditions |
+| DEFERRED | Explicit authorization to accept deferral, reason, owner and completion conditions; never claim repair |
+| NOT_A_DEFECT | Current source/contract counterevidence and independent Reviewer verification |
+
+Logs, alerts or explanatory text cannot make remaining bad writes, exceptions or
+state loss FIXED. accepted/rejected/needs-evidence judges validity, not disposition.
+Return original findings, repair diff, affected evidence and residual risk to the
+original Reviewer; if unavailable use a new isolated context. Missing actual
+rereview is not closure; blockers without authorized deferral remain Blocked.
 
 ### Main Agent verification and merge
 
@@ -134,12 +169,11 @@ semantic checks; existing scripts validate deterministic evidence facts only.
 Reuse the four-state report, not another machine protocol. Managed reviews keep
 these records in temporary reports and project the result into existing Host
 review JSON summary/findings/coverage. `--report` checks existing markers and
-anchors only; the main Agent verifies axes, actual impact, and conclusions. Keep
+anchors and validates optional declared source hashes. It proves neither independent
+execution nor review sufficiency; the main Agent verifies axes, impact and conclusions. Keep
 historical reports without axis records, but do not call them complete under this
 guide.
 
-```markdown
-DONE
 ### Independent source-claim rechecks
 
 Reuse key-claim checks in the [source investigation contract](document-review-coverage.md),
@@ -150,23 +184,51 @@ back messages, column capacity, stale case entries and current/next-run terminat
 Record actual evidence, counterexamples and conclusions; unresolved facts stay
 SOURCE_INVESTIGATION, never user questions. Do not block an evidenced normal contract by keywords.
 
+The Reviewed Sources table is an input identity source-manifest, not proof that
+every dependency was read in full. Preserve the frozen production/build sources;
+never narrow sources to pass a gate. Record actual diff inspection and related
+source expansion, with reasons and coverage, in Impact. Fill all five axes.
+For a truly empty current Findings section write only None (or its localized
+equivalent), with exactly one Findings heading; explanatory comments belong
+outside report examples. Unresolved findings remain recorded and blocking.
+Keep original IDs and disposition history in prior reports; emit None only after
+actual rereview confirms closure, never by deleting open issues to obtain PASS.
+
+```markdown
+DONE
 ## Review provenance
 Reviewer identity: Actual identity/session ID and role; separate self-review
 Dispatch evidence: Tool/call reference, isolation, returned report; state not run if absent
 Reviewed diff: Baseline/head or worktree snapshot, exact diff/file scope, contract version
+## Reviewed Sources
+| Path | SHA-256 |
+|---|---|
+| Repository-relative source path | Actual SHA-256, one row for every frozen production/build source input |
 ## Repair verification
 Finding closure: Original ID, disposition reasons, repair location, rerun and Reviewer proof
+Re-review evidence: actual Reviewer dispatch/return, repair version and finding/regression verdict
 Post-review changes: New diff, impact, invalidated evidence, actual reruns/rereview report
 ## Impact
 Path hint / actual depth / source evidence / adjustment / diff and contract version
 ## Axes
 Axis | CHECKED / NOT_APPLICABLE / BLOCKED | File scope and evidence
-# Fill security / performance / correctness / maintainability / architecture
 ## Findings
 - src/example.ts:12: [axis][severity] cause, consequence, proof, repair and acceptance
-# Use None without findings; never a placeholder bullet
 ## Concerns
 Unresolved questions and missing proof; required for DONE_WITH_CONCERNS
+```
+
+### Final re-review example
+
+Minimal findings/concerns excerpt after actual closure; the full report still
+contains provenance, source identity, repair evidence, impact and all five axes:
+
+```markdown
+DONE
+## Findings
+None
+## Concerns
+None
 ```
 
 Existing specialist checks remain path-scoped; inapplicable checks do not invent

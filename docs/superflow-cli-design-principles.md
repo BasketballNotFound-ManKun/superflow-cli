@@ -180,3 +180,21 @@ path-scoped rules 负责项目适用范围，Hook/脚本只负责可确定的窄
 独立 Reviewer 的实际派发、隔离范围、输入 diff、报告与 finding 复评记录放在既有
 报告中。身份字段不是独立性的防伪签名；缺独立能力如实保留缺口并继续其余授权工作。
 修复后旧 PASS 不覆盖新增影响，完整交付须对账目标、实测、复评、外部协同与资源。
+
+## 阶段承接与当前交付闭环（2026-10-21）
+
+总入口保持短路由，完整旧细则保留按需参考；当前阶段Skill与必读规范必须实际读取，
+不能用入口摘要代替。修文档冲突须改canonical正文及消费引用，不只是选优先级或刷hash。
+
+合法完整且身份一致的旧READY保留冻结语义；真正新发或失效重发READY采用
+workflowPolicy: observed-delivery.v1，要求声明的执行用例冻结runner-captured.v1与
+executionContext。此准入由现有coding-ready owner裁决，拒绝时保留旧证据并写BLOCKED，
+不静默改写旧合同或把其迁移责任交给实现Agent临时猜测。
+
+新策略的完整验证沿现有report linter引用实际独评/复评报告，核当前状态、明确无未决
+Findings及Reviewed Sources身份清单；修后源码变化使旧报告失效。清单是收到的输入
+身份，不等于全仓逐字评审；真实diff/读取范围、Reviewer独立性与结论充分性由Agent
+核验。修复、缓解、授权延期和不成立分别记录，不能以日志改善替代功能修复。
+
+仍复用原文档、四状态报告、Coding Ready与三种托管消息，无新Task/Run、Hook或
+代理能力限制。原生非SDD请求不因此增加研发合同；暂停/恢复和Git授权与业务指导分列。

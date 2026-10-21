@@ -346,3 +346,29 @@ results; unknown usage is not zero. Roll back affected owners if projections rep
 canonical decisions, legacy contracts migrate, synthesized PASS advances, unredacted
 output persists, absent reviewers are called independent, stale repair conclusions are
 reused or installation damages unknown assets. Never weaken assertions to evade failure.
+
+## Phase reading, fresh admission and rereview continuity (2026-10-21)
+
+Comparative evidence showed explicit phase handoff and multi-view review in one run.
+Another improved startup checks, real state change and one independent review, but
+provided no readable diff or rereview, reissued READY for uncaptured legacy cases,
+retained contradictory prose and synthesized post-repair evidence. Recovery controls
+are not business guidance. Raw cases, paths and scores remain outside this repository.
+
+Owners are existing entry/phase Skills, coding-ready, canonical review audit and report
+linter. Baseline: 1276 tests across 122 files and real package installation passed.
+The hypothesis combines a short entry, complete phase reading, fresh capture admission
+and current source-bound review without another workflow or capability restriction.
+
+RED cases cover uncaptured new/expired READY, missing/stale reports and source identity,
+alternative Markdown findings, empty bodies and None mixed with unresolved text. GREEN
+cases exercise all real readiness subgates, valid frozen legacy continuation, observed
+execution, current rereview and isolated host/language installation. Independent review
+found and closed the alternate-list bug. Detailed entry rules migrate intact; tests
+continue checking them at the canonical location instead of deleting assertions.
+
+The external full report owns final results. Structure and synthetic pressure do not
+prove reviewer independence, malicious-local tamper resistance, population compliance,
+Windows execution or renewed business delivery. Roll back owners if missing provenance
+advances, legacy continuation migrates, moved rules disappear, stale review is reused,
+controls count as guidance or installation harms unknown assets; preserve failure data.

@@ -13,8 +13,8 @@ describe("canonical OpenSpec change layout", () => {
     const assets = [
       "assets/skills/superflow-propose/SKILL.md",
       "assets/skills-en/superflow-propose/SKILL.md",
-      "assets/skills/superflow/SKILL.md",
-      "assets/skills-en/superflow/SKILL.md",
+      "assets/skills/superflow/references/routing-contract.md",
+      "assets/skills-en/superflow/references/routing-contract.md",
     ].map(read);
 
     for (const content of assets) {

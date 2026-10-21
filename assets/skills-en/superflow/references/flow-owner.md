@@ -35,6 +35,11 @@ design, test strategy, or a parallel state machine.
    bare task through existing admission; being an Owner does not bypass Quick
    gates or required SDD documents.
 
+Read the entire current phase SKILL.md and its required references before acting.
+Flow Owner defines continuity and cannot replace build/verify or another full phase
+contract. Before implementation/review read the full [Reviewer checklist](reviewer-checklist.md)
+and use its readable bundle for actual dispatch and rereview.
+
 ## Continuous Execution Loop
 
 ```text
@@ -118,6 +123,13 @@ release, and archive still require their own authorization. Honor authorization
 already given without asking again. Never commit or rewrite Git history merely
 to save progress.
 
+For observed-delivery.v1 complete delivery, use a `| Report |` table under
+`## Independent Review` in existing test-report.md to link actual independent
+reports. Reference current DONE rereviews with reviewed source versions bound by
+`## Reviewed Sources` and `| Path | SHA-256 |`. Preserve historical reports; after
+source changes the Reviewer actually reads/rereviews and emits a new table.
+The Owner cannot rebind an old report's hashes to current code.
+
 ### Delivery facts matrix
 
 Record this matrix in the existing test-report and final delivery. Checked tasks,
@@ -132,6 +144,8 @@ dispatch, diff, finding, and rereview records; never relabel self-review indepen
 | Mock / real | Actual counts and scope for mocks, real backend/database, browser, external devices/services; explicitly list unrun coverage |
 | Open items | Open findings, missing proof, changes without rerun/rereview and impact; blockers remain PARTIAL/Blocked |
 | External coordination | Other repository/frontend/deployment/permission owner, status, completion criteria; do not relabel unfinished local work external |
+| Re-review evidence | Original findings with FIXED/MITIGATED/DEFERRED/NOT_A_DEFECT dispositions, residual risk, retests and actual isolated Reviewer rechecks; explicitly state missing rereview |
+| Control actions | Separately count sleep/wake, pause/continue and restart controls with evidence; list business guidance and permission/budget approvals separately; unknown is not zero |
 
 Substitute entries and simulations support only their actual scope. Distinguish
 local implementation from end-to-end usability when external coordination is

@@ -159,3 +159,12 @@ superflow check <change> --level coding-ready
 
 默认采用快速失败、失败关闭、至多一次和调用方补偿。只有 owner 明确要求并证明幂等时，
 才允许透明重试、改投、补发或新的分布式补偿。
+
+## 当前交付策略
+
+真正新发或失效重发Coding Ready时，每个声明的执行用例必须冻结
+`executionEvidence: "runner-captured.v1"` 与 `executionContext`。既有命令产生
+`workflowPolicy: "observed-delivery.v1"`，不代改业务正文或coverage；缺失先由文档
+owner补齐。合法完整且身份一致的旧READY继续保留冻结续跑语义。
+
+完整验证与当前独评报告引用见 [test-guide.md](test-guide.md#当前交付策略)，报告形状仍由 [Reviewer清单](reviewer-checklist.md) 单一维护。

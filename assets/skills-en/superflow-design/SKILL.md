@@ -8,6 +8,27 @@ to this phase owner and consumer references; resolve conflicts before handoff ra
 leaving implementers to guess.
 
 
+
+## Canonical body repair
+
+Resolve conflicts through the Behavior Decision Matrix's Canonical owner: spec/API
+behavior returns to contracts, source HOW/technical design to design, and execution
+navigation to handoff. The original owner repairs canonical prose against sources
+and actual code, then updates every consumer reference. Remove superseded current
+decisions or isolate them explicitly as history; document priority cannot leave
+contradictory current instructions in place. Search for old values, algorithms and
+cases still presented as current requirements before refreshing handoff, document
+review and Coding Ready. Rebinding hashes, editing review receipts manually, or
+claiming one document wins does not repair the contract.
+
+Recover old tasks under their frozen contracts and retain valid evidence. New full
+SDD contracts, including contracts refrozen after contract changes and reissued as
+READY, freeze `workflowPolicy: observed-delivery.v1` in existing coverage and
+`executionEvidence: runner-captured.v1` per case. Missing actual capture remains
+PARTIAL; handwritten PASS cannot become execution evidence. Source-only edits use
+build's continuation check without refreezing the old contract.
+
+
 # SDD Design
 
 Use this after `$superflow-contracts` has produced the OpenSpec/SDD contract documents and

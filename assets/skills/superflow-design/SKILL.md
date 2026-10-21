@@ -7,6 +7,22 @@ description: Superflow 内部能力：根据冻结合同和现有源码明确复
 核对本阶段 owner 与消费引用；交接前收敛冲突，不交给执行者猜测。
 
 
+
+## Canonical body repair
+
+发生冲突时，按 Behavior Decision Matrix 的 Canonical owner 返回原阶段：
+spec/API 行为回 contracts，源码 HOW/技术详设回 design，执行导航回 handoff。
+原 owner 对照来源和实际源码修改 canonical 正文，逐处更新消费者引用；其他当前
+文档中的旧决策须删除或明确隔离为历史，不能靠“高优先级覆盖”保留矛盾正文。
+先复查旧值/旧算法/旧用例是否仍作为现行要求出现，再刷新 handoff、文档评审和
+Coding Ready。只重绑 hash、手改评审凭证或宣称以某文档为准都不算修复。
+
+旧任务恢复保留原冻结合同和已有效的证据。新生成或因合同变化重新冻结并重发 READY
+的完整 SDD，按现有 coverage 冻结 `workflowPolicy: observed-delivery.v1`，逐用例
+`executionEvidence: runner-captured.v1`；缺实际 capture 时保持 PARTIAL，不把
+手填 PASS 升级为执行事实。仅实施源码变化按 build 续跑检查，不因此重新冻结旧合同。
+
+
 # SDD Design
 
 Use this after `$superflow-contracts` has produced the OpenSpec/SDD contract documents and

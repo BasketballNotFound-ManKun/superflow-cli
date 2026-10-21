@@ -5,11 +5,11 @@ import { describe, expect, it } from "vitest";
 describe("managed work skill", () => {
   it("keeps the expensive host on supervision and closes reviews automatically", () => {
     const zh = fs.readFileSync(
-      path.join("assets", "skills", "superflow", "SKILL.md"),
+      path.join("assets", "skills", "superflow", "references", "routing-contract.md"),
       "utf-8",
     );
     const en = fs.readFileSync(
-      path.join("assets", "skills-en", "superflow", "SKILL.md"),
+      path.join("assets", "skills-en", "superflow", "references", "routing-contract.md"),
       "utf-8",
     );
 
@@ -23,7 +23,7 @@ describe("managed work skill", () => {
     expect(zh).toContain("240 秒 Host 兼容传输窗口");
     expect(zh).toContain("不调用 status、不读取完整事件、不重启 Executor");
     expect(zh).toContain("Claude Executor 长会话默认提前自动压缩");
-    expect(zh).toContain("执行前必须阅读 `references/managed-work.md`");
+    expect(zh).toContain("执行前必须阅读 `managed-work.md`");
     const zhRules = fs.readFileSync(
       path.join("assets", "skills", "superflow", "references", "managed-work.md"),
       "utf-8",
@@ -36,7 +36,7 @@ describe("managed work skill", () => {
     expect(en).toContain("--executor peer");
     expect(en).toContain("--submit-host-review");
     expect(en).toContain("must not stop and wait for manual user handoff");
-    expect(en).toContain("Read `references/managed-work.md` before dispatch");
+    expect(en).toContain("Read `managed-work.md` before dispatch");
     expect(en).toContain("240-second Host-compatible transport window");
     expect(en).toContain("Claude Executor long sessions use early auto-compaction");
     const enRules = fs.readFileSync(

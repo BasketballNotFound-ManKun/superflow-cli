@@ -25,6 +25,10 @@ state 脚本推进 SDD，test-guide 定义验证分层，reviewer-checklist 定�
    恢复点写入同目录 test-report.md，不能修改已批准步骤或追加内容使摘要失效。裸任务先由
    既有路由判定范围，不能因称为 Owner 就跳过 quick 准入或必要 SDD 文档。
 
+完整读取当前阶段 SKILL.md 与其必读 references，再执行；Flow Owner 是持续职责合同，
+不能代替 build/verify 或其他阶段全文。实施/评审前完整读取
+[Reviewer 清单](reviewer-checklist.md)，实际派发与复评按其可读包执行。
+
 ## 连续执行循环
 
 ```text
@@ -87,6 +91,11 @@ verify 的全部 lint/guard，Quick 对账批准 spec。正文 PASS、JSON 或�
 才能称完整交付。未授权的 Git 提交、推送、发布与归档仍等待对应授权；已有明确授权
 按原范围执行，不重复索取。不得为了“保存进度”自行提交或重写 Git 历史。
 
+新 observed-delivery.v1 完整交付在现有 test-report.md 的 `## Independent Review` 下
+用 `| Report |` 表逐行链接实际独立报告。引用当前复评的 DONE 报告；报告以
+`## Reviewed Sources` 的 `| Path | SHA-256 |` 表绑定已审源码。保留历史报告，
+源码变化后由 Reviewer 真实读取/复评再生成新表，不由 Owner 重绑旧 hash。
+
 ### 交付事实矩阵
 
 在现有 test-report 和最终交付中逐项记录下表。任务全勾选、verify_result 或
@@ -100,6 +109,8 @@ phase=archive 只说明流程事实，不证明用户目标已达成。沿 revie
 | Mock / real | 每组 mock、真实后端/数据库、浏览器、外部设备/服务实际执行范围和数量；未执行明确列出 |
 | Open items | 未关闭 finding、缺失证据、未重测/复评变更与影响；阻断时保持 PARTIAL/Blocked |
 | External coordination | 另仓/前端/部署/权限等协同责任、现状和完成条件；不得把本地未做工作改名为外部协同 |
+| Re-review evidence | 原 finding 的 FIXED/MITIGATED/DEFERRED/NOT_A_DEFECT 处置、剩余风险、重测和实际隔离 Reviewer 复评；未复评明确未完成 |
+| Control actions | 休眠/唤醒、暂停/继续和重启控制单列次数与依据；业务指导、权限/预算批准另列，未知不记零 |
 
 替代入口或模拟只支持其真实覆盖范围。外部协同尚未完成时分别说明本地实现状态与
 端到端可用状态，不以归档或强 PASS 隐去缺口。显式 native 托管继承宿主原生能力与

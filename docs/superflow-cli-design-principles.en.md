@@ -248,3 +248,25 @@ existing reports. Identity fields do not authenticate independence. Missing dele
 capability remains an explicit gap while other authorized work continues. Prior PASS
 cannot cover new repair impacts; delivery reconciles goals, observations, re-review,
 external coordination and owned resources.
+
+## Phase handoff and current delivery closure (2026-10-21)
+
+Keep entry routing short and retain detailed rules on demand. Actually read the current
+phase Skill and required references; an entry summary is not a substitute. Repair
+canonical prose and consumer references, not just priority choices or rebound hashes.
+
+A complete, identity-matching legacy READY keeps frozen semantics. New or invalidated
+READY issuance uses workflowPolicy: observed-delivery.v1 and requires declared cases to
+freeze runner-captured.v1 and executionContext. Existing coding-ready owns this boundary,
+persists BLOCKED on failure and preserves evidence without silently rewriting contracts.
+
+Under this policy, complete validation reuses the report linter to reference actual
+independent review/rereview reports with current state, explicitly clear Findings and
+Reviewed Sources identity. Repairs invalidate stale source identities. The manifest is
+input provenance, not proof every dependency was read. Agents judge actual diff/read
+scope, reviewer independence and sufficiency. Separate fixed, mitigated, authorized
+deferred and not-a-defect dispositions; logging alone is not a functional fix.
+
+Reuse existing documents, four-state reports, Coding Ready and all three managed
+messages. Add no Task/Run, hook or Agent capability restriction. Native non-SDD requests
+receive no engineering contract; record pause/recovery/Git authorization separately.

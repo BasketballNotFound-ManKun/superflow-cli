@@ -127,3 +127,13 @@ Idempotency basis | Accepted race window | Extreme fallback | Owner approval`.
 Default to fail-fast, fail-closed, at-most-once, and caller-owned compensation.
 Retry, reroute, resend, or distributed compensation requires explicit owner
 approval and a proven idempotency basis.
+
+## Current delivery policy
+
+New or invalidated Coding Ready issuance requires every declared executable case to
+freeze `executionEvidence: "runner-captured.v1"` and `executionContext`. The existing
+command issues `workflowPolicy: "observed-delivery.v1"`; it does not repair business
+prose or rewrite coverage. Resolve missing contracts through their document owner.
+Complete, current legacy READY keeps its frozen continuation boundary.
+
+Complete validation and current independent-review references follow [test-guide.md](test-guide.md#current-delivery-policy). Reviewer report shape remains owned by [reviewer-checklist.md](reviewer-checklist.md).
