@@ -21,12 +21,14 @@ cases still presented as current requirements before refreshing handoff, documen
 review and Coding Ready. Rebinding hashes, editing review receipts manually, or
 claiming one document wins does not repair the contract.
 
-Recover old tasks under their frozen contracts and retain valid evidence. New full
-SDD contracts, including contracts refrozen after contract changes and reissued as
-READY, freeze `workflowPolicy: observed-delivery.v1` in existing coverage and
-`executionEvidence: runner-captured.v1` per case. Missing actual capture remains
-PARTIAL; handwritten PASS cannot become execution evidence. Source-only edits use
-build's continuation check without refreezing the old contract.
+All SDD admission and continuation require `workflowPolicy: observed-delivery.v1`;
+every executable case in existing coverage freezes
+`executionEvidence: runner-captured.v1` and `executionContext`. Missing fields keep
+admission BLOCKED until the document owner repairs and rereviews the contract. Every
+PASS receipt requires actual capture. Retain old files only as history or PARTIAL,
+never as an earlier-policy pass or continuation exemption. Source-only edits still
+use build continuation checks against current contracts and evidence, without
+redesigning business decisions.
 
 
 # SDD Docs

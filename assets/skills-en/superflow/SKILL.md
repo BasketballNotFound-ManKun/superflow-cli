@@ -92,7 +92,8 @@ explicit managed work read [managed-work.md](references/managed-work.md), check
 paths to `superflow_managed_start`. New omitted/auto profiles default to native,
 retaining native capabilities, configuration and approvals. Pass model/effort only
 when selected; leave budgets unset (0 unlimited), respecting each positive limit.
-Legacy tasks and explicit compatibility profiles retain frozen semantics; read their
+Explicit profiles follow current contracts; SDD admission/continuation grants no legacy
+READY exemption. Read their
 managed sections in the detailed routing reference. Host owns goals/semantic review,
 Executor development and Runner deterministic state/facts. Ordinary Owners may code;
 managed Host read-only boundaries do not apply to them. No nested supervision; use

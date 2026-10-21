@@ -162,9 +162,9 @@ superflow check <change> --level coding-ready
 
 ## 当前交付策略
 
-真正新发或失效重发Coding Ready时，每个声明的执行用例必须冻结
-`executionEvidence: "runner-captured.v1"` 与 `executionContext`。既有命令产生
-`workflowPolicy: "observed-delivery.v1"`，不代改业务正文或coverage；缺失先由文档
-owner补齐。合法完整且身份一致的旧READY继续保留冻结续跑语义。
+所有 SDD Coding Ready 准入与续跑统一要求 `workflowPolicy: "observed-delivery.v1"`；
+每个声明的执行用例必须冻结 `executionEvidence: "runner-captured.v1"` 与
+`executionContext`。既有命令不代改业务正文或 coverage；缺项保持 BLOCKED，
+由文档 owner 补齐并重新评审。旧 READY 和旧文件仅作历史或 PARTIAL，不能放行续跑。
 
 完整验证与当前独评报告引用见 [test-guide.md](test-guide.md#当前交付策略)，报告形状仍由 [Reviewer清单](reviewer-checklist.md) 单一维护。

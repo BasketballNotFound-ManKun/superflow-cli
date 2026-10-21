@@ -123,7 +123,7 @@ release, and archive still require their own authorization. Honor authorization
 already given without asking again. Never commit or rewrite Git history merely
 to save progress.
 
-For observed-delivery.v1 complete delivery, use a `| Report |` table under
+For all complete SDD delivery under observed-delivery.v1, use a `| Report |` table under
 `## Independent Review` in existing test-report.md to link actual independent
 reports. Reference current DONE rereviews with reviewed source versions bound by
 `## Reviewed Sources` and `| Path | SHA-256 |`. Preserve historical reports; after

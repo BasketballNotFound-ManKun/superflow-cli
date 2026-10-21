@@ -91,7 +91,7 @@ verify 的全部 lint/guard，Quick 对账批准 spec。正文 PASS、JSON 或�
 才能称完整交付。未授权的 Git 提交、推送、发布与归档仍等待对应授权；已有明确授权
 按原范围执行，不重复索取。不得为了“保存进度”自行提交或重写 Git 历史。
 
-新 observed-delivery.v1 完整交付在现有 test-report.md 的 `## Independent Review` 下
+所有完整 SDD 交付（统一 observed-delivery.v1）在现有 test-report.md 的 `## Independent Review` 下
 用 `| Report |` 表逐行链接实际独立报告。引用当前复评的 DONE 报告；报告以
 `## Reviewed Sources` 的 `| Path | SHA-256 |` 表绑定已审源码。保留历史报告，
 源码变化后由 Reviewer 真实读取/复评再生成新表，不由 Owner 重绑旧 hash。

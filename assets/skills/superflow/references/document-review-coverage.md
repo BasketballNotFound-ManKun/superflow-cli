@@ -40,8 +40,9 @@
 任务不强加本节。新生成的适用合同在 `.openspec.yaml` 的 applicability 下写
 `source_investigation: required`，coverage 同时写 `sourceInvestigation: "required"`。
 此保留键使用 block-mapping 标量；引号和行内注释可用，flow/block-scalar 等未支持写法
-明确拒绝并要求规范化，不静默关闭核验。标记进入既有 handoff 哈希；不能删除标记或刷新哈希来关闭未解决调查。旧 v1 凭证保留原
-边界，未声明时不能声称已通过此核验；重新冻结适用合同须补调查。
+明确拒绝并要求规范化，不静默关闭核验。标记进入既有 handoff 哈希；不能删除标记或
+刷新哈希来关闭未解决调查。历史 v1 资料保留，但不能据此声称通过当前源码调查；
+适用合同须由文档 owner 补调查并重新评审，不授予当前 SDD 准入或完整通过豁免。
 
 ### 生成侧：从实际实现得出结论
 
@@ -119,6 +120,7 @@ CHAR/VARCHAR 声明；values 可引用 code 或 contract 中带引号/反引号�
 ```json
 {
   "schemaVersion": "superflow.review-coverage.v1",
+  "workflowPolicy": "observed-delivery.v1",
   "sources": [
     {"id":"S1","role":"requirement","path":"source-ingestion.md","sha256":"<64 hex>"},
     {"id":"S2","role":"code","path":"../../../src/caller.ts","sha256":"<64 hex>"},
@@ -135,6 +137,8 @@ CHAR/VARCHAR 声明；values 可引用 code 或 contract 中带引号/反引号�
   ],
   "cases": [
     {"id":"C1","entryId":"E1","level":"browser","action":"角色从实际页面执行动作","sourceRefs":["S3"],
+     "executionEvidence":"runner-captured.v1",
+     "executionContext":{"argv":["node","acceptance.js"],"cwd":".","environmentKeys":[]},
      "assertions":{"response":"约定成功结果","state":"归属及查询结果正确","forbiddenEffects":"不会创建独立资源"}}
   ]
 }
@@ -157,7 +161,7 @@ CLI/托管启动重算 handoff 和所有来源指纹；编辑 Hook 同步核验�
 新 Prompt 派发前若前一批已改变入口源码，主 Agent 检查影响并刷新相应评审，不能盲目更新指纹。
 coding-ready 复检失败会写 BLOCKED 撤销旧 READY。
 
-升级后已有评审文件仍可读取；缺 coverage/reviewHash 的旧文档交付不能用于新的启动，
+升级后已有评审文件仍可读取；缺 coverage/reviewHash 的旧文档交付不能用于启动或续跑，
 需按上述步骤补齐复审，不能填空对象绕过。已启动托管 Run 的恢复协议不变。
 直接编辑 Hook 遇旧凭证也需补齐；这属于修复旧门禁误放行，不自动重写项目资料。
 
@@ -214,7 +218,7 @@ PASS 的证据路径现在必须指向本地 `superflow.execution-receipt.v1` JS
   不能用 Mock 参数、NULL、字段键或影响行数独自证明写入。
 - `http-entry` 若承担 DB 义务，必须走真实 HTTP → 生产 Service/Mapper → 同类型 DB，
   同时执行返回、持久化和隔离断言；直接 Mapper 回放不能冒充 HTTP 或 browser 验收。
-- 旧非持久化合同保持兼容；旧持久化 PASS 缺新合同保留 PARTIAL。必要 DB 环境不可用时
+- 所有 SDD 合同统一满足当前要求；旧 PASS 缺当前字段或实际 capture 时保留 PARTIAL。必要 DB 环境不可用时
   记录 PARTIAL/BLOCKED 和原因，不把辅助 Mock/sql-binding 绿灯晋升为完整 PASS。
   历史证据绑定固定入口、源码/构建版本和 DB 引擎时仍有效；当前源码改动需要新证据，
   不得把历史版实际测试误说成没测试，也不能把旧结果用于当前新版本。
@@ -234,8 +238,7 @@ Git 交付路径还会对 tracked 报告依赖（receipt、原始事件、构建
 
 ## 声明式执行上下文与证据复用
 
-沿用 coverage/receipt v1；需要跨轮复用对命令、工作目录或调用环境敏感的检查时，
-由文档 owner 在 tests.md 与对应 case 中冻结
+沿用 coverage/receipt v1；所有 SDD 执行用例由文档 owner 在 tests.md 与对应 case 中冻结
 `executionContext={argv:[命令参数],cwd:相对change目录的工作目录,environmentKeys:[变量名]}`。
 argv 必须非空且逐项明确；cwd 使用相对路径，不使用盘符或绝对路径。作用范围仍由任务授权
 和源码/合同决定，cwd 声明不授予额外读取权限。执行者不能临场改变此合同。
@@ -254,18 +257,17 @@ cwd 对应当前 change 的冻结相对目录；已选环境摘要与运行 lint
 命令、目录、源码、构建或实际入口变化不能用旧结果关闭当前完整 PASS。
 此绑定不证明远端服务的启动环境；服务/数据库引擎、生产链与证据充分性仍须独立评审。
 
-未声明新字段的历史合同继续按已有源码/构建/入口规则核验，保留其原结论，不能声称
-已按此新增上下文要求核验。声明后缺观测、形状错误或错配必须补证据，不能把旧记录改成
-预期值。若需要修订冻结合同，返回文档 owner 重新评审，而非执行者放宽检查。
+历史合同缺当前字段时保留为历史或 PARTIAL，不授予完整通过或续跑豁免。
+缺观测、形状错误或错配必须补合同与实际采集证据，不能把旧记录改成预期值。若需要修订冻结合同，返回文档 owner 重新评审，而非执行者放宽检查。
 
 ## Runner-Captured Execution
 
-新编写的可执行用例应冻结 `executionEvidence: "runner-captured.v1"` 与既有
+所有 SDD 执行用例必须冻结 `executionEvidence: "runner-captured.v1"` 与既有
 `executionContext`（argv、相对cwd、非秘密环境键），调用现有报告linter采集，
-见 [test-guide.md](test-guide.md)，不手填PASS回执。文档评审在新合同冻结前核对
-该选择。未声明该字段的旧v1用例保留边界，不静默升级；缺运行/实测值保留PARTIAL。
+见 [test-guide.md](test-guide.md)，每份 PASS receipt 都须实际 capture。文档评审在合同冻结前
+核对此要求。旧 v1 用例缺字段时阻断补齐；缺运行/实测值保留 PARTIAL。
 捕获仅证明过程/输出来源，不证明业务充分性、Reviewer独立性或抵抗本机恶意篡改。
 
 ## 当前交付策略
 
-新发/失效重发准入见 [document-readiness.md](document-readiness.md#当前交付策略)；实际采集及完整复评收口见 [test-guide.md](test-guide.md#当前交付策略)。coverage继续是既有机器索引，不另持有正文合同或生命周期。
+所有 SDD 准入与续跑见 [document-readiness.md](document-readiness.md#当前交付策略)；实际采集及完整复评收口见 [test-guide.md](test-guide.md#当前交付策略)。coverage继续是既有机器索引，不另持有正文合同或生命周期。

@@ -26,10 +26,10 @@ workspaces run concurrently; overlapping roots queue under existing ownership
 and locks. Delivered tasks release workspaces; stopped missing locators are
 isolated rather than blocking healthy work.
 
-Frozen legacy tasks keep their meaning. Explicit quick/engineering/sdd/monitor
-profiles retain compatibility contracts; the strict engineering, tool and budget
-rules below apply to those profiles. Both paths share Task/Run, events and the
-three Agent messages without a parallel state machine.
+Explicit quick/engineering/sdd/monitor profiles follow their current contracts;
+strict engineering, tool and fixed-budget rules below apply where relevant. All
+SDD admission and continuation satisfy current gates without legacy READY exemptions.
+The paths share Task/Run, events and three Agent messages without a parallel state machine.
 
 
 This is the highest maintenance contract for Superflow CLI. Codex, Claude, and
@@ -133,7 +133,7 @@ through a hook, preflight, or final gate. Open semantic judgment must not be
 disguised as regex validation. Every failed gate explains the fact, repair
 entry, and recovery path.
 
-## 4. Simplicity, Reuse, and Compatibility
+## 4. Simplicity, Reuse, and Current-Policy Consistency
 
 - Search and extend existing modules, skills, scripts, protocols, and tests
   before creating parallel implementations.
@@ -141,8 +141,10 @@ entry, and recovery path.
   async flow, or compensation merely for future flexibility.
 - Each concept has one canonical source; installation or generation synchronizes
   derived assets.
-- Persisted formats and protocols are versioned, backward-compatible,
-  fail-safe, recoverable, and auditable.
+- Persisted formats and protocols are versioned, consistent with current policy,
+  fail-safe, recoverable, and auditable. This early project makes no default
+  backward-compatibility promise. Missing current requirements block until completed.
+  Preserve historical files and unknown/user assets; preservation grants no earlier-policy pass.
 - Codex and Claude differences belong in adapters, not core state.
 - Chinese and English docs, skills, prompts, CLI help, and tests stay equivalent.
 
@@ -236,8 +238,8 @@ normalized fingerprints. Explicit off/beta and old state retain their behavior. 
 does not change identity; checkbox/report progress stays outside frozen requirements,
 while task meaning and design changes invalidate prior readiness evidence.
 
-New execution contracts may freeze executionEvidence: runner-captured.v1. The existing
-report linter actually runs build/case commands and records redacted-before-persistence
+All SDD executable cases freeze executionEvidence: runner-captured.v1 and executionContext.
+The existing report linter actually runs build/case commands and records redacted-before-persistence
 output, exit codes, observed values and version binding. Legacy evidence is not upgraded;
 missing execution remains PARTIAL. Consistent hashes, handwritten PASS and copied expected
 values do not alone prove execution. Capture proves neither semantic sufficiency nor
@@ -255,12 +257,13 @@ Keep entry routing short and retain detailed rules on demand. Actually read the 
 phase Skill and required references; an entry summary is not a substitute. Repair
 canonical prose and consumer references, not just priority choices or rebound hashes.
 
-A complete, identity-matching legacy READY keeps frozen semantics. New or invalidated
-READY issuance uses workflowPolicy: observed-delivery.v1 and requires declared cases to
-freeze runner-captured.v1 and executionContext. Existing coding-ready owns this boundary,
-persists BLOCKED on failure and preserves evidence without silently rewriting contracts.
+All SDD admission and continuation require workflowPolicy: observed-delivery.v1 and
+declared cases freeze runner-captured.v1 and executionContext. Existing coding-ready
+enforces current requirements and persists BLOCKED for missing fields until the document
+owner repairs and rereviews them. Every PASS receipt requires actual capture. Old READY
+receives no exemption; retain old evidence only as history or PARTIAL.
 
-Under this policy, complete validation reuses the report linter to reference actual
+All complete SDD validation reuses the report linter to reference actual
 independent review/rereview reports with current state, explicitly clear Findings and
 Reviewed Sources identity. Repairs invalidate stale source identities. The manifest is
 input provenance, not proof every dependency was read. Agents judge actual diff/read

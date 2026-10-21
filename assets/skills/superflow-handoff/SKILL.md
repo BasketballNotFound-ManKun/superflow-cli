@@ -17,10 +17,11 @@ spec/API 行为回 contracts，源码 HOW/技术详设回 design，执行导航�
 先复查旧值/旧算法/旧用例是否仍作为现行要求出现，再刷新 handoff、文档评审和
 Coding Ready。只重绑 hash、手改评审凭证或宣称以某文档为准都不算修复。
 
-旧任务恢复保留原冻结合同和已有效的证据。新生成或因合同变化重新冻结并重发 READY
-的完整 SDD，按现有 coverage 冻结 `workflowPolicy: observed-delivery.v1`，逐用例
-`executionEvidence: runner-captured.v1`；缺实际 capture 时保持 PARTIAL，不把
-手填 PASS 升级为执行事实。仅实施源码变化按 build 续跑检查，不因此重新冻结旧合同。
+所有 SDD 准入与续跑统一要求 `workflowPolicy: observed-delivery.v1`，既有 coverage
+的每个执行用例必须冻结 `executionEvidence: runner-captured.v1` 与 `executionContext`。
+缺项由文档 owner 补齐并重新评审，当前准入保持 BLOCKED；每份 PASS receipt 都须
+实际 capture。旧文件仅保留为历史或 PARTIAL，不授予旧规范通过或续跑豁免。
+仅实施源码变化仍按 build 续跑检查，复核当前合同与证据，不自行改写业务方案。
 
 
 # SDD Implement

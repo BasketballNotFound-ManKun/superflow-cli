@@ -11,12 +11,12 @@ Read the full [Reviewer checklist](../superflow/references/reviewer-checklist.md
 Dispatch its readable diff.patch/source-manifest bundle; distinguish FIXED,
 MITIGATED, DEFERRED and NOT_A_DEFECT. Repairs return to the original Reviewer
 or a new isolated Reviewer for actual rereview. Logs do not fix remaining defects.
-For observed-delivery.v1 complete delivery, test-report.md `## Independent Review`
+For all complete SDD delivery under observed-delivery.v1, test-report.md `## Independent Review`
 contains a `| Report |` table referencing current independent DONE reports. Reports
 bind reviewed source versions through `## Reviewed Sources` and `| Path | SHA-256 |`.
 Changed source requires actual rereview, not rebound historical report hashes.
-Missing reports/current rereview or open blockers remain PARTIAL/Blocked. Legacy
-frozen contracts are not silently upgraded.
+Missing reports/current rereview or open blockers remain PARTIAL/Blocked. Retain old
+files only as history or PARTIAL; missing current requirements block until completed.
 
 
 ## Verification signal review
@@ -34,9 +34,9 @@ and Mapper XML files together when they share a bundle. Do not treat this
 mechanical inventory as a correctness verdict: findings still need source
 anchors, a fresh reading of the affected call path, and independent judgment.
 
-For declared executionContext reuse, independently check current command, cwd,
+SDD evidence reuse requires executionContext: independently check current command, cwd,
 selected environment, source, build, and entry. Changed invocation context cannot
-reuse PASS. Legacy unbound evidence retains its boundary; JSON presence/hash
+reuse PASS. Missing current requirements remain PARTIAL; JSON presence/hash
 identity does not prove actual execution or business sufficiency.
 
 

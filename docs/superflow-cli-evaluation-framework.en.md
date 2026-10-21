@@ -349,6 +349,13 @@ reused or installation damages unknown assets. Never weaken assertions to evade 
 
 ## Phase reading, fresh admission and rereview continuity (2026-10-21)
 
+The following records historical evaluation; its valid-frozen-legacy-continuation
+exemption is now removed. All current SDD admission and continuation require
+observed-delivery.v1, runner-captured.v1 and executionContext for every executable case.
+Every PASS receipt requires actual capture; complete delivery references actual current
+source-bound independent reports. Retain old files only as history or PARTIAL. Missing
+requirements return to their owner for repair and rereview, never earlier-policy promotion.
+
 Comparative evidence showed explicit phase handoff and multi-view review in one run.
 Another improved startup checks, real state change and one independent review, but
 provided no readable diff or rereview, reissued READY for uncaptured legacy cases,
@@ -372,3 +379,26 @@ prove reviewer independence, malicious-local tamper resistance, population compl
 Windows execution or renewed business delivery. Roll back owners if missing provenance
 advances, legacy continuation migrates, moved rules disappear, stale review is reused,
 controls count as guidance or installation harms unknown assets; preserve failure data.
+
+## One current policy without legacy receipt exemptions (2026-10-21)
+
+The user explicitly rejected old-rule compatibility. Baseline: 1326 tests and actual
+package installation passed. Remove legacy READY branching, source-less report passes
+and missing capture/context exemptions. All SDD admission/recovery follows current
+policy. Historical files remain but grant no approval; native non-SDD/Quick scope is
+a task distinction, not a legacy exemption.
+
+RED cases reject complete old READY, missing frozen fields despite real capture and
+missing/old/BLOCKED readiness despite valid review. Fixtures use real capture instead
+of handwritten successful events. Independent review found additional managed reuse,
+resume, authorization and guidance entries that mutated state or started service first;
+the same admission owner now guards execution, delivery and final preflight. Native
+direct tasks gain no SDD requirement. Current implementation sources may evolve while
+frozen contracts remain checked. Generated rereviews stay in existing .sdd/reviews so
+execution evidence does not change requirement identity.
+
+The external full report owns final test/install results, not business acceptance.
+Roll back affected changes if missing requirements advance, legitimate current code
+evolution fails, non-SDD tasks acquire state, recovery loses evidence, execution state
+changes before admission or installation damages unknown assets. Preserve evidence;
+do not reintroduce old-rule exemptions or weaken assertions to claim a repair.

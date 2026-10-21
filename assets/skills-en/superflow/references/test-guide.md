@@ -2,12 +2,13 @@
 
 ## Runner-Captured Execution
 
-For new cases requiring capture of actual build/case processes, freeze
+All SDD executable cases require capture of actual build/case processes. Freeze
 `executionEvidence: "runner-captured.v1"` and
 `executionContext: {"argv":["node","case.js"],"cwd":".","environmentKeys":[]}`
 in the existing document-review coverage case. argv is an argument array without a shell; cwd is
-relative to the review file. environmentKeys declares supported non-secret keys only. Preserve
-legacy receipts without silently upgrading them. Full fields remain owned by the
+relative to the review file. environmentKeys declares supported non-secret keys only. Every
+PASS receipt requires actual capture. Retain old receipts only as history or PARTIAL;
+missing current requirements block until completed. Full fields remain owned by the
 [execution evidence contract](document-review-coverage.md) and existing receipt validation.
 
 Place these two minimal plans at the project root:
@@ -177,7 +178,7 @@ add transaction annotations or replace Mapper methods. Run the same path and
 affected regression after repair. Design changes first repair canonical contracts.
 Do not skip failures, weaken assertions, or hide blockers.
 
-For cross-round checks sensitive to commands/directories/invocation environments, freeze executionContext under [declared context](document-review-coverage.md#declared-execution-context-and-evidence-reuse). Keep historical proof without calling unbound records complete under a new context.
+For every SDD executable case, freeze executionContext under [declared context](document-review-coverage.md#declared-execution-context-and-evidence-reuse). Keep historical proof without calling unbound records complete under a new context.
 
 ## User operation chains and real anomaly regressions
 
@@ -225,17 +226,20 @@ zero. Final summary counts and scope must match the final effective report.
 
 ## Current delivery policy
 
-This section applies to `workflowPolicy: "observed-delivery.v1"`. Fresh admission and legacy continuation are owned by [document-readiness.md](document-readiness.md#current-delivery-policy).
+All SDD uses `workflowPolicy: "observed-delivery.v1"`. Admission and continuation are owned by [document-readiness.md](document-readiness.md#current-delivery-policy).
 
-For this policy, complete verification references current independent rereview reports
+For all complete SDD delivery, verification references current independent rereview reports
 in test-report.md using the plain relative-path table below (no link syntax):
 
 ```markdown
 ## Independent Review
 | Report |
 |---|
-| reviews/current-review.md |
+| .sdd/reviews/current-code-review.md |
 ```
+
+Store generated review reports in the existing `.sdd/reviews/` evidence area, excluded from the document handoff digest; updating execution/review evidence must not modify frozen requirement identity.
+
 
 The actual report uses the canonical four-state shape and `## Reviewed Sources`
 `| Path | SHA-256 |` input identity manifest from the Reviewer checklist. It must have

@@ -2,7 +2,8 @@
 
 ## Native communication: preserve protocols, separate semantics and transport
 
-New tasks default to native; legacy profiles/contracts are not silently migrated.
+New tasks default to native; explicit profiles follow their current contracts.
+All SDD admission and continuation satisfy current gates without legacy READY exemptions.
 Handoff v2, Executor Delivery v2 and Host Review v2 remain. Agents may reply
 naturally; Runner wraps deterministic facts and original text without inventing
 test/completion claims or asking for engineering reruns to fix formatting.
@@ -21,7 +22,7 @@ explicit Runner-to-Host escalation handles it.
 Native budgets use zero for unset and honor positive user limits independently.
 Native output has no engineering Schema constraint. Runner still validates task,
 round, session, exit status, raw logs, journal integrity and evidence references.
-This section overrides compatibility-only engineering JSON, short-session and
+This section overrides explicit engineering-profile JSON, short-session and
 fixed-budget requirements below.
 
 
@@ -519,9 +520,11 @@ enabling features the user disabled, and changes none of the three protocols.
 
 ### Captured task evidence provenance
 
-An existing coverage case may select executionEvidence: runner-captured.v1, requiring
-the existing report linter to record canonical redacted output and provenance during
-actual build/case execution. This is a project acceptance contract field, not a new
-Handoff, Executor Delivery or Host Review field. Legacy contracts keep their boundary;
-missing capture never invents a pass. Host still judges real state changes and independent
+All SDD admission and continuation require observed-delivery.v1. Existing executable
+coverage cases freeze executionEvidence: runner-captured.v1 and executionContext;
+the report linter captures canonical redacted output and provenance during actual
+build/case execution. Every PASS receipt requires actual capture and complete delivery
+references current independent source reports. Missing requirements block until completed;
+retain old files only as history or PARTIAL. These remain project acceptance fields,
+not new Handoff, Executor Delivery or Host Review fields. Host still judges real state changes and independent
 review. Native users without an SDD request do not acquire an engineering contract.

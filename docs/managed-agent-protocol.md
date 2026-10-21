@@ -2,7 +2,8 @@
 
 ## 原生通信：保留协议，分开语义与传输
 
-新任务默认 native；旧 profile 及落盘合同不静默迁移。仍使用 Handoff v2、
+新任务默认 native；显式档位按各自现行合同执行，SDD 准入与续跑无旧 READY 豁免。
+仍使用 Handoff v2、
 Executor Delivery v2、Host Review v2。Agent 可自然回复，Runner 只包装可确定
 事实及原文，不制造“测试通过/任务完成”等业务断言，不要求 Agent 为格式重跑研发。
 
@@ -16,7 +17,7 @@ Executor Delivery v2、Host Review v2。Agent 可自然回复，Runner 只包装
 
 native 预算 0 为未设限，用户正数独立生效；原生输出没有工程 Schema 限制。
 任务、轮次、会话、退出码、原始日志、状态链与引用完整性仍由 Runner 校验。
-本节优先于下文兼容档位的工程 JSON、短会话及固定预算要求。
+本节优先于下文显式工程档位的工程 JSON、短会话及固定预算要求。
 
 
 ## 目标
@@ -397,8 +398,9 @@ Codex Executor 启动与 resume 不覆写用户的 memories、多代理或技能
 
 ### 任务证据的捕获来源
 
-既有 coverage case 可选 executionEvidence: runner-captured.v1，要求现有报告
-linter 在实际构建/用例执行时记录规范脱敏输出和来源。该字段属于项目验收合同，
-不是 Handoff、Executor Delivery 或 Host Review 的新增字段。旧合同保留旧边界，
-未捕获证据不补造通过。捕获不证明业务充分性，Host 仍核对真实状态变化与独立评审；
+所有 SDD 准入与续跑要求 observed-delivery.v1；既有 coverage 执行用例必须冻结
+executionEvidence: runner-captured.v1 与 executionContext。现有报告 linter 实际执行
+构建/用例并记录规范脱敏输出和来源；每份 PASS receipt 都须实际 capture。完整交付
+必须引用当前独评来源报告。缺项阻断补齐，旧文件仅作历史或 PARTIAL。字段属于项目
+验收合同，不是 Handoff、Executor Delivery 或 Host Review 的新增字段。捕获不证明业务充分性，Host 仍核对真实状态变化与独立评审；
 native 用户未要求 SDD 时不因此被强制生成研发合同。

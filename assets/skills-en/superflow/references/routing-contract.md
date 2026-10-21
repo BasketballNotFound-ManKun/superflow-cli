@@ -8,8 +8,9 @@ For an explicit managed request, check the MCP runtime, then pass the original
 request, skill command and document paths verbatim to superflow_managed_start.
 Omitted/auto profile defaults to native. Do not replace the entry with a summary
 or append another engineering plan, acceptance script or engineering JSON demand.
-The strict rules below apply to explicitly chosen compatibility profiles or
-frozen legacy Task/Run recovery, never by silently converting a new native task.
+The strict rules below apply to explicitly chosen engineering profiles or their
+Task/Run recovery under current contracts. All SDD admission and continuation require
+current gates. Native non-SDD tasks are not silently converted.
 
 Native Agents retain their skills, plugins, subagents, memory, permissions,
 approvals and configuration. Pass model/effort only when explicitly selected.

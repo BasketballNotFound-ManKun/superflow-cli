@@ -10,10 +10,11 @@ description: Superflow 内部能力：只读评审代码、测试证据和交付
 完整读取 [Reviewer 清单](../superflow/references/reviewer-checklist.md)，按其中可读
 diff.patch/source-manifest 派发，区分 FIXED/MITIGATED/DEFERRED/NOT_A_DEFECT；
 整改后由原 Reviewer 或新隔离 Reviewer 实际复评。补日志不关闭仍存在的错误行为。
-observed-delivery.v1 的完整交付在 test-report.md `## Independent Review` 下
+所有完整 SDD 交付（统一 observed-delivery.v1）在 test-report.md `## Independent Review` 下
 用 `| Report |` 表引用当前独立 DONE 报告，报告在 `## Reviewed Sources` 的
 `| Path | SHA-256 |` 表绑定已审源码。源码变更后真实复评，不重绑历史报告的 hash；
-缺报告/当前复评或未决阻断项保持 PARTIAL/Blocked。旧冻结合同不静默升级。
+缺报告/当前复评或未决阻断项保持 PARTIAL/Blocked。旧文件仅保留为历史或 PARTIAL，
+缺当前要求时阻断补齐。
 
 
 ## 验证信号复核
@@ -29,8 +30,8 @@ and Mapper XML files together when they share a bundle. Do not treat this
 mechanical inventory as a correctness verdict: findings still need source
 anchors, a fresh reading of the affected call path, and independent judgment.
 
-复用检查存在 executionContext 声明时，独立核对当前命令、cwd、已选环境、源码、
-构建和入口；调用环境与冻结要求不同时不能沿用 PASS。未声明旧证据保留原边界，
+SDD 复用检查必须有 executionContext，独立核对当前命令、cwd、已选环境、源码、
+构建和入口；调用环境与冻结要求不同时不能沿用 PASS。缺当前要求保留 PARTIAL，
 不以 JSON 存在或哈希一致代替执行真实性/业务充分性。
 
 

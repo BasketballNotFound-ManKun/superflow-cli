@@ -16,10 +16,11 @@ Implement tasks from an OpenSpec change.
 完整读取 [Reviewer 清单](../superflow/references/reviewer-checklist.md)，按其中可读
 diff.patch/source-manifest 派发，区分 FIXED/MITIGATED/DEFERRED/NOT_A_DEFECT；
 整改后由原 Reviewer 或新隔离 Reviewer 实际复评。补日志不关闭仍存在的错误行为。
-observed-delivery.v1 的完整交付在 test-report.md `## Independent Review` 下
+所有完整 SDD 交付（统一 observed-delivery.v1）在 test-report.md `## Independent Review` 下
 用 `| Report |` 表引用当前独立 DONE 报告，报告在 `## Reviewed Sources` 的
 `| Path | SHA-256 |` 表绑定已审源码。源码变更后真实复评，不重绑历史报告的 hash；
-缺报告/当前复评或未决阻断项保持 PARTIAL/Blocked。旧冻结合同不静默升级。
+缺报告/当前复评或未决阻断项保持 PARTIAL/Blocked。旧文件仅保留为历史或 PARTIAL，
+缺当前要求时阻断补齐。
 
 
 ## Superflow 实施验证入口

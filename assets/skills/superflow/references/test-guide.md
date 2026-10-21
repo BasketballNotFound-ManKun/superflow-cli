@@ -2,11 +2,12 @@
 
 ## Runner-Captured Execution
 
-新用例需要捕获实际构建/用例进程时，在既有 document-review coverage 用例冻结
+所有 SDD 执行用例必须捕获实际构建/用例进程，在既有 document-review coverage 用例冻结
 `executionEvidence: "runner-captured.v1"` 与
 `executionContext: {"argv":["node","case.js"],"cwd":".","environmentKeys":[]}`。
 argv 是参数数组，不经 shell；cwd 相对 review 文件目录，environmentKeys 仅声明受支持
-的非秘密环境键。历史凭证保留，不静默升级为本模式；完整字段以
+的非秘密环境键。每份 PASS receipt 必须实际 capture；旧凭证仅保留为历史或 PARTIAL，
+缺当前要求时阻断补齐。完整字段以
 [执行证据合同](document-review-coverage.md)和既有 receipt 校验为准。
 
 在项目根目录准备两个最小 plan（以下文件均放在项目根目录）：
@@ -142,7 +143,7 @@ owner 校验与清理入口，不能用宽泛 pkill/killall。纯函数不要求
 注解或换 Mapper 方法。修复后跑同一路径和受影响回归；方案变化先修复规范合同。
 不跳过失败项、不改断言迎合实现、不隐瞒阻塞。
 
-跨轮复用对命令/目录/调用环境敏感的检查时，按 [声明式上下文](document-review-coverage.md#声明式执行上下文与证据复用)冻结 executionContext；保留历史证据，但不得把未绑定旧记录标为新上下文完整通过。
+所有 SDD 执行用例按 [声明式上下文](document-review-coverage.md#声明式执行上下文与证据复用)冻结 executionContext；保留历史证据，但不得把未绑定旧记录标为新上下文完整通过。
 
 ## 用户操作链与真实异常回归
 
@@ -176,16 +177,19 @@ owner 校验与清理入口，不能用宽泛 pkill/killall。纯函数不要求
 
 ## 当前交付策略
 
-本节适用于 `workflowPolicy: "observed-delivery.v1"`；新发准入与旧冻结续跑边界由 [document-readiness.md](document-readiness.md#当前交付策略) 维护。
+所有 SDD 统一采用 `workflowPolicy: "observed-delivery.v1"`；准入与续跑由 [document-readiness.md](document-readiness.md#当前交付策略) 维护。
 
-该策略的完整验证在test-report.md引用当前实际独评/复评报告，使用纯相对路径表：
+所有完整 SDD 验证在test-report.md引用当前实际独评/复评报告，使用纯相对路径表：
 
 ```markdown
 ## Independent Review
 | Report |
 |---|
-| reviews/current-review.md |
+| .sdd/reviews/current-code-review.md |
 ```
+
+生成的评审报告放既有 `.sdd/reviews/` 证据区，该目录不进入文档交接指纹；更新执行/复评证据不能改变冻结需求身份。
+
 
 实际报告沿Reviewer规范四状态形状，以 `## Reviewed Sources` 的
 `| Path | SHA-256 |` 表记录输入身份。当前唯一 `## Findings` 正文须明确为

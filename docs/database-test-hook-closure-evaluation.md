@@ -29,7 +29,7 @@
 
 case 冻结 mockBoundary（隔离外部客户端可允许；必测 Mapper/Service 不得 mock）、需要执行的 statement 与数据断言；receipt 和原始事件回填对应 testLayer/database/mockBoundary，数据库引擎与主版本匹配，不能以 H2/SQLite替 MySQL。生产 SQL 身份和 schema 来源纳入已有 sources 指纹；写入按同业务ID before/after/expected、影响行数与非目标/旧轮次保持不变验证。哪些风险需要哪些断言由文档冻结；不靠 SQL 关键词猜。
 
-旧非持久化 case 兼容；旧持久化 PASS 缺新合同时保留为 partial，不默许完整通过。纯逻辑任务明确无持久化影响即免 DB。匿名 SQLite回放只验证 harness；新增匿名生产 Mapper XML + 真实MySQL回放，观察 Mock绿、XML漏字段而DB失败并被门禁拦截。不得修改生产断言迎合实现。
+当轮历史行为为旧非持久化 case 兼容、旧持久化 PASS 缺新合同保留 partial；该旧合同豁免现已移除，当前所有 SDD 准入与续跑统一满足当前合同，PASS receipt 必须实际采集。纯逻辑任务明确无持久化影响即免 DB。匿名 SQLite回放只验证 harness；新增匿名生产 Mapper XML + 真实MySQL回放，观察 Mock绿、XML漏字段而DB失败并被门禁拦截。不得修改生产断言迎合实现。
 
 正反例：持久化只计划Mock缺必要DB用例；正确分层通过；纯逻辑免DB；DB引擎/statement/mock边界/指纹错配拒绝；环境缺失partial；历史固定源码证据仍可引用，不替当前改动；真实SQL漏字段失败。
 

@@ -20,9 +20,9 @@
 时间、Token 和费用。未知用量不是零。独立工作区可以并行，重叠工作区按现有锁
 和任务所有权排队；交付后的任务释放工作区，缺失的已停止旧登记隔离处理。
 
-已冻结的旧任务不静默换语义。显式 quick/engineering/sdd/monitor 是既有合同的
-兼容档位；下文关于强工程合同、受控工具及旧预算的条款只在这些档位适用。
-原生路径与旧路径共用 Task/Run、事件和三种 Agent 消息，不引入平行状态机。
+显式 quick/engineering/sdd/monitor 按各自现行合同执行；下文关于强工程合同、
+受控工具及固定预算的条款只在适用档位生效。SDD 准入与续跑统一满足当前门禁，
+不授予旧 READY 豁免。各路径共用 Task/Run、事件和三种 Agent 消息，不引入平行状态机。
 
 
 本纲领是 Superflow CLI 的最高维护约束。Codex、Claude 以及其他受支持的开发 Agent
@@ -96,12 +96,14 @@ Owner 从已满足依赖的任务继续，信号成立才勾选；阶段汇报�
 高风险且可确定的规则不能只写在 Prompt 中，必须由 Hook、preflight 或最终门禁保障；
 开放式语义判断不得伪装成正则门禁。门禁失败必须说明事实、修复入口和恢复方式。
 
-## 4. 简单、复用与兼容
+## 4. 简单、复用与当前规范一致
 
 - 先搜索并扩展现有模块、Skill、脚本、协议和测试，避免平行实现。
 - 优先同步事务和最少状态；没有证据不得为未来扩展增加层、缓存、异步或补偿。
 - 一个概念只有一个 canonical source（规范事实源）；派生资产由安装或生成流程同步。
-- 协议和落盘格式要版本化、向后兼容、失败安全、可恢复、可审计。
+- 协议和落盘格式要版本化、符合当前规范、失败安全、可恢复、可审计；早期项目
+  不默认承诺向后兼容。缺当前必需项时阻断补齐，历史文件与未知/用户资产保留，
+  保留数据不等于授予旧规范通过。
 - Codex、Claude 的能力差异由适配层处理，不污染核心状态机。
 - 中英文文档、Skill、Prompt、CLI 帮助和测试必须同步，语义不得漂移。
 
@@ -172,8 +174,9 @@ path-scoped rules 负责项目适用范围，Hook/脚本只负责可确定的窄
 显式 off/beta 与旧 state 保留。投影形式不改变文档身份，任务勾选/测试报告不进入
 冻结合同；任务语义与设计变化仍使原就绪证据失效。
 
-新执行合同可冻结 executionEvidence: runner-captured.v1，复用现有报告 linter
-实际运行构建与用例命令，保存首写盘前脱敏的输出、退出码、实测值与版本绑定。
+所有 SDD 执行用例必须冻结 executionEvidence: runner-captured.v1 与 executionContext，
+复用现有报告 linter 实际运行构建与用例命令，保存首写盘前脱敏的输出、退出码、
+实测值与版本绑定。
 旧证据不升级；没有执行来源保留 PARTIAL。自洽哈希、手填 PASS 和 expected=actual
 不能单独证明执行，捕获也不证明业务断言充分或抵抗本机恶意篡改。
 
@@ -186,12 +189,12 @@ path-scoped rules 负责项目适用范围，Hook/脚本只负责可确定的窄
 总入口保持短路由，完整旧细则保留按需参考；当前阶段Skill与必读规范必须实际读取，
 不能用入口摘要代替。修文档冲突须改canonical正文及消费引用，不只是选优先级或刷hash。
 
-合法完整且身份一致的旧READY保留冻结语义；真正新发或失效重发READY采用
-workflowPolicy: observed-delivery.v1，要求声明的执行用例冻结runner-captured.v1与
-executionContext。此准入由现有coding-ready owner裁决，拒绝时保留旧证据并写BLOCKED，
-不静默改写旧合同或把其迁移责任交给实现Agent临时猜测。
+所有 SDD 准入与续跑统一要求 workflowPolicy: observed-delivery.v1，声明的执行用例
+必须冻结 runner-captured.v1 与 executionContext。现有 coding-ready owner 裁决当前要求；
+缺项保留历史文件并写 BLOCKED，由文档 owner 补齐与重新评审，不授予旧 READY 豁免。
+所有 PASS receipt 都必须实际 capture，旧证据仅作历史或 PARTIAL。
 
-新策略的完整验证沿现有report linter引用实际独评/复评报告，核当前状态、明确无未决
+所有完整 SDD 验证沿现有report linter引用实际独评/复评报告，核当前状态、明确无未决
 Findings及Reviewed Sources身份清单；修后源码变化使旧报告失效。清单是收到的输入
 身份，不等于全仓逐字评审；真实diff/读取范围、Reviewer独立性与结论充分性由Agent
 核验。修复、缓解、授权延期和不成立分别记录，不能以日志改善替代功能修复。

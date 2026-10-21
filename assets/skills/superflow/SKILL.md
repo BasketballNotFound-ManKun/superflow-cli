@@ -72,7 +72,7 @@ OpenSpec applyRequires 仅完成基础产物。完整文档请求在同一授权
 并核验 `superflow_managed_runtime`，原样传用户请求/技能命令/文档路径给
 `superflow_managed_start`。新任务省略/auto 默认 native，继承原生能力、配置和审批；
 模型/推理仅用户指定时传入，预算默认不填（0 未设限），正数各自生效。
-旧任务/显式兼容档位保留冻结语义，具体强规则按详细路由合同的托管章节读取。
+显式档位按现行合同执行，SDD 准入与续跑无旧 READY 豁免；强规则按详细路由合同读取。
 Host 只持有目标/语义评审，Executor 负责研发，Runner 持有状态/确定事实；普通 Owner
 可以编码，不套用托管 Host 只读规则。不启动嵌套监督，等待沿 MCP wait，未明确通过不交付。
 

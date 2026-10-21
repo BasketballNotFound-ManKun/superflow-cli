@@ -130,10 +130,11 @@ approval and a proven idempotency basis.
 
 ## Current delivery policy
 
-New or invalidated Coding Ready issuance requires every declared executable case to
-freeze `executionEvidence: "runner-captured.v1"` and `executionContext`. The existing
-command issues `workflowPolicy: "observed-delivery.v1"`; it does not repair business
-prose or rewrite coverage. Resolve missing contracts through their document owner.
-Complete, current legacy READY keeps its frozen continuation boundary.
+All SDD Coding Ready admission and continuation require
+`workflowPolicy: "observed-delivery.v1"`; every declared executable case freezes
+`executionEvidence: "runner-captured.v1"` and `executionContext`. The existing command
+does not repair business prose or coverage. Missing fields remain BLOCKED until the
+document owner repairs and rereviews them. Retain old READY and files only as history
+or PARTIAL; they cannot authorize continuation.
 
 Complete validation and current independent-review references follow [test-guide.md](test-guide.md#current-delivery-policy). Reviewer report shape remains owned by [reviewer-checklist.md](reviewer-checklist.md).

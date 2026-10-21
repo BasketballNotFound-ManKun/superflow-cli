@@ -8,6 +8,10 @@ Mock proves isolated logic. SQL generation/binding, actual same-engine database 
 
 ## Observations and verification
 
+These are historical observations. Earlier nonpersistent-case compatibility no longer
+grants admission or continuation: current SDD contracts meet current requirements and
+every PASS receipt requires actual capture. Preserve old files as history or PARTIAL.
+
 Both initial legacy Git negative cases incorrectly committed with exit 0. After current delegation, NULL forged PASS is rejected and complete SQL evidence commits. Anonymous MyBatis/MySQL8.0.36 is actually compiled and executed from a disposable Git workspace: Mock logic is green while omitted XML affects one row but leaves the token NULL. Original assertions fail, and a forged PASS retaining that observation is rejected by the real Git path. Correct XML persists the value, with keyed snapshots for non-target and old-round records unchanged. Both hosts reuse these valid DB observations; this is harness verification, not any private business acceptance.
 
 Independent review found missing snapshots, boolean/number conflation, tracked dependency/index gaps, dangling links and missed generated routing. The database findings were fixed and re-reviewed PASS; remaining fixes are undergoing final review. An interim full run passed 743 tests in 103 files; final signals are recorded after closure.

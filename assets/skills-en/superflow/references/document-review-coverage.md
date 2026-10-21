@@ -47,8 +47,9 @@ applicability in `.openspec.yaml` and `sourceInvestigation: "required"` in cover
 uses the existing handoff hash. This reserved key uses block-mapping scalars; quotes and inline
 comments are accepted. Unsupported flow/block-scalar forms fail explicitly and require normalization,
 never silently disable the check. Removing it or refreshing hashes cannot close investigation.
-Legacy v1 receipts keep their original boundary and cannot claim this new check; refreezing an
-applicable contract requires investigation.
+Preserve historical v1 material without claiming current source-investigation approval.
+Applicable contracts require investigation and rereview by the document owner; historical
+material grants no current SDD admission or complete-pass exemption.
 
 ### Generation: derive conclusions from actual implementations
 
@@ -140,6 +141,7 @@ file bytes, unlike the normalized handoff hash. Reference code, do not copy its 
 ```json
 {
   "schemaVersion": "superflow.review-coverage.v1",
+  "workflowPolicy": "observed-delivery.v1",
   "sources": [
     {"id":"S1","role":"requirement","path":"source-ingestion.md","sha256":"<64 hex>"},
     {"id":"S2","role":"code","path":"../../../src/caller.ts","sha256":"<64 hex>"},
@@ -156,6 +158,8 @@ file bytes, unlike the normalized handoff hash. Reference code, do not copy its 
   ],
   "cases": [
     {"id":"C1","entryId":"E1","level":"browser","action":"Actor performs action on actual page","sourceRefs":["S3"],
+     "executionEvidence":"runner-captured.v1",
+     "executionContext":{"argv":["node","acceptance.js"],"cwd":".","environmentKeys":[]},
      "assertions":{"response":"contracted success","state":"correct ownership and visibility","forbiddenEffects":"no independent resources"}}
   ]
 }
@@ -246,8 +250,8 @@ no-persistence rationale. Do not infer risks from SQL keywords.
 - An `http-entry` carrying DB obligations must traverse real HTTP → production
   Service/Mapper → same-engine DB and check response, persistence, and isolation.
   Direct Mapper replay cannot claim HTTP or browser acceptance.
-- Legacy nonpersistent contracts stay compatible. Legacy persistent PASS without
-  the new contract remains PARTIAL. Missing required DB environments are PARTIAL/BLOCKED
+- All SDD contracts satisfy current requirements. Legacy PASS missing current fields
+  or actual capture remains PARTIAL. Missing required DB environments are PARTIAL/BLOCKED
   with reasons; green auxiliary mocks/SQL binding cannot promote full PASS.
   Historical evidence bound to a fixed entry, source/build version, and DB engine
   remains valid for that version. Current source changes require new evidence; never
@@ -272,9 +276,8 @@ Git delivery compares normalized index objects for tracked report dependencies (
 
 ## Declared execution context and evidence reuse
 
-Reuse coverage/receipt v1. When reusing checks sensitive to commands, working
-directories, or invocation environments, the document owner freezes tests.md and
-its case `executionContext={argv:[arguments],cwd:directory relative to change,environmentKeys:[names]}`.
+Reuse coverage/receipt v1. For every SDD executable case, the document owner freezes
+tests.md and its case `executionContext={argv:[arguments],cwd:directory relative to change,environmentKeys:[names]}`.
 argv is nonempty and explicit; cwd is relative without drive prefixes or absolute
 paths. Task permissions and source/contracts still define read scope: cwd grants
 no additional access. Implementers cannot redesign this contract.
@@ -296,22 +299,21 @@ commands, directories, source, builds, or targets changing prevent old proof fro
 closing current complete PASS. This does not prove remote-service startup
 environments: engines, production chains, and sufficiency need independent review.
 
-Historical contracts without the field retain existing source/build/entry checks
-and their conclusions, without claiming this new context verification. Declared
-contracts with missing/malformed/mismatched observations need evidence, not editing
-old observations to expectations. Contract changes return to the document owner
+Historical contracts missing current fields remain history or PARTIAL; they grant
+no full-pass or continuation exemption. Missing/malformed/mismatched observations
+require repaired contracts and actual captured evidence, never rewritten expectations. Contract changes return to the document owner
 for renewed review rather than weakening execution checks.
 
 ## Runner-Captured Execution
 
-New executable cases freeze `executionEvidence: "runner-captured.v1"` together with
+All SDD executable cases freeze `executionEvidence: "runner-captured.v1"` together with
 `executionContext` (argv, relative cwd and non-secret environment keys). Use the existing
 report linter capture mode documented in [test-guide.md](test-guide.md); do not handwrite
-PASS receipts. The document reviewer checks this choice before freezing new contracts.
-Legacy v1 cases without this field keep their boundary and are not silently upgraded.
+PASS receipts. Every PASS receipt requires actual capture; the document reviewer checks
+this requirement before freezing contracts. Legacy v1 cases missing fields block until completed.
 Capture establishes observed process/output provenance, not business sufficiency or
 independence; preserve PARTIAL when execution or required measurements are missing.
 
 ## Current delivery policy
 
-New/invalidated readiness follows [document-readiness.md](document-readiness.md#current-delivery-policy); actual capture and complete review closure follow [test-guide.md](test-guide.md#current-delivery-policy). Coverage remains the existing machine index, not another contract or lifecycle owner.
+All SDD admission and continuation follow [document-readiness.md](document-readiness.md#current-delivery-policy); actual capture and complete review closure follow [test-guide.md](test-guide.md#current-delivery-policy). Coverage remains the existing machine index, not another contract or lifecycle owner.

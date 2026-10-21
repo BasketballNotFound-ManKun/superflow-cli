@@ -17,12 +17,12 @@ Read the full [Reviewer checklist](../superflow/references/reviewer-checklist.md
 Dispatch its readable diff.patch/source-manifest bundle; distinguish FIXED,
 MITIGATED, DEFERRED and NOT_A_DEFECT. Repairs return to the original Reviewer
 or a new isolated Reviewer for actual rereview. Logs do not fix remaining defects.
-For observed-delivery.v1 complete delivery, test-report.md `## Independent Review`
+For all complete SDD delivery under observed-delivery.v1, test-report.md `## Independent Review`
 contains a `| Report |` table referencing current independent DONE reports. Reports
 bind reviewed source versions through `## Reviewed Sources` and `| Path | SHA-256 |`.
 Changed source requires actual rereview, not rebound historical report hashes.
-Missing reports/current rereview or open blockers remain PARTIAL/Blocked. Legacy
-frozen contracts are not silently upgraded.
+Missing reports/current rereview or open blockers remain PARTIAL/Blocked. Retain old
+files only as history or PARTIAL; missing current requirements block until completed.
 
 
 ## Superflow implementation verification entry

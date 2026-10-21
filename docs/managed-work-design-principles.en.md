@@ -24,10 +24,11 @@ Independent workspaces run concurrently. Overlapping primary/related/canonical
 roots queue; pending reviews retain ownership and delivery states release it.
 Isolate stopped missing locators but never guess ownership of active/unknown tasks.
 
-Frozen tasks and explicit compatibility profiles retain their contracts. Strict
-engineering gates, short sessions, tool and budget constraints below describe
-that compatibility path; native defaults follow this section and the global
-native boundary without adding another role or state machine.
+Explicit engineering profiles follow their current contracts. Strict engineering
+gates, short sessions, tools and budgets below apply to the corresponding profiles.
+All SDD admission and continuation satisfy current gates without legacy READY exemptions.
+Native non-SDD defaults follow this section and the global native boundary without
+another role or state machine.
 
 
 ## Status
@@ -304,7 +305,8 @@ applicable, or suspicious, use an Agent.
 
 Agents communicate through Runner-managed JSON, not fragile chat history.
 Markdown is a human projection; JSON is the machine source of truth. Protocol
-changes require backward compatibility or explicit migration.
+changes follow current policy with fail-safe recovery, without a default
+backward-compatibility promise for this early project. Preserve unknown/user assets.
 
 ### Executor handoff: `superflow.handoff.v2`
 
@@ -820,6 +822,9 @@ resume binds an explicit session and never uses `--last`.
 
 Existing document owners resolve canonical prose/HOW/prompt conflicts. The existing
 report linter captures execution using canonical redaction, without new hooks, durable
-state or Agent message protocols. executionEvidence is an optional frozen coverage field;
-legacy contracts do not migrate silently. Deterministic provenance and semantic sufficiency
+state or Agent message protocols. All SDD admission and continuation require
+observed-delivery.v1 and executable coverage cases freeze executionEvidence:
+runner-captured.v1 and executionContext. Every PASS receipt requires actual capture;
+complete delivery references current independent source reports. Old files remain
+history or PARTIAL; missing requirements block until completed. Provenance and sufficiency
 remain separate, preserving Host/Executor/Runner roles and native Agent capabilities.
