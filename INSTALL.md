@@ -19,7 +19,7 @@ docs -> design -> implement -> verify -> archive
 
 ## 推荐的交互式安装与更新
 
-从公共 npm 安装 CLI，再进入项目根目录运行初始化向导：
+从公共 npm 安装即可自动检测宿主并完成全局部署。需要选择项目级范围或初始化项目上下文时，再运行向导：
 
 ```bash
 npm install -g @chenmk/superflow@latest
@@ -27,7 +27,9 @@ superflow init
 ```
 
 `init` 会询问语言、Agent 和范围，展示计划并确认后安装，包含 MCP 注册。
-npm 安装过程不收集 Agent 选择；问答由 CLI 在真实终端中完成。以后交互式更新只需
+npm 全局安装首次按检测到的 Claude/Codex 自动部署，已有安装沿用登记的宿主、语言和范围。
+没有可用宿主时保留 CLI 并提示初始化；`--ignore-scripts` 会跳过部署。npx、源码依赖安装及
+更新流程内部的 npm 调用不重复部署。问答仍由 CLI 在真实终端中完成。以后交互式更新只需
 `superflow update`，可选完整更新、仅配套刷新或只预览。自动化保留显式参数、init 的
 `--yes`、JSON 和 dry-run。成功后重启所选宿主并运行
 `superflow doctor --agent both --scope global` 检查（单端替换对应 Agent）。

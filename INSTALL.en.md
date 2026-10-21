@@ -7,7 +7,8 @@ aliases, scripts, rules, and handoff state for Claude Code and Codex.
 
 ## Recommended interactive setup and updates
 
-Install the CLI from public npm, then enter your project root and run the setup wizard:
+A global npm install detects hosts and completes global deployment automatically.
+For project scope or project context initialization, run the wizard afterward:
 
 ```bash
 npm install -g @chenmk/superflow@latest
@@ -15,8 +16,11 @@ superflow init
 ```
 
 `init` asks for language, Agent tools and scope, previews changes and confirms before
-installing. MCP registration is included. npm installation itself remains
-noninteractive; lifecycle scripts do not collect Agent choices. Future interactive
+installing. MCP registration is included. Global npm installation automatically
+deploys to detected Claude/Codex hosts, retaining recorded hosts, language and scopes
+for existing installations. With no host it keeps the CLI and prints an init hint.
+`--ignore-scripts` skips deployment; npx, source dependency installs and npm calls
+inside updates do not deploy twice. Future interactive
 updates use `superflow update` with complete/assets/preview modes. Explicit flags,
 `--yes` for init, JSON and dry-run remain available for automation. Restart selected
 hosts and run `superflow doctor --agent both --scope global` afterward.

@@ -64,9 +64,13 @@ npm install -g @chenmk/superflow@latest
 
 This installs the CLI from npm; no repository clone is required. npm's default
 registry is the public registry, so ordinary commands need no `--registry` flag.
-Installing the package alone does not select or configure Agents.
+A global npm install detects installed Claude/Codex CLIs and automatically deploys
+global skills, dependencies, Hooks and MCP. Existing installations retain their
+recorded hosts, language and scopes. `npx/npm exec`, source dependency installs
+and npm calls owned by an update do not initialize twice. If no host is detected,
+only the CLI is installed with an `init` hint. `--ignore-scripts` skips deployment.
 
-### Run the setup wizard
+### Customize setup when needed
 
 Enter the root of the project where you will use Superflow, then run:
 

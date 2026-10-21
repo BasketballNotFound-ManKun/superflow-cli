@@ -402,3 +402,17 @@ Roll back affected changes if missing requirements advance, legitimate current c
 evolution fails, non-SDD tasks acquire state, recovery loses evidence, execution state
 changes before admission or installation damages unknown assets. Preserve evidence;
 do not reintroduce old-rule exemptions or weaken assertions to claim a repair.
+
+## Automatic npm installation synchronization (2026-10-21)
+
+Baseline: 1358 passing tests; global postinstall migrated Hooks and requested manual
+init without deploying skills or MCP. The installation owner now reuses init/update
+and the existing registry. First installation deploys globally to detected hosts;
+existing installations retain scopes and language. Caller-owned updates skip duplicate
+deployment and dependency recursion.
+
+Cases cover single-host detection, recorded project scope, language retention, npx and
+internal-update skips, missing hosts, and failed deployment. Verification uses an
+isolated source copy, leaving the active local CLI and assets untouched. Final results
+are recorded in this run's evidence. Roll back on expanded targets, duplicate deployment,
+false success, or writes to the real user home.

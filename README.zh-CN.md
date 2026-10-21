@@ -58,9 +58,11 @@ npm install -g @chenmk/superflow@latest
 ```
 
 从公共 npm 包安装，不需要拉取代码仓库。npm 默认使用官方公共库，普通命令无需填写
-`--registry`。这一步只安装 CLI，尚未选择或配置 Agent。
+`--registry`。全局 npm 安装会自动检测已安装的 Claude/Codex，并完成全局技能、依赖、Hooks 和 MCP 部署；已有安装沿用登记的宿主、语言和范围同步。
 
-### 运行初始化向导
+`npx/npm exec`、源码依赖安装和更新流程内部的 npm 调用不重复初始化。未检测到宿主时只安装 CLI 并提示 `superflow init`；`--ignore-scripts` 会跳过自动部署。
+
+### 按需运行初始化向导
 
 先进入准备使用 Superflow 的**项目根目录**，再执行：
 
