@@ -691,8 +691,8 @@ def source_fingerprint(sources: list) -> str:
                                         for s in sources)).encode())
 
 
-def capture_redactor() -> Path:
-    # Reuse the installed canonical redactor; never ship a second regex policy.
+def canonical_module(relative: str, label: str = "规范模块") -> Path:
+    # Reuse installed canonical policies; do not maintain parallel parsers.
     executable = shutil.which("superflow")
     roots = list(Path(__file__).resolve().parents)
     if executable:
@@ -700,10 +700,15 @@ def capture_redactor() -> Path:
     for root in roots:
         # npm's Windows shim is a regular .cmd file, not a Unix symlink.
         for package in (root, root / "node_modules/@chenmk/superflow"):
-            candidate = package / "dist/domains/managed-work/redaction.js"
+            candidate = package / relative
             if candidate.is_file():
                 return candidate
-    raise ValueError("capture 缺少已构建的规范脱敏器；请修复 Superflow 安装")
+    raise ValueError(f"缺少已构建的{label} {relative}；请修复 Superflow 安装")
+
+
+def capture_redactor() -> Path:
+    # Reuse the installed canonical redactor; never ship a second regex policy.
+    return canonical_module("dist/domains/managed-work/redaction.js", "规范脱敏器")
 
 
 def redact_capture(values: list, redactor: Path) -> list:
@@ -1010,6 +1015,86 @@ def lint_case_evidence(report_path: Path, report_text: str, review_path: Path, i
     return issues
 
 
+def lint_independent_review(report: Path, text: str, root: Path | None,
+                            review_path: Path | None, index_root: Path | None) -> list[Issue]:
+    """Identity/status only: this cannot prove reviewer independence or sufficiency."""
+    ready = report.parent / ".sdd/readiness/coding-ready.json"
+    if not ready.is_file():
+        return []
+    try:
+        policy = json.loads(ready.read_text()).get("workflowPolicy")
+        if policy != "observed-delivery.v1":
+            return []
+        document = review_path or report.parent / ".sdd/reviews/document-review.json"
+        frozen = json.loads(document.read_text())
+        project = (report.parent / frozen["projectRoot"]).resolve() if frozen.get("projectRoot") else (root or report.parent).resolve()
+        lines, ambiguous = markdown_body_lines(text)
+        if ambiguous:
+            raise ValueError("Independent Review Markdown 结构无法确定")
+        sections = [i for i, line in enumerate(lines) if line.strip() == "## Independent Review"]
+        if len(sections) != 1:
+            raise ValueError("完整交付需要一个 Independent Review 报告引用表")
+        references = []
+        for line in lines[sections[0] + 1:]:
+            if line.startswith("## "):
+                break
+            if not line.strip() or re.fullmatch(r"\|\s*Report\s*\|", line) or re.fullmatch(r"\|[\s:|-]+\|", line):
+                continue
+            match = re.fullmatch(r"\|\s*([^|]+?)\s*\|", line)
+            if not match:
+                raise ValueError("Independent Review 必须使用 | Report | 本地路径表")
+            references.append(verified_file(report.parent, match[1]))
+        if not references or len(set(references)) != len(references):
+            raise ValueError("Independent Review 缺少报告或引用重复")
+        module = canonical_module("dist/domains/review/report.js")
+        script = """import fs from 'node:fs';
+import {pathToFileURL} from 'node:url';
+const {auditReviewReport}=await import(pathToFileURL(process.argv[1]));
+const input=JSON.parse(fs.readFileSync(0,'utf8'));
+console.log(JSON.stringify(input.reports.map(file=>auditReviewReport(fs.readFileSync(file,'utf8'),input.root))));"""
+        result = subprocess.run(["node", "--input-type=module", "-e", script, str(module)],
+                                input=json.dumps({"reports": list(map(str, references)), "root": str(project)}),
+                                capture_output=True, text=True)
+        if result.returncode:
+            raise ValueError("Independent Review 规范审计器执行失败；请修复 Superflow 安装")
+        audits = json.loads(result.stdout)
+        reviewed = set()
+        dependencies = [ready, document, *references]
+        for file, audit in zip(references, audits):
+            if (audit.get("state") != "DONE" or not audit.get("eligibleForTriage")
+                    or audit.get("findings") != 0 or not audit.get("findingsClear")
+                    or not audit.get("reviewedSources")):
+                raise ValueError(f"Independent Review 未闭环 {file.name}: " + "; ".join(audit.get("issues", []))
+                                 + "; 需要 DONE、Findings 明确 None/无且无未决项，以及当前 Reviewed Sources")
+            for source in audit["reviewedSources"]:
+                current = hashed_file(project, source["path"], source["sha256"])
+                reviewed.add(current)
+                dependencies.append(current)
+        required = set()
+        for source in frozen["coverage"].get("sources", []):
+            if source.get("role") in {"code", "build", "config", "schema"}:
+                required.add(verified_file(report.parent, source["path"]))
+        # Reuse the already checked per-case receipts: their sources include the
+        # source/build input snapshot, not merely the entry point anchor.
+        for line in lines:
+            if not line.startswith("|"):
+                continue
+            columns = [column.strip() for column in line.strip().strip("|").split("|")]
+            if len(columns) == 5 and columns[0] in {case["id"] for case in frozen["coverage"]["cases"]} and columns[3].upper() == "PASS":
+                receipt_file = verified_file(report.parent, columns[4].split("#", 1)[0])
+                receipt = json.loads(receipt_file.read_text())
+                for source in receipt["sources"]:
+                    required.add(hashed_file(receipt_file.parent, source["path"], source["sha256"]))
+        missing = required - reviewed
+        if missing:
+            raise ValueError("Independent Review 未覆盖当前源码/构建输入：" + ", ".join(sorted(map(str, missing))))
+        if index_root is not None:
+            check_git_index_files(index_root, dependencies)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        return [Issue("FAIL", report, 0, str(error))]
+    return []
+
+
 def infer_tests_path(report: Path) -> Path | None:
     direct = report.parent / "tests.md"
     if direct.exists():
@@ -1207,6 +1292,8 @@ def main() -> int:
         all_issues.extend(lint_report(path, repo, tests_path, review_path, Path(args.git_index_root) if args.git_index_root else None))
         if args.require_complete:
             text = path.read_text(encoding="utf-8")
+            all_issues.extend(lint_independent_review(path, text, repo, review_path,
+                              Path(args.git_index_root) if args.git_index_root else None))
             if final_report_result(text) != "PASS":
                 all_issues.append(Issue("FAIL", path, 0, "完整交付要求最终验证结果 PASS；局部证据保留为 PARTIAL"))
 

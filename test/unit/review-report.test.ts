@@ -1,10 +1,84 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { auditReviewReport } from "../../src/domains/review/report.js";
 
 describe("reviewer four-state report", () => {
+  it.each(["-", "+", "*", "1.", "1)"])(
+    "counts unresolved findings using Markdown list marker %s", marker => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-list-"));
+      fs.writeFileSync(path.join(root, "application.ts"), "source");
+      try {
+        const result = auditReviewReport(`DONE\n## Findings\n${marker} application.ts:1: unresolved\n`, root);
+        expect(result.findings).toBe(1);
+        expect(result.findingsClear).toBe(false);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+  it.each(["unresolved issue remains", "", "None\nunresolved issue remains"])(
+    "does not mistake an ambiguous Findings body for explicit clearance: %s", body => {
+      const result = auditReviewReport(`DONE\n## Findings\n${body}\n`, os.tmpdir());
+      expect(result.findingsClear).toBe(false);
+    },
+  );
+  it("requires explicit clearance in the current Findings section", () => {
+    expect(auditReviewReport("DONE\n## Findings\nNone\n", os.tmpdir()).findingsClear).toBe(true);
+    expect(auditReviewReport("DONE\n", os.tmpdir()).findingsClear).toBe(false);
+  });
+
+  it("binds declared reviewed sources to the current source bytes", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-snapshot-"));
+    fs.writeFileSync(path.join(root, "application.ts"), "before");
+    const sha = createHash("sha256").update("before").digest("hex");
+    const report = `DONE\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| application.ts | ${sha} |\n`;
+    try {
+      const current = auditReviewReport(report, root);
+      expect(current.eligibleForTriage).toBe(true);
+      expect(current.reviewedSources).toEqual([{ path: "application.ts", sha256: sha }]);
+      fs.writeFileSync(path.join(root, "application.ts"), "after");
+      expect(auditReviewReport(report, root).eligibleForTriage).toBe(false);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    "", "| Path | SHA-256 |\n|---|---|", "| missing.ts | invalid |",
+    `| ../outside.ts | ${"a".repeat(64)} |`,
+    `| missing.ts | ${"a".repeat(64)} |`,
+  ])("rejects incomplete or invalid declared reviewed sources: %s", (table) => {
+    const result = auditReviewReport(`DONE\n## Reviewed Sources\n${table}\n`, os.tmpdir());
+    expect(result.eligibleForTriage).toBe(false);
+    expect(result.issues.join("\n")).toContain("reviewed source");
+  });
+
+  it("rejects duplicate and symlink-escaped source declarations", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-snapshot-"));
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "review-snapshot-outside-"));
+    const sha = createHash("sha256").update("source").digest("hex");
+    fs.writeFileSync(path.join(root, "application.ts"), "source");
+    fs.writeFileSync(path.join(outside, "outside.ts"), "source");
+    fs.symlinkSync(path.join(outside, "outside.ts"), path.join(root, "link.ts"));
+    const header = "DONE\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n";
+    try {
+      expect(auditReviewReport(header + `| application.ts | ${sha} |\n| ./application.ts | ${sha} |`, root).eligibleForTriage).toBe(false);
+      expect(auditReviewReport(header + `| link.ts | ${sha} |`, root).eligibleForTriage).toBe(false);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps legacy report semantics without a reviewed source declaration", () => {
+    const result = auditReviewReport("DONE\n## Findings\nNone\n", os.tmpdir());
+    expect(result.eligibleForTriage).toBe(true);
+    expect(result.reviewedSources).toBeNull();
+  });
+
   it.each(["-\t```markdown", "1.\t```markdown", ">\t```markdown"])(
     "fails closed for unsupported tab container %s",
     (open) => {

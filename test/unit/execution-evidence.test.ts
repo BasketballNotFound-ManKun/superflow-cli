@@ -16,7 +16,8 @@ function run(environment: NodeJS.ProcessEnv = {}, complete = false) {
       output: execFileSync(
         "python3",
         [
-          lint,
+          fs.existsSync(path.join(dir, "capture-package/assets/scripts/lint.py"))
+            ? path.join(dir, "capture-package/assets/scripts/lint.py") : lint,
           ...(complete ? ["--require-complete"] : []),
           "--review",
           path.join(dir, "review.json"),
@@ -72,6 +73,12 @@ function prepareCapturedCase(fail = false) {
       compilerOptions: { module: ts.ModuleKind.ES2022 },
     }).outputText,
   );
+  const reviewModule = path.join(packageRoot, "dist/domains/review");
+  fs.mkdirSync(reviewModule, { recursive: true });
+  fs.writeFileSync(path.join(reviewModule, "report.js"), ts.transpileModule(
+    fs.readFileSync("src/domains/review/report.ts", "utf8"),
+    { compilerOptions: { module: ts.ModuleKind.ES2022 } },
+  ).outputText);
   fs.writeFileSync(
     path.join(dir, "build.cjs"),
     `
@@ -174,6 +181,111 @@ beforeEach(() => {
 });
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 describe("execution receipt boundary", () => {
+  function observedDelivery() {
+    prepareCapturedCase();
+    expect(captureBuild().code).toBe(0);
+    expect(captureCase().code).toBe(0);
+    fs.mkdirSync(path.join(dir, ".sdd/readiness"), { recursive: true });
+    fs.writeFileSync(path.join(dir, ".sdd/readiness/coding-ready.json"), JSON.stringify({
+      workflowPolicy: "observed-delivery.v1",
+    }));
+  }
+  function reviewed(files = ["application.ts", "build.cjs", "case.cjs"], state = "DONE", findings = "None") {
+    fs.writeFileSync(path.join(dir, "code-review.md"),
+      `${state}\n## Findings\n${findings}\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n`
+      + files.map(file => `| ${file} | ${digest(fs.readFileSync(path.join(dir, file), "utf8"))} |`).join("\n"));
+    fs.appendFileSync(path.join(dir, "report.md"),
+      "\n## Independent Review\n| Report |\n|---|\n| code-review.md |\n");
+  }
+
+  it("requires actual independent review references for new complete delivery", () => {
+    observedDelivery();
+    const result = run({}, true);
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("Independent Review");
+    expect(run().code).toBe(0);
+  });
+  it("preserves legacy completion without upgrading an older coding-ready receipt", () => {
+    observedDelivery();
+    fs.writeFileSync(path.join(dir, ".sdd/readiness/coding-ready.json"), JSON.stringify({
+      schemaVersion: "superflow.coding-ready.v1", codingReady: true,
+    }));
+    expect(run({}, true).code).toBe(0);
+  });
+  it("does not reuse a legacy review without current reviewed-source identities", () => {
+    observedDelivery();
+    reviewed();
+    fs.writeFileSync(path.join(dir, "code-review.md"), "DONE\n## Findings\nNone\n");
+    const result = run({}, true);
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("Reviewed Sources");
+  });
+  it("rejects an unreadable review reference", () => {
+    observedDelivery();
+    reviewed();
+    fs.rmSync(path.join(dir, "code-review.md"));
+    expect(run({}, true).code).toBe(2);
+  });
+  it("accepts a current source-bound completed review", () => {
+    observedDelivery();
+    reviewed();
+    expect(run({}, true).code).toBe(0);
+  });
+  it.each(["BLOCKED", "NEEDS_CONTEXT", "DONE_WITH_CONCERNS"])(
+    "does not promote a %s reviewer to complete delivery", state => {
+      observedDelivery();
+      reviewed(undefined, state);
+      expect(run({}, true).code).toBe(2);
+    },
+  );
+  it.each(["+ application.ts:1: unresolved", "* application.ts:1: unresolved",
+    "1. application.ts:1: unresolved", "1) application.ts:1: unresolved",
+    "Unresolved issue remains", "", "None\nUnresolved issue remains"])(
+    "rejects ambiguous or unresolved current review findings: %s", findings => {
+      observedDelivery();
+      reviewed(undefined, "DONE", findings);
+      expect(run({}, true).code).toBe(2);
+    },
+  );
+  it("rejects a review that retains an unresolved finding", () => {
+    observedDelivery();
+    reviewed(undefined, "DONE", "- application.ts:1: unresolved issue");
+    expect(run({}, true).code).toBe(2);
+  });
+  it("rejects a prior PASS after source repair even when execution receipts are refreshed", () => {
+    observedDelivery();
+    reviewed();
+    fs.appendFileSync(path.join(dir, "application.ts"), "// repaired\n");
+    expect(captureBuild().code).toBe(0);
+    expect(captureCase().code).toBe(0);
+    const result = run({}, true);
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("reviewed source hash drift");
+    fs.writeFileSync(path.join(dir, "report.md"),
+      fs.readFileSync(path.join(dir, "report.md"), "utf8").split("\n## Independent Review")[0]);
+    reviewed();
+    expect(run({}, true).code).toBe(0);
+  });
+  it("requires review coverage of build inputs beyond the entry source", () => {
+    observedDelivery();
+    expect(captureBuild().code).toBe(0);
+    expect(captureCase().code).toBe(0);
+    reviewed(["application.ts"]);
+    const result = run({}, true);
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("build.cjs");
+    fs.writeFileSync(path.join(dir, "report.md"),
+      fs.readFileSync(path.join(dir, "report.md"), "utf8").split("\n## Independent Review")[0]);
+    reviewed(["application.ts", "build.cjs", "case.cjs"]);
+    expect(run({}, true).code).toBe(0);
+  });
+  it("fails closed when the installed canonical reviewer auditor is unavailable", () => {
+    observedDelivery();
+    reviewed();
+    fs.rmSync(path.join(dir, "capture-package/dist/domains/review"), { recursive: true });
+    // Prevent fallback to a developer's unrelated global installation.
+    expect(run({ PATH: path.dirname(process.execPath) + ":/usr/bin:/bin" }, true).code).toBe(2);
+  });
   it.each(["delete", "empty", "directory"])(
     "retains process facts when a build makes its source unreadable: %s",
     (mutation) => {
