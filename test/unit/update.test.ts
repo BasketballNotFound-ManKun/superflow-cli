@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'fs';
+import { execFileSync } from 'node:child_process';
+import { fixtureProcessEnv } from '../helpers/fixture-process-env.js';
 import os from 'os';
 import path from 'path';
 import { initState } from '../../src/domains/state.js';
@@ -19,6 +21,24 @@ import {
 } from '../../src/app/commands/update.js';
 
 describe('commands/update', () => {
+  it('does not expand a registered project-only installation into global scope', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-project-refresh-'));
+    const home = path.join(root, 'home');
+    const project = path.join(root, 'project');
+    fs.mkdirSync(home); fs.mkdirSync(project);
+    try {
+      const code = `import {resolveUpdateTargetsFromState as resolve} from './src/app/commands/update.ts';
+        const state = {platforms:{codex:{scope:'project'}}, managedProjects:{projects:[{
+          root:${JSON.stringify(project)}, agents:['codex'], scope:'project', hooks:[], registeredAt:'2026-10-21'
+        }]}};
+        console.log(JSON.stringify(resolve(${JSON.stringify(home)}, ['codex'], 'auto', state)));`;
+      const result = execFileSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', code], {
+        env: fixtureProcessEnv(home), encoding: 'utf8', timeout: 15_000,
+      });
+      expect(JSON.parse(result)).toEqual([{ agent: 'codex', scope: 'project', projectPath: project }]);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
   it('无历史状态时仍识别旧版项目安装，不把更新扩大到全局', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-old-project-'));
     try {

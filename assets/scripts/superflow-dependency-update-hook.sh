@@ -172,7 +172,7 @@ update_npm_if_needed() {
   fi
   current="$(installed_npm_version "$package_name")"
   if [ "$current" != "$latest" ]; then
-    run_logged npm install -g "$package_name@latest" --registry https://registry.npmjs.org
+    SUPERFLOW_INSTALL_OWNER=hook run_logged npm install -g "$package_name@latest" --registry https://registry.npmjs.org
   fi
 }
 

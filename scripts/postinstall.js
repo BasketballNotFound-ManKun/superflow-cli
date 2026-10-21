@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,7 +52,8 @@ function printInstallMessage(version, language) {
 }
 
 export async function runPostinstall(env = process.env, runtime = {}) {
-  if (!isGlobalInstall(env)) return;
+  // npm exec and an existing update owner deploy once through their own entry.
+  if (!isGlobalInstall(env) || env.npm_command === 'exec' || env.SUPERFLOW_INSTALL_OWNER) return;
   const migrateGlobalHooks = runtime.migrateGlobalHooks
     ?? (await import('../dist/domains/hook-migration.js')).migrateGlobalHooks;
   const homeRoot = runtime.homeRoot ?? homedir();
@@ -65,7 +66,56 @@ export async function runPostinstall(env = process.env, runtime = {}) {
       console.log(`[Superflow] Migrated old ${host} global Hooks; backup: ${migration.backup}`);
     }
   }
-  printInstallMessage(pkg.version, resolveInstallLanguage(env));
+  const loadState = runtime.loadState
+    ?? (await import('../dist/domains/state.js')).loadState;
+  const state = loadState(join(homeRoot, '.sdd-state.json'));
+  const caller = resolve(env.INIT_CWD || homeRoot);
+  const agents = ['claude', 'codex'].filter((agent) =>
+    state?.platforms[agent]?.scope || state?.platforms[agent]?.skills?.length ||
+    state?.managedProjects?.projects?.some((project) => project.agents?.includes(agent)) ||
+    [homeRoot, caller].some((root) =>
+      existsSync(join(root, `.${agent}`, 'skills', 'superflow', 'SKILL.md'))));
+  for (const agent of agents) {
+    if (state?.platforms[agent]?.scope === 'project' &&
+      !existsSync(join(homeRoot, `.${agent}`, 'skills', 'superflow', 'SKILL.md')) &&
+      !existsSync(join(caller, `.${agent}`, 'skills', 'superflow', 'SKILL.md')) &&
+      !state.managedProjects?.projects?.some((project) =>
+        project.agents?.includes(agent) && existsSync(project.root))) {
+      throw new Error(`Registered ${agent} project unavailable; restore its directory and run superflow update there. / 登记项目不可用，请恢复目录后在项目中运行 superflow update。`);
+    }
+  }
+  const installed = agents.length > 0;
+  const runCommand = runtime.runCommand
+    ?? (await import('../dist/platform/process.js')).runCommand;
+  if (!installed) {
+    for (const agent of ['claude', 'codex']) {
+      try {
+        const result = await runCommand(agent, ['--version'], { env, timeout: 3_000 });
+        if (result.code === 0) agents.push(agent);
+      } catch { /* An unavailable host is not an installation target. */ }
+    }
+  }
+  if (!agents.length) {
+    printInstallMessage(pkg.version, resolveInstallLanguage(env));
+    return;
+  }
+  const language = state?.language ?? resolveInstallLanguage(env);
+  const args = installed
+    ? ['update', caller, '--scope', 'auto', '--with-dependencies']
+    : ['init', homeRoot, '--scope', 'global', '--yes', '--no-scan', '--no-openspec-init'];
+  args.push('--agent', agents.join(','), '--language', language);
+  console.log(language === 'zh' ? '[Superflow] 自动同步技能与配套组件…' : '[Superflow] Synchronizing skills and companion components…');
+  const result = await runCommand(process.execPath,
+    [join(__dirname, '../dist/app/cli.js'), ...args],
+    { env: { ...env, SUPERFLOW_INSTALL_OWNER: 'postinstall' }, cwd: homeRoot, timeout: 600_000 });
+  if (result.stdout) console.log(result.stdout.trim());
+  if (result.code !== 0) {
+    throw new Error(`${result.stderr || result.stdout || 'deployment failed'}\n` +
+      `Recovery: superflow ${args[0]} --agent ${agents.join(',')} --scope ${installed ? 'auto' : 'global'} --language ${language}`);
+  }
+  console.log(language === 'zh'
+    ? `[Superflow] CLI v${pkg.version} 与配套组件已同步，请重启所选宿主。`
+    : `[Superflow] CLI v${pkg.version} and companion components synchronized. Restart the selected hosts.`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

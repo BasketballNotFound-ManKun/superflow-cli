@@ -325,7 +325,16 @@ export function resolveUpdateTargetsFromState(
   state: SddState | null = null,
   warn: (message: string) => void = () => {},
 ): UpdateTarget[] {
-  const base = resolveUpdateTargets(projectPath, agents, scopeValue);
+  const automatic = !scopeValue || scopeValue === 'auto';
+  const base = automatic
+    ? detectInstalledTargets(projectPath, agents)
+    : resolveUpdateTargets(projectPath, agents, scopeValue);
+  for (const agent of agents) {
+    if (automatic && state?.platforms[agent]?.scope === 'global'
+      && !base.some((target) => target.agent === agent && target.scope === 'global')) {
+      base.push({ agent, scope: 'global', projectPath });
+    }
+  }
   const { targets: managed, staleRoots } = collectManagedProjectTargets(
     readManagedProjects(state, warn)
   );
@@ -343,7 +352,7 @@ export function resolveUpdateTargetsFromState(
       merged.push({ agent, scope: 'project', projectPath: project.root });
     }
   }
-  return merged;
+  return merged.length ? merged : resolveUpdateTargets(projectPath, agents, scopeValue);
 }
 
 export function createUpdatePlan(
@@ -540,7 +549,9 @@ async function updateNpmPackage(
   scope: InstallScope,
   label: string
 ): Promise<void> {
-  const npmResult = await runCommand('npm', buildNpmUpdateArgs(packageName, scope));
+  const npmResult = await runCommand('npm', buildNpmUpdateArgs(packageName, scope), {
+    env: { SUPERFLOW_INSTALL_OWNER: 'update' },
+  });
   if (npmResult.code !== 0) {
     throw new Error(`${label} update failed: ${npmResult.stderr || npmResult.stdout}`);
   }

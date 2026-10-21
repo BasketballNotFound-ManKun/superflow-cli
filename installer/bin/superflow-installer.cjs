@@ -72,8 +72,8 @@ function main() {
 if (require.main === module) {
 try {
   main();
-  console.log('[Superflow] CLI installation complete. Enter your project root and run: superflow init');
-  console.log('[Superflow] CLI 安装完成；进入项目根目录运行 superflow init，选择语言、Agent 和范围并注册 MCP。');
+  console.log('[Superflow] npm installation finished. To customize scope or initialize project context: superflow init');
+  console.log('[Superflow] npm 安装已结束；如需调整范围或初始化项目上下文，进入项目运行 superflow init。');
 } catch (error) {
   console.error(`[Superflow] Installation failed: ${error.message}`);
   process.exitCode = 1;

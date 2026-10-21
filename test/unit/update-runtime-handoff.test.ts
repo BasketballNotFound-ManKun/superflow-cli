@@ -30,6 +30,7 @@ describe('dependency updates run in the new CLI', () => {
     expect(calls.map(([command]) => command)).toEqual(['npm', 'npm', process.execPath, 'superflow']);
     expect(calls[2][1][0]).toBe(cli);
     expect(calls[2][1]).toContain('--with-dependencies');
+    expect(calls[0][2]?.env?.SUPERFLOW_INSTALL_OWNER).toBe('update');
   });
   it('rejects a stale PATH entry after the new package and assets are installed', async () => {
     vi.mocked(runCommand).mockImplementation(async (command, args) => ({
