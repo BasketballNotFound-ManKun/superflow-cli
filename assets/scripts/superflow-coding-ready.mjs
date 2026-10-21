@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { fileHash, reviewPath } from "./superflow-review-coverage.mjs";
+import { checkReceipt, fileHash, reviewPath } from "./superflow-review-coverage.mjs";
 
 const args = process.argv.slice(2);
 const changeArg = args.find((arg) => !arg.startsWith("--"));
@@ -106,7 +106,17 @@ try {
 } catch {
   issues.push("无法冻结文档评审凭证指纹");
 }
+// Only a complete, still-valid READY can retain its frozen legacy policy.
+// Missing, revoked or changed receipts are a new issuance of the contract.
+const previousReceipt = readValidPreviousReceipt(changeDir, checks);
+const workflowPolicy = previousReceipt
+  ? previousReceipt.workflowPolicy
+  : "observed-delivery.v1";
+if (workflowPolicy === "observed-delivery.v1") {
+  requireCapturedCases(changeDir, issues);
+}
 const receipt = {
+  ...(workflowPolicy ? { workflowPolicy } : {}),
   schemaVersion: "superflow.coding-ready.v1",
   codingReady: issues.length === 0,
   documentReadiness: issues.length === 0 ? "READY" : "BLOCKED",
@@ -233,4 +243,52 @@ function fail(
     );
   }
   process.exit(1);
+}
+
+function readValidPreviousReceipt(root, requiredChecks) {
+  try {
+    const previous = JSON.parse(fs.readFileSync(
+      path.join(root, ".sdd/readiness/coding-ready.json"), "utf8",
+    ));
+    const labels = [...requiredChecks.map(([label]) => label), "OpenSpec strict"];
+    if (
+      previous.documentReadiness !== "READY" ||
+      previous.environmentReadiness !== "READY" ||
+      !Number.isInteger(previous.reviewRounds) || previous.reviewRounds < 3 ||
+      typeof previous.checkedAt !== "string" ||
+      !Number.isFinite(Date.parse(previous.checkedAt)) ||
+      previous.ownerDecisions !== 0 ||
+      !Array.isArray(previous.issues) || previous.issues.length !== 0 ||
+      !Array.isArray(previous.evidence) ||
+      previous.evidence.length !== labels.length ||
+      labels.some((label) => previous.evidence.filter(
+        (item) => item?.label === label && item.exitCode === 0,
+      ).length !== 1) ||
+      ![undefined, "observed-delivery.v1"].includes(previous.workflowPolicy) ||
+      checkReceipt(root, { checkCode: false }).length !== 0
+    ) return null;
+    return previous;
+  } catch {
+    return null;
+  }
+}
+
+function requireCapturedCases(root, targetIssues) {
+  try {
+    const review = JSON.parse(fs.readFileSync(path.join(root, reviewPath), "utf8"));
+    // Exclusions require no invented executable case. Existing declared cases
+    // retain their execution obligation; an unused case cannot be a bypass.
+    for (const test of review.coverage?.cases ?? []) {
+      if (!test || test.executionEvidence !== "runner-captured.v1") {
+        targetIssues.push(
+          `用例 ${test?.id ?? "未知"} 新发 Coding Ready 必须冻结 executionEvidence: runner-captured.v1`,
+        );
+      }
+      if (!test?.executionContext) {
+        targetIssues.push(`用例 ${test?.id ?? "未知"} 缺少冻结 executionContext`);
+      }
+    }
+  } catch {
+    targetIssues.push("无法核验新发 Coding Ready 的 executionEvidence 合同");
+  }
 }

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -5,7 +6,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { makeContractChange, write } from "../helpers/contract-change.js";
 import { fixtureProcessEnv } from "../helpers/fixture-process-env.js";
-import { prepareCoverage } from "../helpers/review-coverage.js";
+import { prepareCoverage, mutateReview } from "../helpers/review-coverage.js";
 import { assertCodingReadyForPrompt } from "../../src/domains/sdd-readiness.js";
 
 const ROOT = path.resolve(__dirname, "../..");
@@ -14,9 +15,18 @@ afterEach(() => {
   if (temporary) fs.rmSync(temporary, { recursive: true, force: true });
 });
 
-it.each(["team-prompt", "owner"])(
-  "%s complete contract passes every coding-ready subgate and generates the receipt",
-  async (buildMode) => {
+it.each([
+  { buildMode: "team-prompt", scenario: "captured", ready: true },
+  { buildMode: "owner", scenario: "captured", ready: true },
+  { buildMode: "owner", scenario: "fresh legacy", ready: false },
+  { buildMode: "owner", scenario: "one legacy case", ready: false },
+  { buildMode: "owner", scenario: "valid legacy receipt", ready: true },
+  { buildMode: "owner", scenario: "incomplete legacy receipt", ready: false },
+  { buildMode: "owner", scenario: "stale legacy receipt", ready: false },
+  { buildMode: "owner", scenario: "blocked legacy receipt", ready: false },
+])(
+  "$buildMode $scenario coding-ready preserves frozen policy or requires capture",
+  async ({ buildMode, scenario, ready }) => {
     temporary = fs.mkdtempSync(path.join(os.tmpdir(), "superflow ready flow "));
     const home = path.join(temporary, "isolated home");
     fs.mkdirSync(home);
@@ -96,6 +106,19 @@ it.each(["team-prompt", "owner"])(
       persistState: false,
       persistReceipt: false,
     });
+    if (["captured", "one legacy case"].includes(scenario)) {
+      mutateReview(change, (review) => {
+        for (const test of review.coverage.cases) {
+          if (scenario === "one legacy case" && test.id === "C2") continue;
+          test.executionEvidence = "runner-captured.v1";
+          test.executionContext = {
+            argv: ["node", "verify.mjs"],
+            cwd: ".",
+            environmentKeys: [],
+          };
+        }
+      });
+    }
     shell("superflow-handoff.sh", [change, "--refresh"]);
     expect(
       fs
@@ -166,6 +189,44 @@ it.each(["team-prompt", "owner"])(
     expect(shell("superflow-state.sh", ["phase", change]).stdout.trim()).toBe(
       "implement",
     );
+    const receiptFile = path.join(change, ".sdd/readiness/coding-ready.json");
+    if (scenario.endsWith("legacy receipt")) {
+      const prior = {
+        schemaVersion: "superflow.coding-ready.v1",
+        codingReady: scenario !== "blocked legacy receipt",
+        documentReadiness: "READY",
+        environmentReadiness: "READY",
+        handoffHash: hash,
+        reviewHash: createHash("sha256")
+          .update(
+            fs.readFileSync(
+              path.join(change, ".sdd/reviews/document-review.json"),
+            ),
+          )
+          .digest("hex"),
+        reviewRounds: 3,
+        checkedAt: "2026-10-20T00:00:00.000Z",
+        evidence: [
+          "YAML 状态",
+          "docs 门禁",
+          "design 门禁",
+          "implement 门禁",
+          "文档交付审计",
+          "环境预检",
+          "OpenSpec strict",
+        ].map((label) => ({ label, exitCode: 0 })),
+        ownerDecisions: 0,
+        issues: [],
+      };
+      if (scenario === "incomplete legacy receipt") prior.evidence = [];
+      if (scenario === "stale legacy receipt")
+        prior.reviewHash = "a".repeat(64);
+      await write(receiptFile, JSON.stringify(prior));
+    }
+    const reviewBefore = fs.readFileSync(
+      path.join(change, ".sdd/reviews/document-review.json"),
+      "utf8",
+    );
     const result = spawnSync(
       process.execPath,
       [
@@ -175,14 +236,33 @@ it.each(["team-prompt", "owner"])(
       ],
       { encoding: "utf8", env },
     );
-    expect(result.status, result.stderr).toBe(0);
+    expect(result.status, result.stderr).toBe(ready ? 0 : 1);
     const receipt = JSON.parse(
       fs.readFileSync(
         path.join(change, ".sdd/readiness/coding-ready.json"),
         "utf8",
       ),
     );
-    expect(receipt.codingReady).toBe(true);
+    expect(receipt.codingReady).toBe(ready);
+    expect(
+      fs.readFileSync(
+        path.join(change, ".sdd/reviews/document-review.json"),
+        "utf8",
+      ),
+    ).toBe(reviewBefore);
+    if (!ready) {
+      expect(receipt.documentReadiness).toBe("BLOCKED");
+      expect(receipt.issues.join("\n")).toContain("executionEvidence");
+      expect(() =>
+        assertCodingReadyForPrompt(
+          path.join(change, "prompt/implementation.md"),
+        ),
+      ).toThrow();
+      return;
+    }
+    expect(receipt.workflowPolicy).toBe(
+      scenario === "captured" ? "observed-delivery.v1" : undefined,
+    );
     expect(receipt.evidence).toHaveLength(7);
     expect(
       receipt.evidence.every(
@@ -193,6 +273,24 @@ it.each(["team-prompt", "owner"])(
     expect(() =>
       assertCodingReadyForPrompt(path.join(change, "prompt/implementation.md")),
     ).not.toThrow();
+    if (scenario === "valid legacy receipt") {
+      await write(
+        path.join(change, "caller.ts"),
+        "export const create = () => post('/operator/add', { rootId: 'root' });\n",
+      );
+      const continuation = spawnSync(
+        process.execPath,
+        [
+          path.join(ROOT, "assets/scripts/superflow-review-coverage.mjs"),
+          change,
+        ],
+        { encoding: "utf8", env },
+      );
+      expect(continuation.status, continuation.stderr).toBe(0);
+      expect(
+        JSON.parse(fs.readFileSync(receiptFile, "utf8")).workflowPolicy,
+      ).toBeUndefined();
+    }
   },
   30_000,
 );
