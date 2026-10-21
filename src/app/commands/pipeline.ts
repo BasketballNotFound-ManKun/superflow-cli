@@ -47,7 +47,7 @@ import { resolveRuntimeLanguage } from "../../domains/config/cli-help.js";
 import { managedText } from "../../domains/managed-work/i18n.js";
 import { evaluateCompletion } from "../../domains/managed-work/completion-policy.js";
 import { isProcessAlive } from "../../platform/process-liveness.js";
-import { assertCodingReadyForPrompt } from "../../domains/sdd-readiness.js";
+import { assertCodingReadyForPrompt, assertManagedSddCodingReady } from "../../domains/sdd-readiness.js";
 import { assertManagedAgentPair } from "../../domains/managed-work/pair-admission.js";
 import {
   resumeHumanDirectedAfterReview,
@@ -350,6 +350,7 @@ async function resumeManagedTask(
   const contract = loadManagedTask(entry.projectRoot, taskId);
   const language = contract.language ?? requestedLanguage;
   const state = loadManagedRun(entry.projectRoot, taskId, entry.activeRunId);
+  assertManagedSddCodingReady(contract);
   if (options.submitHostReview) {
     const resultPath = submitExternalHostReview(
       contract,

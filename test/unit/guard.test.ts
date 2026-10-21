@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { writeExecutionReceipt } from "../helpers/execution-receipt.js";
+import { writeExecutionReceipt, writeIndependentReview } from "../helpers/execution-receipt.js";
 import { makeContractChange, MINIMAL_DESIGN_REVIEW, write, writeRequirementReview } from "../helpers/contract-change.js";
 
 const execFileAsync = promisify(execFile);
@@ -1326,6 +1326,8 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
     await write(path.join(change, "test-report.md"), partialReport.replace(
       "验证结果: PASS", `${remainingRows.join("\n")}\n验证结果: PASS`,
     ));
+    writeIndependentReview(change);
+    fs.symlinkSync(path.join(change, "capture-package/dist"), path.join(tmp, ".codex/dist"), "dir");
     for (const guard of [GUARD, EN_GUARD]) {
       await expect(execFileAsync("bash", [guard, change, "verify"]))
         .resolves.toMatchObject({

@@ -36,6 +36,26 @@ describe("SDD coding-ready receipt", () => {
     expect(() => assertCodingReadyForPrompt(prompt)).not.toThrow();
   });
 
+  it("rejects an otherwise valid legacy READY without the current policy", () => {
+    const file = path.join(change, ".sdd/readiness/coding-ready.json");
+    const receipt = JSON.parse(fs.readFileSync(file, "utf8"));
+    delete receipt.workflowPolicy;
+    fs.writeFileSync(file, JSON.stringify(receipt));
+    expect(() => assertCodingReadyForPrompt(prompt)).toThrow("Coding Ready");
+  });
+
+  it.each(["executionEvidence", "executionContext"])(
+    "rejects a READY whose case lacks %s even with a refreshed review hash",
+    (field) => {
+      const reviewFile = path.join(change, REVIEW);
+      const review = JSON.parse(fs.readFileSync(reviewFile, "utf8"));
+      delete review.coverage.cases[0][field];
+      fs.writeFileSync(reviewFile, JSON.stringify(review));
+      writeReceipt(hash);
+      expect(() => assertCodingReadyForPrompt(prompt)).toThrow("Coding Ready");
+    },
+  );
+
   it("blocks missing or stale receipts before managed dispatch", () => {
     fs.unlinkSync(path.join(change, ".sdd/readiness/coding-ready.json"));
     expect(() => assertCodingReadyForPrompt(prompt)).toThrow("Coding Ready");
@@ -66,6 +86,7 @@ function writeReceipt(handoffHash: string): void {
     JSON.stringify({
       schemaVersion: "superflow.coding-ready.v1",
       codingReady: true,
+      workflowPolicy: "observed-delivery.v1",
       handoffHash,
       reviewHash: digest(fs.readFileSync(path.join(change, REVIEW))),
     }),

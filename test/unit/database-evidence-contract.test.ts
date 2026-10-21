@@ -84,64 +84,37 @@ function issues(dir: string, review: any): string[] {
   );
 }
 function receiptCheck(f: ReturnType<typeof fixture>, mutate = (_r: any) => {}) {
-  const receipt: any = writeExecutionReceipt(f.dir, "C2", "api-child-create");
-  receipt.target.route = f.review.coverage.entries[1].route;
-  Object.assign(receipt, {
+  fs.writeFileSync(path.join(f.dir, "application.ts"), "export const run = () => true;\n");
+  f.review.coverage.sources[1] = {
+    id: "caller", path: "application.ts", role: "code",
+    sha256: digest(fs.readFileSync(path.join(f.dir, "application.ts"))),
+  };
+  const captureReview = structuredClone(f.review);
+  if (!f.test.testLayer) {
+    delete captureReview.coverage.entries[1].database;
+    delete captureReview.coverage.entries[1].persistence;
+  }
+  fs.writeFileSync(path.join(f.dir, "review.json"), JSON.stringify(captureReview));
+  const receipt: any = writeExecutionReceipt(f.dir, "C2", "api-child-create", "api", {
     testLayer: f.test.testLayer,
     mockBoundary: f.test.mockBoundary,
     database: {
-      engine: "mysql",
-      major: 8,
-      statements: f.database.statements,
+      engine: "mysql", major: 8, statements: f.database.statements,
       assertions: f.test.databaseAssertions.map((a: any) => ({
         ...a,
-        actual: structuredClone(
-          a.kind === "unchangedRows"
-            ? { before: a.expected, after: a.expected }
-            : a.expected,
-        ),
+        actual: structuredClone(a.kind === "unchangedRows"
+          ? { before: a.expected, after: a.expected } : a.expected),
         result: "PASS",
       })),
     },
   });
-  f.review.coverage.sources[1] = {
-    id: "caller",
-    path: "application.ts",
-    role: "code",
-    sha256: digest(fs.readFileSync(path.join(f.dir, "application.ts"))),
-  };
-  // Schema and SQL source identity are bound independently of entry source refs.
-  receipt.sources.push({
-    path: "../tests.md",
-    sha256: f.review.coverage.sources[2].sha256,
-  });
-  receipt.build.sourceFingerprint = digest(
-    receipt.sources
-      .map((s: any) => `${s.path}:${s.sha256}`)
-      .sort()
-      .join("\n"),
-  );
-  receipt.target.sourceFingerprint = receipt.build.sourceFingerprint;
-  const buildEvent = {
-    event: "build",
-    buildId: receipt.build.id,
-    sourceFingerprint: receipt.build.sourceFingerprint,
-    artifactSha256: receipt.build.sha256,
-    argv: receipt.build.command.argv,
-    exitCode: 0,
-  };
-  fs.writeFileSync(
-    path.join(f.dir, "logs/build.jsonl"),
-    JSON.stringify(buildEvent) + "\n",
-  );
-  receipt.build.command.sha256 = digest(JSON.stringify(buildEvent) + "\n");
   mutate(receipt);
   const event = {
     ...receipt,
     command: { argv: receipt.command.argv, exitCode: 0 },
   };
   const output = JSON.stringify(event) + "\n";
-  fs.writeFileSync(path.join(f.dir, "logs/C2.jsonl"), output);
+  fs.writeFileSync(path.join(f.dir, "logs/C2.events.jsonl"), output);
   receipt.command.sha256 = digest(output);
   fs.writeFileSync(path.join(f.dir, "logs/C2.json"), JSON.stringify(receipt));
   fs.writeFileSync(path.join(f.dir, "review.json"), JSON.stringify(f.review));
@@ -243,7 +216,7 @@ describe("数据库执行合同", () => {
           r.database.assertions[2].actual.rows[0].value = true;
       });
       if (scope === "raw") {
-        const file = path.join(f.dir, "logs/C2.jsonl");
+        const file = path.join(f.dir, "logs/C2.events.jsonl");
         const event = JSON.parse(fs.readFileSync(file, "utf8"));
         event.assertions[0].actual = 1;
         const output = JSON.stringify(event) + "\n";

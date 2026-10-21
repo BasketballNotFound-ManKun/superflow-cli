@@ -41,6 +41,14 @@ describe("anonymous application replay through the actual verify guard", () => {
             fs.readFileSync(path.join(dir, "logs", `${entry}.json`), "utf8"),
           );
           expect(receipt.status).toBe("PASS");
+          const captured = JSON.parse(fs.readFileSync(
+            path.join(dir, "logs", receipt.capture.path), "utf8",
+          ));
+          expect(captured).toMatchObject({
+            schemaVersion: "superflow.execution-capture.v1", kind: "case", exitCode: 0,
+          });
+          expect(captured.argv[1]).toBe("case.py");
+          expect(receipt.build.capture.path).toBe("build.capture.json");
           expect(
             receipt.database.assertions.every(
               (assertion: { result: string }) => assertion.result === "PASS",
@@ -93,6 +101,15 @@ describe("anonymous application replay through the actual verify guard", () => {
           ).not.toThrow();
         const review = path.join(dir, ".sdd/reviews/document-review.json");
         if (mode === "omit") {
+          const omitted = JSON.parse(fs.readFileSync(path.join(dir, "logs/E11.json"), "utf8"));
+          expect(omitted.status).toBe("PARTIAL");
+          expect(omitted.command.exitCode).toBe(1);
+          expect(omitted.persistence[0]).toMatchObject({
+            before: { value: null }, after: { value: null }, result: "FAIL",
+          });
+          expect(omitted.assertions.find((assertion: { id: string }) => assertion.id === "state").actual).toBe(true);
+          expect(omitted.database.assertions[0].actual).toBe(1);
+          expect(omitted.database.assertions[1].actual.before).toEqual(omitted.database.assertions[1].actual.after);
           // The E05 receipt remains valid. Relabeling it cannot substitute E11.
           const report = path.join(dir, "test-report.md");
           fs.writeFileSync(

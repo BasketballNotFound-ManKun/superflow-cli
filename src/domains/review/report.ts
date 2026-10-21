@@ -61,14 +61,19 @@ export function auditReviewReport(
     }
   }
   const reviewedSources = auditReviewedSources(lines, projectRoot, issues);
+  const findingsClear = findingsSections === 1 && findingsBody.length === 1
+    && /^(?:None|无)[。.]?$/i.test(findingsBody[0]);
+  if (findingsSections !== 1) {
+    issues.push("reviewer report requires one current Findings section");
+  } else if (findings === 0 && !findingsClear) {
+    issues.push("Findings must explicitly declare None or list anchored issues");
+  }
   return {
     state,
     eligibleForTriage: state === "DONE" && issues.length === 0,
     findings,
-    // Modern closure requires an explicit current clearance, rather than
-    // assuming unrecognized prose or an absent Findings section means none.
-    findingsClear: findingsSections === 1 && findingsBody.length === 1
-      && /^(?:None|无)[。.]?$/i.test(findingsBody[0]),
+    // Current closure requires explicit clearance, never an inferred absence.
+    findingsClear,
     reviewedSources,
     issues,
   };
@@ -81,7 +86,10 @@ function auditReviewedSources(
 ): ReviewReportAudit["reviewedSources"] {
   const headings = lines.flatMap((line, index) =>
     /^## Reviewed Sources\s*$/.test(line) ? [index] : []);
-  if (!headings.length) return null;
+  if (!headings.length) {
+    issues.push("reviewer report requires current Reviewed Sources");
+    return null;
+  }
   if (headings.length !== 1) issues.push("duplicate reviewed source sections");
   const sources: NonNullable<ReviewReportAudit["reviewedSources"]> = [];
   const seen = new Set<string>();

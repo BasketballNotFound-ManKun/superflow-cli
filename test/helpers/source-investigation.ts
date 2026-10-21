@@ -94,6 +94,7 @@ export function prepareSourceInvestigation(change: string): void {
     JSON.stringify({
       schemaVersion: "superflow.coding-ready.v1",
       codingReady: true,
+      workflowPolicy: "observed-delivery.v1",
       handoffHash: hash,
       reviewHash: digest(fs.readFileSync(path.join(change, REVIEW))),
     }),

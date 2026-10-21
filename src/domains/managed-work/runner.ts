@@ -61,6 +61,7 @@ import {
   snapshotChangedWorkspaceFiles,
 } from "./state.js";
 import { ASSETS_DIR } from "../../platform/assets.js";
+import { assertManagedSddCodingReady } from "../sdd-readiness.js";
 import { notifyManagedTask } from "./notifications.js";
 import {
   calculateManagedContractHash,
@@ -123,6 +124,7 @@ export async function runManagedTask(
   let projectLocks: Awaited<ReturnType<typeof acquireProjectLocks>> = [];
 
   try {
+    assertManagedSddCodingReady(contract);
     const prepared = await prepareManagedExecution(contract);
     projectLocks = prepared.projectLocks;
     if (migrateLegacyDataDisclosure(contract, state)) {
@@ -208,6 +210,7 @@ export async function runManagedTask(
     }
 
     while (state.status === "running") {
+      assertManagedSddCodingReady(contract);
       state = pauseAtSafeBoundary(contract, state, env);
       if (state.status !== "running") break;
       state = enforceBudgets(contract, state, env);
@@ -237,6 +240,7 @@ export async function runManagedTask(
         }
       }
 
+      assertManagedSddCodingReady(contract);
       state = prepareExternalHostReview(contract, state, env);
       break;
     }

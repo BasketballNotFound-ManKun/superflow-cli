@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkReceipt } from "./superflow-review-coverage.mjs";
 
 const [projectArg = ".", taskId] = process.argv.slice(2);
 if (!taskId) {
@@ -17,6 +18,17 @@ const taskFile = path.join(root, ".superflow", "tasks", taskId, "task.json");
 if (!fs.existsSync(taskFile)) fail(`缺少托管任务合同: ${taskFile}`);
 const task = JSON.parse(fs.readFileSync(taskFile, "utf8"));
 const english = task.language === "en";
+if (task.source === "sdd" && task.profile !== "native") {
+  const original = task.taskPrompt?.originalPath;
+  let change = original ? path.dirname(path.resolve(original)) : null;
+  while (change && !fs.existsSync(path.join(change, ".sdd/state.yaml"))) {
+    const parent = path.dirname(change);
+    change = parent === change ? null : parent;
+  }
+  if (!change) fail("SDD 任务缺少原始 Prompt/change，无法核验当前 Coding Ready");
+  const readinessIssues = checkReceipt(change);
+  if (readinessIssues.length) fail(`Coding Ready: ${readinessIssues.join("; ")}`);
+}
 const protectedInputErrors = validateProtectedInputs(root, taskId);
 const enforceEightyColumns = requiresEightyColumns(task, root);
 const enforcePortableAcceptance = requiresPortableAcceptance(task);

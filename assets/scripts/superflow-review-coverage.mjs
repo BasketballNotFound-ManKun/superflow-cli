@@ -157,11 +157,8 @@ export function validateCoverage(root, review, issues, checkCode = true) {
   }
   for (const test of cases.values()) {
     const entry = entries.get(test.entryId);
-    if (
-      test.executionEvidence !== undefined &&
-      test.executionEvidence !== "runner-captured.v1"
-    ) {
-      issues.push(`用例 ${test.id} 的 executionEvidence 无效`);
+    if (test.executionEvidence !== "runner-captured.v1") {
+      issues.push(`用例 ${test.id} 必须冻结 executionEvidence: runner-captured.v1`);
     }
     if (
       test.executionEvidence === "runner-captured.v1" &&
@@ -698,11 +695,14 @@ export function checkReceipt(root, { checkCode = false } = {}) {
     if (
       receipt.schemaVersion !== "superflow.coding-ready.v1" ||
       receipt.codingReady !== true ||
+      receipt.workflowPolicy !== "observed-delivery.v1" ||
       receipt.handoffHash !== stateHash ||
       receipt.handoffHash !== currentHandoffHash(root) ||
       receipt.reviewHash !== fileHash(path.join(root, reviewPath))
     ) {
-      issues.push("Coding Ready 内容已过期或缺少评审指纹");
+      issues.push(
+        "Coding Ready 缺少当前 workflowPolicy、内容已过期或缺少评审指纹；请回文档 owner 补齐并重新评审",
+      );
     }
     const review = JSON.parse(
       fs.readFileSync(path.join(root, reviewPath), "utf8"),

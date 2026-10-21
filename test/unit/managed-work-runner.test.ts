@@ -38,6 +38,9 @@ import type {
   ReviewResult,
 } from "../../src/domains/managed-work/types.js";
 
+import { prepareCoverage, digest, handoffHash, REVIEW } from "../helpers/review-coverage.js";
+import { writeExecutionReceipt, writeIndependentReview } from "../helpers/execution-receipt.js";
+
 const roots: string[] = [];
 
 afterEach(() => {
@@ -3240,7 +3243,30 @@ function createSddFixture(tasks: string[], initializeGit = false) {
     path.join(changeDir, "tasks.md"),
     `# Tasks\n\n${tasks.join("\n")}\n`,
   );
-  fs.writeFileSync(path.join(changeDir, "test-report.md"), "# Test Report\n");
+  prepareCoverage(changeDir);
+  const reviewFile = path.join(changeDir, REVIEW);
+  const review = JSON.parse(fs.readFileSync(reviewFile, "utf8"));
+  review.projectRoot = ".";
+  fs.writeFileSync(reviewFile, JSON.stringify(review));
+  writeExecutionReceipt(changeDir, "C1", "page-child-create", "browser");
+  writeExecutionReceipt(changeDir, "C2", "api-child-create", "api");
+  const readyFile = path.join(changeDir, ".sdd/readiness/coding-ready.json");
+  const ready = JSON.parse(fs.readFileSync(readyFile, "utf8"));
+  fs.writeFileSync(path.join(changeDir, "test-report.md"),
+    "| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |\n" +
+    "|---|---|---|---|---|\n" +
+    "| C1 | page-child-create | browser | PASS | logs/C1.json |\n" +
+    "| C2 | api-child-create | api | PASS | logs/C2.json |\n验证结果: PASS\n");
+  writeIndependentReview(changeDir);
+  const currentHash = handoffHash(changeDir);
+  review.handoffHash = currentHash;
+  for (const round of review.rounds) round.inputHash = currentHash;
+  fs.writeFileSync(reviewFile, JSON.stringify(review));
+  ready.handoffHash = currentHash;
+  ready.reviewHash = digest(fs.readFileSync(reviewFile));
+  fs.writeFileSync(readyFile, JSON.stringify(ready));
+  fs.writeFileSync(path.join(changeDir, ".sdd/state.yaml"),
+    `phase: implement\nhandoff_hash: ${currentHash}\n`);
   if (initializeGit) initializeGitRepository(root);
   const env = {
     ...process.env,

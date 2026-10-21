@@ -105,6 +105,12 @@ export function prepareCoverage(
         entryId,
         level: i === 0 ? "browser" : "api",
         action: "Child creates another account",
+        executionEvidence: "runner-captured.v1",
+        executionContext: {
+          argv: [process.execPath, `case-C${i + 1}.cjs`],
+          cwd: ".",
+          environmentKeys: [],
+        },
         sourceRefs: ["tests"],
         assertions: {
           response: "success",
@@ -124,6 +130,7 @@ export function prepareCoverage(
       JSON.stringify({
         schemaVersion: "superflow.coding-ready.v1",
         codingReady: true,
+        workflowPolicy: "observed-delivery.v1",
         handoffHash: hash,
         reviewHash: digest(JSON.stringify(review)),
       }),

@@ -20,12 +20,12 @@ it.each([
   { buildMode: "owner", scenario: "captured", ready: true },
   { buildMode: "owner", scenario: "fresh legacy", ready: false },
   { buildMode: "owner", scenario: "one legacy case", ready: false },
-  { buildMode: "owner", scenario: "valid legacy receipt", ready: true },
+  { buildMode: "owner", scenario: "valid legacy receipt", ready: false },
   { buildMode: "owner", scenario: "incomplete legacy receipt", ready: false },
   { buildMode: "owner", scenario: "stale legacy receipt", ready: false },
   { buildMode: "owner", scenario: "blocked legacy receipt", ready: false },
 ])(
-  "$buildMode $scenario coding-ready preserves frozen policy or requires capture",
+  "$buildMode $scenario coding-ready requires the current capture contract",
   async ({ buildMode, scenario, ready }) => {
     temporary = fs.mkdtempSync(path.join(os.tmpdir(), "superflow ready flow "));
     const home = path.join(temporary, "isolated home");
@@ -106,16 +106,12 @@ it.each([
       persistState: false,
       persistReceipt: false,
     });
-    if (["captured", "one legacy case"].includes(scenario)) {
+    if (scenario !== "captured") {
       mutateReview(change, (review) => {
         for (const test of review.coverage.cases) {
-          if (scenario === "one legacy case" && test.id === "C2") continue;
-          test.executionEvidence = "runner-captured.v1";
-          test.executionContext = {
-            argv: ["node", "verify.mjs"],
-            cwd: ".",
-            environmentKeys: [],
-          };
+          if (scenario === "one legacy case" && test.id === "C1") continue;
+          delete test.executionEvidence;
+          delete test.executionContext;
         }
       });
     }
@@ -260,9 +256,7 @@ it.each([
       ).toThrow();
       return;
     }
-    expect(receipt.workflowPolicy).toBe(
-      scenario === "captured" ? "observed-delivery.v1" : undefined,
-    );
+    expect(receipt.workflowPolicy).toBe("observed-delivery.v1");
     expect(receipt.evidence).toHaveLength(7);
     expect(
       receipt.evidence.every(
@@ -273,24 +267,19 @@ it.each([
     expect(() =>
       assertCodingReadyForPrompt(path.join(change, "prompt/implementation.md")),
     ).not.toThrow();
-    if (scenario === "valid legacy receipt") {
-      await write(
-        path.join(change, "caller.ts"),
-        "export const create = () => post('/operator/add', { rootId: 'root' });\n",
-      );
-      const continuation = spawnSync(
-        process.execPath,
-        [
-          path.join(ROOT, "assets/scripts/superflow-review-coverage.mjs"),
-          change,
-        ],
-        { encoding: "utf8", env },
-      );
-      expect(continuation.status, continuation.stderr).toBe(0);
-      expect(
-        JSON.parse(fs.readFileSync(receiptFile, "utf8")).workflowPolicy,
-      ).toBeUndefined();
-    }
+    await write(
+      path.join(change, "caller.ts"),
+      "export const create = () => post('/operator/add', { rootId: 'root' });\n",
+    );
+    const continuation = spawnSync(
+      process.execPath,
+      [path.join(ROOT, "assets/scripts/superflow-review-coverage.mjs"), change],
+      { encoding: "utf8", env },
+    );
+    expect(continuation.status, continuation.stderr).toBe(0);
+    expect(
+      JSON.parse(fs.readFileSync(receiptFile, "utf8")).workflowPolicy,
+    ).toBe("observed-delivery.v1");
   },
   30_000,
 );

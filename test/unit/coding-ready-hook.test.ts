@@ -45,6 +45,15 @@ describe("coding-ready source edit hook", () => {
     expect(result.status).toBe(0);
   });
 
+  it("blocks an otherwise current READY without the current workflow policy", () => {
+    prepareCoverage(change);
+    const file = path.join(change, ".sdd/readiness/coding-ready.json");
+    const receipt = JSON.parse(fs.readFileSync(file, "utf8"));
+    delete receipt.workflowPolicy;
+    fs.writeFileSync(file, JSON.stringify(receipt));
+    expect(runHook(sourceFile).status).toBe(2);
+  });
+
   it("allows implementation edits but blocks changed contracts", () => {
     fs.writeFileSync(path.join(change, "tests.md"), "# Tests\n");
     prepareCoverage(change);

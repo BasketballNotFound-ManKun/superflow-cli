@@ -3,9 +3,8 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import ts from "typescript";
 import { digest } from "../helpers/review-coverage.js";
-import { writeExecutionReceipt } from "../helpers/execution-receipt.js";
+import { writeExecutionReceipt, prepareCapturePackage } from "../helpers/execution-receipt.js";
 
 const lint = path.resolve("assets/scripts/superflow-test-report-lint.py");
 let dir: string;
@@ -54,31 +53,7 @@ function record(
 }
 
 function prepareCapturedCase(fail = false) {
-  // Compile the real canonical redactor in an isolated package. This suite
-  // also runs before build and must not depend on stale repository dist.
-  const packageRoot = path.join(dir, "capture-package");
-  const scriptDir = path.join(packageRoot, "assets/scripts");
-  const moduleDir = path.join(packageRoot, "dist/domains/managed-work");
-  fs.mkdirSync(scriptDir, { recursive: true });
-  fs.mkdirSync(moduleDir, { recursive: true });
-  fs.copyFileSync(lint, path.join(scriptDir, "lint.py"));
-  fs.writeFileSync(path.join(packageRoot, "package.json"), '{"type":"module"}');
-  const redactor = fs.readFileSync(
-    "src/domains/managed-work/redaction.ts",
-    "utf8",
-  );
-  fs.writeFileSync(
-    path.join(moduleDir, "redaction.js"),
-    ts.transpileModule(redactor, {
-      compilerOptions: { module: ts.ModuleKind.ES2022 },
-    }).outputText,
-  );
-  const reviewModule = path.join(packageRoot, "dist/domains/review");
-  fs.mkdirSync(reviewModule, { recursive: true });
-  fs.writeFileSync(path.join(reviewModule, "report.js"), ts.transpileModule(
-    fs.readFileSync("src/domains/review/report.ts", "utf8"),
-    { compilerOptions: { module: ts.ModuleKind.ES2022 } },
-  ).outputText);
+  prepareCapturePackage(dir);
   fs.writeFileSync(
     path.join(dir, "build.cjs"),
     `
@@ -142,7 +117,6 @@ function captureCase() {
 }
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-receipt-"));
-  writeExecutionReceipt(dir, "C1", "E11");
   fs.writeFileSync(
     path.join(dir, "review.json"),
     JSON.stringify({
@@ -174,20 +148,25 @@ beforeEach(() => {
       },
     }),
   );
+  writeExecutionReceipt(dir, "C1", "E11");
   fs.writeFileSync(
     path.join(dir, "report.md"),
     "| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |\n|---|---|---|---|---|\n| C1 | E11 | api | PASS | logs/C1.json |\n验证结果: PASS\n",
   );
+  const receipt = JSON.parse(fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"));
+  fs.writeFileSync(path.join(dir, "baseline-review.md"), "DONE\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" + receipt.sources.map((source: any) => `| ${source.path.replace(/^\.\.\//, "")} | ${source.sha256} |`).join("\n"));
+  fs.appendFileSync(path.join(dir, "report.md"), "\n## Independent Review\n| Report |\n|---|\n| baseline-review.md |\n\n## Summary\n");
 });
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 describe("execution receipt boundary", () => {
   function observedDelivery() {
+    fs.writeFileSync(path.join(dir, "report.md"), fs.readFileSync(path.join(dir, "report.md"), "utf8").split("\n## Independent Review")[0]);
     prepareCapturedCase();
     expect(captureBuild().code).toBe(0);
     expect(captureCase().code).toBe(0);
     fs.mkdirSync(path.join(dir, ".sdd/readiness"), { recursive: true });
     fs.writeFileSync(path.join(dir, ".sdd/readiness/coding-ready.json"), JSON.stringify({
-      workflowPolicy: "observed-delivery.v1",
+      workflowPolicy: "observed-delivery.v1", codingReady: true,
     }));
   }
   function reviewed(files = ["application.ts", "build.cjs", "case.cjs"], state = "DONE", findings = "None") {
@@ -205,12 +184,35 @@ describe("execution receipt boundary", () => {
     expect(result.output).toContain("Independent Review");
     expect(run().code).toBe(0);
   });
-  it("preserves legacy completion without upgrading an older coding-ready receipt", () => {
+  it("requires current independent review despite an older coding-ready receipt", () => {
     observedDelivery();
     fs.writeFileSync(path.join(dir, ".sdd/readiness/coding-ready.json"), JSON.stringify({
       schemaVersion: "superflow.coding-ready.v1", codingReady: true,
     }));
-    expect(run({}, true).code).toBe(0);
+    expect(run({}, true).code).toBe(2);
+  });
+  it.each(["missing", "absent-policy", "old-policy"])(
+    "rejects complete captured and reviewed SDD with %s READY policy", (kind) => {
+      observedDelivery();
+      reviewed();
+      const ready = path.join(dir, ".sdd/readiness/coding-ready.json");
+      if (kind === "missing") fs.rmSync(ready);
+      else fs.writeFileSync(ready, JSON.stringify(kind === "absent-policy"
+        ? { codingReady: true } : { workflowPolicy: "legacy-delivery.v0" }));
+      const result = run({}, true);
+      expect(result.code).toBe(2);
+      expect(result.output).toContain("workflowPolicy");
+    },
+  );
+  it("rejects complete captured and reviewed SDD when current READY is blocked", () => {
+    observedDelivery();
+    reviewed();
+    fs.writeFileSync(path.join(dir, ".sdd/readiness/coding-ready.json"), JSON.stringify({
+      workflowPolicy: "observed-delivery.v1", codingReady: false, verdict: "BLOCKED",
+    }));
+    const result = run({}, true);
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("codingReady");
   });
   it("does not reuse a legacy review without current reviewed-source identities", () => {
     observedDelivery();
@@ -284,7 +286,10 @@ describe("execution receipt boundary", () => {
     reviewed();
     fs.rmSync(path.join(dir, "capture-package/dist/domains/review"), { recursive: true });
     // Prevent fallback to a developer's unrelated global installation.
-    expect(run({ PATH: path.dirname(process.execPath) + ":/usr/bin:/bin" }, true).code).toBe(2);
+    const bin = path.join(dir, "isolated-bin");
+    fs.mkdirSync(bin);
+    fs.symlinkSync(process.execPath, path.join(bin, "node"));
+    expect(run({ PATH: bin + ":/usr/bin:/bin" }, true).code).toBe(2);
   });
   it.each(["delete", "empty", "directory"])(
     "retains process facts when a build makes its source unreadable: %s",
@@ -538,12 +543,51 @@ describe("execution receipt boundary", () => {
     const review = JSON.parse(fs.readFileSync(file, "utf8"));
     review.coverage.cases[0].executionEvidence = "runner-captured.v1";
     fs.writeFileSync(file, JSON.stringify(review));
-    // This fixture copies expected into actual without running command.argv.
-    // The opted-in gate must distinguish consistency from observed execution.
+    const receipt = JSON.parse(fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"));
+    delete receipt.capture;
+    save(receipt);
+    // The gate must distinguish a schema-consistent receipt from capture.
     const result = run();
     expect(result.code).toBe(2);
     expect(result.output).toContain("capture");
   });
+  it.each(["case", "build"])("rejects synthetic %s PASS when the case omits executionEvidence", (kind) => {
+    const file = path.join(dir, "review.json");
+    const review = JSON.parse(fs.readFileSync(file, "utf8"));
+    delete review.coverage.cases[0].executionEvidence;
+    fs.writeFileSync(file, JSON.stringify(review));
+    const receipt = JSON.parse(fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"));
+    if (kind === "case") delete receipt.capture;
+    else {
+      delete receipt.build.capture;
+      const eventFile = path.join(dir, "logs/C1.events.jsonl");
+      const event = JSON.parse(fs.readFileSync(eventFile, "utf8"));
+      event.build = receipt.build;
+      const output = JSON.stringify(event) + "\n";
+      fs.writeFileSync(eventFile, output);
+      receipt.command.sha256 = digest(output);
+    }
+    save(receipt);
+    const result = run();
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("capture");
+  });
+  it("requires current independent review when coding-ready is missing", () => {
+    observedDelivery();
+    fs.rmSync(path.join(dir, ".sdd/readiness/coding-ready.json"));
+    expect(run({}, true).code).toBe(2);
+  });
+  it.each(["executionEvidence", "executionContext"])(
+    "rejects genuine captured SDD PASS when frozen %s is missing", (field) => {
+      const file = path.join(dir, "review.json");
+      const review = JSON.parse(fs.readFileSync(file, "utf8"));
+      delete review.coverage.cases[0][field];
+      fs.writeFileSync(file, JSON.stringify(review));
+      const result = run({}, true);
+      expect(result.code).toBe(2);
+      expect(result.output).toContain(field);
+    },
+  );
   it("does not treat an unsupported capture declaration as legacy evidence", () => {
     const file = path.join(dir, "review.json");
     const review = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -620,7 +664,7 @@ describe("execution receipt boundary", () => {
     const reviewFile = path.join(dir, "review.json");
     const review = JSON.parse(fs.readFileSync(reviewFile, "utf8"));
     review.coverage.cases[0].executionContext = {
-      argv: ["node", "application.ts"],
+      argv: [process.execPath, "case-C1.cjs"],
       cwd: ".",
       environmentKeys: ["NODE_ENV"],
     };
@@ -634,7 +678,7 @@ describe("execution receipt boundary", () => {
         NODE_ENV: digest(JSON.stringify(process.env.NODE_ENV ?? null)),
       },
     };
-    const outputFile = path.join(dir, "logs/C1.jsonl");
+    const outputFile = path.join(dir, "logs/C1.events.jsonl");
     const event = JSON.parse(fs.readFileSync(outputFile, "utf8"));
     event.executionContext = receipt.executionContext;
     const output = JSON.stringify(event) + "\n";
@@ -643,13 +687,17 @@ describe("execution receipt boundary", () => {
     save(receipt);
     return receipt;
   }
-  it("preserves legacy extra context without claiming declared binding", () => {
+  it("requires a frozen context even when the receipt retains actual capture context", () => {
+    const file = path.join(dir, "review.json");
+    const review = JSON.parse(fs.readFileSync(file, "utf8"));
+    delete review.coverage.cases[0].executionContext;
+    fs.writeFileSync(file, JSON.stringify(review));
     const receipt = JSON.parse(
       fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
     );
-    receipt.executionContext = { legacyNote: "not frozen" };
+    receipt.executionContext.legacyNote = "not frozen";
     save(receipt);
-    expect(run().code).toBe(0);
+    expect(run().code).toBe(2);
   });
   it("matches declared command, working directory and selected environment", () => {
     bindExecutionContext();
@@ -789,11 +837,11 @@ describe("execution receipt boundary", () => {
       fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
     );
     const raw = JSON.parse(
-      fs.readFileSync(path.join(dir, "logs/C1.jsonl"), "utf8"),
+      fs.readFileSync(path.join(dir, "logs/C1.events.jsonl"), "utf8"),
     );
     raw.target.service = "E05";
     const output = JSON.stringify(raw) + "\n";
-    fs.writeFileSync(path.join(dir, "logs/C1.jsonl"), output);
+    fs.writeFileSync(path.join(dir, "logs/C1.events.jsonl"), output);
     receipt.command.sha256 = digest(output);
     save(receipt);
     expect(run().code).toBe(2);
@@ -849,56 +897,27 @@ describe("execution receipt boundary", () => {
       });
 
       fs.writeFileSync(reviewFile, JSON.stringify(review));
-      const receipt = JSON.parse(
-        fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
-      );
-
-      Object.assign(receipt, {
-        testLayer: "database",
-        mockBoundary: boundary,
-        database: {
-          engine: "sqlite",
-          major: 3,
-          statements,
-          assertions: frozen.map((a) => ({
-            ...a,
-            actual:
-              a.kind === "unchangedRows"
-                ? { before: a.expected, after: a.expected }
-                : a.expected,
+      const measurement = {
+        testLayer: "database", mockBoundary: boundary,
+        database: { engine: "sqlite", major: 3, statements,
+          assertions: frozen.map((a) => ({ ...a,
+            actual: a.kind === "unchangedRows"
+              ? { before: a.expected, after: a.expected } : a.expected,
             result: "PASS",
           })),
         },
-      });
-      receipt.sources.push({ path: "../schema.sql", sha256: digest(schema) });
-      const fingerprint = digest(
-        receipt.sources
-          .map((source: any) => `${source.path}:${source.sha256}`)
-          .sort()
-          .join("\n"),
-      );
-      receipt.build.sourceFingerprint = fingerprint;
-      receipt.target.sourceFingerprint = fingerprint;
-      const buildFile = path.join(dir, "logs/build.jsonl");
-      const buildEvent = JSON.parse(fs.readFileSync(buildFile, "utf8"));
-      buildEvent.sourceFingerprint = fingerprint;
-      const buildOutput = JSON.stringify(buildEvent) + "\n";
-      fs.writeFileSync(buildFile, buildOutput);
-      receipt.build.command.sha256 = digest(buildOutput);
-      receipt.persistence = [
-        {
-          ...expected,
+        persistence: [{ ...expected,
           before: { businessId: "synthetic-1", value: null },
-          after: { businessId: "synthetic-1", value: actual },
-          result: "PASS",
-        },
-      ];
-      const raw = {
-        ...receipt,
+          after: { businessId: "synthetic-1", value: "expected" }, result: "PASS",
+        }],
+      };
+      const receipt = writeExecutionReceipt(dir, "C1", "E11", "api", measurement);
+      receipt.persistence[0].after.value = actual;
+      const raw = { ...receipt,
         command: { argv: receipt.command.argv, exitCode: 0 },
       };
       const output = JSON.stringify(raw) + "\n";
-      fs.writeFileSync(path.join(dir, "logs/C1.jsonl"), output);
+      fs.writeFileSync(path.join(dir, "logs/C1.events.jsonl"), output);
       receipt.command.sha256 = digest(output);
       save(receipt);
       expect(run().code).toBe(actual === "expected" ? 0 : 2);
@@ -909,21 +928,21 @@ describe("execution receipt boundary", () => {
       fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
     );
     const event = JSON.parse(
-      fs.readFileSync(path.join(dir, "logs/build.jsonl"), "utf8"),
+      fs.readFileSync(path.join(dir, "logs/build.events.jsonl"), "utf8"),
     );
     const buildOutput =
       JSON.stringify(event) +
       "\n" +
       JSON.stringify({ ...event, exitCode: 1 }) +
       "\n";
-    fs.writeFileSync(path.join(dir, "logs/build.jsonl"), buildOutput);
+    fs.writeFileSync(path.join(dir, "logs/build.events.jsonl"), buildOutput);
     receipt.build.command.sha256 = digest(buildOutput);
     const raw = {
       ...receipt,
       command: { argv: receipt.command.argv, exitCode: 0 },
     };
     const output = JSON.stringify(raw) + "\n";
-    fs.writeFileSync(path.join(dir, "logs/C1.jsonl"), output);
+    fs.writeFileSync(path.join(dir, "logs/C1.events.jsonl"), output);
     receipt.command.sha256 = digest(output);
     save(receipt);
     expect(run().code).toBe(2);

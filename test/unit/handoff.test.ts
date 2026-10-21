@@ -105,6 +105,10 @@ describe("handoff contract fingerprint boundaries", () => {
           "- [x] Reject unauthorized users\n",
         );
         await write(path.join(change, "test-report.md"), "Tests: 10 passed\n");
+        const review = path.join(change, ".sdd/reviews/current-code-review.md");
+        await write(review, "BLOCKED\n## Findings\nNeeds evidence\n");
+        expect(await hash()).toBe(initial);
+        await write(review, "DONE\n## Findings\nNone\n");
         expect(await hash()).toBe(initial);
         await write(
           path.join(change, "tasks.md"),

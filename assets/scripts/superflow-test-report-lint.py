@@ -522,11 +522,9 @@ EXECUTION_ENV_KEYS = frozenset([
 
 
 def validate_execution_context(receipt: dict, event: dict, case: dict, change: Path) -> None:
-    """Optional frozen bindings strengthen reuse without rewriting legacy proof."""
-    if "executionContext" not in case:
-        # Legacy extra metadata is retained, but never proves declared-context reuse.
-        return
-    binding = case["executionContext"]
+    """Validate required frozen command, cwd, and non-secret environment bindings."""
+    # Additional metadata alone does not establish a frozen context binding.
+    binding = case.get("executionContext")
     if (not isinstance(binding, dict)
             or set(binding) != {"argv", "cwd", "environmentKeys"}
             or not isinstance(binding["argv"], list) or not binding["argv"]
@@ -559,8 +557,8 @@ def validate_execution_context(receipt: dict, event: dict, case: dict, change: P
 
 
 def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: Path) -> None:
-    if "executionEvidence" in case and case["executionEvidence"] != "runner-captured.v1":
-        raise ValueError("不支持的 executionEvidence capture 声明")
+    if case.get("executionEvidence") != "runner-captured.v1":
+        raise ValueError("executionEvidence 必须冻结 runner-captured.v1；capture 不能替代缺失合同")
     receipt = json.loads(file.read_text(encoding="utf-8"))
     if receipt.get("schemaVersion") != "superflow.execution-receipt.v1":
         raise ValueError("缺少 execution-receipt.v1；旧证据应保留为 PARTIAL")
@@ -590,9 +588,6 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
     if len(events) != 1:
         raise ValueError("原始输出缺少唯一用例执行事件；未知 ID/零执行不可 PASS")
     event = events[0]
-    if case.get("executionEvidence") == "runner-captured.v1":
-        validate_capture(file.parent, receipt, "case")
-        validate_capture(file.parent, receipt["build"], "build")
     for key in ["caseId", "entryId", "level", "status", "executed", "assertions", "persistence",
                 "evidenceKind", "sources", "build", "target"]:
         if not json_equal(event.get(key), receipt.get(key)):
@@ -672,6 +667,10 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
                 or (after["value"] is None and not expected.get("allowNull", False))
                 or actual.get("result") != "PASS"):
             raise ValueError("持久化值未达到预期；结构存在/全 NULL/跨业务 ID 不能替代写入")
+
+    # Every PASS needs observed execution, including cases without a declaration.
+    validate_capture(file.parent, receipt, "case")
+    validate_capture(file.parent, build, "build")
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -1019,14 +1018,25 @@ def lint_independent_review(report: Path, text: str, root: Path | None,
                             review_path: Path | None, index_root: Path | None) -> list[Issue]:
     """Identity/status only: this cannot prove reviewer independence or sufficiency."""
     ready = report.parent / ".sdd/readiness/coding-ready.json"
-    if not ready.is_file():
+    document = review_path or report.parent / ".sdd/reviews/document-review.json"
+    # A full SDD delivery is identified by its coverage/state, never by the age
+    # of its READY receipt. Ordinary reports without SDD retain their own scope.
+    state = report.parent / ".sdd/state.yaml"
+    full_sdd = state.is_file() and re.search(
+        r"^workflow:\s*[\"']?full[\"']?\s*$", state.read_text(), re.M)
+    if not document.is_file() and not full_sdd:
         return []
     try:
-        policy = json.loads(ready.read_text()).get("workflowPolicy")
-        if policy != "observed-delivery.v1":
-            return []
-        document = review_path or report.parent / ".sdd/reviews/document-review.json"
         frozen = json.loads(document.read_text())
+        if not frozen.get("coverage") and not full_sdd:
+            return []
+        if not ready.is_file():
+            raise ValueError("完整 SDD 需要当前 READY workflowPolicy=observed-delivery.v1")
+        marker = json.loads(ready.read_text())
+        if marker.get("workflowPolicy") != "observed-delivery.v1":
+            raise ValueError("完整 SDD READY workflowPolicy 必须为 observed-delivery.v1")
+        if marker.get("codingReady") is not True:
+            raise ValueError("完整 SDD READY codingReady 必须为 true；BLOCKED 不能完整交付")
         project = (report.parent / frozen["projectRoot"]).resolve() if frozen.get("projectRoot") else (root or report.parent).resolve()
         lines, ambiguous = markdown_body_lines(text)
         if ambiguous:
@@ -1059,7 +1069,9 @@ console.log(JSON.stringify(input.reports.map(file=>auditReviewReport(fs.readFile
             raise ValueError("Independent Review 规范审计器执行失败；请修复 Superflow 安装")
         audits = json.loads(result.stdout)
         reviewed = set()
-        dependencies = [ready, document, *references]
+        dependencies = [document, *references]
+        if ready.is_file():
+            dependencies.append(ready)
         for file, audit in zip(references, audits):
             if (audit.get("state") != "DONE" or not audit.get("eligibleForTriage")
                     or audit.get("findings") != 0 or not audit.get("findingsClear")

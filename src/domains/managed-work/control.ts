@@ -45,7 +45,7 @@ import type {
 import type { Language } from "../../types.js";
 import { managedText } from "./i18n.js";
 import { submitExternalHostReviewResult } from "./host-review.js";
-import { assertCodingReadyForPrompt } from "../sdd-readiness.js";
+import { assertCodingReadyForPrompt, assertManagedSddCodingReady } from "../sdd-readiness.js";
 import {
   clearManagedControlSignal,
   readManagedControlSignal,
@@ -93,6 +93,7 @@ export function submitHumanDirectedDelivery(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<ManagedRunState> {
   const { contract, state } = loadManagedContext(taskId, env);
+  assertManagedSddCodingReady(contract);
   if (contract.executionMode !== "human_directed") {
     throw new Error("该任务不是人工执行任务，不能提交人工交付");
   }
@@ -124,6 +125,7 @@ export async function resumeHumanDirectedAfterReview(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<ManagedRunState> {
   const { contract, state } = loadManagedContext(taskId, env);
+  assertManagedSddCodingReady(contract);
   if (
     contract.executionMode !== "human_directed" ||
     state.status !== "queued" ||
@@ -356,6 +358,7 @@ export function startManagedTaskFromHost(
     env,
   );
   if (existingTaskId) {
+    assertManagedSddCodingReady(loadManagedTask(resolved.projectRoot, existingTaskId));
     startService(runtime, language);
     return getManagedTaskSnapshot(existingTaskId, env);
   }
@@ -717,6 +720,9 @@ export async function waitForManagedTaskChange(
       return { timedOut: true, snapshot: compactWaitSnapshot(snapshot) };
     }
     if (Date.now() - lastServiceCheck >= 10_000) {
+      assertManagedSddCodingReady(
+        loadManagedTask(snapshot.projectRoot, taskId),
+      );
       startService(runtime, snapshot.language);
       lastServiceCheck = Date.now();
     }
@@ -844,6 +850,7 @@ export function submitManagedHostReview(
 ): ManagedTaskSnapshot {
   const env = runtime.env ?? process.env;
   const { contract, state } = loadManagedContext(taskId, env);
+  assertManagedSddCodingReady(contract);
   const resultPath = submitExternalHostReviewResult(
     contract,
     state,
@@ -886,6 +893,7 @@ export function recordManagedValidation(
 ): ManagedTaskSnapshot {
   const env = runtime.env ?? process.env;
   const { contract, state, entry } = loadManagedContext(taskId, env);
+  assertManagedSddCodingReady(contract);
   if (
     ![
       "local_delivery_ready",
@@ -950,6 +958,7 @@ export function authorizeManagedExecutor(
 ): ManagedTaskSnapshot {
   const env = runtime.env ?? process.env;
   const { contract, state, entry } = loadManagedContext(taskId, env);
+  assertManagedSddCodingReady(contract);
   contract.permissions.externalModelDataDisclosure = {
     approved: true,
     approvedBy,
@@ -995,6 +1004,7 @@ export function confirmManagedExecutor(
 ): ManagedTaskSnapshot {
   const env = runtime.env ?? process.env;
   const { contract, state, entry } = loadManagedContext(taskId, env);
+  assertManagedSddCodingReady(contract);
   if (!contract.executorConfig || contract.executorConfig.confirmed) {
     throw new Error("该任务没有待确认的执行 Agent 模型配置");
   }
@@ -1056,6 +1066,7 @@ export function addManagedHumanGuidance(
 ): ManagedTaskSnapshot {
   const env = runtime.env ?? process.env;
   const { contract, state, entry } = loadManagedContext(taskId, env);
+  assertManagedSddCodingReady(contract);
   const message = appendManagedHumanMessage(contract, content, actor);
   if (
     [
@@ -1165,6 +1176,7 @@ export function resumeManagedTaskFromHost(
       ),
     );
   }
+  assertManagedSddCodingReady(contract);
   clearManagedControlSignal(contract);
   state.status = "queued";
   state.currentStep = recoveringEscalatedReview

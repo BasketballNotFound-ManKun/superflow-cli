@@ -44,8 +44,12 @@ function validate(update: (test: any) => void) {
 }
 
 describe("captured execution coverage contract", () => {
-  it("keeps legacy contracts unchanged", () => {
-    expect(validate(() => {})).toEqual([]);
+  it("rejects cases without the current captured execution policy", () => {
+    expect(
+      validate((test) => {
+        delete test.executionEvidence;
+      }).join("\n"),
+    ).toContain("executionEvidence");
   });
   it("rejects unknown capture policies", () => {
     expect(
@@ -57,7 +61,7 @@ describe("captured execution coverage contract", () => {
   it("requires a frozen command for captured execution", () => {
     expect(
       validate((test) => {
-        test.executionEvidence = "runner-captured.v1";
+        delete test.executionContext;
       }).join("\n"),
     ).toContain("executionContext");
   });

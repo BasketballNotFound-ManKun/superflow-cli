@@ -27,6 +27,7 @@ import {
   calculateManagedContractHash,
   createManagedTaskContract,
 } from "../../src/domains/managed-work/contract.js";
+import { prepareCoverage } from "../helpers/review-coverage.js";
 import { createManagedTaskFiles } from "../../src/domains/managed-work/storage.js";
 import { initManagedRunState } from "../../src/domains/managed-work/state.js";
 import type { ManagedRunState } from "../../src/domains/managed-work/types.js";
@@ -44,6 +45,51 @@ afterEach(() => {
 });
 
 describe("pipeline managed task recovery", () => {
+  it.each([
+    { status: "paused" as const, current: false },
+    { status: "running" as const, current: false },
+    { status: "running" as const, current: true },
+  ])(
+    "checks SDD $status recovery before mutation (current policy: $current)",
+    async ({ status, current }) => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), "pipeline-current-ready-"));
+      roots.push(root);
+      const change = path.join(root, "openspec/changes/demo");
+      const prompt = path.join(change, "prompt/implementation.md");
+      fs.mkdirSync(path.dirname(prompt), { recursive: true });
+      fs.writeFileSync(prompt, "# Implementation\n");
+      prepareCoverage(change);
+      const ready = path.join(change, ".sdd/readiness/coding-ready.json");
+      const receipt = JSON.parse(fs.readFileSync(ready, "utf8"));
+      if (!current) delete receipt.workflowPolicy;
+      else fs.appendFileSync(path.join(change, "caller.ts"), "\n// implemented\n");
+      fs.writeFileSync(ready, JSON.stringify(receipt));
+      const contract = createManagedTaskContract({ request: prompt, projectRoot: root,
+        profile: "sdd", source: "sdd", taskPromptPath: prompt });
+      contract.status = status;
+      const state = initManagedRunState(contract);
+      state.status = status;
+      state.runningAgentPid = status === "running" ? process.pid : null;
+      const home = path.join(root, "home");
+      createManagedTaskFiles(contract, state, { ...process.env, SUPERFLOW_HOME: home });
+      const taskFile = path.join(root, ".superflow/tasks", contract.taskId, "task.json");
+      const before = fs.readFileSync(taskFile, "utf8");
+      const previousHome = process.env.SUPERFLOW_HOME;
+      process.env.SUPERFLOW_HOME = home;
+      const service = vi.spyOn(managedService, "ensureManagedService")
+        .mockImplementation(() => { throw new Error("unexpected service startup"); });
+      try {
+        await expect(pipelineCommand(undefined, { resumeTask: contract.taskId,
+          ...(status === "paused" ? { maxExecutorInvocations: "9", maxTotalAgentInvocations: "30", budgetOverrideReason: "continue fixture" } : {}) }))
+          .rejects.toThrow(current ? "unexpected service startup" : "Coding Ready");
+        expect(service).toHaveBeenCalledTimes(current ? 1 : 0);
+        expect(fs.readFileSync(taskFile, "utf8")).toBe(before);
+      } finally {
+        if (previousHome === undefined) delete process.env.SUPERFLOW_HOME;
+        else process.env.SUPERFLOW_HOME = previousHome;
+      }
+    },
+  );
   it("prepares native raw skill requests without standard artifacts and honors explicit budgets", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "pipeline-native-"));
     roots.push(root);
