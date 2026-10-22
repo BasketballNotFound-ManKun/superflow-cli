@@ -54,6 +54,7 @@ describe("managed work runner", () => {
     "HTTP 403: usage limit reached for the 5-hour window",
     "Failed to refresh access token: HTTP 403: You have reached your usage limit",
     "403 Forbidden: weekly usage limit exceeded; rate limit",
+    "stream disconnected before completion: usage limit reached",
   ])(
     "stops explicit provider usage quota without credits: %s",
     async (message) => {
@@ -84,6 +85,15 @@ describe("managed work runner", () => {
       expect(isPermanentProviderFailure(message)).toBe(false);
     },
   );
+
+  it.each(["HTTP 403 invalid access token", "permission denied"])("does not retry or credit stream text with permission failure: %s", async detail => {
+    const fixture = createFixture("engineering");
+    const state = await runManagedTask(fixture.root, fixture.contract.taskId,
+      new FakeInvoker([new Error(`stream disconnected before completion: ${detail}`)]), fixture.env);
+    expect(state.currentStep).toBe("waiting_for_human");
+    expect(state.executorInvocationCredits ?? 0).toBe(0);
+    expect(state.connectivityRetryCount ?? 0).toBe(0);
+  });
 
   it("credits temporary concurrent capacity separately from quota", async () => {
     const fixture = createFixture("engineering");
@@ -3005,7 +3015,10 @@ describe("managed work runner", () => {
     expect(state.blocker).toContain("Unable to connect");
   });
 
-  it("credits temporary connection failures while still opening the circuit after three attempts", async () => {
+  it.each([
+    "API Error: Unable to connect to API (ConnectionRefused)",
+    "stream disconnected before completion",
+  ])("credits temporary connection failures and opens the existing three-attempt circuit: %s", async message => {
     const fixture = createFixture();
     let state = fixture.state;
 
@@ -3014,16 +3027,20 @@ describe("managed work runner", () => {
         fixture.root,
         fixture.contract.taskId,
         new FakeInvoker([
-          new Error("API Error: Unable to connect to API (ConnectionRefused)"),
+          new Error(message),
         ]),
         fixture.env,
       );
+      expect(state.status).toBe(attempt < 2 ? "waiting_for_connectivity" : "waiting_for_human");
+      expect(state.consecutiveTransientProviderFailures).toBe(attempt + 1);
+      expect(state.executorInvocationCredits).toBe(attempt + 1);
     }
 
     expect(state.status).toBe("waiting_for_human");
     expect(state.currentStep).toBe("provider_change_required");
     expect(state.consecutiveTransientProviderFailures).toBe(3);
     expect(state.connectivityRetryCount).toBe(3);
+    expect(state.executorInvocations).toBe(3);
     expect(state.executorInvocationCredits).toBe(3);
     expect(state.totalAgentInvocationCredits).toBe(3);
     expect(

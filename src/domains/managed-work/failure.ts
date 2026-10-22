@@ -95,7 +95,9 @@ export function isCreditableTransientProviderFailure(message: string): boolean {
   if (isPermanentProviderFailure(message)) {
     return false;
   }
-  return /(\b429\b|\b529\b|rate.?limit|concurrent[ _-]+requests?[ _-]+limit|overloaded|访问量过大|暂时.*限流|temporar(?:y|ily).*(?:busy|unavailable)|connection (?:refused|reset|closed)|unable to connect|socket hang up|\bECONN[A-Z]*\b|连接(?:被拒绝|重置|关闭)|无法连接)/i.test(
+  const interruptedStream = /\bstream disconnected before completion\b/i.test(message)
+    && !/(\b(?:401|403|unauthorized|forbidden)\b|permission denied|invalid (?:access )?token)/i.test(message);
+  return interruptedStream || /(\b429\b|\b529\b|rate.?limit|concurrent[ _-]+requests?[ _-]+limit|overloaded|访问量过大|暂时.*限流|temporar(?:y|ily).*(?:busy|unavailable)|connection (?:refused|reset|closed)|unable to connect|socket hang up|\bECONN[A-Z]*\b|连接(?:被拒绝|重置|关闭)|无法连接)/i.test(
     message,
   );
 }

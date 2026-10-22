@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { isCreditableTransientProviderFailure } from "../../src/domains/managed-work/failure.js";
 import { isPermanentProviderFailure } from "../../src/domains/managed-work/runner.js";
 
 describe("isPermanentProviderFailure", () => {
+  it("credits explicit stream interruption before completion", () => {
+    expect(isCreditableTransientProviderFailure("stream disconnected before completion")).toBe(true);
+  });
+  it.each(["HTTP 403 invalid access token", "permission denied", "quota exhausted", "billing required", "auth_unavailable: no accounts"])("does not credit stream text hiding permanent or permission failure: %s", detail => {
+    expect(isCreditableTransientProviderFailure(`stream disconnected before completion: ${detail}`)).toBe(false);
+  });
   it("classifies account-pool auth failures as permanent", () => {
     const realWorldMessage =
       "unexpected status 503 Service Unavailable: auth_unavailable: 账号池没有可用账号：候选 5 个，不可用 5 个，模型排除 0 个，额度保留拦截 0 个，生图策略拦截 0 个。, url: http://localhost:55288/v1/responses";

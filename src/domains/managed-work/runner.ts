@@ -3716,7 +3716,7 @@ function registryRunId(
 }
 
 function isConnectivityFailure(message: string): boolean {
-  return /(network|socket|unable to connect|connection (?:refused|reset|closed)|server_error|timed?\s*out|rate.?limit|concurrent[ _-]+requests?[ _-]+limit|overloaded|busy|\b(?:429|503|529)\b|\bECONN[A-Z]*\b|网络|无法连接|连接被拒绝|限流|繁忙)/i.test(
+  return isCreditableTransientProviderFailure(message) || /(network|socket|unable to connect|connection (?:refused|reset|closed)|server_error|timed?\s*out|rate.?limit|concurrent[ _-]+requests?[ _-]+limit|overloaded|busy|\b(?:429|503|529)\b|\bECONN[A-Z]*\b|网络|无法连接|连接被拒绝|限流|繁忙)/i.test(
     message,
   );
 }
