@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -109,6 +109,7 @@ function captureBuild() {
 function captureCase() {
   return record({
     kind: "case",
+    changeDir: ".",
     review: "review.json",
     caseId: "C1",
     build: "logs/build.json",
@@ -159,6 +160,75 @@ beforeEach(() => {
 });
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 describe("execution receipt boundary", () => {
+  function nestedCapture(cwd: string, changeDir: unknown) {
+    prepareCapturedCase();
+    expect(captureBuild().code).toBe(0);
+    const change = path.join(dir, "openspec/changes/sample");
+    const reviewPath = path.join(change, ".sdd/reviews/document-review.json");
+    fs.mkdirSync(path.dirname(reviewPath), { recursive: true });
+    const review = JSON.parse(fs.readFileSync(path.join(dir, "review.json"), "utf8"));
+    review.projectRoot = "../../..";
+    review.coverage.cases[0].executionContext.cwd = cwd;
+    for (const source of review.coverage.sources) source.path = "../../../" + source.path;
+    fs.writeFileSync(reviewPath, JSON.stringify(review));
+    const result = record({
+      kind: "case", changeDir,
+      review: "openspec/changes/sample/.sdd/reviews/document-review.json",
+      caseId: "C1", build: "logs/build.json", output: "logs/C1.json",
+    });
+    return { change, reviewPath, result };
+  }
+
+  it("captures from a change-relative project cwd and consumes the unchanged nested receipt", () => {
+    const { change, reviewPath, result } = nestedCapture("../../..", "openspec/changes/sample");
+    expect(result, result.output).toMatchObject({ code: 0 });
+    const receipt = fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8");
+    expect(JSON.parse(receipt).executionContext.cwd).toBe(fs.realpathSync(dir));
+    fs.writeFileSync(path.join(change, "current-review.md"),
+      "DONE\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" +
+      JSON.parse(receipt).sources.map((source: any) =>
+        `| ${path.relative(dir, path.resolve(dir, "logs", source.path))} | ${source.sha256} |`).join("\n"));
+    fs.mkdirSync(path.join(change, ".sdd/readiness"), { recursive: true });
+    fs.copyFileSync(path.join(dir, ".sdd/readiness/coding-ready.json"),
+      path.join(change, ".sdd/readiness/coding-ready.json"));
+    const report = path.join(change, "report.md");
+    fs.writeFileSync(report,
+      "| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |\n|---|---|---|---|---|\n" +
+      "| C1 | E11 | api | PASS | ../../../logs/C1.json |\n验证结果: PASS\n" +
+      "\n## Independent Review\n| Report |\n|---|\n| current-review.md |\n");
+    const consumed = spawnSync("python3", [
+      path.join(dir, "capture-package/assets/scripts/lint.py"),
+      "--require-complete", "--review", reviewPath, report,
+    ], { encoding: "utf8" });
+    expect(consumed.status, consumed.stdout + consumed.stderr).toBe(0);
+    expect(consumed.stdout).toContain("检查通过");
+    expect(fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8")).toBe(receipt);
+  });
+
+  it.each([undefined, null, "", "/absolute", "C:\\absolute", "missing-change", 3])(
+    "rejects an absent or invalid explicit case change root %s", changeDir => {
+      const { result } = nestedCapture("../../..", changeDir);
+      expect(result.code).toBe(2);
+      expect(result.output).toContain("changeDir");
+      expect(fs.existsSync(path.join(dir, "invoked.txt"))).toBe(false);
+    },
+  );
+
+  it.each([".", "openspec/changes/sample/.sdd/reviews"])(
+    "rejects a wrong existing change root %s", changeDir => {
+      const { result } = nestedCapture("../../..", changeDir);
+      expect(result.code).toBe(2);
+      expect(fs.existsSync(path.join(dir, "invoked.txt"))).toBe(false);
+    },
+  );
+
+  it.each(["../../../../..", ".", "../../../missing"])(
+    "rejects the old review-relative or incorrect cwd %s", cwd => {
+      const { result } = nestedCapture(cwd, "openspec/changes/sample");
+      expect(result.code).toBe(2);
+    },
+  );
+
   function observedDelivery() {
     fs.writeFileSync(path.join(dir, "report.md"), fs.readFileSync(path.join(dir, "report.md"), "utf8").split("\n## Independent Review")[0]);
     prepareCapturedCase();

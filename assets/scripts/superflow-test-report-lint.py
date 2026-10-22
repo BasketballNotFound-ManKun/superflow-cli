@@ -853,19 +853,27 @@ def record_execution(plan_file: Path) -> int:
         record["status"] = "PASS"
         output.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
     elif plan.get("kind") == "case":
+        change_dir = plan.get("changeDir")
+        if (not isinstance(change_dir, str) or not change_dir.strip()
+                or Path(change_dir).is_absolute() or ntpath.isabs(change_dir)
+                or bool(ntpath.splitdrive(change_dir)[0])):
+            raise ValueError("case plan.changeDir 必须明确为相对 plan 文件的 change 目录")
+        change = (base / change_dir).resolve()
+        if not change.is_dir():
+            raise ValueError("case plan.changeDir 指向的 change 目录不存在")
         review_file = (base / plan["review"]).resolve()
         coverage = json.loads(review_file.read_text())["coverage"]
         case = next(c for c in coverage["cases"] if c["id"] == plan["caseId"])
         if case.get("executionEvidence") != "runner-captured.v1":
             raise ValueError("capture 用例未冻结 runner-captured.v1")
         context = case["executionContext"]
-        cwd = (review_file.parent / context["cwd"]).resolve()
+        cwd = (change / context["cwd"]).resolve()
         observed_context = {"cwd": str(cwd), "environmentSha256": {
             key: sha256_bytes(json.dumps(os.environ.get(key), ensure_ascii=False).encode())
             for key in context["environmentKeys"]}}
         validate_execution_context(
             {"command": {"argv": context["argv"]}, "executionContext": observed_context},
-            {"executionContext": observed_context}, case, review_file.parent)
+            {"executionContext": observed_context}, case, change)
         build_file = (base / plan["build"]).resolve()
         if build_file.parent != output.parent:
             raise ValueError("capture 构建和用例凭证须保存在同一证据目录")
@@ -890,7 +898,7 @@ def record_execution(plan_file: Path) -> int:
                 record["status"] = "PASS"
             event = {**record, "command": dict(record["command"])}
             write_capture_record(output, record, event)
-            validate_execution_receipt(output, case, coverage, review_file.parent)
+            validate_execution_receipt(output, case, coverage, change)
         except (ValueError, KeyError, TypeError):
             record["status"] = "PARTIAL"
             write_capture_record(output, record, {**record, "command": {

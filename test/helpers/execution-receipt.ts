@@ -57,9 +57,8 @@ export function writeExecutionReceipt(
     executionEvidence: "runner-captured.v1",
     executionContext: { argv: [process.execPath, `case-${caseId}.cjs`], cwd: ".", environmentKeys: [] },
   });
-  const captureReview = path.join(directory, "capture-review.json");
+  const captureReview = reviewFile ?? path.join(directory, "capture-review.json");
   fs.writeFileSync(captureReview, JSON.stringify(review));
-  if (reviewFile) fs.writeFileSync(reviewFile, JSON.stringify(review));
   const entry = review.coverage.entries.find((item: any) => item.id === entryId);
   const buildName = caseId === "C1" ? "build" : `build-${caseId}`;
   fs.writeFileSync(path.join(directory, "build.cjs"),
@@ -85,7 +84,7 @@ console.log(JSON.stringify(event));
     sources: [...sources], artifact: "artifact.txt", output: `logs/${buildName}.json`,
   });
   recordExecution(directory, {
-    kind: "case", review: "capture-review.json", caseId,
+    kind: "case", changeDir: ".", review: path.relative(directory, captureReview), caseId,
     build: `logs/${buildName}.json`, output: `logs/${caseId}.json`,
   });
   // Current delivery marker only; issuing real readiness remains the gate owner's job.

@@ -136,10 +136,8 @@ for entry, service, route in [("E05", "service-a", "POST /a/notify"), ("E11", "s
                            "entries": entries, "cases": cases,
                            "decisions": [{"disposition": "FIX", "caseIds": [case["id"]]} for case in cases]}}
     review_path.write_text(json.dumps(review))
-    # Use a change-root review projection for the recorder's working directory.
-    capture_review = root / "capture-review.json"
-    capture_review.write_text(json.dumps(review))
-    record({"kind": "case", "review": "capture-review.json", "caseId": entry,
+    record({"kind": "case", "changeDir": ".",
+            "review": ".sdd/reviews/document-review.json", "caseId": entry,
             "build": "logs/build.json", "output": f"logs/{entry}.json"}, allow_failure=omit and entry == "E11")
     rows.append(f"| {entry} | {entry} | api | PASS | logs/{entry}.json |")
 ready = root / ".sdd/readiness/coding-ready.json"
