@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  superflow-handoff.sh <change-dir> [--write|--hash-only|--refresh]
+  superflow-handoff.sh <change-dir> [--write|--hash-only|--manifest|--refresh]
 
 Generate a deterministic SDD handoff pack from OpenSpec/SDD documents.
 The pack is context for Superpowers execution strategy; OpenSpec/SDD docs
@@ -98,6 +98,10 @@ config_value() {
 
 source_role() {
   local rel="$1"
+  if [[ -n "${DECLARED_TECHNICAL_REL:-}" && "$rel" == "$DECLARED_TECHNICAL_REL" ]]; then
+    printf 'technical-design'
+    return
+  fi
   case "$rel" in
     docs/superpowers/specs/*.md|*/docs/superpowers/specs/*.md) printf 'technical-design' ;;
     docs/superpowers/plans/*.md|*/docs/superpowers/plans/*.md) printf 'implementation-plan' ;;
@@ -126,9 +130,9 @@ if [[ -z "$CHANGE_DIR" || "$CHANGE_DIR" == "-h" || "$CHANGE_DIR" == "--help" ]];
 fi
 
 [[ -d "$CHANGE_DIR" ]] || die "change dir not found: $CHANGE_DIR"
-[[ -z "$MODE" || "$MODE" == "--write" || "$MODE" == "--hash-only" || "$MODE" == "--refresh" ]] || die "unknown option: $MODE"
+[[ -z "$MODE" || "$MODE" == "--write" || "$MODE" == "--hash-only" || "$MODE" == "--manifest" || "$MODE" == "--refresh" ]] || die "unknown option: $MODE"
 
-CHANGE_DIR="$(cd "$CHANGE_DIR" && pwd)"
+CHANGE_DIR="$(cd "$CHANGE_DIR" && pwd -P)"
 OUT_DIR="$CHANGE_DIR/.sdd/handoff"
 TMP_LIST="$(mktemp)"
 trap 'rm -f "$TMP_LIST"' EXIT
@@ -144,9 +148,57 @@ esac
 find "$CHANGE_DIR" -type f \
   \( -name '*.md' -o -name '.openspec.yaml' -o -name '*.yml' -o -name '*.yaml' \) \
   ! -path "$CHANGE_DIR/.sdd/*" \
-  ! -path "$CHANGE_DIR/.sdd/*" \
   ! -path "$CHANGE_DIR/.git/*" \
   | sort > "$TMP_LIST"
+
+# The declared source-level HOW can live at the project root, outside change.
+# This remains the single source inventory used by hashing and every projection.
+DECLARED_TECHNICAL_REL=""
+technical_design="$(yaml_value "$CHANGE_DIR/.sdd/state.yaml" technical_design 2>/dev/null || true)"
+if [[ -n "$technical_design" && "$technical_design" != "null" ]]; then
+  authorized_root="$(git -C "$CHANGE_DIR" rev-parse --show-toplevel 2>/dev/null || printf '%s' "$CHANGE_DIR")"
+  declared_source="$(python3 - "$CHANGE_DIR" "$authorized_root" "$technical_design" <<'PYHOW'
+import os
+import pathlib
+import sys
+
+change, project, declaration = sys.argv[1:]
+if len(declaration) > 1 and declaration[0] == declaration[-1] and declaration[0] in "\"'":
+    declaration = declaration[1:-1]
+if declaration == "null":
+    sys.exit(0)
+project = os.path.realpath(project)
+source = os.path.realpath(os.path.join(change, declaration))
+relative = os.path.relpath(source, change)
+if (os.path.commonpath([project, source]) != project
+        or any(part in {".sdd", ".git"} for part in pathlib.Path(source).parts)
+        or pathlib.Path(source).suffix not in {".md", ".yaml", ".yml"}
+        or os.path.basename(source) == "test-report.md"
+        or "\n" in source or "\r" in source):
+    sys.stderr.write("superflow-handoff: technical_design must be a project-scoped canonical document, outside generated/report paths\n")
+    sys.exit(1)
+if not os.path.isfile(source):
+    sys.stderr.write("superflow-handoff: technical_design document is not readable\n")
+    sys.exit(1)
+print(source)
+print(relative)
+PYHOW
+)" || die "invalid technical_design source"
+  if [[ -n "$declared_source" ]]; then
+    DECLARED_TECHNICAL_FILE="${declared_source%%$'\n'*}"
+    DECLARED_TECHNICAL_REL="${declared_source#*$'\n'}"
+    printf '%s\n' "$DECLARED_TECHNICAL_FILE" >> "$TMP_LIST"
+    LC_ALL=C sort -u "$TMP_LIST" -o "$TMP_LIST"
+  fi
+fi
+
+source_relative() {
+  if [[ "$1" == "$CHANGE_DIR/"* ]]; then
+    printf '%s\n' "${1#"$CHANGE_DIR"/}"
+  else
+    python3 -c 'import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' "$1" "$CHANGE_DIR"
+  fi
+}
 
 [[ -s "$TMP_LIST" ]] || die "no SDD/OpenSpec documents found under $CHANGE_DIR"
 
@@ -156,7 +208,7 @@ fi
 
 context_hash_input=""
 while IFS= read -r file; do
-  rel="${file#"$CHANGE_DIR"/}"
+  rel="$(source_relative "$file")"
   [[ "${file##*/}" == "test-report.md" ]] && continue
   hash="$(sha_file "$file")"
   context_hash_input+="${rel}:${hash}"$'\n'
@@ -180,7 +232,7 @@ write_markdown() {
     printf '| Path | Role | SHA256 | Lines |\n'
     printf '|---|---|---|---:|\n'
     while IFS= read -r file; do
-      rel="${file#"$CHANGE_DIR"/}"
+      rel="$(source_relative "$file")"
       hash="$(sha_file "$file")"
       lines="$(wc -l < "$file" | tr -d ' ')"
       role="$(source_role "$rel")"
@@ -200,7 +252,7 @@ write_markdown() {
       printf '## Source Excerpts\n\n'
     fi
     while IFS= read -r file; do
-      rel="${file#"$CHANGE_DIR"/}"
+      rel="$(source_relative "$file")"
       role="$(source_role "$rel")"
       printf '### `%s`\n\n' "$rel"
       if [[ "$context_compression" == "references" ]] || { [[ "$context_compression" == "beta" ]] && ! is_beta_projected_role "$role"; }; then
@@ -235,7 +287,7 @@ write_json() {
     printf '  "sources": [\n'
     first=1
     while IFS= read -r file; do
-      rel="${file#"$CHANGE_DIR"/}"
+      rel="$(source_relative "$file")"
       hash="$(sha_file "$file")"
       lines="$(wc -l < "$file" | tr -d ' ')"
       role="$(source_role "$rel")"
@@ -261,8 +313,8 @@ sync_state() {
   "$state_sh" set "$CHANGE_DIR" context_compression "$context_compression"
   "$state_sh" set "$CHANGE_DIR" handoff_context .sdd/handoff/sdd-context.json
   "$state_sh" set "$CHANGE_DIR" handoff_hash "$context_hash"
-  technical_design_rel=""
-  if [[ -d "$CHANGE_DIR/docs/superpowers/specs" ]]; then
+  technical_design_rel="${DECLARED_TECHNICAL_REL:-}"
+  if [[ -z "$technical_design_rel" && -d "$CHANGE_DIR/docs/superpowers/specs" ]]; then
     technical_design_rel="$(
       find "$CHANGE_DIR/docs/superpowers/specs" -maxdepth 1 -type f -name '*.md' \
         | sort | head -n 1 | sed "s#^$CHANGE_DIR/##"
@@ -311,6 +363,8 @@ if [[ "$MODE" == "--write" || "$MODE" == "--refresh" ]]; then
   if [[ "$MODE" == "--refresh" ]]; then
     run_refresh_checks
   fi
+elif [[ "$MODE" == "--manifest" ]]; then
+  write_json
 else
   printf '%s\n' "$context_hash"
 fi

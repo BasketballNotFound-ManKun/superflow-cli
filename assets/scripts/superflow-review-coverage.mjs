@@ -13,7 +13,7 @@ export function fileHash(file) {
 
 // Reuse the handoff's canonical projection: progress checkboxes/report updates
 // must not invalidate a frozen contract. Do not invent a second hash algorithm.
-export function currentHandoffHash(root) {
+function currentHandoffOutput(root, mode) {
   const directory = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
     path.resolve(directory, "../skills/superflow/scripts"),
@@ -25,15 +25,32 @@ export function currentHandoffHash(root) {
     .map((dir) => path.join(dir, "superflow-handoff.sh"))
     .find((file) => fs.existsSync(file));
   if (!script) throw new Error("缺少 handoff 脚本，请执行 superflow update");
-  const result = spawnSync("bash", [script, root, "--hash-only"], {
+  const result = spawnSync("bash", [script, root, mode], {
     encoding: "utf-8",
     timeout: 30000,
   });
-  const hash = result.stdout?.trim();
-  if (result.status !== 0 || !/^[a-f0-9]{64}$/.test(hash ?? "")) {
+  if (result.status !== 0)
+    throw new Error(
+      "无法读取当前 handoff 输入，请检查 technical_design 和冻结文档",
+    );
+  return result.stdout?.trim();
+}
+
+export function currentHandoffHash(root) {
+  const hash = currentHandoffOutput(root, "--hash-only");
+  if (!/^[a-f0-9]{64}$/.test(hash ?? ""))
     throw new Error("无法重新计算 handoff hash，请检查冻结文档");
-  }
   return hash;
+}
+
+function currentHandoffInput(root) {
+  const input = JSON.parse(currentHandoffOutput(root, "--manifest"));
+  if (
+    !/^[a-f0-9]{64}$/.test(input?.contextHash ?? "") ||
+    !Array.isArray(input.sources)
+  )
+    throw new Error("当前 handoff 输入清单无效，请刷新冻结文档");
+  return input;
 }
 
 const nonempty = (value) =>
@@ -472,7 +489,20 @@ function validateSourceInvestigation(
         "当前 technical_design 未以 contract 来源纳入评审 / Missing current HOW source",
       );
     try {
-      const hash = currentHandoffHash(root);
+      const input = currentHandoffInput(root);
+      const hash = input.contextHash;
+      const howFile = fs.realpathSync(path.resolve(root, technicalDesign));
+      if (
+        !input.sources.some(
+          (source) =>
+            source.role === "technical-design" &&
+            nonempty(source.path) &&
+            fs.realpathSync(path.resolve(root, source.path)) === howFile,
+        )
+      )
+        issues.push(
+          "当前 technical_design 未进入实际 handoff 输入 / HOW missing from current handoff input",
+        );
       currentInputHash = hash;
       for (const lens of [
         "source-contract",

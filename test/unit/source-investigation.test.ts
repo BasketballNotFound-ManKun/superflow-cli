@@ -261,16 +261,82 @@ describe("source investigation facts, never a semantic verdict", () => {
       for (const entry of r.coverage.entries) delete entry.investigation;
       delete r.rounds[0].sourceChecks;
     });
-    fs.writeFileSync(path.join(change, ".sdd/state.yaml"), `phase: implement\nhandoff_hash: ${hash}\n`);
+    fs.writeFileSync(
+      path.join(change, ".sdd/state.yaml"),
+      `phase: implement\nhandoff_hash: ${hash}\n`,
+    );
     const receiptFile = path.join(change, ".sdd/readiness/coding-ready.json");
     const receipt = JSON.parse(fs.readFileSync(receiptFile, "utf8"));
     receipt.handoffHash = hash;
     receipt.reviewHash = digest(fs.readFileSync(path.join(change, REVIEW)));
     fs.writeFileSync(receiptFile, JSON.stringify(receipt));
-    const checked = spawnSync(process.execPath, [script, change], { encoding: "utf8" });
+    const checked = spawnSync(process.execPath, [script, change], {
+      encoding: "utf8",
+    });
     expect(checked.status, checked.stderr).toBe(1);
     expect(checked.stderr).toContain("workflow");
   });
+  it("accepts project-scoped HOW outside change and rejects its obsolete review input", () => {
+    const project = change;
+    const names = fs.readdirSync(project);
+    const nested = path.join(project, "planning/openspec/changes/demo");
+    fs.mkdirSync(nested, { recursive: true });
+    for (const name of names)
+      fs.renameSync(path.join(project, name), path.join(nested, name));
+    change = nested;
+    expect(spawnSync("git", ["init", project]).status).toBe(0);
+    const file = path.join(project, "docs/superpowers/specs/current-how.md");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "# HOW\nPreserve the caller.\n");
+    const relative = path.relative(change, file);
+    fs.appendFileSync(
+      path.join(change, ".sdd/state.yaml"),
+      `technical_design: ${relative}\n`,
+    );
+    try {
+      const hash = handoffHash(change);
+      mutateReview(change, (r) => {
+        r.coverage.sources.push({
+          id: "how",
+          path: relative,
+          role: "contract",
+          sha256: digest(fs.readFileSync(file)),
+        });
+        for (const round of r.rounds) round.inputHash = hash;
+      });
+      expect(audit()).toEqual([]);
+      fs.appendFileSync(file, "Correct the caller boundary.\n");
+      mutateReview(change, (r) => {
+        r.coverage.sources.find((source: any) => source.id === "how").sha256 =
+          digest(fs.readFileSync(file));
+      });
+      expect(audit().join("\n")).toContain("当前 HOW 输入");
+      expect(audit(false).join("\n")).toContain("当前 HOW 输入");
+    } finally {
+      fs.rmSync(project, { recursive: true, force: true });
+    }
+  });
+  it.each([".sdd/current-how.md", "current-how.txt", "test-report.md"])(
+    "rejects coverage-only HOW outside the handoff input %s",
+    (file) => {
+      fs.writeFileSync(path.join(change, file), "# Current HOW\n");
+      const hash = handoffHash(change);
+      fs.appendFileSync(
+        path.join(change, ".sdd/state.yaml"),
+        `technical_design: ${file}\n`,
+      );
+      mutateReview(change, (r) => {
+        r.coverage.sources.push({
+          id: "how",
+          path: file,
+          role: "contract",
+          sha256: digest("# Current HOW\n"),
+        });
+        for (const round of r.rounds) round.inputHash = hash;
+      });
+      expect(audit().join("\n")).toContain("handoff");
+    },
+  );
   it("full workflow cannot delete the current technical_design declaration", () => {
     fs.appendFileSync(path.join(change, ".sdd/state.yaml"), "workflow: full\n");
     expect(audit().join("\n")).toContain("technical_design");

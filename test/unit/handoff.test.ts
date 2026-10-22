@@ -11,6 +11,119 @@ const SCRIPT_DIR = path.join(ROOT, "assets", "skills", "superflow", "scripts");
 const HANDOFF = path.join(SCRIPT_DIR, "superflow-handoff.sh");
 const STATE = path.join(SCRIPT_DIR, "superflow-state.sh");
 
+describe("declared HOW handoff membership", () => {
+  it.each(["skills", "skills-en"])(
+    "%s binds project-scoped HOW outside the change to the same manifest and hash",
+    async (language) => {
+      const project = await fs.promises.mkdtemp(
+        path.join(os.tmpdir(), "handoff-project-how-"),
+      );
+      const change = path.join(project, "planning/openspec/changes/demo");
+      const how = path.join(project, "docs/superpowers/specs/current-how.md");
+      const script = path.join(
+        ROOT,
+        "assets",
+        language,
+        "superflow/scripts/superflow-handoff.sh",
+      );
+      const relative = path.relative(change, how);
+      const hash = async () =>
+        (
+          await execFileAsync("bash", [script, change, "--hash-only"])
+        ).stdout.trim();
+      try {
+        await execFileAsync("git", ["init", project]);
+        await write(how, "# HOW\nUse the existing route.\n");
+        await write(path.join(change, "design.md"), "# Design\n");
+        await write(
+          path.join(change, "tasks.md"),
+          "- [ ] 1.1 Preserve route\n",
+        );
+        await write(
+          path.join(change, ".sdd/state.yaml"),
+          `workflow: full\ntechnical_design: ${relative}\n`,
+        );
+        const initial = await hash();
+        await write(how, "# HOW\nUse the corrected route.\n");
+        const current = await hash();
+        expect(current).not.toBe(initial);
+        await write(
+          path.join(change, "tasks.md"),
+          "- [x] 1.1 Preserve route\n",
+        );
+        await write(path.join(change, "test-report.md"), "PASS\n");
+        expect(await hash()).toBe(current);
+        const stateBefore = await fs.promises.readFile(
+          path.join(change, ".sdd/state.yaml"),
+          "utf8",
+        );
+        const manifest = JSON.parse(
+          (await execFileAsync("bash", [script, change, "--manifest"])).stdout,
+        );
+        expect(manifest.contextHash).toBe(current);
+        expect(manifest.sources).toContainEqual(
+          expect.objectContaining({ path: relative, role: "technical-design" }),
+        );
+        expect(
+          await fs.promises.readFile(
+            path.join(change, ".sdd/state.yaml"),
+            "utf8",
+          ),
+        ).toBe(stateBefore);
+        expect(fs.existsSync(path.join(change, ".sdd/handoff"))).toBe(false);
+        await execFileAsync("bash", [script, change, "--write"]);
+        expect(
+          JSON.parse(
+            await fs.promises.readFile(
+              path.join(change, ".sdd/handoff/sdd-context.json"),
+              "utf8",
+            ),
+          ),
+        ).toEqual(manifest);
+        expect(
+          await fs.promises.readFile(
+            path.join(change, ".sdd/state.yaml"),
+            "utf8",
+          ),
+        ).toContain(`technical_design: ${relative}`);
+      } finally {
+        await fs.promises.rm(project, { recursive: true, force: true });
+      }
+    },
+  );
+  it.each([
+    ".sdd/current-how.md",
+    "current-how.txt",
+    "test-report.md",
+    "../private-how.md",
+  ])("rejects excluded or unscoped HOW %s", async (relative) => {
+    const project = await fs.promises.mkdtemp(
+      path.join(os.tmpdir(), "handoff-excluded-how-"),
+    );
+    const change = path.join(project, "change");
+    try {
+      await fs.promises.mkdir(change, { recursive: true });
+      await execFileAsync("git", ["init", change]);
+      await write(
+        path.resolve(change, relative),
+        "# HOW\nDo not project this input.\n",
+      );
+      await write(path.join(change, "design.md"), "# Design\n");
+      await write(
+        path.join(change, ".sdd/state.yaml"),
+        `technical_design: ${relative}\n`,
+      );
+      await expect(
+        execFileAsync("bash", [HANDOFF, change, "--hash-only"]),
+      ).rejects.toMatchObject({
+        stderr: expect.stringContaining("technical_design"),
+      });
+    } finally {
+      await fs.promises.rm(project, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("handoff contract fingerprint boundaries", () => {
   it.each(["skills", "skills-en"])(
     "%s defaults new packs to references without changing contract identity",
