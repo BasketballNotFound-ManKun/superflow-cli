@@ -3,6 +3,8 @@ name: superflow-verify
 description: Use when reviewing code changes or verifying an SDD/OpenSpec implementation, test evidence, branch/worktree handling, or retry decisions.
 ---
 
+Use the [current independent report chain](../superflow/references/reviewer-checklist.md#finding-closure) for originals, Owner response and actual re-review. Apply [current evidence reconciliation](../superflow/references/test-guide.md#actual-assertions-and-one-current-verdict) to prevent alternative entries masquerading as required ones or historical PASS mixing.
+
 # SDD Verify
 
 ## Current independent review and delivery record

@@ -269,3 +269,57 @@ registered code and case/build source inputs; do not trim build provenance to sa
 coverage. Input identity is not a claim that every dependency was read: actual diff,
 read scope and sufficiency belong in Impact and independent judgment. Source changes
 after review require affected retesting and actual rereview, not just refreshed hashes.
+
+## Actual assertions and one current verdict
+
+Each case freezes the real business entry and fixture. Every response/state/forbiddenEffects
+claim needs actual assertions/observations. Testing null does not also test empty
+or malformed values; verifying calls does not prove database rollback; unchanged
+zero rows do not establish existing-content preservation. Concurrency needs two
+controlled contenders or explicit interleavings. A rollback case first proves the
+intended writes were reached, then checks business/related-state rollback and
+external effects. Static PASS text never expands the proof.
+
+Alternative entries/simulation retain only actual coverage. A different endpoint
+or manual SQL cannot retain the original entry target and end-to-end PASS. An
+incomplete original case stays PARTIAL; reconcile receipt, case row, task and
+current final verdict together. Existing lint rejects PARTIAL receipts labeled
+PASS and PARTIAL rows with final PASS. Only --require-complete supports complete
+delivery; delivery-check verifies assets, not acceptance. Link historical records
+from existing .sdd evidence rather than mixing old all-PASS summaries into the
+current conclusion. Distinguish contract cases, input branches, JUnit methods and
+repeated aggregate scenarios.
+
+## Capture boundaries without test coupling
+
+Business tests assert actual behavior and need not read a particular delivery's
+build.json. Reuse the project's existing acceptance wrapper: execute frozen real
+tests, extract actual counts/assertions from original output/test reports, attach
+captured build identity, emit measurement, then use existing --record-execution.
+Wrappers add provenance only, never invented actual values, execution counts or
+successful assertions. Failures exit nonzero; `test ... && echo success || echo failure`
+does not ensure that.
+
+Existing artifact binds one real file. To prove a complete artifact set, have the
+real build produce a JAR/archive as artifact. One class or an unverified manifest
+is not proof of the whole set. Verify source identity, artifact identity and real
+runtime target separately; self-reading build receipts does not establish deployment.
+Do not add a test framework or parallel capture protocol.
+
+Paths retain the current contract: plan references resolve from the plan file;
+case changeDir is plan-relative; executionContext.cwd is change-relative; receipt
+references are receipt-directory-relative. Use declared/base/resolved diagnostics,
+not guessed alternate roots or old-path fallbacks. Retain readable JSON stdout,
+exit codes and full original logs under the existing evidence location.
+
+## Linked independent review
+
+Use the [Reviewer shape](reviewer-checklist.md#reviewer-report-shape) with Review
+Identity: Role=independent-reviewer and actual locatable Dispatch/Return references.
+Independent Review in test-report still references final reports. When findings
+existed, Review Chain links original/Owner response paths and file hashes; Finding
+Rechecks records actual resolved/dismissed results for each ID. Owner-generated None
+projections do not substitute. Historical source may evolve while original report
+identity remains; final reports bind current source. Mitigation/deferral is not
+repair. Missing required checks/re-review remain PARTIAL. Identity fields/hashes
+do not replace actual independence judgment.

@@ -3,6 +3,8 @@ name: superflow-verify
 description: Superflow 内部能力：只读评审代码、测试证据和交付状态，确认冻结合同是否已被完整实现。由 $superflow 选择，用户无需手动分流。
 ---
 
+使用[当前独评格式与链](../superflow/references/reviewer-checklist.md#finding-closure)核原报告、Owner响应和实际复评；用[当前实测对账](../superflow/references/test-guide.md#actual-assertions-and-one-current-verdict)防替代入口冒名和旧PASS混入。
+
 # SDD Verify
 
 ## 当前独立评审与交付记录

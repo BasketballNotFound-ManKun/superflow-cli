@@ -3,6 +3,8 @@ name: superflow-design
 description: Use when OpenSpec/SDD contract documents exist and source-level technical design, reverse impact analysis, TDD strategy, or Superpowers design handoff must be produced before implementation prompts.
 ---
 
+Use [reverse traceability](../superflow/references/traceability-matrix.md) for real payloads, single/batch/internal re-save, transactions/status and unchanged consumers. Changed facts update all canonical consumers before a common freeze.
+
 Apply [behavior decision continuity](../superflow/references/document-templates.md#behavior-decision-matrix)
 to this phase owner and consumer references; resolve conflicts before handoff rather than
 leaving implementers to guess.

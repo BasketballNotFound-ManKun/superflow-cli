@@ -9,6 +9,8 @@ metadata:
   generatedBy: "1.3.1"
 ---
 
+At startup check batch Task/Entry/Case via [main navigation](../superflow/references/implementation-prompt-template.md#execution-navigation). Decouple delivery identity using the [test guide](../superflow/references/test-guide.md#capture-boundaries-without-test-coupling). Repair under the [original/re-review chain](../superflow/references/reviewer-checklist.md#finding-closure), never by rewriting conclusions for formatting.
+
 Implement tasks from an OpenSpec change.
 
 ## Current independent review and delivery record

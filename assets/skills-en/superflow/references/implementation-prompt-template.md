@@ -1,181 +1,77 @@
-# Implementation Prompt Template
+# Main Implementation Prompt Template
 
 ## Thin Prompt Contract
 
-Generate only applicable sections and canonical Decision/Entry/Case navigation. The long
-template below is a section reference, not an instruction to copy unrelated checklists, algorithms,
-SQL hashes or full handoff projections into every batch. Preserve execution modes and
-context_compression; locate originals via the index and read risk-relevant bodies in full.
+The artifact is `prompt/implementation.md`: one execution navigator, not a second
+business design. Use this shape for every execution mode and retain declared
+build_mode/isolation/tdd_mode/review_mode. HOW, algorithms, SQL and commands remain
+owned by design/technical_design, release-sql and tests respectively. Read
+[Flow Owner](flow-owner.md), [test guide](test-guide.md) and the
+[Reviewer checklist](reviewer-checklist.md), rather than copying their procedures
+into every batch.
 
-Every execution mode uses this thin Prompt structure. Long scripts below are applicability
-references, not text to copy wholesale. The main Prompt is the sole contract navigator; batch
-Prompts link to it and contain only their incremental scope:
+## Output order
 
-| Part | Generated content |
-|---|---|
-| Canonical links | Current handoff, Decision ID matrix, technical design, tasks/tests and applicable gates |
-| Execution policy | Inherited mode/isolation/TDD/review, authorization, stopping and recovery boundaries |
-| Incremental goals/files | Batch task IDs, dependencies, exact file scope, order and exclusions |
-| Acceptance IDs | Batch entry/case IDs and tests.md command/assertion/evidence section links |
-| Delivery reconciliation | Task/case outcomes, independent review, blockers and recovery location |
+1. Goal, confirmed authorization, exclusions and current workspace.
+2. **Canonical links** to spec/API/design/technical_design/tasks/tests, applicable contracts, quality gates and release-sql.
+3. **Execution navigation** below; **Acceptance IDs** come from existing coverage.
+4. Execution strategy and recovery location: declared modes, dependencies, next incomplete task and test-report.
+5. Delivery reconciliation: actual cases/entries/versions, open findings, independent re-review and resources; verify Git authorization separately.
 
-Inherit matrices by link and ID instead of copying tables; maintain actual commands/assertions only
-in tests.md. Keep applicability reasons with their canonical owner, without repeating “money not
-applicable” in every batch. Read and verify SQL content, target path and sql_sha256 only from
-release-sql.md; do not hard-code their values in Prompts. Existing handoff/hash checks still apply.
-The current document owner resolves contract conflicts and refreshes handoff before execution;
-implementers cannot choose a competing design inside the Prompt.
+## Execution navigation
 
+| Prompt | Task IDs | Entry IDs | Case IDs |
+|---|---|---|---|
+| [This execution](implementation.md) | 1.1, 1.2 | E1, E2 | C1, C2 |
 
-## Execution mode inheritance
+With only a main prompt, link to itself. For batches, link each actual batch from
+this table, such as `[Batch one](batch-a.md)`. Each batch links back to the main
+prompt and declares the same ID sets as its main-table row. Check task existence
+with the current tasks index; check relationships using existing
+`coverage.decisions.taskIds/caseIds` and `coverage.cases.entryId`.
+VERIFY_EXISTING may have no new implementation task; EXCLUDED must not invent a
+case. Navigate every applicable case/task and satisfy actual predecessors.
 
-Read [Flow Owner](flow-owner.md) and inherit the selected technical-design/state
-mode. New ordinary work defaults to `owner`: the current Agent implements and
-tests, coordinating independent views according to risk and frozen obligations.
-Preserve team/subagent roles and isolation when selected. Team checklists below
-define responsibilities; a separate Tester is fixed only when required by the
-contract. Self-tests are not independent verification. Continue all work,
-verification, review, repair, and delivery after updates; do not commit to save
-progress. Document-only work does not execute code.
+## Example artifact
 
+```markdown
+# Implementation navigation
+## Goal and authorization
+Deliver the approved scope; Git, publication and archive each follow confirmed authorization.
+## Canonical links
+- [Behavior](../api.md), [HOW](../design.md), [Tasks](../tasks.md)
+- [Acceptance and execution context](../tests.md), [Traceability](../traceability-matrix.md)
+- [Current handoff](../.sdd/handoff/sdd-context.json)
+## Execution navigation
+| Prompt | Task IDs | Entry IDs | Case IDs |
+|---|---|---|---|
+| [This execution](implementation.md) | 1.1, 1.2 | E1, E2 | C1, C2 |
+## Execution strategy
+Inherit declared modes and continuously implement, verify, review, repair and actually re-review ready tasks.
+Keep the recovery point and this run's evidence in ../test-report.md.
+```
 
-For code-quality review read [reviewer-checklist.md](reviewer-checklist.md):
-select depth from actual impact, use isolated independent views, and have the
-main Agent verify and merge findings. Templates do not redefine risk or agent counts.
+## Contract inheritance
 
-Inherit verification only from tests.md and read [test-guide.md](test-guide.md).
-Apply startup, API, DB, and team checklists to frozen applicable cases; give source
-reasons for inapplicability, keeping missing required environments blocked. Reuse
-healthy instances matching the tested build; load new code/configuration before
-verification. Independently inspect raw evidence; implementers rerun invalidated
-or contract-required paths, not every environment merely because roles changed.
+Preserve `context_compression`, check the state binding and current manifest, then
+read canonical bodies required by the Decision/Entry/Case risk. Do not unconditionally
+read a full projection and then every original again. `technical_design` owns
+source-level HOW. Reference Field And Status Reverse Impact and external enum,
+configuration, concurrency/idempotency or money precision contracts only where
+applicable. The navigator inherits constraints without redesigning business logic.
+For database changes reference release-sql.md; copy its SQL verbatim to target_sql_path
+and verify sql_sha256 there. Prompts do not duplicate SQL, raw hashes or commands.
 
-Use this as the prefix for every implementation prompt.
+## Owner Mode Prompt Generation Contract
 
-## Owner-mode prompt generation contract
+The current Agent implements/tests authorized work and coordinates required
+independent reviewers; preserve frozen team/subagent boundaries. Continue ready
+tasks after updates. Stop dependent work only for real decisions, unavailable
+permissions/environment, user pauses or existing non-convergence limits. New caller
+or entry discoveries return to the current document owner to repair canonical
+bodies/consumers and refreeze before continuing. Delivery references the actual
+current independent report and its history/response/re-review chain. Missing required
+checks or unresolved items remain PARTIAL/Blocked. Session exit provides no background
+wake-up; retain task, evidence, resources and next action for recovery.
 
-When `build_mode: owner` is selected, generate the actual batch prompt using
-this structure instead of copying the Team/Subagent playbook below. Retain all
-required contracts, applicable tests, and independent-verification obligations.
-
-1. **Goal and scope**: authorization, task IDs, exact files, dependencies,
-   exclusions, and actual isolation.
-2. **Required reading and source-level HOW**: link handoff, api.md, design.md,
-   tasks.md, tests.md, quality gate, review checklist, technical_design, and
-   applicable release-sql.md.
-3. **Execution decisions**: record `build_mode: owner`, isolation, tdd_mode,
-   review_mode, implementation_prompt, current implementation/test responsibility,
-   and actual required independent Reviewer/Tester responsibilities.
-4. **Contract inheritance**: carry every applicable semantic, write-loop, impact,
-   and real-entry contract required by the phase skill, plus frozen case IDs,
-   commands, assertions, and evidence paths. Add no business design or raw hash copy.
-5. **Continuous execution**: dependency-ready work, applicable RED/GREEN and real
-   verification, required independent review, repair/retest/review, existing verify
-   gates. Continue after updates; return only at an actual stop boundary.
-6. **Recovery and delivery**: Owner Recovery in test-report, resource identity
-   and cleanup, evidence/remaining-item reconciliation, and existing operation
-   authorization for Git, release, and archive.
-
-## Team/Subagent mode template
-
-The following playbook is for selected team/subagent execution; ordinary owner
-mode uses the generation contract above.
-
-## Context Drift And State Inheritance
-
-- Handoff: [.sdd/handoff/sdd-context.md](../.sdd/handoff/sdd-context.md)
-- Handoff JSON: [.sdd/handoff/sdd-context.json](../.sdd/handoff/sdd-context.json)
-- Hash binding: `handoff_hash` in `.sdd/state.yaml` must match `.sdd/handoff/sdd-context.sha256` and the current contract. Do not copy the hash into prose.
-- State: .sdd/state.yaml
-
-If requirements, design, API, SQL, test contracts or task content change, rerun
-superflow-handoff.sh --refresh. Task checkbox progress and test-report updates
-do not invalidate the frozen contract hash.
-
-Before coding and after compaction, agent/worktree switches or a new terminal,
-check state against the current sha256/manifest identity. Preserve declared
-`context_compression`; use the handoff index to locate canonical Decision/Entry/Case
-bodies in API/design/tests and technical design. Read risk-relevant bodies in
-full, without requiring a full projection followed by the same originals.
-Required contracts, project rules and phase skills remain mandatory reading.
-
-### Project Rules, Host Rules, And Applicable Skills
-
-- Read selected project rule files from the existing handoff/context manifest.
-  The Host uses its normal skill discovery to identify and read task-relevant
-  skills, then freezes the actually applicable rule statements in the existing
-  `mandatoryEngineeringRules` input. Do not pass skill names alone or manually
-  scan personal configuration directories.
-- The Executor and independent Reviewer receive the same frozen rules; both
-  must read applicable project rule files completely. If a source is inaccessible
-  or a required rule was not frozen, report the concrete blocker instead of
-  guessing or weakening it.
-- Pass only constraints relevant to the task. Do not copy personal rules or
-  entire skills into project artifacts.
-
-### Data Scale And Processing Cost
-
-For data-intensive paths only, carry forward the technical design's current and
-expected scale, growth boundary, work and primary cost per request/job, design
-trade-offs, and validation evidence. Scale validation to risk; query/source
-analysis or a representative functional case can suffice for small tasks, with
-no blanket performance benchmark. This adds no burden to non-data-intensive work.
-
-## Contract Boundary
-
-OpenSpec/SDD is canonical for requirements, API, DB, SQL, tests, and acceptance.
-Superpowers technical design is canonical for source-level HOW and execution.
-
-For a database change, SQL is already frozen in
-[release-sql.md](../release-sql.md). The implementation agent may only copy its
-single SQL block verbatim to the exact `target_sql_path`, normalize line endings
-to LF with one trailing newline, and verify `sql_sha256`. Do not add, remove,
-reorder, split, or optimize SQL. Any omission returns to docs and requires a
-refreshed handoff; never design SQL inside the implementation prompt.
-
-## Required Preflight
-
-- Real entry located.
-- Field semantic contract checked.
-- Write-loop checked.
-- No-fallback boundary confirmed.
-- External Integration Configuration And Deployment Contract copied from the
-  API, quality gate, and technical design for third-party platforms/tools,
-  SDKs, MQ/Kafka, callbacks, payment providers, cloud services, or other
-  external integrations. Cover local/test/production sources and provisioning,
-  injection/creation, runtime/provisioning owners and timing, readiness
-  evidence, rollback, secret handling, and blockers. Do not hard-code
-  environment-dependent external values or treat test auto-creation as
-  production readiness evidence.
-- Link frozen Concurrency And Idempotency Ownership decisions, per-entry transaction
-  boundaries and Case IDs; verify applicability and effective source paths. The Prompt
-  does not select PENDING states, short transactions or an atomic-claim design.
-  Repeated external actions inherit their idempotency contract; content saves inherit
-  their revision-conflict/whole-operation rollback contract. Missing decisions return
-  to the document owner, not template examples. Required concurrency, idempotency,
-  rollback and real-entry verification still execute.
-- Money Precision Boundary linked from the canonical technical design when monetary
-  behavior changes. Keep calculation-state precision until the confirmed
-  settlement/display boundary, record scale and rounding mode, forbid early
-  rounding, and define deterministic residual allocation. For additive
-  identities, name the authoritative total, calculate only N-1 components
-  independently, and derive the complement as `authoritative total - sum(other
-  components)`. Do not calculate and round every component independently.
-- Read `money-precision-algorithms.md`; inherit exact decimal construction,
-  currency and provider minor units, rounding level/mode/policy source,
-  residual strategy and stable tie-breaker, pre/post-round audit, and
-  positive/zero/negative tests. FX changes also inherit base/quote metadata,
-  rate source/time, canonical path, and target settlement rounding.
-- RED test executed.
-- Allowed and forbidden files confirmed.
-- Blockers listed.
-
-## Completion Gate
-
-Do not claim completion until build/test, real-entry execution, DB/log evidence,
-test-report update, and SuperBridge Flow hook scripts pass or are marked blocked
-with concrete reasons.
-
-For monetary changes, completion also requires half-cent, residual, or
-multi-detail allocation tests and reconciliation evidence proving that original,
-discount, actual, and allocated totals satisfy the contract identities.
+Runtime test-report is evidence: reference it without projecting its body in every context_compression mode.

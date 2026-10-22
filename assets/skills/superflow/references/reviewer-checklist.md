@@ -148,61 +148,103 @@ finding ID / acceptanceContractRefs，协议、预算和状态 owner 不变；�
 
 ### Reviewer 报告形状
 
-沿用现有四状态报告，不另建机器协议；托管只在临时报告完成这些记录，最终投影进原
-Host review JSON 的 summary/findings/coverage。`--report` 检查原状态、锚点及可选声明的源码 hash；
-它不证明实际独立评审或充分性，五维完整性、实际风险与结论仍由主 Agent 核实。历史未带五维记录的报告保留，但不能称已按本规范全查。
+沿现有四状态Markdown和同一审计器，当前报告必须有Review Identity、唯一Findings、
+明确Concerns及Reviewed Sources。Reviewer identity、Dispatch evidence和真实返回引用
+必须来自实际隔离派发；自由文本引用与hash不证明真实独立、阅读充分性或恶意防伪。
+Reviewer自己产出原结论与输入身份；Owner保留原文，另记响应，不能替Reviewer改DONE/None。
 
 ### 源码结论的独立复核
 
-复用[源码调查规范](document-review-coverage.md)的关键结论核验，不另建 claim 账本。
-不从“已核实”或哈希推断理解；从当前调用者/方法体/Mapper/DDL尝试证伪：未挂载却
-称生效、准备字段被重读丢弃、零影响行误判、遗漏外层事务、吞异常却称回滚消息、
-字段容量冲突、旧用例入口或本轮/下轮终止冲突。记录源码依据、反例和实际结论；
-无法查明保留 SOURCE_INVESTIGATION，不转问用户。正常已证实合同不因关键词被阻断。
-
-Reviewed Sources 表是评审输入身份 source-manifest，不证明每个依赖全文已读。
-保留冻结的生产/构建 sources 全集，不得缩减 sources 来通过门禁。实际 diff 读取范围、
-因风险扩查的源码及理由在 Impact 记录；五维逐项填写。当前 Findings 真正为空时，
-唯一 `## Findings` 正文仅写 None 或“无”，说明性注释放在报告围栏外。实际未决
-条目继续保留并阻断；原 finding ID 和处置历史保留于历史报告，实际复评确认关闭
-后才生成 None，不得清空未决项换取 PASS。
+按[源码调查](document-review-coverage.md)反查写方法/SQL的全部消费者、真实请求、单条/批量、
+内部/异步重存、事务代理、内容/状态与外部副作用。已列入口的锚点通过不证明入口全集。
+用[追溯导航](traceability-matrix.md)回原需求及Task/Entry/Case；补新入口到同一coverage。
+Reviewed Sources是当前输入source-manifest；实际Reviewed diff、baseline/current及扩查理由写Impact，
+不声称每个依赖已全文读懂，不缩小冻结构建输入来通过门禁。
 
 ```markdown
-DONE
-## Review provenance
-Reviewer identity: 实际身份/会话 ID 与职责；自评另列
-Dispatch evidence: 工具/调用引用、隔离方式与返回报告；未执行如实注明
-Reviewed diff: baseline/head 或工作树快照、准确 diff/文件范围、合同版本
+DONE_WITH_CONCERNS
+## Review Identity
+| Field | Value |
+|---|---|
+| Role | independent-reviewer |
+| Dispatch | session:actual-invocation:dispatch |
+| Return | session:actual-invocation:return |
 ## Reviewed Sources
 | Path | SHA-256 |
 |---|---|
-| 仓库相对源码路径 | 实际 SHA-256；逐项列出冻结生产/构建源码输入 |
-## Repair verification
-Finding closure: 原 ID、处置依据、修复位置、重测与 Reviewer 复核证据
-Re-review evidence: 实际 Reviewer 派发/返回、修复版本及逐 finding/回归结论
-Post-review changes: 新增 diff、影响、失效证据、实际重测和复评报告
+| src/example.ts | 实际当前SHA-256 |
 ## Impact
-路径提示 / 实际深度 / 源码依据 / 调整理由 / diff 与合同版本
+Reviewed diff: baseline/current、实际读取范围与理由
 ## Axes
-维度 | CHECKED / NOT_APPLICABLE / BLOCKED | 文件范围与依据
+五维各自CHECKED/NOT_APPLICABLE/BLOCKED及依据
 ## Findings
-- src/example.ts:12: [维度][严重度] 根因、后果、证据、修复与验收建议
+- [F-001] src/example.ts:12 [correctness][HIGH] 根因、后果、证据、建议与验收
 ## Concerns
-未解决问题与缺少证据；DONE_WITH_CONCERNS 必须提供此段
+F-001尚未关闭，保留缺失证据及风险。
+```
+
+Role只接受independent-reviewer作为最终独评，owner身份不能代替。Dispatch/Return为实际
+调用/返回的可定位引用（如session:...或报告路径#事件）；新复评使用新Return，不能复用祖先
+返回。缺能力时保留缺口，不编造身份或文件。普通未闭环报告可诊断，完整交付不得晋升。
+
+### Finding closure
+
+1. 原Reviewer报告按原状态落既有.sdd/reviews目录，finding使用稳定ID，引用后不覆盖。
+2. Owner单独响应文件，表头严格为 `| ID | Disposition | Evidence |`：
+   fixed、mitigated、deferred、dismissed分别记录修复、缓解、延期、不成立及具体证据。
+   这些是处置，不自动等于独立确认。修复位置、实际命令/退出码、用户授权分别可定位。
+3. 按受影响路径重测后，实际隔离Reviewer读原报告、Owner响应、当前diff及回归证据，
+   新建复评报告。它的Review Chain关联original与owner-response路径和文件SHA-256；
+   Finding Rechecks逐原ID给resolved或dismissed及证据，不能漏项、换ID或复用旧返回。
+4. MITIGATED/DEFERRED仅降低风险或待外部条件，未补原目标/必测仍是PARTIAL。
+   NOT_A_DEFECT需Reviewer核证；FIXED需实际修复与验证。accepted不是修复结果。
+5. 当前报告绑定当前源码；原报告保留历史源码声明和文件身份，不把旧hash重绑成新hash。
+   首次真正没有finding的独评无需伪造整改链。多轮链保留所有祖先身份和不同返回引用。
+
+Owner响应示例：
+
+```markdown
+## Finding Dispositions
+| ID | Disposition | Evidence |
+|---|---|---|
+| F-001 | fixed | test-report.md#实际修复命令与输出 |
 ```
 
 ### Final re-review example
 
-以下仅示例真实闭环后的 Findings/Concerns；完整报告仍需派发身份、输入指纹、
-修复证据、Impact 与五维记录：
+仅在Reviewer实际确认后生成以下形状；占位路径/hash全部替换为真实值。Re-review evidence由
+Review Chain和Finding Rechecks承载；Post-review changes写Impact并决定失效/重测范围。
 
 ```markdown
 DONE
+## Review Identity
+| Field | Value |
+|---|---|
+| Role | independent-reviewer |
+| Dispatch | session:actual-rereview:dispatch |
+| Return | session:actual-rereview:return |
+## Review Chain
+| Role | Path | SHA-256 |
+|---|---|---|
+| original | .sdd/reviews/review-round-1.md | 原报告文件实际SHA-256 |
+| owner-response | .sdd/reviews/owner-response-1.md | 响应文件实际SHA-256 |
+## Finding Rechecks
+| ID | Result | Evidence |
+|---|---|---|
+| F-001 | resolved | 当前源码锚点与真实修复/回归证据 |
+## Reviewed Sources
+| Path | SHA-256 |
+|---|---|
+| src/example.ts | 当前源码实际SHA-256 |
 ## Findings
 None
 ## Concerns
 None
 ```
+
+Review Chain及Reviewed Sources路径统一相对当前项目根；文件hash保护引用身份，不证明
+派发与理解真实。Owner不能为过格式把原concerns或findings改无，不能从build清单批量补
+hash后声称Reviewer实际复核。审计器只核当前格式、身份、逐ID链关系；充分性仍由Host判断。
 
 旧专项检查按适用路径继续使用；不能用任一不适用项强加运行要求，也不能删减冻结的
 必查项。以下细则提供五维的场景检查，不另持有分档、派发或最终结论。

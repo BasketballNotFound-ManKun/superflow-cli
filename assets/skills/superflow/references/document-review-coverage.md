@@ -299,3 +299,19 @@ cwd 对应当前 change 的冻结相对目录；已选环境摘要与运行 lint
 ## 当前交付策略
 
 所有 SDD 准入与续跑见 [document-readiness.md](document-readiness.md#当前交付策略)；实际采集及完整复评收口见 [test-guide.md](test-guide.md#当前交付策略)。coverage继续是既有机器索引，不另持有正文合同或生命周期。
+
+## Reverse discovery and current navigation
+
+源码调查先从受影响写方法/SQL/字段反查全部调用者，再回原需求决定范围；已登记入口的笛卡尔积
+不证明全集。实际读取单条/批量、内部/异步重存、job/event与旁路以及未改消费者。由当前源码
+判断内容/状态边界、真实payload中的字段来源、代理/事务和失败副作用，不能只找一个同名方法。
+
+在已有source-code-audit和investigation.evidence中保存这些来源/反例，不另建账本。真实UI/SDK
+没有的字段不能由测试补造；只重读最新令牌而未重建内容快照不等于一致输入。先提交业务写
+再推进关联状态的两步要用受控交错反例核验，串行改版本不能替代并发保证。无源码时仍按
+No existing source的明确负面调查，不伪造调用者。独立source-contract按关键结论证伪。
+
+用[追溯规则](traceability-matrix.md)将新发现入口补入同一coverage entries/decisions/cases，
+FIX通过现有taskIds引用tasks，Case通过entryId和caseIds关联。主/批Prompt的Execution navigation
+使用同一Task/Entry/Case ID，不复制另一份业务矩阵。检查器只核已声明引用闭合，不证明
+真实调用关系、入口完整性或断言充分性；这些结论仍由Agent及独立Reviewer持有。

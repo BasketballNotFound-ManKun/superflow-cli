@@ -430,3 +430,36 @@ installation results live in the external run report. Synthetic CLI fixtures do
 not establish provider-catalog availability. Roll back this default-policy change
 if opt-outs install, concurrent updates duplicate work, failures claim success or
 lose retry eligibility. Never substitute old caches for official plugin inventory.
+
+## Handoff, traceability and independent review closure (2026-10-22)
+
+Baseline d2c39bb passed 1426 tests and real isolated package installation. External
+run evidence exposed repeated batch contracts, closed entry inventories, Owner
+rewrites of reviewer conclusions, alternative-entry claims and ambiguous path
+bases. Responsibility remains in existing handoff/guard, coverage/task indexes,
+review auditor/report linter and Agent semantic judgment.
+
+Reuse these owners for one main/batch ID graph, generated mode/source/body identity,
+original four-state reports, separate Owner responses, actual per-finding re-review
+with historical file identity, declared/base/resolved path diagnostics and PARTIAL
+combinations. Known completion-time stream disconnections use existing transient
+classification; authentication/quota failures receive neither retry nor credit.
+Guidance covers actual callers/payloads, transaction counterexamples, current
+verdicts, business-test/capture-wrapper/archive boundaries and authorization/recovery
+evidence. No new Skill, Hook, task state or old-format exemption was introduced.
+
+Representative RED cases retain original assertions: main contracts plus thin
+batches, unknown/missing Task/Entry/Case IDs, stale mode/body packages, rewritten
+Concerns, duplicate/ancestor Returns, original tampering/missing finding IDs,
+historical source evolution, nested paths, PARTIAL/PASS combinations and disconnects
+mixed with authentication errors. Independent review findings require repair and
+actual re-review. Neutral old/new application probes do not establish population
+model compliance or turn structural checks into semantic proof.
+
+The user explicitly deferred local installation: verify/commit only in the isolated
+worktree, never merge into the source-linked installed checkout. Package installation
+uses isolated consumers only. Final verification, packaging, application comparison
+and installed fingerprint checks are recorded externally. Roll back the affected
+change if valid tasks/history are rejected, reports are washed clean, normal progress
+becomes contract drift, permissions receive credits or metadata is treated as
+authenticity proof. Preserve evidence without weakening goals or gates.

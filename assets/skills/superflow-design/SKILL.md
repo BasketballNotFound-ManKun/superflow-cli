@@ -3,6 +3,8 @@ name: superflow-design
 description: Superflow 内部能力：根据冻结合同和现有源码明确复用点、实现方案、影响范围与验证策略。由 $superflow 选择，用户无需手动分流。
 ---
 
+当前HOW按[追溯反查](../superflow/references/traceability-matrix.md)核真实payload、单条/批量/内部重存、事务/状态与未改消费者；事实改变时同步所有canonical消费引用，再统一冻结。
+
 先按[行为决策连续性](../superflow/references/document-templates.md#behavior-decision-matrix)
 核对本阶段 owner 与消费引用；交接前收敛冲突，不交给执行者猜测。
 

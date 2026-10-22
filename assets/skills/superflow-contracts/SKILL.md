@@ -3,6 +3,8 @@ name: superflow-contracts
 description: Superflow 内部能力：补齐接口、测试、追溯和质量合同，为源码技术详设与执行交接提供依据。由 $superflow 选择，用户无需手动分流。
 ---
 
+追溯矩阵按[同一coverage关系](../superflow/references/traceability-matrix.md)生成，先反查写方法和真实调用者，再冻结Task/Entry/Case；原始目标不因现有入口清单或后补风险声明而缩窄。
+
 先按[行为决策连续性](../superflow/references/document-templates.md#behavior-decision-matrix)
 核对本阶段 owner 与消费引用；交接前收敛冲突，不交给执行者猜测。
 

@@ -212,3 +212,40 @@ owner 校验与清理入口，不能用宽泛 pkill/killall。纯函数不要求
 保留在历史/Notes，不删除未决finding换通过。清单覆盖登记代码及用例/构建来源，
 不能缩减完整构建来源过门；它不声称每个依赖全文已读，真实diff/读取范围写Impact，
 充分性由独立判断。修后源码变化需受影响重测和实际复评，不只刷新hash。
+
+## Actual assertions and one current verdict
+
+每条Case冻结实际业务入口及前置数据，输出的response/state/forbiddenEffects每项都要有真实
+断言/读取支撑。测试null不代表同时测了空串/非法值；只verify调用不能声称真实事务回滚；
+0行不变不能证明原有内容保全。并发风险至少有两个受控竞争者或明确交错点；回滚反例先证明
+进入预期写分支，再核业务与关联状态同回滚及外部效果。静态PASS文本不能扩大证明范围。
+
+替代入口/模拟只保留其真实覆盖，实际调另一接口或手工SQL时不得保留原入口target和端到端
+PASS。原Case未完成保持PARTIAL，报告行、回执、任务及当前最终结论一起对账；已有linter会
+拒绝PARTIAL回执冒充PASS、PARTIAL行却宣称最终PASS。--require-complete通过才支持完整
+交付，delivery-check只核交付资产，不替代验收。历史记录放既有.sdd证据区并链接，不把旧
+全PASS摘要混在本轮当前结论中。运行数量区分合同Case、参数分支、JUnit方法和重复聚合。
+
+## Capture boundaries without test coupling
+
+业务测试只断言真实行为，普通执行无需读取某次交付目录里的build.json。复用项目已有验收
+wrapper：它调用冻结真实测试、从原始输出/测试报告提取实际执行数与断言，读取已捕获build
+身份后输出measurement，再交现有--record-execution捕获。wrapper只能附加来源身份，不能补造
+actual/执行数/成功断言，测试失败必须退出非零；`test ... && echo成功 || echo失败`不保证非零。
+
+现有artifact绑定一个真实文件；需证明完整产物集时让真实构建生成JAR/归档作为artifact，不能
+拿一个class或未逐文件验证的manifest冒称全部产物。来源hash、产物hash和运行目标实际身份
+分别核验；自读build回执不是部署身份实证。不新增测试框架或平行捕获协议。
+
+路径按现有合同区分：plan引用相对plan文件，case的changeDir相对plan，executionContext.cwd
+相对change，回执文件引用相对回执目录。缺失时按错误展示的声明/基准/解析路径修复，不猜
+另一目录或增加旧路径回退。JSON stdout、退出码和完整原始日志在既有证据区留可回读引用。
+
+## Linked independent review
+
+当前独评按[Reviewer形状](reviewer-checklist.md#reviewer-报告形状)输出Review Identity，
+Role=independent-reviewer、Dispatch/Return为实际可定位引用。test-report的Independent Review
+仍引用最终报告。曾有finding时，Review Chain链接原报告与Owner响应的路径/文件hash，
+Finding Rechecks逐ID记录实际复评的resolved/dismissed；不能由Owner生成None投影替代。
+历史源码可变化但历史报告文件身份保留；当前结论绑定当前源码。缓解/延期不冒称修复，
+未补必测或缺复评保留PARTIAL。清单、hash与身份字段不能代替真实独立性判断。

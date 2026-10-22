@@ -9,6 +9,8 @@ metadata:
   generatedBy: "1.3.1"
 ---
 
+开工按[主导航](../superflow/references/implementation-prompt-template.md#execution-navigation)核本批Task/Entry/Case，测试按[test-guide](../superflow/references/test-guide.md#capture-boundaries-without-test-coupling)解耦交付身份。已有独评问题沿[原报告和复评链](../superflow/references/reviewer-checklist.md#finding-closure)整改，不改原结论过格式。
+
 Implement tasks from an OpenSpec change.
 
 ## 当前独立评审与交付记录

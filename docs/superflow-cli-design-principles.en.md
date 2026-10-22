@@ -281,3 +281,23 @@ empty. Explicit check reports only; off/0 disables it. Reuse the same update own
 session deduplication, global six-hour throttle and lock. Failures retain logs and
 release throttle eligibility for later-session retry. Success requests a restart;
 updating disk assets does not hot-load the current host.
+
+## Handoff navigation, traceability and review closure (2026-10-22)
+
+The main implementation prompt references shared canonical contracts. Batch
+prompts navigate to that main prompt and their task/entry/case IDs; shared
+constraints are consumed once, never proven by repeated contract bodies. Check
+registered navigation against existing coverage/task indexes. Agents still own
+entry discovery, real payload investigation and semantic independent review.
+
+Retain the original independent report, state, finding IDs and content identity.
+Owner responses are separate and never replace the reviewer conclusion. Findings
+require an actual re-review linked to the original report, owner response and
+per-finding results. Final reports bind current sources; historical reports retain
+historical input identity. DONE cannot retain unresolved Concerns. Hashes and
+dispatch references establish record identity, not independence, actual reading
+or repair correctness; Host semantic verification remains necessary.
+
+Runtime test-report is excluded from canonical hashing and remains reference-only
+in every context_compression mode. Do not preserve old projections with fence
+guessing or a parallel body interpreter.

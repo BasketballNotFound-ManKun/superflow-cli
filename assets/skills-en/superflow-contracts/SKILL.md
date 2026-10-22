@@ -3,6 +3,8 @@ name: superflow-contracts
 description: Use when confirmed requirements or OpenSpec artifacts need SDD contract documents, API-first checks, traceability, quality gates, tests, test-report skeletons, and handoff before source-level design.
 ---
 
+Build traceability from the [same coverage relationships](../superflow/references/traceability-matrix.md). Reverse-search writes and actual callers before freezing Task/Entry/Case; a listed inventory or later risk note cannot narrow the original goal.
+
 Apply [behavior decision continuity](../superflow/references/document-templates.md#behavior-decision-matrix)
 to this phase owner and consumer references; resolve conflicts before handoff rather than
 leaving implementers to guess.

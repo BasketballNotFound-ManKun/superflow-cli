@@ -169,3 +169,32 @@ local implementation from end-to-end usability when external coordination is
 pending; archive or strong PASS cannot hide gaps. Explicit native managed work
 inherits native Host capabilities and project contracts; this document adds no
 SDD documents, mandatory team, or business test strategy to that profile.
+
+## Current run, authorization and recovery
+
+At startup record selected branch/contracts, CLI version and available buildCommit
+or runtime fingerprint, actual Skill source, requested/reported model names,
+authorization and next action in the existing test-report recovery point. Unknown
+telemetry stays unknown; equal versions do not prove equal builds. Identity does
+not prove the provider's underlying model or reading compliance.
+
+Git commit/push/publication/archive each require locatable existing explicit
+authorization. Later approval does not establish earlier authorization. Delivery
+requests, saving progress, phase completion or model claims do not grant control
+actions. Continue authorized ready work after progress updates. Real subagent
+returns may resume through host notifications, not promised background work after exit.
+
+After an incomplete response or host exit preserve the last completed action,
+pending tools, error/request references, evidence and resources. Distinguish normal
+end_turn, waiting subagents, permission/quota and network failures. Without raw
+errors leave cause undetermined; model self-explanation cannot blame provider or
+Owner. The native host owns retries after native CLI exit. Explicit managed work
+uses existing Runner classification, three-attempt limits and crediting for known
+transient connections, without a new supervisor Agent or model polling.
+
+When findings existed, final reports retain Review Identity and Review Chain/Finding
+Rechecks. Originals and Owner responses remain separate, followed by actual
+independent re-review. Identity fields do not prove independence: verify original
+tool returns rather than rewriting DONE/None or rebinding hashes. Reconcile cases,
+receipts, tasks and final state. PARTIAL discloses the gap and next step, never a
+claim that every goal was achieved.

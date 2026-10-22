@@ -350,3 +350,27 @@ independence; preserve PARTIAL when execution or required measurements are missi
 ## Current delivery policy
 
 All SDD admission and continuation follow [document-readiness.md](document-readiness.md#current-delivery-policy); actual capture and complete review closure follow [test-guide.md](test-guide.md#current-delivery-policy). Coverage remains the existing machine index, not another contract or lifecycle owner.
+
+## Reverse discovery and current navigation
+
+Start with affected write methods/SQL/fields and reverse-search every caller before
+using the original requirement to decide scope. A Cartesian product of registered
+entries does not establish completeness. Read single/batch, internal/async re-save,
+job/event/bypass routes and unchanged consumers. Inspect content/status boundaries,
+real payload field sources, proxies/transactions and failure effects rather than
+locating only a similarly named method.
+
+Retain sources/counterexamples in existing source-code-audit and investigation.evidence,
+not a new ledger. Tests must not invent values absent from actual UI/SDK payloads.
+Reloading only a token without its content snapshot does not produce consistent
+input. Challenge separate business-write/state-update commits with controlled
+interleavings; sequential version edits do not prove concurrency guarantees. With
+no existing source use the explicit No existing source investigation, never invented
+callers. Independent source-contract reviewers challenge key conclusions.
+
+Use [traceability](traceability-matrix.md) to add discovered entries to existing
+coverage entries/decisions/cases. FIX taskIds reference tasks; cases link through
+entryId/caseIds. Main/batch Execution navigation uses the same Task/Entry/Case IDs,
+not a duplicate business matrix. The validator checks declared relationships, not
+real call relationships, entry completeness or assertion sufficiency. Those remain
+Agent and independent Reviewer judgments.

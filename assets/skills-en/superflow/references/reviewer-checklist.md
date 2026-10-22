@@ -184,70 +184,118 @@ semantic checks; existing scripts validate deterministic evidence facts only.
 
 ### Reviewer report shape
 
-Reuse the four-state report, not another machine protocol. Managed reviews keep
-these records in temporary reports and project the result into existing Host
-review JSON summary/findings/coverage. `--report` checks existing markers and
-anchors and validates optional declared source hashes. It proves neither independent
-execution nor review sufficiency; the main Agent verifies axes, impact and conclusions. Keep
-historical reports without axis records, but do not call them complete under this
-guide.
+Use the existing four-state Markdown and one canonical auditor. Current reports
+require Review Identity, one Findings section, explicit Concerns and Reviewed
+Sources. Reviewer identity and Dispatch evidence reference actual isolated calls
+and returns. Free-text references/hashes establish record identity, not genuine
+independence, actual reading or resistance to malicious local rewriting. Reviewer
+produces its report; Owner retains the original and writes a separate response.
 
 ### Independent source-claim rechecks
 
-Reuse key-claim checks in the [source investigation contract](document-review-coverage.md),
-not a parallel claim ledger. “Verified” and hashes do not prove understanding. Try to falsify
-claims using current callers/bodies/Mapper/DDL: unmounted activation, re-reads dropping prepared
-fields, zero-row misclassification, omitted outer transactions, swallowed errors claimed to roll
-back messages, column capacity, stale case entries and current/next-run termination conflicts.
-Record actual evidence, counterexamples and conclusions; unresolved facts stay
-SOURCE_INVESTIGATION, never user questions. Do not block an evidenced normal contract by keywords.
-
-The Reviewed Sources table is an input identity source-manifest, not proof that
-every dependency was read in full. Preserve the frozen production/build sources;
-never narrow sources to pass a gate. Record actual diff inspection and related
-source expansion, with reasons and coverage, in Impact. Fill all five axes.
-For a truly empty current Findings section write only None (or its localized
-equivalent), with exactly one Findings heading; explanatory comments belong
-outside report examples. Unresolved findings remain recorded and blocking.
-Keep original IDs and disposition history in prior reports; emit None only after
-actual rereview confirms closure, never by deleting open issues to obtain PASS.
+Follow [source investigation](document-review-coverage.md) through all write/SQL
+consumers, real payloads, single/batch and internal/async re-save routes,
+transaction proxies, content/status and side effects. Registered anchors do not
+prove entry completeness. Use [traceability](traceability-matrix.md) for original
+requirements and Task/Entry/Case IDs; add discovered entries to the same coverage.
+The source-manifest binds current input identity, not complete understanding.
+Record Reviewed diff, baseline/current, actual inspection and expansion in Impact;
+never shrink frozen production/build inputs to pass.
 
 ```markdown
-DONE
-## Review provenance
-Reviewer identity: Actual identity/session ID and role; separate self-review
-Dispatch evidence: Tool/call reference, isolation, returned report; state not run if absent
-Reviewed diff: Baseline/head or worktree snapshot, exact diff/file scope, contract version
+DONE_WITH_CONCERNS
+## Review Identity
+| Field | Value |
+|---|---|
+| Role | independent-reviewer |
+| Dispatch | session:actual-invocation:dispatch |
+| Return | session:actual-invocation:return |
 ## Reviewed Sources
 | Path | SHA-256 |
 |---|---|
-| Repository-relative source path | Actual SHA-256, one row for every frozen production/build source input |
-## Repair verification
-Finding closure: Original ID, disposition reasons, repair location, rerun and Reviewer proof
-Re-review evidence: actual Reviewer dispatch/return, repair version and finding/regression verdict
-Post-review changes: New diff, impact, invalidated evidence, actual reruns/rereview report
+| src/example.ts | Actual current SHA-256 |
 ## Impact
-Path hint / actual depth / source evidence / adjustment / diff and contract version
+Reviewed diff: baseline/current, actual reading scope and reasons
 ## Axes
-Axis | CHECKED / NOT_APPLICABLE / BLOCKED | File scope and evidence
+Each axis: CHECKED/NOT_APPLICABLE/BLOCKED and evidence
 ## Findings
-- src/example.ts:12: [axis][severity] cause, consequence, proof, repair and acceptance
+- [F-001] src/example.ts:12 [correctness][HIGH] Cause, consequence, evidence, repair and acceptance
 ## Concerns
-Unresolved questions and missing proof; required for DONE_WITH_CONCERNS
+F-001 remains open; retain missing evidence and risk.
+```
+
+Only independent-reviewer qualifies as final independent review; owner cannot
+substitute. Dispatch/Return are locatable actual invocation/return references
+(for example session:... or a report path#event). Actual re-review requires a new
+Return, never any ancestor's return. Missing capability remains a gap, not an
+invented identity. Incomplete reports remain diagnosable but cannot become complete delivery.
+
+### Finding closure
+
+1. Retain original reports/states in existing .sdd/reviews with stable finding IDs;
+   never overwrite referenced originals.
+2. Owner responds separately using `| ID | Disposition | Evidence |`: fixed,
+   mitigated, deferred or dismissed with concrete evidence. Responses are not
+   independent confirmation. Keep repair location, actual commands/exit codes and
+   user authorization separately locatable.
+3. After affected verification an actual isolated Reviewer reads original, Owner
+   response, current diff and regressions, then creates a new report. Review Chain
+   links original/owner-response by path/file SHA-256. Finding Rechecks gives
+   resolved or dismissed and evidence for every original ID; no omissions or ID changes.
+4. MITIGATED/DEFERRED do not finish incomplete goals/required checks. NOT_A_DEFECT
+   needs Reviewer verification; FIXED needs actual repair and tests. accepted is
+   not a repair result. Retain PARTIAL rather than rewriting concerns to None.
+5. Current reports bind current source; originals retain historical input/file
+   identity, never rebind old hashes. Initially clean independent reports require
+   no invented repair chain. All historical returns remain distinct.
+
+Owner response example:
+
+```markdown
+## Finding Dispositions
+| ID | Disposition | Evidence |
+|---|---|---|
+| F-001 | fixed | test-report.md#actual-repair-and-output |
 ```
 
 ### Final re-review example
 
-Minimal findings/concerns excerpt after actual closure; the full report still
-contains provenance, source identity, repair evidence, impact and all five axes:
+Use this shape only after actual Reviewer confirmation; replace every placeholder
+with real data. Review Chain/Finding Rechecks carry Re-review evidence. Record
+Post-review changes in Impact and determine affected verification.
 
 ```markdown
 DONE
+## Review Identity
+| Field | Value |
+|---|---|
+| Role | independent-reviewer |
+| Dispatch | session:actual-rereview:dispatch |
+| Return | session:actual-rereview:return |
+## Review Chain
+| Role | Path | SHA-256 |
+|---|---|---|
+| original | .sdd/reviews/review-round-1.md | Actual original file SHA-256 |
+| owner-response | .sdd/reviews/owner-response-1.md | Actual response file SHA-256 |
+## Finding Rechecks
+| ID | Result | Evidence |
+|---|---|---|
+| F-001 | resolved | Current source anchors and actual repair/regression evidence |
+## Reviewed Sources
+| Path | SHA-256 |
+|---|---|
+| src/example.ts | Actual current source SHA-256 |
 ## Findings
 None
 ## Concerns
 None
 ```
+
+Review Chain and Reviewed Sources paths are project-root relative. File hashes
+protect reference identity, not actual dispatch or understanding. Owner cannot
+clear original concerns/findings for formatting or bulk-copy build hashes to claim
+Reviewer verification. The auditor checks shape, identity and per-ID relationships;
+Host still judges sufficiency.
 
 Existing specialist checks remain path-scoped; inapplicable checks do not invent
 runtime obligations or remove frozen requirements. They detail axes without
