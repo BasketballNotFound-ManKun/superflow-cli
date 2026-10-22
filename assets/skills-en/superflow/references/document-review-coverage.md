@@ -39,17 +39,23 @@ investigate source-resolvable questions autonomously.
 
 ## Investigate source before freezing design
 
-This section owns source investigation, key-claim rechecks and current-contract convergence.
-Extend the existing source audit and coverage; do not add a parallel claim ledger. Apply to full
-existing-system document tasks. Exclude copy-only, mechanical and lightweight tasks independent
-of existing behavior. New applicable contracts set `source_investigation: required` under
-applicability in `.openspec.yaml` and `sourceInvestigation: "required"` in coverage. The marker
-uses the existing handoff hash. This reserved key uses block-mapping scalars; quotes and inline
-comments are accepted. Unsupported flow/block-scalar forms fail explicitly and require normalization,
-never silently disable the check. Removing it or refreshing hashes cannot close investigation.
-Preserve historical v1 material without claiming current source-investigation approval.
-Applicable contracts require investigation and rereview by the document owner; historical
-material grants no current SDD admission or complete-pass exemption.
+This section is the sole source-code-audit/coverage contract for source investigation and
+key-claim review. workflow: full in .sdd/state.yaml requires current investigation and
+technical_design; deleting applicability markers cannot downgrade it. Existing-system full
+contracts still declare applicability.source_investigation: required and
+coverage.sourceInvestigation: "required", but markers do not switch off the full obligation.
+Quick, non-SDD native requests and lightweight prose follow their own admission; do not skip
+full investigation or force lightweight requests into full. Preserve historical artifacts;
+the current Flow Owner completes prose and independent review before current admission.
+
+Reverse-trace all consumers of changed shared methods/interfaces/Mapper statements. Check
+single/batch, sync/async, internal callers, direct Mapper bypasses and content/state branches;
+read complete relevant method bodies, transaction proxies and catch context. Add newly found
+authorized paths to the same Entry/Decision/Case inventory, not only the author's chosen entries.
+
+
+Reserved keys use block-mapping scalars; quotes/inline comments are accepted. Unsupported
+flow/block-scalar forms fail explicitly rather than silently disabling checks.
 
 ### Generation: derive conclusions from actual implementations
 
@@ -110,6 +116,26 @@ readiness. Repair canonical prose and independently recheck conflicts, never jus
 Scripts check shape, references, text identity and task IDs; they cannot judge selection sufficiency,
 reasoning validity or reviewer independence.
 
+### No existing source
+
+Only when the whole coverage.sources has no role: code may investigation explicitly use
+scope: no-existing-source. Search the actual repository and dependencies first and record
+negative investigation evidence in contract prose; this is neither a default exemption nor a
+fabricated code anchor. The corresponding entry.investigation and current
+source-contract.sourceChecks must use the same scope. Both evidence arrays reference contract
+sources; canonical, rationale and counterexample remain required, with VERIFIED / CONFIRMED:
+
+```json
+{"investigation":{"scope":"no-existing-source","status":"VERIFIED","canonical":{"sourceRef":"S_AUDIT","lineStart":12,"lineEnd":12,"text":"Current repository and dependencies have no existing implementation"},"evidence":[{"sourceRef":"S_AUDIT","lineStart":13,"lineEnd":13,"text":"Actual search scope, commands and negative results"}],"counterexample":"An existing consumer requires source investigation"}}
+```
+
+```json
+{"sourceChecks":[{"entryId":"E1","scope":"no-existing-source","result":"CONFIRMED","evidence":[{"sourceRef":"S_AUDIT","lineStart":13,"lineEnd":13,"text":"Actual search scope, commands and negative results"}],"rationale":"Independently checked negative search scope and results","counterexample":"Existing implementation invalidates the conclusion"}]}
+```
+
+Structure verifies eligibility, sources and current input identity; independent Reviewers still
+judge investigation completeness.
+
 ### Explicit field-capacity mappings
 
 After verifying a literal writes directly to a field, add `valueConstraints` to the existing entry:
@@ -138,23 +164,30 @@ fields. Paths are relative to the change and may reference authorized sibling re
 Save online originals as local snapshots with URL and confirmation context. SHA-256 hashes
 file bytes, unlike the normalized handoff hash. Reference code, do not copy its body.
 
+This is an index fragment. For full workflow, also fill each entry's investigation, FIX taskIds
+and source-contract sourceChecks as above. S_HOW must match state.technical_design and actual
+handoff membership.
+
 ```json
 {
   "schemaVersion": "superflow.review-coverage.v1",
   "workflowPolicy": "observed-delivery.v1",
+  "sourceInvestigation": "required",
   "sources": [
     {"id":"S1","role":"requirement","path":"source-ingestion.md","sha256":"<64 hex>"},
     {"id":"S2","role":"code","path":"../../../src/caller.ts","sha256":"<64 hex>"},
-    {"id":"S3","role":"contract","path":"tests.md","sha256":"<64 hex>"}
+    {"id":"S3","role":"contract","path":"tests.md","sha256":"<64 hex>"},
+    {"id":"S_AUDIT","role":"contract","path":"source-code-audit.md","sha256":"<64 hex>"},
+    {"id":"S_HOW","role":"contract","path":"../../../docs/superpowers/specs/sample-technical-design.md","sha256":"<64 hex>"}
   ],
   "requirements": [
     {"id":"R1","statement":"Complete confirmed constraint, preserving allowed actions and outcome boundaries","sourceRefs":["S1"]}
   ],
   "entries": [
-    {"id":"E1","kind":"browser","actor":"specified actor","route":"page action -> actual request path","sourceRefs":["S2"]}
+    {"id":"E1","kind":"browser","actor":"specified actor","route":"page action -> actual request path","sourceRefs":["S2"],"investigation":{"status":"VERIFIED","canonical":{"sourceRef":"S_AUDIT","lineStart":12,"lineEnd":12,"text":"<canonical audit line>"},"evidence":[{"sourceRef":"S2","lineStart":20,"lineEnd":20,"text":"<actual caller source line>"}],"counterexample":"<a concrete falsifying caller or branch>"}}
   ],
   "decisions": [
-    {"requirementId":"R1","entryId":"E1","disposition":"FIX","rationale":"This entry is subject to the requirement; see design","currentBehavior":"actual current behavior","targetBehavior":"preserve allowed action and constrain ownership","sourceRefs":["S1","S2"],"caseIds":["C1"]}
+    {"requirementId":"R1","entryId":"E1","disposition":"FIX","rationale":"This entry is subject to the requirement; see design","currentBehavior":"actual current behavior","targetBehavior":"preserve allowed action and constrain ownership","sourceRefs":["S1","S2"],"caseIds":["C1"],"taskIds":["2.1"]}
   ],
   "cases": [
     {"id":"C1","entryId":"E1","level":"browser","action":"Actor performs action on actual page","sourceRefs":["S3"],

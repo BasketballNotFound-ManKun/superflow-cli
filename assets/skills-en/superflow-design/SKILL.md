@@ -9,27 +9,13 @@ leaving implementers to guess.
 
 
 
+Apply [HOW input and consumption order](../superflow/references/document-readiness.md#final-document-review-inputs)
+for final document review. Early review does not replace current three-lens review after complete HOW.
+
 ## Canonical body repair
 
-Resolve conflicts through the Behavior Decision Matrix's Canonical owner: spec/API
-behavior returns to contracts, source HOW/technical design to design, and execution
-navigation to handoff. The original owner repairs canonical prose against sources
-and actual code, then updates every consumer reference. Remove superseded current
-decisions or isolate them explicitly as history; document priority cannot leave
-contradictory current instructions in place. Search for old values, algorithms and
-cases still presented as current requirements before refreshing handoff, document
-review and Coding Ready. Rebinding hashes, editing review receipts manually, or
-claiming one document wins does not repair the contract.
-
-All SDD admission and continuation require `workflowPolicy: observed-delivery.v1`;
-every executable case in existing coverage freezes
-`executionEvidence: runner-captured.v1` and `executionContext`. Missing fields keep
-admission BLOCKED until the document owner repairs and rereviews the contract. Every
-PASS receipt requires actual capture. Retain old files only as history or PARTIAL,
-never as an earlier-policy pass or continuation exemption. Source-only edits still
-use build continuation checks against current contracts and evidence, without
-redesigning business decisions.
-
+Follow [canonical repair and current admission](../superflow/references/document-readiness.md#canonical-body-repair)
+for prose ownership, consumer references, observed-delivery.v1, runner-captured.v1 and executionContext.
 
 # SDD Design
 
@@ -78,8 +64,9 @@ writer. Independently required test/review evidence is retained in every mode.
 
 ## Procedure
 
-1. Read `.sdd/handoff/sdd-context.md` plus original `api.md`, `design.md`,
-   `tasks.md`, and `tests.md`.
+1. Use the current handoff index to locate canonical `api.md`, `design.md`,
+   `tasks.md` and `tests.md`; read relevant bodies in full. Preserve declared
+   context_compression: do not require a full projection followed by the same originals.
    Read applicable project rules and use the Host's normal skill discovery for
    relevant skills referenced by those rules or applicable to the task. Read
    each complete skill file and its relevant references before designing.
@@ -192,11 +179,13 @@ writer. Independently required test/review evidence is retained in every mode.
    ../superflow/scripts/superflow-state.sh set <change-dir> design_doc design.md
    ```
 13. Update `design.md` with `Superpowers Technical Design Handoff`, update
-   `sdd-quality-gate.md` with the technical design path and hash, then run
+   `sdd-quality-gate.md` with the technical design path and state binding, then run
    `../superflow/scripts/superflow-handoff.sh <change-dir> --refresh`.
-   If the guard reports a stale or missing hash, record the printed hash in
-   `design.md`, `sdd-quality-gate.md`, prompts, and `test-report.md`, then run
-   `--refresh` again. Do not set `design_doc` to the Superpowers document;
+   Register the actual HOW as a contract in coverage.sources and verify its membership
+   with `superflow-handoff.sh <change-dir> --manifest`. Complete current final review
+   through the shared readiness contract before Coding Ready. Do not copy raw handoff
+   hashes into prose or prompts; state and the current handoff own this binding.
+   Do not set `design_doc` to the Superpowers document;
    `design_doc` is the OpenSpec/SDD contract design, while `technical_design`
    is the Superpowers HOW document.
 14. Run:

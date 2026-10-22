@@ -6,7 +6,7 @@ All SDD executable cases require capture of actual build/case processes. Freeze
 `executionEvidence: "runner-captured.v1"` and
 `executionContext: {"argv":["node","case.js"],"cwd":".","environmentKeys":[]}`
 in the existing document-review coverage case. argv is an argument array without a shell; cwd is
-relative to the review file. environmentKeys declares supported non-secret keys only. Every
+relative to the change directory. environmentKeys declares supported non-secret keys only. Every
 PASS receipt requires actual capture. Retain old receipts only as history or PARTIAL;
 missing current requirements block until completed. Full fields remain owned by the
 [execution evidence contract](document-review-coverage.md) and existing receipt validation.
@@ -18,7 +18,7 @@ Place these two minimal plans at the project root:
 ```
 
 ```json
-{"kind":"case","review":"review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
+{"kind":"case","changeDir":".","review":"review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
 ```
 
 Use the current Host's installed script; replace installed-script-path with its installed location:
@@ -28,10 +28,20 @@ python3 <installed-script-path>/superflow-test-report-lint.py --record-execution
 python3 <installed-script-path>/superflow-test-report-lint.py --record-execution case-plan.json
 ```
 
-Plan output/review/build/cwd paths are relative to the plan directory; build sources/artifact are
+Case plans require changeDir relative to the plan directory; output/review/build are also plan-relative.
+Build cwd stays plan-relative; only case executionContext.cwd is changeDir-relative. Never infer
+the root from review directories. Build sources/artifact are
 relative to build cwd. build.sources covers relevant source, build and acceptance scripts, not
 unrelated small files. Build/case outputs must share one evidence directory. The case command
 comes only from frozen executionContext.
+
+Nested example: plan at project root, change at openspec/changes/sample, frozen
+executionContext.cwd is ../../.. (project root), with argv still invoking root case.js.
+The review location does not determine cwd:
+
+```json
+{"kind":"case","changeDir":"openspec/changes/sample","review":"openspec/changes/sample/.sdd/reviews/document-review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
+```
 
 The acceptance command emits exactly one JSON measurement event matching caseId on stdout;
 other diagnostic output may be retained:
@@ -51,6 +61,15 @@ Locally writable files support auditable consistency, not resistance to maliciou
 Host still independently judges real entries, coverage and business correctness. Capture success
 cannot replace tests.md or promote helper units into production acceptance.
 
+
+When one class run covers multiple Cases, record actual method/assertion mappings and separate
+execution count from independent coverage. Rerunning a whole class does not create new case
+coverage. Nonzero exits cannot become green through old XML/results; verify current output
+freshness. Reuse evidence only with current diff, entry and dependency applicability, rerunning
+affected layers. actual must be observed; constant true, copying expected into actual or unchanged
+COUNT cannot prove unobserved fields or old rounds unchanged. Sensitive raw evidence may remain
+outside the repository: provide authorized successors accessible locations and hashes, without
+requiring large Git bundles or giving only inaccessible personal paths.
 
 ## Production Entry State Assertions
 

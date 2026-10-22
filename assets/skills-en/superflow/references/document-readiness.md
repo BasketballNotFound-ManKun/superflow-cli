@@ -26,6 +26,43 @@ applicability:
 allocation, or financial display. It is not a bypass when source impact proves
 that money behavior changes.
 
+
+## Canonical body repair
+
+Repair prose through the Behavior Decision Matrix's Canonical owner: spec/API in contracts,
+HOW in design, verification in contracts' tests responsibility, navigation in handoff. The current
+Flow Owner takes over these responsibilities, checks original requirements and actual code,
+replaces wrong passages and updates every consumer reference. Isolate superseded decisions as
+history. Search for old values, algorithms and cases; document priority cannot preserve opposite
+current instructions. Refresh handoff and actual independent reviews, then Coding Ready.
+Rebinding hashes or editing receipts proves neither repair nor rereview. Apply current
+observed-delivery.v1; executable cases freeze runner-captured.v1 and executionContext. Missing
+fields require prose repair and actual review while BLOCKED. Keep historical files PARTIAL;
+every PASS receipt requires capture. Source-only implementation evolution keeps build's
+checkCode:false contract checks without making implementation code immutable.
+
+## Final document review inputs
+
+A full workflow first completes investigation, canonical prose and full HOW. Set
+state.technical_design and register its actual path in coverage.sources with role: contract.
+Run `superflow-handoff.sh <change-dir> --refresh`; read-only `--manifest` exposes the same
+source set and normalized fingerprint, without substituting for reading canonical prose.
+Declared HOW may be outside change only within a verifiable Git project root. Supported suffixes
+are .md/.yaml/.yml; reject .sdd/.git, test-report.md, outside-project paths and unsupported
+suffixes. HOW must actually belong to handoff; a contract field alone is insufficient. Paths are
+change-relative; reuse the handoff algorithm rather than inventing a HOW hash.
+
+After HOW enters current handoff, source-contract reads code facts/contracts and HOW,
+architecture-minimality reads ownership, boundaries and complexity, and e2e-environment reads
+test/environment executability. Reviewers independently derive scope and counterexamples from
+original requirements before comparing the author's inventory. Read relevant canonical prose,
+method bodies, unchanged callers, batch bypasses and shared-state consumers. Early reviews may
+inform exploration, but rebinding inputHash cannot turn them into final approval. After prose
+and reference repairs, actually rereview affected conclusions. Current records for all three lenses
+bind the current normalized handoff inputHash. Keep historical findings and rereview evidence;
+fields/hashes prove input identity, not reading, independence or sufficiency. Handoff completes
+final document review and delivery before Coding Ready, without a fourth round or fixed Agent count.
+
 ## Three-Review Receipt
 
 Path: `.sdd/reviews/document-review.json`

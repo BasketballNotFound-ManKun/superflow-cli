@@ -11,6 +11,24 @@ existing contracts without creating another requirements-review entry. Scripts
 check paths, state markers, and anchors, not review sufficiency. The main Agent /
 Host owns actual risk and the final verdict.
 
+
+### Goal, contract and evidence
+
+Reviewers first derive affected scope and counterexamples from original requirements, then
+compare the author's inventory/diff. Reverse-check unchanged callers, direct batch writes,
+shared methods and state consumers by risk; an entry inventory cannot prove completeness.
+Answer separately:
+1. Does implementation meet the current frozen contract? Route code defects to build.
+2. Do contract and implementation meet the original goal? Route omissions/opposite prose to
+   the current Flow Owner's canonical responsibility, then rereview repairs.
+3. Do observations prove behavior and counterexamples? Return evidence gaps for real validation.
+
+For key guards, batch branches and snapshot binding, propose a falsifying wrong implementation
+and identify the Case that would fail; missing assertions are gaps. FIXED requires changed wrong
+behavior, retesting and actual rereview. Logging alone closes observability findings only;
+functional errors remain open. Contract wording, extra logs and constant assertions cannot close
+risks to the user's original goal.
+
 ### Axis coverage
 
 | Axis | Focus | Minimum evidence |

@@ -21,6 +21,35 @@ applicability:
 `money: false` 只表示本次不修改金额计算、舍入、分摊或财务展示，不允许借此绕过真实的
 金额改动。若源码影响面证明涉及金额，必须改为 `true` 并补齐金额合同。
 
+## Canonical body repair
+
+按 Behavior Decision Matrix 的 Canonical owner 修正正文：spec/API 回 contracts，
+HOW 回 design，验证回 tests 的 contracts 职责，导航回 handoff。当前 Flow Owner 承接这些职责，
+核原需求与实际源码后替换错误段落，更新全部消费者引用；过时决定隔离为历史。
+逐处搜索旧值、算法与用例，不能靠优先级声明保留相反当前正文。再刷新 handoff 和实际独评，
+最后重发 Coding Ready；重绑 hash 或手改凭证不证明修复/复评。
+统一当前 observed-delivery.v1；所有执行用例冻结 runner-captured.v1 与 executionContext，
+缺项先补正文与实际评审，保持 BLOCKED。历史文件保留 PARTIAL；每份 PASS receipt 须实际 capture。
+仅实现源码演进继续沿 build 的 checkCode:false 核合同，不冻结实现代码不准变化。
+
+## Final document review inputs
+
+full 必须先完成调查、正文与完整 HOW，设置 state.technical_design，并将其实际路径以
+role: contract 登记到 coverage.sources。运行 `superflow-handoff.sh <change-dir> --refresh`；
+只读 `--manifest` 可核同源来源集合与规范化指纹，不能代替正文阅读。
+声明 HOW 可以位于 change 外，但必须在可核验 Git 项目根内；仅支持 .md/.yaml/.yml，
+拒绝 .sdd/.git、test-report.md、项目外路径和不支持后缀。必须是真实 handoff 成员，
+只加 contract 字段不够。来源路径相对 change，复用当前 handoff 算法，不另算 HOW hash。
+
+HOW 纳入当前 handoff 后，现有 source-contract 读源码事实/契约与 HOW，
+architecture-minimality 读职责、边界与复杂度，e2e-environment 读测试/环境可执行性。
+Reviewer 从原需求独立列范围及反例，再与作者台账比较；实际读取相关正文、方法体、
+未改调用者、批量旁路和共享状态消费者。早期评审可供探索，不能只重绑 inputHash 算最终通过。
+修正文与引用后实际复核受影响结论；三个视角的当前记录均绑定当前规范化 handoff inputHash。
+保留历史 finding 和复评证据；字段/哈希仅证明输入身份，不能证明真实阅读、独立性或充分性。
+由 handoff 完成最终文档评审与交接，再运行 Coding Ready；不增加第四轮或固定 Agent 人数。
+
+
 ## 三轮评审凭证
 
 下方为基础字段示例，不是完整凭证。0.5.10 起必须同时按

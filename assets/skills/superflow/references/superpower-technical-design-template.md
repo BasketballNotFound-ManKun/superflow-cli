@@ -101,11 +101,14 @@ Not created 记录已考虑但不新增的模块、工具、缓存、状态或�
 
 每个失败风险绑定可执行用例；零写入须覆盖全部受影响状态，不能仅查行数或单个版本值。
 
+逐入口冻结现状与目标，不把关键输入来源、批量旁路、事务/异常或失败副作用留给编码时决定。
+上方四类风险结构只填写适用内容；无关章节省略并集中说明依据，不重复“不适用”表。
+
 ## Source-Level HOW
 
-| Requirement/Scenario | Code anchor     | Current behavior | Target HOW                | Files/methods | Risk   |
-| -------------------- | --------------- | ---------------- | ------------------------- | ------------- | ------ |
-| <R1/S1>              | `<file>:<line>` | <observed fact>  | <implementation approach> | <files>       | <risk> |
+| Entry / Decision / Case | Files/methods and branch | Current behavior and source | Target HOW and input source | Boundaries / risk references |
+|---|---|---|---|---|
+| <E/D/C-ID> | <actual caller→method/Mapper; batch bypass> | <observed behavior, source anchor> | <exact change and request/DB/cache origin> | <transaction, exception and failure-order sections> |
 
 ## 复杂度减法评审
 

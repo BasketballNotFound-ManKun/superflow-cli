@@ -124,9 +124,10 @@ If the change is still in `implement`, run:
 ~/.codex/skills/superflow/scripts/superflow-guard.sh <change-dir> implement --apply
 ```
 
-Do not verify from conversation memory. Reload `.sdd/handoff/sdd-context.md`,
-`api.md`, `design.md`, `tasks.md`, `tests.md`, `sdd-quality-gate.md`, and
-existing `test-report.md`.
+Do not verify from conversation memory. Use the current handoff index to locate canonical
+`api.md`, `design.md`, `tasks.md`, `tests.md`, `sdd-quality-gate.md` and `test-report.md`.
+Read the relevant bodies and evidence; preserve context_compression without rereading a full
+projection of the same originals.
 
 ## Verification Modes
 

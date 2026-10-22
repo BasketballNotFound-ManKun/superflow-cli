@@ -92,6 +92,9 @@ describe("document contract installation continuity", () => {
               "superflow-contracts",
               "superflow-design",
               "superflow-handoff",
+              "superflow-requirement-review",
+              "superflow-build",
+              "superflow-verify",
             ]) {
               await deploySkill(
                 name,
@@ -108,6 +111,10 @@ describe("document contract installation continuity", () => {
               "batch-prompt-template",
               "test-guide",
               "routing-contract",
+              "document-readiness",
+              "document-review-coverage",
+              "flow-owner",
+              "reviewer-checklist",
             ]) {
               const installed = fs.readFileSync(
                 path.join(references, `${file}.md`),
@@ -123,16 +130,33 @@ describe("document contract installation continuity", () => {
               expect(normalized).toBe(
                 read(language, `superflow/references/${file}.md`),
               );
-              expect(installed).toContain(
-                file === "routing-contract"
-                  ? (language === "skills" ? "## Non-Negotiable Rules" : "## Quality Gates")
-                  : file === "test-guide"
-                  ? "## Production Entry State Assertions"
-                  : file === "document-templates"
-                    ? "## Behavior Decision Matrix"
-                    : file === "superpower-technical-design-template"
-                      ? "## Entry Execution Boundaries"
-                      : "## Thin Prompt Contract",
+              const headings: Record<string, string> = {
+                "document-readiness": "## Final document review inputs",
+                "document-review-coverage": "### No existing source",
+                "flow-owner": "## Existing document implementation",
+                "reviewer-checklist": "### Goal, contract and evidence",
+                "routing-contract": language === "skills"
+                  ? "## Non-Negotiable Rules" : "## Quality Gates",
+                "test-guide": "## Production Entry State Assertions",
+                "document-templates": "## Behavior Decision Matrix",
+                "superpower-technical-design-template": "## Entry Execution Boundaries",
+              };
+              expect(installed).toContain(headings[file] ?? "## Thin Prompt Contract");
+            }
+            for (const phase of ["design", "requirement-review", "handoff"]) {
+              const consumer = path.join(
+                destination,
+                `superflow-${phase}/SKILL.md`,
+              );
+              const body = fs.readFileSync(consumer, "utf8");
+              const link = body.match(
+                /\]\(([^)]+#final-document-review-inputs)\)/,
+              );
+              expect(link, consumer).not.toBeNull();
+              const [relative, anchor] = link![1].split("#");
+              const source = path.resolve(path.dirname(consumer), relative);
+              expect(fs.readFileSync(source, "utf8")).toContain(
+                `## ${anchor.replaceAll("-", " ").replace(/^f/, "F")}`,
               );
             }
             for (const skill of ["clarify", "contracts", "design", "handoff"]) {
@@ -185,3 +209,83 @@ describe.each(["skills", "skills-en"])("%s phase reading and refreeze", (languag
     }
   });
 });
+
+describe.each(["skills", "skills-en"])(
+  "%s source-to-delivery consumption",
+  (language) => {
+    it("routes existing-document implementation through owner repair", () => {
+      const entry = read(language, "superflow/SKILL.md");
+      expect(entry).toContain("flow-owner.md#existing-document-implementation");
+      const owner = read(language, "superflow/references/flow-owner.md");
+      const repair = owner
+        .split("## Existing document implementation")[1]
+        ?.split("\n## ")[0];
+      expect(repair).toBeDefined();
+      for (const stage of [
+        "clarify",
+        "contracts",
+        "design",
+        "handoff",
+        "build",
+      ])
+        expect(repair).toContain(`superflow-${stage}`);
+      expect(repair).toContain("Coding Ready");
+    });
+
+    it("makes final HOW consumption shared by design, review and handoff", () => {
+      for (const phase of ["design", "requirement-review", "handoff"])
+        expect(read(language, `superflow-${phase}/SKILL.md`)).toContain(
+          "document-readiness.md#final-document-review-inputs",
+        );
+      const readiness = read(
+        language,
+        "superflow/references/document-readiness.md",
+      );
+      const inputs = readiness
+        .split("## Final document review inputs")[1]
+        ?.split("\n## ")[0];
+      expect(inputs).toBeDefined();
+      for (const field of [
+        "technical_design",
+        "coverage.sources",
+        "contract",
+        "--manifest",
+        "source-contract",
+        "architecture-minimality",
+        "e2e-environment",
+        "inputHash",
+      ])
+        expect(inputs).toContain(field);
+    });
+
+    it("publishes case plans with an explicit change root", () => {
+      const guide = read(language, "superflow/references/test-guide.md");
+      const plans = [...guide.matchAll(/```json\n([\s\S]*?)```/g)]
+        .map((match) => JSON.parse(match[1]))
+        .filter((plan) => plan.kind === "case");
+      expect(plans.length).toBeGreaterThan(0);
+      for (const plan of plans) expect(plan.changeDir).toBeTypeOf("string");
+      expect(guide).not.toMatch(
+        /cwd 相对 review|cwd is\s*relative to the review/,
+      );
+    });
+
+    it("documents the only no-source investigation scope", () => {
+      const coverage = read(
+        language,
+        "superflow/references/document-review-coverage.md",
+      );
+      const scope = coverage
+        .split("### No existing source")[1]
+        ?.split("\n### ")[0];
+      expect(scope).toBeDefined();
+      for (const field of [
+        "no-existing-source",
+        "sourceChecks",
+        "CONFIRMED",
+        "VERIFIED",
+      ])
+        expect(scope).toContain(field);
+    });
+  },
+);

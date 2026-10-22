@@ -35,14 +35,20 @@
 
 ## 先调查源码，再冻结设计
 
-本节是源码调查、关键结论复核和当前合同收敛的唯一规范；沿用现有源码审计与 coverage，
-不另建 claim 账本。适用完整存量系统文档任务；纯文案、机械改动和不依赖现有行为的轻量
-任务不强加本节。新生成的适用合同在 `.openspec.yaml` 的 applicability 下写
-`source_investigation: required`，coverage 同时写 `sourceInvestigation: "required"`。
-此保留键使用 block-mapping 标量；引号和行内注释可用，flow/block-scalar 等未支持写法
-明确拒绝并要求规范化，不静默关闭核验。标记进入既有 handoff 哈希；不能删除标记或
-刷新哈希来关闭未解决调查。历史 v1 资料保留，但不能据此声称通过当前源码调查；
-适用合同须由文档 owner 补调查并重新评审，不授予当前 SDD 准入或完整通过豁免。
+本节是 source-code-audit/coverage 源码调查与关键结论复核的唯一规范。
+`.sdd/state.yaml` 的 workflow: full 强制当前调查和 technical_design；删除适用标记不能降级。
+完整存量合同仍显式写 applicability.source_investigation: required 与
+coverage.sourceInvestigation: "required"，但标记不是 full 义务的开关。
+Quick、无 SDD 原生请求和轻量文案沿自身准入；不借 full 身份免调查，也不强迫轻量请求建 full。
+历史资料保留，缺当前调查时由当前 Flow Owner 补正文与独评，不能授予当前准入。
+
+从共享方法/接口/Mapper statement 反查全部消费者，核单条/批量、同步/异步、内部调用、
+直接 Mapper 旁路及内容/状态分支；读完整相关方法体、事务代理与 catch 上下文。
+反向新发现的已授权路径纳入同一 Entry/Decision/Case，不能只审作者已列的入口。
+
+
+保留键仍用 block-mapping 标量，允许引号/行内注释；不支持的 flow/block-scalar 形式明确拒绝，
+不能静默关闭核验。
 
 ### 生成侧：从实际实现得出结论
 
@@ -91,6 +97,23 @@ result 为 CONFIRMED / CONTRADICTED / SOURCE_INVESTIGATION，evidence 同上述�
 非 CONFIRMED 不准就绪；有冲突须先改 canonical 正文并重新独立核验，禁止只刷哈希。
 脚本核非空/来源/片段身份与任务引用，不能判断选取是否充分、推导是否成立、评审者是否独立。
 
+### No existing source
+
+仅整个 coverage.sources 无任何 role: code 时，调查可显式使用 scope: no-existing-source。
+先搜索实际仓库与依赖并把负面调查证据写进 contract 正文；这不是缺省豁免或伪造 code 锚点。
+对应 entry.investigation 与当前 source-contract.sourceChecks 必须使用相同 scope。
+两个 evidence 均引用 contract 来源；canonical、理由和反例仍必需，状态分别 VERIFIED / CONFIRMED：
+
+```json
+{"investigation":{"scope":"no-existing-source","status":"VERIFIED","canonical":{"sourceRef":"S_AUDIT","lineStart":12,"lineEnd":12,"text":"已核当前仓库及依赖，无既有实现"},"evidence":[{"sourceRef":"S_AUDIT","lineStart":13,"lineEnd":13,"text":"实际搜索范围、命令与未发现结果"}],"counterexample":"若发现既有消费者，须回到源码调查"}}
+```
+
+```json
+{"sourceChecks":[{"entryId":"E1","scope":"no-existing-source","result":"CONFIRMED","evidence":[{"sourceRef":"S_AUDIT","lineStart":13,"lineEnd":13,"text":"实际搜索范围、命令与未发现结果"}],"rationale":"独立核实负面调查范围与结果","counterexample":"发现既有实现则不成立"}]}
+```
+
+结构只核资格、来源与当前输入身份；调查是否完整仍由独立 Reviewer 判断。
+
 ### 明确映射的字段容量
 
 Agent 已核实某字面量直接写入某字段时，在既有 entry 中添加 `valueConstraints`：
@@ -112,7 +135,9 @@ CHAR/VARCHAR 声明；values 可引用 code 或 contract 中带引号/反引号�
 
 ## 凭证扩展
 
-下面是 `coverage` 最小结构，添加到现有三轮凭证，不替换其它字段。
+下面是 `coverage` 索引片段，添加到现有三视角凭证，不替换其它字段。full 还须按上文
+给每个 entry 填 investigation，FIX 填 taskIds，source-contract 填 sourceChecks；
+S_HOW 必须与 state.technical_design 和真实 handoff 成员一致。
 `sources.path` 相对 change 目录，可引用授权范围内的跨仓文件；在线来源保存带 URL、
 原文和确认上下文的本地快照。SHA-256 是文件字节哈希，不是 handoff 的规范化哈希。
 不要复制源码正文；只登记定位与指纹。`sourceRefs` 均引用 sources 中的 ID。
@@ -121,19 +146,22 @@ CHAR/VARCHAR 声明；values 可引用 code 或 contract 中带引号/反引号�
 {
   "schemaVersion": "superflow.review-coverage.v1",
   "workflowPolicy": "observed-delivery.v1",
+  "sourceInvestigation": "required",
   "sources": [
     {"id":"S1","role":"requirement","path":"source-ingestion.md","sha256":"<64 hex>"},
     {"id":"S2","role":"code","path":"../../../src/caller.ts","sha256":"<64 hex>"},
-    {"id":"S3","role":"contract","path":"tests.md","sha256":"<64 hex>"}
+    {"id":"S3","role":"contract","path":"tests.md","sha256":"<64 hex>"},
+    {"id":"S_AUDIT","role":"contract","path":"source-code-audit.md","sha256":"<64 hex>"},
+    {"id":"S_HOW","role":"contract","path":"../../../docs/superpowers/specs/sample-technical-design.md","sha256":"<64 hex>"}
   ],
   "requirements": [
     {"id":"R1","statement":"用户确认的完整约束，保留允许行为和结果边界","sourceRefs":["S1"]}
   ],
   "entries": [
-    {"id":"E1","kind":"browser","actor":"指定角色","route":"页面动作 -> 实际请求路径","sourceRefs":["S2"]}
+    {"id":"E1","kind":"browser","actor":"指定角色","route":"页面动作 -> 实际请求路径","sourceRefs":["S2"],"investigation":{"status":"VERIFIED","canonical":{"sourceRef":"S_AUDIT","lineStart":12,"lineEnd":12,"text":"<canonical audit line>"},"evidence":[{"sourceRef":"S2","lineStart":20,"lineEnd":20,"text":"<actual caller source line>"}],"counterexample":"<a concrete falsifying caller or branch>"}}
   ],
   "decisions": [
-    {"requirementId":"R1","entryId":"E1","disposition":"FIX","rationale":"该入口适用此需求，详见设计","currentBehavior":"当前实际行为","targetBehavior":"保留允许动作并约束归属","sourceRefs":["S1","S2"],"caseIds":["C1"]}
+    {"requirementId":"R1","entryId":"E1","disposition":"FIX","rationale":"该入口适用此需求，详见设计","currentBehavior":"当前实际行为","targetBehavior":"保留允许动作并约束归属","sourceRefs":["S1","S2"],"caseIds":["C1"],"taskIds":["2.1"]}
   ],
   "cases": [
     {"id":"C1","entryId":"E1","level":"browser","action":"角色从实际页面执行动作","sourceRefs":["S3"],

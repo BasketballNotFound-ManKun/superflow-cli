@@ -8,21 +8,13 @@ description: Superflow 内部能力：将冻结合同与技术详设转成分批
 
 
 
+最终文档复核按 [HOW 输入与消费顺序](../superflow/references/document-readiness.md#final-document-review-inputs)。
+本阶段早期评审不代替完整 HOW 后的当前三视角复核。
+
 ## Canonical body repair
 
-发生冲突时，按 Behavior Decision Matrix 的 Canonical owner 返回原阶段：
-spec/API 行为回 contracts，源码 HOW/技术详设回 design，执行导航回 handoff。
-原 owner 对照来源和实际源码修改 canonical 正文，逐处更新消费者引用；其他当前
-文档中的旧决策须删除或明确隔离为历史，不能靠“高优先级覆盖”保留矛盾正文。
-先复查旧值/旧算法/旧用例是否仍作为现行要求出现，再刷新 handoff、文档评审和
-Coding Ready。只重绑 hash、手改评审凭证或宣称以某文档为准都不算修复。
-
-所有 SDD 准入与续跑统一要求 `workflowPolicy: observed-delivery.v1`，既有 coverage
-的每个执行用例必须冻结 `executionEvidence: runner-captured.v1` 与 `executionContext`。
-缺项由文档 owner 补齐并重新评审，当前准入保持 BLOCKED；每份 PASS receipt 都须
-实际 capture。旧文件仅保留为历史或 PARTIAL，不授予旧规范通过或续跑豁免。
-仅实施源码变化仍按 build 续跑检查，复核当前合同与证据，不自行改写业务方案。
-
+执行[正文纠偏与当前准入](../superflow/references/document-readiness.md#canonical-body-repair)：
+按正文职责修复冲突与消费引用，统一 observed-delivery.v1、runner-captured.v1 和 executionContext。
 
 # SDD Implement
 

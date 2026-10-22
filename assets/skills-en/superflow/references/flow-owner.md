@@ -15,6 +15,23 @@ verification levels, and reviewer-checklist owns independent review. Read each
 phase skill before invoking it. This contract owns continuity, not business
 design, test strategy, or a parallel state machine.
 
+
+## Existing document implementation
+
+“Implement the tasks from existing documents and close delivery” authorizes the current Flow
+Owner to investigate and repair those documents first. For a full task missing investigation,
+HOW or current reviews, use `superflow-clarify` for discoverable facts, `superflow-contracts`
+for behavior/API/tests prose, `superflow-design` for entry-level HOW, then `superflow-handoff`
+for current three-lens independent review, repairs and Coding Ready before `superflow-build`.
+Read each actual phase in full through the entry. Do not ask the user to generate a first draft
+or approve already-authorized document completion. “Original owner” means canonical prose
+responsibility; the current Owner can take over without finding the original author/session.
+Investigate code-resolvable facts; ask only for new business choices, scope changes or unavailable
+permissions not settled by the contract. Document-only requests stop at document delivery.
+Preserve declared execution modes, context_compression and manual boundaries. In managed work,
+Host coordinates contract repair and handoff, Executor writes business code, and Runner decides
+deterministic facts. Use existing controlled refreezing without weakening contract protection.
+
 ## Start and Recovery
 
 1. Read project rules, current workspace, baseline, and untracked files; separate

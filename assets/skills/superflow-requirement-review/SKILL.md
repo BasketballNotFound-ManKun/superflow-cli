@@ -3,6 +3,9 @@ name: superflow-requirement-review
 description: Superflow 内部能力：基于源码检查需求与设计的遗漏、冲突、可测性和过度设计并推动整改。由 $superflow 选择，用户无需手动分流。
 ---
 
+最终文档复核按 [HOW 输入与消费顺序](../superflow/references/document-readiness.md#final-document-review-inputs)。
+本阶段早期评审不代替完整 HOW 后的当前三视角复核。
+
 # Superflow Requirement Review
 
 必须读取并执行[需求×真实入口评审](../superflow/references/document-review-coverage.md)。

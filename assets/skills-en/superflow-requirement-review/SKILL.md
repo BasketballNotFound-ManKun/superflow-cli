@@ -3,6 +3,9 @@ name: superflow-requirement-review
 description: Perform source-backed reverse review of clarified requirements and OpenSpec/SDD drafts to find closure gaps, factual conflicts, missing scenarios, over-design, under-design, API/UI/DB/test drift, and unverifiable contracts, then drive remediation and re-review. Use for requirement review, reverse review, challenge the design, find omissions, testability review, or pre-design/pre-implementation review.
 ---
 
+Apply [HOW input and consumption order](../superflow/references/document-readiness.md#final-document-review-inputs)
+for final document review. Early review does not replace current three-lens review after complete HOW.
+
 # Superflow Requirement Review
 
 Read and apply [requirement × real-entry review](../superflow/references/document-review-coverage.md).

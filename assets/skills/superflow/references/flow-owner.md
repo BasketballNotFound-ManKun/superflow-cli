@@ -11,6 +11,20 @@ Owner 可以亲自编码、测试和管理自己启动的资源；按风险协�
 state 脚本推进 SDD，test-guide 定义验证分层，reviewer-checklist 定义独立评审。
 调用阶段技能前读取其说明。本文只定义持续责任，不重写业务设计、测试策略或状态机。
 
+## Existing document implementation
+
+“根据现有文档实现任务并闭环交付”已经授权当前 Flow Owner 先核查并修正文档。
+已有 full 任务缺调查、HOW 或当前评审时，先按 `superflow-clarify` 调查可查事实，
+由 `superflow-contracts` 修正行为/API/tests 正文，`superflow-design` 补齐逐入口 HOW，
+`superflow-handoff` 组织当前三视角独评、整改及 Coding Ready，再进入 `superflow-build`。
+沿入口完整读取每个实际阶段；不要求用户先生成文档或确认是否补齐已授权文档。
+“原 owner”指 canonical 正文职责，当前 Owner 可以接手，无需寻找旧作者或旧会话。
+源码可解问题继续调查；只对原合同未决定的新业务取舍、范围变化或不可得权限请求输入。
+只文档请求完成文档交付即停止。保留已声明执行模式、context_compression 与手动边界。
+托管仍由 Host 组织合同纠偏及交接，Executor 写业务代码，Runner 裁决确定事实；
+沿既有受控重新冻结路径承接，不能让 Executor 绕过冻结合同保护。
+
+
 ## 开工与恢复
 
 1. 读取项目规则、当前工作区、基线及未跟踪文件；区分本任务与他人改动。

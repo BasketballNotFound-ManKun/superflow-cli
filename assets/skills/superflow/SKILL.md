@@ -57,6 +57,9 @@ description: Superflow 用户总入口：日常任务由当前 Agent 持续负�
 显式手动阶段或既有不收敛边界停止依赖工作；保留恢复点，退出会话不承诺后台继续。
 交付报告目标/实际实现、验证范围数量、未决项、外部协同与复评证据；控制操作单列。
 
+已有文档的实施请求先执行 [当前 Owner 文档承接](references/flow-owner.md#existing-document-implementation)，
+补齐当前合同、独评与 Coding Ready 后继续 build。
+
 ## Document Delivery Exit
 
 OpenSpec applyRequires 仅完成基础产物。完整文档请求在同一授权内接续

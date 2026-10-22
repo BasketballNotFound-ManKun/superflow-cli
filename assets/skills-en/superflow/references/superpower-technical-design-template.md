@@ -93,11 +93,15 @@ does not prescribe short transactions, whole-operation transactions or a propaga
 Bind every failure risk to executable cases. Zero writes covers all affected state, not just row
 counts or one revision value.
 
+Freeze current and target behavior per entry. Do not defer key input sources, batch bypasses,
+transaction/exception or failure effects to coding. Use the four risk structures above only
+where applicable; omit unrelated sections with one scoped rationale rather than repeated N/A tables.
+
 ## Source-Level HOW
 
-| Requirement/Scenario | Code anchor | Current behavior | Target HOW | Files/methods | Risk |
-|---|---|---|---|---|---|
-| <R1/S1> | `<file>:<line>` | <observed fact> | <implementation approach> | <files> | <risk> |
+| Entry / Decision / Case | Files/methods and branch | Current behavior and source | Target HOW and input source | Boundaries / risk references |
+|---|---|---|---|---|
+| <E/D/C-ID> | <actual caller→method/Mapper; batch bypass> | <observed behavior, source anchor> | <exact change and request/DB/cache origin> | <transaction, exception and failure-order sections> |
 
 ## Minimal Design Review
 

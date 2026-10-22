@@ -73,6 +73,9 @@ repair limits. Preserve recovery; exited sessions cannot promise background work
 Delivery reconciles goals, implementation, evidence scope/counts, open items,
 external coordination and rereview. Count control actions separately.
 
+For implementation from existing documents, follow [current Owner document continuation](references/flow-owner.md#existing-document-implementation)
+through contract repair, independent review and Coding Ready before build.
+
 ## Document Delivery Exit
 
 OpenSpec applyRequires only completes base artifacts. Full document requests

@@ -5,7 +5,7 @@
 所有 SDD 执行用例必须捕获实际构建/用例进程，在既有 document-review coverage 用例冻结
 `executionEvidence: "runner-captured.v1"` 与
 `executionContext: {"argv":["node","case.js"],"cwd":".","environmentKeys":[]}`。
-argv 是参数数组，不经 shell；cwd 相对 review 文件目录，environmentKeys 仅声明受支持
+argv 是参数数组，不经 shell；cwd 相对 change 目录，environmentKeys 仅声明受支持
 的非秘密环境键。每份 PASS receipt 必须实际 capture；旧凭证仅保留为历史或 PARTIAL，
 缺当前要求时阻断补齐。完整字段以
 [执行证据合同](document-review-coverage.md)和既有 receipt 校验为准。
@@ -17,7 +17,7 @@ argv 是参数数组，不经 shell；cwd 相对 review 文件目录，environme
 ```
 
 ```json
-{"kind":"case","review":"review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
+{"kind":"case","changeDir":".","review":"review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
 ```
 
 使用当前宿主已安装脚本运行；下列 installed-script-path 替换为安装位置：
@@ -27,9 +27,17 @@ python3 <installed-script-path>/superflow-test-report-lint.py --record-execution
 python3 <installed-script-path>/superflow-test-report-lint.py --record-execution case-plan.json
 ```
 
-plan 的 output/review/build/cwd 相对 plan 所在目录；build 的 sources/artifact 相对
+case plan 必填 changeDir，相对 plan 所在目录；output/review/build 也相对 plan，
+build plan 的 cwd 相对 plan；仅 case executionContext.cwd 相对 changeDir。不得猜 review 目录。build 的 sources/artifact 相对
 build cwd。build.sources 覆盖实际相关源码、构建和验收脚本，不仅列无关小文件。
 build/case 输出必须在同一证据目录；case 命令只从冻结 executionContext 读取。
+
+嵌套示例：plan 在项目根，change 在 openspec/changes/sample，冻结 executionContext.cwd 为
+../../..（项目根），其 argv 仍为项目根的 case.js；review 不决定工作目录：
+
+```json
+{"kind":"case","changeDir":"openspec/changes/sample","review":"openspec/changes/sample/.sdd/reviews/document-review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
+```
 
 验收命令 stdout 输出且仅输出一个匹配该 caseId 的 JSON 测量事件；其他诊断输出可保留：
 
@@ -47,6 +55,13 @@ Runner 通过规范脱敏器保留 stdout/stderr、退出码、执行前后源�
 本地可写文件只支持可审计一致性，不保证抵抗恶意篡改；Host 仍独立判断真实入口、
 覆盖充分性和业务正确性。捕获通过不能代替测试合同，也不把 helper 单测升级成生产验收。
 
+
+一次类级执行覆盖多个 Case 时，逐项记录实际方法/断言映射，执行次数与独立覆盖数分开；
+反复跑整类不能冒充新增 case 覆盖。非零退出不能被旧 XML 或旧结果变绿，核对本轮产物新鲜度。
+继承证据须说明当前 diff 与入口/依赖的适用关系，只重跑受影响层级。actual 必须实际观测，
+恒 true、expected 复制 actual、COUNT 不变都不能证明未观测字段或旧轮次完整不变。
+敏感原始证据可留仓外；交付给授权接手方可访问的位置与 hash，不强制 Git 提交大包，
+也不能只给另一人无法读取的个人路径。
 
 ## Production Entry State Assertions
 

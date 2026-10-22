@@ -2,6 +2,11 @@
 
 ## Thin Prompt Contract
 
+Generate only applicable sections and canonical Decision/Entry/Case navigation. The long
+template below is a section reference, not an instruction to copy unrelated checklists, algorithms,
+SQL hashes or full handoff projections into every batch. Preserve execution modes and
+context_compression; locate originals via the index and read risk-relevant bodies in full.
+
 Every execution mode uses this thin Prompt structure. Long scripts below are applicability
 references, not text to copy wholesale. The main Prompt is the sole contract navigator; batch
 Prompts link to it and contain only their incremental scope:

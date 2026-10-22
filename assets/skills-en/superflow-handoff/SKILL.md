@@ -8,27 +8,13 @@ to this phase owner and consumer references; resolve conflicts before handoff ra
 leaving implementers to guess.
 
 
+Apply [HOW input and consumption order](../superflow/references/document-readiness.md#final-document-review-inputs)
+for final document review. Early review does not replace current three-lens review after complete HOW.
+
 ## Canonical body repair
 
-Resolve conflicts through the Behavior Decision Matrix's Canonical owner: spec/API
-behavior returns to contracts, source HOW/technical design to design, and execution
-navigation to handoff. The original owner repairs canonical prose against sources
-and actual code, then updates every consumer reference. Remove superseded current
-decisions or isolate them explicitly as history; document priority cannot leave
-contradictory current instructions in place. Search for old values, algorithms and
-cases still presented as current requirements before refreshing handoff, document
-review and Coding Ready. Rebinding hashes, editing review receipts manually, or
-claiming one document wins does not repair the contract.
-
-All SDD admission and continuation require `workflowPolicy: observed-delivery.v1`;
-every executable case in existing coverage freezes
-`executionEvidence: runner-captured.v1` and `executionContext`. Missing fields keep
-admission BLOCKED until the document owner repairs and rereviews the contract. Every
-PASS receipt requires actual capture. Retain old files only as history or PARTIAL,
-never as an earlier-policy pass or continuation exemption. Source-only edits still
-use build continuation checks against current contracts and evidence, without
-redesigning business decisions.
-
+Follow [canonical repair and current admission](../superflow/references/document-readiness.md#canonical-body-repair)
+for prose ownership, consumer references, observed-delivery.v1, runner-captured.v1 and executionContext.
 
 # SuperFlow Implement
 

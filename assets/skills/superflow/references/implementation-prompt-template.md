@@ -2,6 +2,10 @@
 
 ## Thin Prompt Contract
 
+仅生成当前适用章节和 Decision/Entry/Case 的 canonical 导航；后文长模板是栏目参考，
+不把无关检查表、算法、SQL hash 或完整 handoff 投影复制进每批。保留既有执行模式与
+context_compression，按索引定位原件，风险所需正文仍须完整读取。
+
 所有执行模式使用同一薄 Prompt 结构；后文长剧本仅供查阅适用要求，不整段复制到实际
 Prompt。主 Prompt 是唯一合同导航，批次 Prompt 引用它并只列本批增量：
 
