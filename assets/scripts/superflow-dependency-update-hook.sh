@@ -1,6 +1,6 @@
 #!/bin/bash
 # Session-scoped Superflow dependency update checker.
-# Default mode checks and reports updates. Set SUPERFLOW_AUTO_UPDATE=apply to install.
+# Default mode installs updates. Set SUPERFLOW_AUTO_UPDATE=check to report only.
 
 set -u
 
@@ -9,7 +9,7 @@ if [ ! -t 0 ]; then
   INPUT=$(cat 2>/dev/null || true)
 fi
 
-MODE="${SUPERFLOW_AUTO_UPDATE:-check}"
+MODE="${SUPERFLOW_AUTO_UPDATE:-apply}"
 case "$MODE" in
   0|off|false|none) exit 0 ;;
   1|true|yes|apply) MODE="apply" ;;
