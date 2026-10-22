@@ -8,6 +8,15 @@ import {
 } from '../../src/app/commands/doctor.js';
 import { hasCodexSuperpowerSkill } from '../../src/domains/deps.js';
 
+// Workspace assertions must not start installed host CLIs or inspect remote plugins.
+const unavailableRuntime = {
+  runCommand: async () => ({
+    code: 1,
+    stdout: '',
+    stderr: 'CLI unavailable in workspace fixture',
+  }),
+};
+
 describe('commands/doctor', () => {
   it('uses specs from the selected nested workspace', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-doctor-nested-'));
@@ -16,7 +25,10 @@ describe('commands/doctor', () => {
     fs.mkdirSync(path.join(workspace, 'specs'), { recursive: true });
     fs.writeFileSync(path.join(workspace, 'config.yaml'), 'schema: spec-driven\n');
     try {
-      const result = await collectDoctor({ agent: 'codex', scope: 'project', projectPath: root });
+      const result = await collectDoctor(
+        { agent: 'codex', scope: 'project', projectPath: root },
+        unavailableRuntime,
+      );
       expect(result.checks).toContainEqual(expect.objectContaining({
         check: 'openspec project', status: 'pass',
       }));
@@ -32,7 +44,10 @@ describe('commands/doctor', () => {
     ] }] } }));
     vi.stubEnv('HOME', root);
     try {
-      const result = await collectDoctor({ agent: 'codex', scope: 'project', projectPath: root });
+      const result = await collectDoctor(
+        { agent: 'codex', scope: 'project', projectPath: root },
+        unavailableRuntime,
+      );
       expect(result.checks).toContainEqual(expect.objectContaining({
         check: 'hooks:codex:legacy-global',
         status: 'fail',
@@ -75,7 +90,7 @@ describe('commands/doctor', () => {
       agent: 'codex',
       scope: 'auto',
       projectPath: root,
-    });
+    }, unavailableRuntime);
 
     expect(result.scope).toBe('auto');
     expect(result.scopesChecked).toEqual(['project', 'global']);
@@ -119,7 +134,7 @@ describe('commands/doctor', () => {
       scope: 'project',
       projectPath: root,
       language: 'en',
-    });
+    }, unavailableRuntime);
 
     expect(result.failed).toBe(true);
     expect(result.checks).toContainEqual({
