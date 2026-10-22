@@ -80,8 +80,8 @@ raw evidence and have implementers rerun invalidated or contract-required paths.
 
 ## Implementation Gate
 
-- Every prompt links the handoff pack, state-file hash binding and technical design; no prose hash backfill is required. Task checkbox progress and test-report updates do not change the contract hash.
-- Every prompt includes TDD RED/GREEN plan.
+- The main prompt links handoff/state identity and technical HOW; batches inherit it and declare Task/Entry/Case navigation. No prose hash backfill is required; task progress and runtime reports do not change contract identity.
+- Main navigation links the canonical TDD RED/GREEN plan in tests; batches inherit it without duplicate commands.
 - Every L3/L4 test has executable command and evidence target.
 - Workers update only task-local docs.
 - Root aggregate docs are closed out by the leader.

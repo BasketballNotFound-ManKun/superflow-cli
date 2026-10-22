@@ -179,7 +179,7 @@
 ### 检查 1：Prompt → Design 映射
 
 - implementation prompt 中每个任务必须能映射到 design.md / api.md / database-contract.md / tests.md 的具体章节
-- 映射方式：在 prompt 的"精确实现步骤"中标注 `(参考 design.md #{章节})`
+- 映射方式：主/批Execution navigation引用同一Task/Entry/Case，HOW位置链接design/technical_design的canonical章节；批次继承主Prompt，不复制精确实现步骤。
 - prompt 必须继承 `docs/superpowers/specs/*-technical-design.md`，并只把它作为
   源码级 HOW 和执行策略：团队、拆分、TDD、独立测试、Review、验证闭环。
   不得把 Superpowers 技术详设扩写成新的需求/API/DB/测试事实源。

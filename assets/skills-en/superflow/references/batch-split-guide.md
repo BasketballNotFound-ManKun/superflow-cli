@@ -24,3 +24,12 @@ Split implementation by independently verifiable business closure.
 - Dependencies on previous batches.
 - Tests and real-entry evidence.
 - Documentation update responsibility.
+
+## Main and batch navigation
+
+Use the [main](implementation-prompt-template.md) and [batch](batch-prompt-template.md)
+shapes. Main navigation references shared canonical contracts/boundaries; batches
+link to it and declare incremental Task/Entry/Case IDs, files and predecessors.
+Cross-repository interface/message details remain in their API contracts, not copied
+into every prompt. Execute the applicable frozen tests; mandatory real-entry/DB
+checks remain binding, while pure logic does not acquire login/startup/DB duties.

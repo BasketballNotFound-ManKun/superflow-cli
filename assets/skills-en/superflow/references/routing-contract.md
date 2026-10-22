@@ -524,3 +524,24 @@ Use the reference files in this skill directory as templates:
 ## Handoff projection
 
 New changes default to `context_compression: references`: retain canonical paths, roles and fingerprints, then read the original documents for the current task. Existing explicit `off`/`beta` values keep their behavior; changing projection does not change contract identity.
+
+## Shared execution navigation and applicable verification
+
+The [main prompt](implementation-prompt-template.md) links the complete canonical
+contract set, including design/HOW, tests, review checklist and quality gates.
+[Batches](batch-prompt-template.md) inherit it through one main link and carry
+Task/Entry/Case IDs, files and dependencies, not repeated curl/startup/login/DB scripts.
+Actual commands and assertions remain in tests.md. Apply [the test guide](test-guide.md)
+to required real runtime/entry/database/log evidence and current build/config/owner
+identity. Restart when changed code requires loading; reuse a verified current
+instance. Authentication follows the actual project, never imposed captcha paths
+or field names. Simulation/alternative entries do not establish original paths.
+
+Missing canonical navigation returns to handoff; missing executable tests/fixtures/
+auth/assertions return to contracts. Failed or missing mandatory checks remain
+PARTIAL/Blocked. delivery-check does not replace complete acceptance and Git needs
+explicit authorization. Task-local Worker/aggregate-owner boundaries apply when
+team/subagent roles were selected; ordinary Owner owns its implementation/test
+summary while independent Reviewers remain read-only. Follow the
+[original/re-review chain](reviewer-checklist.md#finding-closure), not rewritten
+DONE/None or old source hashes.

@@ -331,7 +331,7 @@ SDD 的核心价值是可追溯事实链、接口验证、hook 质量监控、�
   `technical_design`，并声明 OpenSpec/SDD 文档仍是
   WHAT/API/DB/tests 的事实源。handoff hash 的绑定关系由 `.sdd/state.yaml`
   的 `handoff_hash` 字段单点维护，不要求把原始 hash 抄进正文文档。
-- 每个实现 prompt 必须引用 `.sdd/handoff/sdd-context.md`；继承校验以
+- 主实现Prompt引用当前handoff索引，批次通过主Prompt继承；校验以
   `.sdd/state.yaml` 的 `handoff_hash` 与
   `.sdd/handoff/sdd-context.sha256` 一致为准。
 - `test-report.md` 必须记录本批次的 status 阶段和执行过的
@@ -730,7 +730,7 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`
 
 #### 5. Agent 执行前自检门禁
 
-每份实现 prompt 必须要求研发 agent 在编码前填写自检表，并回填到
+主导航继承执行前自检，批次只列增量ID；实际自检由研发Agent回填到
 `test-report.md` 或 P-local 执行记录：
 
 `真实入口已定位 | 字段语义合同已核对 | 写入闭环已核对 |
@@ -1127,39 +1127,36 @@ starter、connector 或任何被当前项目引用的外部项目时，必须把
 缺少任一层时，不得把实现 prompt 标记为可执行完成态；已执行的 Worker
 报告只能标记为 `Partially verified` 或 `Blocked`。
 
-#### 通用规则（所有涉及接口实现的 prompt）
+#### 实施导航与真实验证合同
 
-- **生成 prompt 时必须从 tests.md 提取 L3 接口用例**：superflow-handoff 生成 `prompt/pXX-xxx.md` 时，必须读取 `tests.md` 中所有标注 `[自动化]` 的 L3 接口测试用例，将完整的 curl 命令（含 Method、URL、Headers、Body）、前置条件、断言标准嵌入 prompt 的"接口验证"章节。不得只写抽象的"接口验证必须覆盖 XXX"而不给出具体命令。
-- **prompt 必须包含应用启动和进程验证步骤**：每个实现 prompt 必须明确要求：编译 → 停止旧进程 → 重新编译 → 启动应用 → 进程验证（PID、启动时间、端口绑定、日志时间戳）→ 健康检查。不得跳过启动直接测试，不得复用旧进程。
-- **prompt 必须包含 Token 获取规范**：每个实现 prompt 必须包含完整的登录流程（/captcha/image + /login，Content-Type 为 application/x-www-form-urlencoded，userName 字段），不得省略或假设固定 token。
-- **prompt 必须包含数据库验证步骤**：每个实现 prompt 必须要求执行 `SHOW CREATE TABLE`、`SELECT` 等数据库查询来验证数据状态，不能只靠接口返回值判断。
-- **prompt 必须包含日志检查步骤**：每个实现 prompt 必须要求 `grep ERROR` 检查应用日志，不得只验证接口返回不检查日志。
-- **prompt 必须包含验收脚本步骤**：每个实现 prompt 必须要求在完成前执行 `~/.codex/hooks/superflow-verify-integration.sh <test-report.md>`，脚本失败时不得提交、不得交付、不得写"后续补测"。
-- **prompt 必须包含交付完整性检查步骤**：每个实现 prompt 必须要求在提交前执行 `~/.codex/hooks/superflow-delivery-check.sh --check-staged <repo-root>`，脚本失败时不得提交；必须先更新当前 P 任务的 `tasks.md`、`test-report.md`、`sdd-quality-gate.md`。
-- **并行 Worker 禁止编辑根级汇总文档**：实现 prompt 必须要求普通研发 agent 只更新自己的 `embedded-changes/pXX-*` 目录；不得修改根级 `tasks.md`、`test-report.md`、`traceability-matrix.md`、`sdd-quality-gate.md`、`tests.md`。这些汇总文档由 Leader 在所有 P 任务合并后单独执行，必要时通过 `touch .sdd-aggregate-closeout` 打开汇总收口门禁。
-- **任务完成定义必须包含集成测试证据**：prompt 中的"任务完成"条件必须明确列出：代码已修改、编译通过、**应用已启动**、**接口已真实调用**、**数据库已验证**、**日志无 ERROR**、test-report 已回填。缺少任一证据不得标记完成。
-- **真实入口优先于测试端点**：涉及第三方、外部集成、支付、设备、回调、客户端或跨系统链路时，必须至少保留一条真实外部入口证据。测试 Controller、mock endpoint、绕过鉴权端点只能证明局部代码路径，不能替代真实入口验收。
-- **区分 mock 通过与真实链路通过**：test-report 必须把 `Mock 验证`、`测试端点验证`、`真实入口验证` 分开记录；只有真实入口的请求参数、响应、日志 trace、DB 证据都闭环时，才能写 `Real integration passed`。
+主Prompt按[薄导航模板](implementation-prompt-template.md)链接当前canonical合同；批次按
+[批次模板](batch-prompt-template.md)仅给主链接、Task/Entry/Case、文件/依赖。命令与断言在
+唯一tests.md维护，不嵌入每批另一套curl、启动、登录或数据库脚本。
+
+- 冻结适用的启动/真实接口/数据库/日志信号仍须实际执行；按[test-guide](test-guide.md)
+  核当前产物、配置、实例owner与证据，需加载新代码时重启；已验证当前实例可复用。
+- 认证沿项目实际合同取得真实凭据/会话，不伪造固定token；不通用强加captcha、路径或字段名。
+- 有必要数据库行为时，真实结构/数据断言不能由HTTP或mock替代；无必要DB时不造通用DB义务。
+- 既有superflow-verify-integration、完整报告lint和适用交付检查仍必须成立；缺必测证据是
+  PARTIAL/Blocked。delivery-check不能替代完整验收；Git提交前须有单独明确授权。
+- 只有显式team/subagent分工时普通Worker保持任务局部写权限，集成owner更新汇总；
+  普通owner模式由当前Agent完成实施、测试与汇总，独立Reviewer只读，不强造团队角色。
+- 真实入口及浏览器/设备范围分别记录。测试端点、模拟或替代入口不能冒充原业务链路。
 
 #### 阻塞规则
 
-1. **如果 prompt 中缺少 L3 接口用例的完整 curl 命令** → 阻塞，补充后才能进入开发。
-2. **如果 prompt 中缺少应用启动和进程验证步骤** → 阻塞，补充后才能进入开发。
-3. **如果 prompt 中缺少 Token 获取规范** → 阻塞，补充后才能进入开发。
-4. **如果 prompt 中缺少 `superflow-verify-integration.sh` 执行步骤** → 阻塞，补充后才能进入开发。
-5. **如果 prompt 中缺少 `superflow-delivery-check.sh --check-staged` 执行步骤** → 阻塞，补充后才能进入开发。
-6. **如果 Worker 报告"完成"但没有提供启动证据**（PID、启动时间、健康检查 UP）→ 标记未完成，必须补充。
-7. **如果 Worker 报告"完成"但没有提供接口调用证据**（curl 命令、响应摘要）→ 标记未完成，必须补充。
-8. **如果 Worker 报告"完成"但没有提供数据库验证证据**（SHOW CREATE / SELECT 结果）→ 标记未完成，必须补充。
-9. **如果 Worker 没有执行或没有通过 `superflow-verify-integration.sh`** → 标记未完成，必须补充真实证据后重跑。
-10. **如果 Worker 没有执行或没有通过 `superflow-delivery-check.sh --check-staged`** → 标记未完成，必须补齐当前 P 任务交付文档后重跑。
-11. **如果跨系统链路只提供 mock/test controller 证据**，但缺少真实外部入口 payload、响应和 trace 日志 → 标记未完成，必须补充真实入口证据或写明外部阻塞。
+1. 主/批缺可解析canonical链接或Task/Entry/Case关系，返回handoff修导航。
+2. tests.md缺适用用例的实际命令、前置/认证、断言或证据位置，返回contracts补齐。
+3. 当前模式的冻结必测未执行/失败、旧进程未匹配当前构建/配置、真实入口缺证据，保持
+   PARTIAL/Blocked；修复后重跑受影响范围，不伪称完整交付。
+4. 原独评未闭环/实际复评缺失，按[Reviewer](reviewer-checklist.md#finding-closure)保留链与未决项，
+   不把重写DONE/None或旧hash当通过。
 
 ### 文档完整性强制门禁（不可裁剪）
 
 - **Do not skip any file in the embedded change document checklist regardless of perceived complexity.** Every embedded change must include `.openspec.yaml`, `api.md`, `spec.md`, `design.md`, `tasks.md`, `tests.md`, `review-checklist.md`, and `sdd-quality-gate.md`. No exceptions.
 - **Do not mark any task or sub-change complete until all files in the checklist are generated and cross-referenced.** "编译成功" or "代码已修改" does not equal "文档完成".
-- **Do not generate implementation prompts that only reference `api.md` and `spec.md`.** `design.md`, `tests.md`, `review-checklist.md`, and `sdd-quality-gate.md` must be in the required reading list of every implementation prompt.
+- **The main implementation prompt references the complete canonical set**, including design, tests, review checklist and quality gates. Batch prompts inherit that set through the main link; api/spec alone are insufficient.
 - **Top-level documents are generated/indexed before parallel development and closed out after merge.** When creating embedded change docs, update root `tasks.md`, `traceability-matrix.md`, `sdd-quality-gate.md`, `tests.md`, and `test-report.md` only as initial index/placeholders. During parallel Worker implementation, do not edit these root aggregate documents; each Worker updates only its own `embedded-changes/pXX-*` files. After all related P worktrees merge, a Leader/closeout task updates root aggregate status in one separate commit.
 
 ## Shared References
