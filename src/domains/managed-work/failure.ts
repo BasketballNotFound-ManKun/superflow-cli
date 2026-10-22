@@ -85,7 +85,7 @@ function remediation(
 }
 
 export function isPermanentProviderFailure(message: string): boolean {
-  return /(?:\binvalid[ _-]+api[ _-]+key\b|\bauthentication[ _-]+failed\b|\binsufficient[ _-]+permissions?\b|usage[ _-]+limit[ _-]+(?:has[ _-]+been[ _-]+)?(?:reached|exceeded|exhausted)|(?:reached|exceeded)[^\n]{0,40}usage[ _-]+limit|token[ _-]+plan|credit[ _-]+balance[^\n]{0,40}(?:exhausted|depleted|insufficient)|insufficient[ _-]+credit[ _-]+balance|用量上限|套餐|quota.?exhaust|insufficient.?quota|error.?code\s*2056|\b2056\b|billing|payment required|auth[_ ]?unavailable\s*:|账号池没有可用账号)/i.test(
+  return /(?:\bpermission[ _-]+denied\b|\binvalid[ _-]+(?:access[ _-]+)?token\b|\bunauthori[sz]ed\b|\b(?:401|403)[ :]+forbidden\b|\binvalid[ _-]+api[ _-]+key\b|\bauthentication[ _-]+failed\b|\binsufficient[ _-]+permissions?\b|usage[ _-]+limit[ _-]+(?:has[ _-]+been[ _-]+)?(?:reached|exceeded|exhausted)|(?:reached|exceeded)[^\n]{0,40}usage[ _-]+limit|token[ _-]+plan|credit[ _-]+balance[^\n]{0,40}(?:exhausted|depleted|insufficient)|insufficient[ _-]+credit[ _-]+balance|用量上限|套餐|quota.?exhaust|insufficient.?quota|error.?code\s*2056|\b2056\b|billing|payment required|auth[_ ]?unavailable\s*:|账号池没有可用账号)/i.test(
     message,
   );
 }
@@ -95,9 +95,7 @@ export function isCreditableTransientProviderFailure(message: string): boolean {
   if (isPermanentProviderFailure(message)) {
     return false;
   }
-  const interruptedStream = /\bstream disconnected before completion\b/i.test(message)
-    && !/(\b(?:401|403|unauthorized|forbidden)\b|permission denied|invalid (?:access )?token)/i.test(message);
-  return interruptedStream || /(\b429\b|\b529\b|rate.?limit|concurrent[ _-]+requests?[ _-]+limit|overloaded|访问量过大|暂时.*限流|temporar(?:y|ily).*(?:busy|unavailable)|connection (?:refused|reset|closed)|unable to connect|socket hang up|\bECONN[A-Z]*\b|连接(?:被拒绝|重置|关闭)|无法连接)/i.test(
+  return /\bstream disconnected before completion\b/i.test(message) || /(\b429\b|\b529\b|rate.?limit|concurrent[ _-]+requests?[ _-]+limit|overloaded|访问量过大|暂时.*限流|temporar(?:y|ily).*(?:busy|unavailable)|connection (?:refused|reset|closed)|unable to connect|socket hang up|\bECONN[A-Z]*\b|连接(?:被拒绝|重置|关闭)|无法连接)/i.test(
     message,
   );
 }

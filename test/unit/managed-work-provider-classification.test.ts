@@ -11,6 +11,18 @@ describe("isPermanentProviderFailure", () => {
     expect(isPermanentProviderFailure(message)).toBe(true);
     expect(isCreditableTransientProviderFailure(message)).toBe(false);
   });
+  it.each([
+    "permission denied; connection reset",
+    "invalid access token; socket hang up",
+    "401 unauthorized; network error",
+    "HTTP 403 Forbidden; network error",
+    "PERMISSION_DENIED; CONNECTION RESET",
+    "INVALID_ACCESS_TOKEN; SOCKET HANG UP",
+  ])("rejects explicit authorization across every transport branch: %s", detail => {
+    const message = `stream disconnected before completion: ${detail}`;
+    expect(isPermanentProviderFailure(message)).toBe(true);
+    expect(isCreditableTransientProviderFailure(message)).toBe(false);
+  });
   it.each(["HTTP 403 invalid access token", "permission denied", "quota exhausted", "billing required", "auth_unavailable: no accounts"])("does not credit stream text hiding permanent or permission failure: %s", detail => {
     expect(isCreditableTransientProviderFailure(`stream disconnected before completion: ${detail}`)).toBe(false);
   });

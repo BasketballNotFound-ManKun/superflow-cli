@@ -73,9 +73,7 @@ describe("managed work runner", () => {
   );
 
   it.each([
-    "HTTP 403: invalid access token",
     "HTTP 403: concurrent request limit reached",
-    "HTTP 403 Forbidden",
     "HTTP 403: configured usage limit is 100",
     "/tmp/403/fixture limit",
     "request403 forbidden limit",
@@ -90,12 +88,12 @@ describe("managed work runner", () => {
     const fixture = createFixture("engineering");
     const state = await runManagedTask(fixture.root, fixture.contract.taskId,
       new FakeInvoker([new Error(`stream disconnected before completion: ${detail}`)]), fixture.env);
-    expect(state.currentStep).toBe("waiting_for_human");
+    expect(state.currentStep).toBe("provider_change_required");
     expect(state.executorInvocationCredits ?? 0).toBe(0);
     expect(state.connectivityRetryCount ?? 0).toBe(0);
   });
 
-  it.each(["invalid API key", "authentication failed", "insufficient permissions", "INVALID_API_KEY"])("stops explicit authorization failure before stream retry: %s", async detail => {
+  it.each(["invalid API key", "authentication failed", "insufficient permissions", "INVALID_API_KEY", "HTTP 403: invalid access token", "HTTP 403 Forbidden", "permission denied; connection reset", "invalid access token; socket hang up", "401 unauthorized; network error", "PERMISSION_DENIED; CONNECTION RESET"])("stops explicit authorization failure before stream retry: %s", async detail => {
     const fixture = createFixture("engineering");
     const state = await runManagedTask(fixture.root, fixture.contract.taskId,
       new FakeInvoker([new Error(`stream disconnected before completion: ${detail}; network 529 overloaded`)]), fixture.env);
