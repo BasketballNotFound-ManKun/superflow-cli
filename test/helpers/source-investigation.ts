@@ -123,6 +123,45 @@ export function prepareSourceInvestigation(
       },
     ];
   });
+  if (
+    (full || /^workflow: full$/m.test(state)) &&
+    fs.existsSync(path.join(change, "prompt"))
+  ) {
+    const review = JSON.parse(
+      fs.readFileSync(path.join(change, REVIEW), "utf8"),
+    );
+    const prompts = fs
+      .readdirSync(path.join(change, "prompt"))
+      .filter((name) => name.endsWith(".md") && name !== "implementation.md");
+    const header =
+      "| Prompt | Task IDs | Entry IDs | Case IDs |\n|---|---|---|---|\n";
+    const taskIds = [
+      ...new Set(review.coverage.decisions.flatMap((d: any) => d.taskIds)),
+    ].join(", ");
+    const entryIds = review.coverage.entries.map((e: any) => e.id).join(", ");
+    const caseIds = review.coverage.cases.map((c: any) => c.id).join(", ");
+    const row = (link: string) =>
+      `| [Prompt](${link}) | ${taskIds} | ${entryIds} | ${caseIds} |\n`;
+    const main = path.join(change, "prompt/implementation.md");
+    const mainExists = fs.existsSync(main);
+    fs.appendFileSync(main, `\n${header}${prompts.map(row).join("")}`);
+    for (const prompt of prompts)
+      fs.appendFileSync(
+        path.join(change, "prompt", prompt),
+        `\n${header}${row("implementation.md")}`,
+      );
+    if (!mainExists)
+      for (const document of [
+        "tasks.md",
+        "traceability-matrix.md",
+        "sdd-quality-gate.md",
+        "test-report.md",
+      ])
+        fs.appendFileSync(
+          path.join(change, document),
+          "\n[Main](prompt/implementation.md)\n",
+        );
+  }
   const hash = handoffHash(change);
   mutateReview(change, (review) => {
     review.handoffHash = hash;

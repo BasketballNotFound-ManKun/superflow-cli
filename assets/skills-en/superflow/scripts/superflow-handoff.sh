@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  superflow-handoff.sh <change-dir> [--write|--hash-only|--manifest|--refresh]
+  superflow-handoff.sh <change-dir> [--write|--hash-only|--manifest|--check|--refresh]
 
 Generate a deterministic SDD handoff pack from OpenSpec/SDD documents.
 The pack is context for Superpowers execution strategy; OpenSpec/SDD docs
@@ -130,7 +130,7 @@ if [[ -z "$CHANGE_DIR" || "$CHANGE_DIR" == "-h" || "$CHANGE_DIR" == "--help" ]];
 fi
 
 [[ -d "$CHANGE_DIR" ]] || die "change dir not found: $CHANGE_DIR"
-[[ -z "$MODE" || "$MODE" == "--write" || "$MODE" == "--hash-only" || "$MODE" == "--manifest" || "$MODE" == "--refresh" ]] || die "unknown option: $MODE"
+[[ -z "$MODE" || "$MODE" == "--write" || "$MODE" == "--hash-only" || "$MODE" == "--manifest" || "$MODE" == "--check" || "$MODE" == "--refresh" ]] || die "unknown option: $MODE"
 
 CHANGE_DIR="$(cd "$CHANGE_DIR" && pwd -P)"
 OUT_DIR="$CHANGE_DIR/.sdd/handoff"
@@ -363,6 +363,44 @@ if [[ "$MODE" == "--write" || "$MODE" == "--refresh" ]]; then
   if [[ "$MODE" == "--refresh" ]]; then
     run_refresh_checks
   fi
+elif [[ "$MODE" == "--check" ]]; then
+  expected_json="$(mktemp)"
+  expected_md="$(mktemp)"
+  trap 'rm -f "$TMP_LIST" "$expected_json" "$expected_md"' EXIT
+  write_json > "$expected_json"
+  write_markdown > "$expected_md"
+  python3 - "$OUT_DIR" "$expected_json" "$expected_md" <<'PYCHECK'
+import json
+import pathlib
+import re
+import sys
+
+root, expected_json, expected_md = sys.argv[1:]
+root = pathlib.Path(root)
+try:
+    actual = json.loads((root / "sdd-context.json").read_text())
+    expected = json.loads(pathlib.Path(expected_json).read_text())
+    # Line counts are display metadata, not frozen contract identity.
+    for manifest in (actual, expected):
+        for source in manifest["sources"]:
+            source.pop("lines", None)
+    if actual != expected:
+        raise ValueError("manifest/mode/source role/projected/hash mismatch")
+    def normalize(text):
+        text = re.sub(r"(^### `test-report\.md`\n\n)```text\n.*?^```\n", r"\1", text, flags=re.M | re.S)
+        text = re.sub(r"^- generated_at:.*$", "", text, flags=re.M)
+        text = re.sub(r"(\| `[^`]+` \| `[^`]+` \| `[a-f0-9]{64}` \|) \d+ \|", r"\1 |", text)
+        text = re.sub(r"^\s*(?:handoff_hash|context_hash):\s*\S*\s*$", "", text, flags=re.M)
+        text = re.sub(r"^(\s*[-*]\s+)\[[xX ]\]", r"\1[ ]", text, flags=re.M)
+        return "\n".join(line for line in text.splitlines() if line.strip())
+    if normalize((root / "sdd-context.md").read_text()) != normalize(pathlib.Path(expected_md).read_text()):
+        raise ValueError("generated Markdown body identity mismatch")
+    if (root / "sdd-context.sha256").read_text().strip() != expected["contextHash"]:
+        raise ValueError("recorded context hash mismatch")
+except (OSError, ValueError, KeyError, TypeError) as error:
+    sys.stderr.write("superflow-handoff: current pack invalid; run --refresh / 当前交接包不一致，请刷新: " + str(error) + "\n")
+    sys.exit(1)
+PYCHECK
 elif [[ "$MODE" == "--manifest" ]]; then
   write_json
 else

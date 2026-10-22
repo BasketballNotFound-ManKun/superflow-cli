@@ -124,6 +124,76 @@ describe("declared HOW handoff membership", () => {
   });
 });
 
+describe("handoff generated identity", () => {
+  it.each(["skills", "skills-en"])(
+    "%s rejects stale mode and altered body",
+    async (language) => {
+      const change = await fs.promises.mkdtemp(
+        path.join(os.tmpdir(), "handoff-identity-"),
+      );
+      const script = path.join(
+        ROOT,
+        "assets",
+        language,
+        "superflow/scripts/superflow-handoff.sh",
+      );
+      try {
+        await write(path.join(change, "api.md"), "# API\nFrozen behavior.\n");
+      await write(path.join(change, "tasks.md"), "- [ ] Preserve route\n");
+      await write(path.join(change, "test-report.md"), "Not run\n");
+        await execFileAsync("bash", [script, change, "--write"]);
+        await expect(
+          execFileAsync("bash", [script, change, "--check"]),
+        ).resolves.toBeDefined();
+        const manifestFile = path.join(change, ".sdd/handoff/sdd-context.json");
+        const original = JSON.parse(fs.readFileSync(manifestFile, "utf8"));
+        for (const mutate of [
+          (manifest: any) => {
+            delete manifest.contextCompression;
+          },
+          (manifest: any) => {
+            manifest.sources[0].role = "supporting";
+          },
+          (manifest: any) => {
+            manifest.sources[0].projected = true;
+          },
+          (manifest: any) => {
+            manifest.sources[0].sha256 = "a".repeat(64);
+          },
+        ]) {
+          const altered = structuredClone(original);
+          mutate(altered);
+          fs.writeFileSync(manifestFile, JSON.stringify(altered));
+          await expect(
+            execFileAsync("bash", [script, change, "--check"]),
+          ).rejects.toThrow();
+        }
+        fs.writeFileSync(manifestFile, JSON.stringify(original));
+        await write(
+          path.join(change, ".sdd/config.yaml"),
+          "context_compression: beta\n",
+        );
+        await expect(
+          execFileAsync("bash", [script, change, "--check"]),
+        ).rejects.toThrow();
+        await execFileAsync("bash", [script, change, "--write"]);
+        await write(path.join(change, ".sdd/config.yaml"), "context_compression: off\n");
+      await execFileAsync("bash", [script, change, "--write"]);
+      await write(path.join(change, "tasks.md"), "- [x] Preserve route\n");
+      await write(path.join(change, "test-report.md"), "Execution completed\nDetails\n");
+      await expect(execFileAsync("bash", [script, change, "--check"])).resolves.toBeDefined();
+      const body = path.join(change, ".sdd/handoff/sdd-context.md");
+        fs.appendFileSync(body, "\nInjected contract.\n");
+        await expect(
+          execFileAsync("bash", [script, change, "--check"]),
+        ).rejects.toThrow();
+      } finally {
+        await fs.promises.rm(change, { recursive: true, force: true });
+      }
+    },
+  );
+});
+
 describe("handoff contract fingerprint boundaries", () => {
   it.each(["skills", "skills-en"])(
     "%s defaults new packs to references without changing contract identity",

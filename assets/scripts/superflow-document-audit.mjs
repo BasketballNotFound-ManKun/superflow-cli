@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   currentHandoffHash,
   validateCoverage,
+  validatePromptNavigation,
 } from "./superflow-review-coverage.mjs";
 
 const args = process.argv.slice(2);
@@ -55,6 +56,7 @@ const review = readJson(
 validateReview(review, handoffHash, issues);
 // Coverage sources, task indexes and applicability all resolve from the change.
 validateCoverage(changeDir, review, issues, true);
+validatePromptNavigation(changeDir, review, prompts, issues);
 try {
   if (currentHandoffHash(changeDir) !== handoffHash) {
     issues.push("冻结文档内容已变化，请刷新 handoff 并重新评审");

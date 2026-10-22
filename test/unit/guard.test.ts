@@ -1178,18 +1178,31 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
     });
   });
 
-  it("checks inheritance in every implementation prompt", async () => {
+  it("checks shared inheritance at the main implementation prompt", async () => {
     const change = await prepareMoneyPrecisionChange({
       designContract: true,
       promptContract: true,
     });
-    await write(path.join(change, "prompt", "p01.md"), "# Incomplete Prompt\n");
+    await write(path.join(change, "prompt", "implementation.md"), "# Incomplete Prompt\n");
 
     await expect(
       execFileAsync("bash", [GUARD, change, "implement"]),
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("prompt Superpower strategy inheritance"),
     });
+  });
+
+  it("accepts navigation-only batches when the main prompt carries public contracts", async () => {
+    const change = await prepareMoneyPrecisionChange({ designContract: true, promptContract: true });
+    const oldHash = fs.readFileSync(path.join(change, ".sdd/handoff/sdd-context.sha256"), "utf8").trim();
+    fs.appendFileSync(path.join(change, "prompt/implementation.md"), "\nField And Status Reverse Impact: inherit the canonical design.\n");
+    await write(path.join(change, "prompt/p01.md"), "# Batch\n[Main](implementation.md)\n\n| Prompt | Task IDs | Entry IDs | Case IDs |\n|---|---|---|---|\n| [Main](implementation.md) | 1.1 | entry-1 | C1 |\n");
+    const hash = (await execFileAsync("bash", [HANDOFF, change, "--hash-only"])).stdout.trim();
+    for (const document of ["design.md", "sdd-quality-gate.md", "test-report.md"])
+      await write(path.join(change, document), fs.readFileSync(path.join(change, document), "utf8").replaceAll(oldHash, hash));
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
+    for (const guard of [GUARD, EN_GUARD])
+      await expect(execFileAsync("bash", [guard, change, "implement"])).resolves.toMatchObject({ stdout: expect.stringContaining("guard passed for phase implement") });
   });
 
   it("requires money precision reconciliation evidence before verify", async () => {

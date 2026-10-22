@@ -303,7 +303,6 @@ require_tasks_complete() {
   local task_count unchecked_count
   require_file tasks.md
   [[ -f "$CHANGE_DIR/tasks.md" ]] || return 0
-  task_count="$(grep -Ec '^[[:space:]]*-[[:space:]]+\[[ xX]\]' "$CHANGE_DIR/tasks.md" || true)"
   unchecked_count="$(grep -Ec '^[[:space:]]*-[[:space:]]+\[[[:space:]]\]' "$CHANGE_DIR/tasks.md" || true)"
   [[ "$task_count" -gt 0 ]] || issues+=("tasks.md has no checkbox tasks")
   [[ "$unchecked_count" -eq 0 ]] || issues+=("$unchecked_count unchecked task(s) remain in tasks.md")
@@ -389,6 +388,10 @@ require_handoff() {
 }
 
 require_handoff_current() {
+  local pack_error
+  if ! pack_error="$("$HANDOFF" "$CHANGE_DIR" --check 2>&1)"; then
+    issues+=("$pack_error")
+  fi
   local hash_file="$CHANGE_DIR/.sdd/handoff/sdd-context.sha256"
   local recorded actual
   [[ -f "$hash_file" ]] || return 0
@@ -695,14 +698,9 @@ require_any_prompt() {
 }
 
 require_prompt_set() {
-  local task_count prompt_count non_index_prompt_count prompt_rel document
+  local prompt_count prompt_rel document
   require_file prompt/implementation.md
-  task_count="$(grep -E '^[[:space:]]*-[[:space:]]+\[[ xX]\]' "$CHANGE_DIR/tasks.md" 2>/dev/null | wc -l | tr -d ' ')"
   prompt_count="$(find "$CHANGE_DIR/prompt" -maxdepth 1 -type f -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
-  non_index_prompt_count="$(find "$CHANGE_DIR/prompt" -maxdepth 1 -type f -name '*.md' ! -name 'implementation.md' 2>/dev/null | wc -l | tr -d ' ')"
-  if [[ "$task_count" -gt 0 && "$non_index_prompt_count" -eq 0 ]]; then
-    issues+=("missing task prompt under prompt/<task-name>.md; prompt/implementation.md alone is not enough")
-  fi
   if [[ "$prompt_count" -eq 0 ]]; then
     issues+=("missing prompt/*.md files")
   fi
@@ -997,7 +995,7 @@ case "$PHASE" in
         require_grep 'release-sql\.md' "$prompt_rel" "prompt frozen release SQL reference"
         require_grep '原样复制|verbatim|sql_sha256' "$prompt_rel" "prompt verbatim SQL copy contract"
       fi
-    done < <(prompt_rels)
+    done < <(printf '%s\n' prompt/implementation.md)
     require_state_value build_mode "build_mode"
     require_state_value isolation "isolation"
     require_state_value tdd_mode "tdd_mode"

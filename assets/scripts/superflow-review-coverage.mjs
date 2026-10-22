@@ -869,3 +869,182 @@ if (
     process.exitCode = 1;
   }
 }
+
+// Markdown is a navigation view over the existing coverage, never a new matrix.
+export function validatePromptNavigation(root, review, prompts, issues) {
+  const main = path.join(root, "prompt/implementation.md");
+  const coverage = review?.coverage;
+  if (!coverage) return;
+  let tasks;
+  try {
+    const parser = path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "superflow-test-report-lint.py",
+    );
+    const result = spawnSync(
+      "python3",
+      [parser, path.join(root, "tasks.md"), "--task-index"],
+      { encoding: "utf8", timeout: 30000 },
+    );
+    const index = JSON.parse(result.stdout);
+    if (result.status !== 0 || index.ambiguous) throw new Error("task-index");
+    tasks = new Set(index.ids);
+  } catch {
+    issues.push("Prompt 导航无法读取当前任务索引");
+    return;
+  }
+  const entries = new Map(
+    list(coverage.entries)
+      .filter(Boolean)
+      .map((item) => [item.id, item]),
+  );
+  const cases = new Map(
+    list(coverage.cases)
+      .filter(Boolean)
+      .map((item) => [item.id, item]),
+  );
+  const rows = (file) => {
+    if (!fs.existsSync(file)) {
+      issues.push("Prompt 导航缺少主入口 prompt/implementation.md");
+      return [];
+    }
+    const text = fs
+      .readFileSync(file, "utf8")
+      .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, "");
+    const result = [];
+    let columns;
+    for (const line of text.split("\n")) {
+      if (!/^\s*\|/.test(line)) {
+        columns = undefined;
+        continue;
+      }
+      const cells = line
+        .trim()
+        .replace(/^\||\|$/g, "")
+        .split("|")
+        .map((cell) => cell.trim());
+      if (
+        ["Prompt", "Task IDs", "Entry IDs", "Case IDs"].every((name) =>
+          cells.includes(name),
+        )
+      ) {
+        columns = cells;
+        continue;
+      }
+      if (!columns || cells.every((cell) => /^:?-+:?$/.test(cell))) continue;
+      const cell = (name) => cells[columns.indexOf(name)] ?? "";
+      const ids = (name) =>
+        cell(name)
+          .split(",")
+          .map((id) => id.trim().replace(/^`|`$/g, ""))
+          .filter((id) => id && !["-", "—"].includes(id));
+      const link = cell("Prompt").match(/\[[^\]]*\]\(([^)#]+)\)/)?.[1];
+      const row = {
+        file: link ? path.resolve(path.dirname(file), link) : "",
+        tasks: ids("Task IDs"),
+        entries: ids("Entry IDs"),
+        cases: ids("Case IDs"),
+      };
+      if (
+        !link ||
+        !row.entries.length ||
+        row.tasks.some((id) => !tasks.has(id)) ||
+        row.entries.some((id) => !entries.has(id)) ||
+        row.cases.some((id) => !cases.has(id))
+      )
+        issues.push(
+          `Prompt 导航存在缺失或未知 ID/链接: ${path.relative(root, file)}`,
+        );
+      for (const id of row.cases) {
+        const test = cases.get(id);
+        if (
+          test &&
+          (!row.entries.includes(test.entryId) ||
+            !list(coverage.decisions)
+              .filter(Boolean)
+              .some(
+                (d) =>
+                  list(d.caseIds).includes(id) &&
+                  ((d.disposition === "VERIFY_EXISTING" &&
+                    !list(d.taskIds).length) ||
+                    list(d.taskIds).some((task) => row.tasks.includes(task))),
+              ))
+        )
+          issues.push(`Prompt 导航用例 ${id} 与 Task/Entry 关系不一致`);
+      }
+      const excluded = (id) => {
+        const decisions = list(coverage.decisions).filter(
+          (d) => d?.entryId === id,
+        );
+        return (
+          decisions.length > 0 &&
+          decisions.every((d) => d.disposition === "EXCLUDED")
+        );
+      };
+      for (const id of row.entries)
+        if (
+          !excluded(id) &&
+          !row.cases.some((test) => cases.get(test)?.entryId === id)
+        )
+          issues.push(`Prompt 导航入口 ${id} 漏用例覆盖`);
+      for (const id of row.tasks)
+        if (
+          !list(coverage.decisions)
+            .filter(Boolean)
+            .some(
+              (d) =>
+                list(d.taskIds).includes(id) &&
+                (d.disposition === "EXCLUDED" ||
+                  list(d.caseIds).some((test) => row.cases.includes(test))),
+            )
+        )
+          issues.push(`Prompt 导航任务 ${id} 漏用例覆盖`);
+      result.push(row);
+    }
+    if (!result.length)
+      issues.push(
+        `Prompt 导航缺少当前表头 Prompt / Task IDs / Entry IDs / Case IDs: ${path.relative(root, file)}`,
+      );
+    return result;
+  };
+  const mainRows = rows(main);
+  for (const row of mainRows)
+    if (
+      (row.file === main && prompts.length !== 1) ||
+      !prompts.includes(row.file)
+    )
+      issues.push("Prompt 导航主入口引用未知批次");
+  const signature = (items, key) =>
+    [...new Set(items.flatMap((row) => row[key]))].sort().join("\n");
+  for (const file of prompts.filter((file) => file !== main)) {
+    const batch = rows(file);
+    if (batch.some((row) => row.file !== main))
+      issues.push("Prompt 导航批次必须链接主入口");
+    const declared = mainRows.filter((row) => row.file === file);
+    if (
+      !declared.length ||
+      ["tasks", "entries", "cases"].some(
+        (key) => signature(batch, key) !== signature(declared, key),
+      )
+    )
+      issues.push(`Prompt 导航主/批次 ID 不一致: ${path.relative(root, file)}`);
+  }
+  for (const id of tasks)
+    if (!mainRows.some((row) => row.tasks.includes(id)))
+      issues.push(`Prompt 导航漏任务 ${id}`);
+  for (const decision of list(coverage.decisions).filter(
+    (d) => d && d.disposition !== "EXCLUDED",
+  ))
+    for (const id of list(decision.caseIds))
+      if (
+        !mainRows.some(
+          (row) =>
+            row.cases.includes(id) &&
+            row.entries.includes(decision.entryId) &&
+            ((decision.disposition === "VERIFY_EXISTING" &&
+              !list(decision.taskIds).length) ||
+              list(decision.taskIds).some((task) => row.tasks.includes(task))),
+        )
+      )
+        issues.push(`Prompt 导航漏用例 ${id} / 入口 ${decision.entryId}`);
+}

@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mutateReview } from "../helpers/review-coverage.js";
+import { handoffHash, mutateReview } from "../helpers/review-coverage.js";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "../..");
@@ -218,7 +218,10 @@ describe("document delivery readiness", () => {
       path.join(os.tmpdir(), "superflow-doc-readiness-"),
     );
     await prepareReadyChange();
-    const hash = prepareSourceInvestigation(change, { full: true, preserveContracts: true });
+    const hash = prepareSourceInvestigation(change, {
+      full: true,
+      preserveContracts: true,
+    });
     const envFile = path.join(change, ".sdd/readiness/environment.json");
     const env = JSON.parse(fs.readFileSync(envFile, "utf8"));
     env.handoffHash = hash;
@@ -230,18 +233,40 @@ describe("document delivery readiness", () => {
   });
 
   it("nested workspace uses change-relative sources despite declared project root", async () => {
-    const nested = path.join(tmp, "docs", "planning", "openspec", "changes", "demo");
+    const nested = path.join(
+      tmp,
+      "docs",
+      "planning",
+      "openspec",
+      "changes",
+      "demo",
+    );
     await fs.promises.mkdir(path.dirname(nested), { recursive: true });
     await fs.promises.rename(change, nested);
     change = nested;
-    mutateReview(change, (review) => { review.projectRoot = "../../../../.."; });
-    const reviewText = fs.readFileSync(path.join(change, ".sdd/reviews/document-review.json"));
-    const receipt = JSON.parse(fs.readFileSync(path.join(change, ".sdd/readiness/coding-ready.json"), "utf8"));
+    mutateReview(change, (review) => {
+      review.projectRoot = "../../../../..";
+    });
+    const reviewText = fs.readFileSync(
+      path.join(change, ".sdd/reviews/document-review.json"),
+    );
+    const receipt = JSON.parse(
+      fs.readFileSync(
+        path.join(change, ".sdd/readiness/coding-ready.json"),
+        "utf8",
+      ),
+    );
     receipt.reviewHash = createHash("sha256").update(reviewText).digest("hex");
     await write(".sdd/readiness/coding-ready.json", JSON.stringify(receipt));
     const audit = await execFileAsync("node", [AUDIT, change, "--json"]);
     expect(JSON.parse(audit.stdout).ready).toBe(true);
-    await expect(execFileAsync("node", [path.join(ROOT, "assets/scripts/superflow-review-coverage.mjs"), change, "--check-sources"])).resolves.toMatchObject({ stderr: "" });
+    await expect(
+      execFileAsync("node", [
+        path.join(ROOT, "assets/scripts/superflow-review-coverage.mjs"),
+        change,
+        "--check-sources",
+      ]),
+    ).resolves.toMatchObject({ stderr: "" });
   });
 
   it("accepts three closed review lenses and exact prompt links", async () => {
@@ -249,8 +274,68 @@ describe("document delivery readiness", () => {
     const parsed = JSON.parse(result.stdout);
     expect(parsed.ready).toBe(true);
     expect(parsed.reviewRounds).toBe(3);
-    expect(parsed.promptCount).toBe(2);
+    expect(parsed.promptCount).toBe(3);
   });
+
+  it.each([
+    ["unknown task", "1.1", "unknown-task"],
+    ["unknown entry", "page-child-create", "unknown-entry"],
+    ["unknown case", "C1", "unknown-case"],
+  ])("blocks prompt navigation %s", async (_name, before, after) => {
+    const file = path.join(change, "prompt/implementation.md");
+    const text = fs.readFileSync(file, "utf8").replaceAll(before, after);
+    fs.writeFileSync(file, text);
+    await expect(execFileAsync("node", [AUDIT, change])).rejects.toMatchObject({
+      stderr: expect.stringContaining("导航"),
+    });
+  });
+
+  it.each(["case", "task", "entry", "batch-link"])(
+    "rejects missing navigation %s",
+    async (missing) => {
+      const main = path.join(change, "prompt/implementation.md");
+      let text = fs.readFileSync(main, "utf8");
+      if (missing === "case") text = text.replaceAll(", C2", "");
+      if (missing === "task") text = text.replaceAll("| 1.1 |", "| — |");
+      if (missing === "entry") text = text.replaceAll(", api-child-create", "");
+      if (missing === "batch-link")
+        text = text.replaceAll("](p01.md)", "](missing.md)");
+      fs.writeFileSync(main, text);
+      await expect(
+        execFileAsync("node", [AUDIT, change]),
+      ).rejects.toMatchObject({ stderr: expect.stringContaining("导航") });
+    },
+  );
+
+  it.each(["main-only", "single-batch", "multiple-batches"])(
+    "accepts %s navigation",
+    async (shape) => {
+      const promptDir = path.join(change, "prompt");
+      if (shape !== "multiple-batches") {
+        fs.rmSync(path.join(promptDir, "p00.md"));
+        const main = path.join(promptDir, "implementation.md");
+        let text = fs
+          .readFileSync(main, "utf8")
+          .split("\n")
+          .filter((line) => !line.includes("](p00.md)"))
+          .join("\n");
+        if (shape === "main-only") {
+          fs.rmSync(path.join(promptDir, "p01.md"));
+          text = text.replaceAll("](p01.md)", "](implementation.md)");
+        }
+        fs.writeFileSync(main, text);
+      }
+      const hash = handoffHash(change);
+      mutateReview(change, (r) => {
+        r.handoffHash = hash;
+        for (const round of r.rounds) round.inputHash = hash;
+      });
+      await write(".sdd/handoff/sdd-context.sha256", `${hash}\n`);
+      await expect(
+        execFileAsync("node", [AUDIT, change]),
+      ).resolves.toBeDefined();
+    },
+  );
 
   it("requires every aggregate document to link every prompt", async () => {
     await write("test-report.md", "# Test Report\n\n[P00](prompt/p00.md)\n");
@@ -343,6 +428,21 @@ describe("document delivery readiness", () => {
       });
       r.coverage.cases.pop();
     });
+    for (const prompt of fs.readdirSync(path.join(change, "prompt"))) {
+      const file = path.join(change, "prompt", prompt);
+      fs.writeFileSync(
+        file,
+        fs
+          .readFileSync(file, "utf8")
+          .replaceAll(", C2", ""),
+      );
+    }
+    const hash = handoffHash(change);
+    mutateReview(change, (r) => {
+      r.handoffHash = hash;
+      for (const round of r.rounds) round.inputHash = hash;
+    });
+    await write(".sdd/handoff/sdd-context.sha256", `${hash}\n`);
     await expect(execFileAsync("node", [AUDIT, change])).resolves.toBeDefined();
   });
 
