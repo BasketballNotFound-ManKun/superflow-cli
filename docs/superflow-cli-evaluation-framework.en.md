@@ -416,3 +416,17 @@ internal-update skips, missing hosts, and failed deployment. Verification uses a
 isolated source copy, leaving the active local CLI and assets untouched. Final results
 are recorded in this run's evidence. Roll back on expanded targets, duplicate deployment,
 false success, or writes to the real user home.
+
+## Automatic updates by default (2026-10-22)
+
+Baseline: 1419 tests and real package installation passed, but the daily hook
+still defaulted to check despite the requested automatic updates. Responsibility
+belongs to the existing installation/update owner. Default to apply; retain
+explicit check/off, locking, throttling and failure retries without adding a
+skill, hook or updater. RED cases cover unset/empty modes and default failure;
+positive and negative cases exercise command dispatch, both languages, explicit
+opt-outs, session/global throttling and locking. Final verification and local
+installation results live in the external run report. Synthetic CLI fixtures do
+not establish provider-catalog availability. Roll back this default-policy change
+if opt-outs install, concurrent updates duplicate work, failures claim success or
+lose retry eligibility. Never substitute old caches for official plugin inventory.

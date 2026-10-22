@@ -509,17 +509,16 @@ best-effort and does not block initialization.
 | `superflow eval <taskPath> [--json]`                         | Evaluate managed quality, calls, tokens, cache, and time offline         |
 | `superflow update --with-package`                            | Update superflow, OpenSpec, and Superpowers                              |
 
-## Automatic Update Checks
+## Automatic Updates
 
-After hooks are registered, SuperBridge Flow checks core dependency updates once
-per new session and throttles real network checks to once every 6 hours by
+After hooks are registered, SuperBridge Flow checks and installs core dependency updates on the first prompt
+of each new session and throttles real network checks to once every 6 hours by
 default.
 
-Default behavior is **check only**. It reports available updates but does not
-install them. Run this to update explicitly:
-
-The default check queries npm versions; Superpowers receives a refresh reminder.
-Manual update or `apply` refreshes plugins through native commands. To update only
+Default behavior is **automatic update**, including Superpowers through native
+plugin commands. No environment setting is needed; explicit `check` mode only
+reports updates and reminds you to refresh plugins. To update immediately, run
+`superflow update --with-package`. To update only
 OpenSpec, Superpowers and host assets, use `superflow update --agent codex --scope global --with-dependencies`.
 
 ```bash
@@ -529,13 +528,13 @@ superflow update --with-package
 Environment controls:
 
 ```bash
-# Default: check and report
+# Optional: check and report without installing
 export SUPERFLOW_AUTO_UPDATE=check
 
-# Disable automatic checks
+# Disable automatic updates and checks
 export SUPERFLOW_AUTO_UPDATE=0
 
-# Optional: update packages, Skills, Hooks, rules, scripts, and managed MCP
+# Default (also when unset or empty): update packages, Skills, Hooks, rules, scripts, and managed MCP
 export SUPERFLOW_AUTO_UPDATE=apply
 
 # Minimum check interval in seconds; default is 21600

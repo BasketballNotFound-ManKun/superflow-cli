@@ -423,28 +423,28 @@ Agent 进程树；macOS/Linux 继续使用独立进程组。三端均不通过�
   - understand-anything（尽力安装，失败只警告）
   - superflow-api-changelog（正式专项技能，由统一安装清单部署）
 
-## 自动检查更新
+## 自动更新
 
-注册 hook 后，Superflow 会在新会话开始时轻量检查核心依赖更新：
+注册 hook 后，Superflow 会在新会话首次提交提示时自动检查并更新核心依赖：
 
 - `@chenmk/superflow`
 - `@fission-ai/openspec`
-- Superpowers 在手动更新或 `apply` 时通过原生插件命令更新；默认 `check` 仅给出刷新提示
+- Superpowers 通过原生插件命令更新；显式 `check` 模式仅给出刷新提示
 
-推荐策略是“自动检查，手动更新”：默认只提示，不自动安装；执行
-`superflow update --with-package` 才会统一更新。
+默认自动完整更新；无需设置环境变量。也可执行
+`superflow update --with-package` 立即统一更新。
 只更新 OpenSpec、Superpowers 和宿主资产、不重装 CLI 时，可执行
 `superflow update --agent codex --scope global --with-dependencies`。
 同一会话只检查一次，并且默认至少间隔 6 小时才真正访问 npm/plugin 源。
 
 ```bash
-# 默认：只检查并提示
+# 可选：只检查并提示，不安装
 export SUPERFLOW_AUTO_UPDATE=check
 
-# 关闭自动检查
+# 关闭自动更新和检查
 export SUPERFLOW_AUTO_UPDATE=0
 
-# 个人机器可选：检查到新版本后完整更新包、Skills、Hooks、规则、脚本和托管 MCP
+# 默认（未设置或留空亦生效）：完整更新包、Skills、Hooks、规则、脚本和托管 MCP
 export SUPERFLOW_AUTO_UPDATE=apply
 
 # 调整最小检查间隔，默认 21600 秒（6 小时）

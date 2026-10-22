@@ -273,3 +273,11 @@ deferred and not-a-defect dispositions; logging alone is not a functional fix.
 Reuse existing documents, four-state reports, Coding Ready and all three managed
 messages. Add no Task/Run, hook or Agent capability restriction. Native non-SDD requests
 receive no engineering contract; record pause/recovery/Git authorization separately.
+
+## Daily automatic-update default (2026-10-22)
+
+The existing dependency-update hook defaults to apply when its mode is unset or
+empty. Explicit check reports only; off/0 disables it. Reuse the same update owner,
+session deduplication, global six-hour throttle and lock. Failures retain logs and
+release throttle eligibility for later-session retry. Success requests a restart;
+updating disk assets does not hot-load the current host.

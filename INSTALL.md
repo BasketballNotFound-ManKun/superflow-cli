@@ -546,34 +546,33 @@ Claude Code 里也可以直接用当前阶段命令继续，例如：
 
 ## 8. 更新
 
-### 8.1 会话级自动检查更新
+### 8.1 会话级自动更新
 
-注册 hook 后，Superflow 会在新会话开始时检查一次核心依赖：
+注册 hook 后，Superflow 会在新会话首次提交提示时检查并更新核心依赖：
 
 - `@chenmk/superflow`
 - `@fission-ai/openspec`
-- Superpowers 插件在手动更新或 `apply` 时刷新；默认检查仅提供刷新提示
+- Superpowers 插件通过原生插件命令刷新；显式 `check` 仅提供刷新提示
 
-同一会话只检查一次；默认只提示，不自动安装。至少间隔 6 小时才真正访问
+同一会话最多更新一次；默认自动安装。至少间隔 6 小时才真正访问
 npm/plugin 源，避免每次 prompt 都联网。可用：
 
 ```bash
-# 默认推荐：只检查并提示
+# 可选：只检查并提示，不安装
 export SUPERFLOW_AUTO_UPDATE=check
 
-# 关闭自动检查
+# 关闭自动更新和检查
 export SUPERFLOW_AUTO_UPDATE=0
 
-# 个人机器可选：自动完整更新 CLI、Skills、Hooks、规则、脚本和托管 MCP
+# 默认（未设置或留空亦生效）：自动完整更新 CLI、Skills、Hooks、规则、脚本和托管 MCP
 export SUPERFLOW_AUTO_UPDATE=apply
 
 # 调整最小检查间隔，默认 21600 秒（6 小时）
 export SUPERFLOW_UPDATE_MIN_INTERVAL_SECONDS=21600
 ```
 
-团队或企业环境建议保持默认 `check`，由开发者显式执行
-`superflow update --with-package` 更新；个人机器如果接受自动升级风险，再设置
-`SUPERFLOW_AUTO_UPDATE=apply`。
+需要自行安排更新时间的环境可显式设置 `check`，由开发者执行
+`superflow update --with-package` 更新；未设置时直接采用 `apply`。
 
 显式更新和 Hook `apply` 使用同一闭环：先升级 CLI 包，再由新版本 CLI 更新 OpenSpec、
 从 Codex 原生目录发现官方 Superpowers（当前为 `openai-curated-remote`），并重新部署全部 Agent

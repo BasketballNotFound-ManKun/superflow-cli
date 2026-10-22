@@ -1,5 +1,7 @@
 # 0.5.11: Superpowers channel migration and dependency update evaluation
 
+> Historical evaluation: that release defaulted to check. The current default is apply; explicit check/off settings remain available.
+
 ## Evidence and ownership
 
 Version 0.5.10 used the retired openai-api-curated channel and local configuration to
@@ -36,7 +38,7 @@ contracts, managed state transitions, or relaxed verification requirements.
 
 ## Scope, conclusion, and rollback
 
-Daily policy remains check by default: npm version checks and plugin refresh hints.
+That release defaulted to check: npm version checks and plugin refresh hints.
 Only apply or explicit dependency updates actually upgrade OpenSpec, Superpowers,
 and Superflow assets. No silent switch to background mutation was introduced.
 Help and installation instructions are bilingual. Both hosts received live update
