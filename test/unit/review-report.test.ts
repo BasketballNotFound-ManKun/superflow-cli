@@ -50,6 +50,16 @@ describe("reviewer four-state report", () => {
     try {
       expect(auditReviewReport(current, root).issues).toEqual([]);
       expect(auditReviewReport(current, root).eligibleForTriage).toBe(true);
+      const spaced = current.replace(/^(## .+)$/gm, "$1 ");
+      expect(auditReviewReport(spaced, root).eligibleForTriage).toBe(true);
+      expect(auditReviewReport(spaced.replace("| F-001 | resolved | test:guard |", ""), root).eligibleForTriage).toBe(false);
+      expect(auditReviewReport(current.replace("| Return | session:return/2 |", "| Return | session:return/2 |\n| Return | session:return/1 |"), root).eligibleForTriage).toBe(false);
+      const second = current.replace("DONE\n", "DONE_WITH_CONCERNS\n").replace("## Findings\nNone", "## Concerns\nNew issue\n## Findings\n- [F-002] current.ts:1: new issue");
+      fs.writeFileSync(path.join(root, "second.md"), second);
+      fs.writeFileSync(path.join(root, "second-owner.md"), owner.replace("F-001", "F-002"));
+      const third = current.replace("original.md", "second.md").replace(hash(original), hash(second)).replace("owner.md", "second-owner.md").replace(hash(owner), hash(owner.replace("F-001", "F-002"))).replace("F-001", "F-002").replace("session:return/2", "session:return/3");
+      expect(auditReviewReport(third, root).eligibleForTriage).toBe(true);
+      expect(auditReviewReport(third.replace("session:return/3", "session:return/1"), root).eligibleForTriage).toBe(false);
       expect(auditReviewReport(current.replace("session:return/2", "session:return/1"), root).eligibleForTriage).toBe(false);
       const combined = original + owner;
       fs.writeFileSync(path.join(root, "original.md"), combined);
@@ -69,9 +79,14 @@ describe("reviewer four-state report", () => {
       expect(auditReviewReport(current.replace(hash(original), hash(overwritten)), root).eligibleForTriage).toBe(false);
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
-  it("rejects DONE with residual concerns", () => {
-    const result = auditCurrentReport("DONE\n## Findings\nNone\n## Concerns\nPending retry semantics\n", os.tmpdir());
+  it.each(["## Concerns", "## Concerns ", "## Concerns\t", "  ## Concerns ##", "##\tConcerns"])("rejects DONE with residual concerns and ATX heading %j", heading => {
+    const result = auditCurrentReport(`DONE\n## Findings\nNone\n## Notes\nContext\n${heading}\nPending retry semantics\n`, os.tmpdir());
     expect(result.eligibleForTriage).toBe(false);
+  });
+  it.each(["Role", "Dispatch", "Return"])("rejects duplicate Review Identity field %s", field => {
+    const identity = "## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:d/1 |\n| Return | session:r/1 |\n";
+    const row = identity.split("\n").find(line => line.startsWith(`| ${field} |`));
+    expect(auditCurrentReport(`DONE\n${identity}${row}\n## Findings\nNone\n`, os.tmpdir()).eligibleForTriage).toBe(false);
   });
   it("rejects Owner self-review and missing dispatch identity", () => {
     for (const identity of ["| Role | owner |\n| Dispatch | d |\n| Return | r |", "| Role | independent-reviewer |\n| Return | r |"])

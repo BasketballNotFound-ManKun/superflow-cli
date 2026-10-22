@@ -28,6 +28,7 @@ export function auditReviewReport(
   projectRoot: string,
   historical = false,
   ancestors: Set<string> = new Set(),
+  ancestorReturns: Set<string> = new Set(),
 ): ReviewReportAudit {
   const body = reportBodyLines(content);
   const lines = body.lines;
@@ -47,9 +48,18 @@ export function auditReviewReport(
   const dependencies: string[] = [];
   const identity = reportTable(lines, "Review Identity", ["Field", "Value"], issues);
   const fields = new Map(identity.map(row => [row[0], row[1]]));
+  if (fields.size !== identity.length) {
+    issues.push("Review Identity fields must be unique");
+  }
   if (fields.get("Role") !== "independent-reviewer" || !["Dispatch", "Return"].every(key => /^(?:[a-z][a-z0-9+.-]*:|[^ \t]+[\/#])\S+$/i.test(fields.get(key) ?? ""))) {
     issues.push("Review Identity requires independent-reviewer Role, Dispatch and Return references");
   }
+  const returnReference = fields.get("Return");
+  if (returnReference && ancestorReturns.has(returnReference)) {
+    issues.push("Finding recheck requires a distinct actual Return reference throughout its chain");
+  }
+  const nextReturns = new Set(ancestorReturns);
+  if (returnReference) nextReturns.add(returnReference);
   if (state === "DONE") {
     const concerns = sectionLines(lines, "Concerns", issues);
     if (concerns !== null && !(concerns.length === 1 && /^(?:None|无)[。.]?$/i.test(concerns[0]))) {
@@ -88,7 +98,7 @@ export function auditReviewReport(
   } else if (findings === 0 && !findingsClear) {
     issues.push("Findings must explicitly declare None or list anchored issues");
   }
-  auditReviewChain(lines, projectRoot, issues, dependencies, ancestors);
+  auditReviewChain(lines, projectRoot, issues, dependencies, ancestors, nextReturns);
   return {
     state,
     eligibleForTriage: state === "DONE" && issues.length === 0,
@@ -160,7 +170,7 @@ function safeRelative(candidate: string): boolean {
 }
 
 function sectionLines(lines: string[], title: string, issues: string[]): string[] | null {
-  const starts = lines.flatMap((line, index) => line === `## ${title}` ? [index] : []);
+  const starts = lines.flatMap((line, index) => line.trimEnd() === `## ${title}` ? [index] : []);
   if (!starts.length) return null;
   if (starts.length !== 1) issues.push(`duplicate ${title} sections`);
   const rest = lines.slice(starts[0] + 1);
@@ -185,7 +195,7 @@ function reportTable(lines: string[], title: string, header: string[], issues: s
 }
 
 function auditReviewChain(lines: string[], root: string, issues: string[],
-  dependencies: string[], ancestors: Set<string>): void {
+  dependencies: string[], ancestors: Set<string>, ancestorReturns: Set<string>): void {
   const chain = reportTable(lines, "Review Chain", ["Role", "Path", "SHA-256"], issues);
   const rechecks = reportTable(lines, "Finding Rechecks", ["ID", "Result", "Evidence"], issues);
   if (sectionLines(lines, "Review Chain", issues) === null
@@ -219,14 +229,7 @@ function auditReviewChain(lines: string[], root: string, issues: string[],
   }
   const next = new Set(ancestors).add(original);
   const originalContent = fs.readFileSync(original, "utf8");
-  const previous = auditReviewReport(originalContent, root, true, next);
-  const previousIdentity = reportTable(reportBodyLines(originalContent).lines,
-    "Review Identity", ["Field", "Value"], issues);
-  const currentIdentity = reportTable(lines, "Review Identity", ["Field", "Value"], issues);
-  if (previousIdentity.find(row => row[0] === "Return")?.[1]
-      === currentIdentity.find(row => row[0] === "Return")?.[1]) {
-    issues.push("Finding recheck requires a distinct actual Return reference");
-  }
+  const previous = auditReviewReport(originalContent, root, true, next, ancestorReturns);
   dependencies.push(...previous.dependencies);
   issues.push(...previous.issues.map(issue => `original: ${issue}`));
   if (!previous.findingIds.length) issues.push("Review Chain original must retain finding IDs");
@@ -244,6 +247,11 @@ function auditReviewChain(lines: string[], root: string, issues: string[],
       issues.push(`${label} must cover every original finding ID with an explicit result and evidence`);
     }
   }
+}
+
+function normalizeSectionHeading(line: string): string {
+  const heading = /^ {0,3}##[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/.exec(line);
+  return heading ? `## ${heading[1]}` : line;
 }
 
 function reportBodyLines(content: string): {
@@ -279,7 +287,7 @@ function reportBodyLines(content: string): {
     return true;
   });
   return {
-    lines,
+    lines: lines.map(normalizeSectionHeading),
     unclosedContainer: fence !== null && prefixes.length > 0,
     unsupportedTabContainer,
   };
