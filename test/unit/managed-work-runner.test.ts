@@ -95,6 +95,16 @@ describe("managed work runner", () => {
     expect(state.connectivityRetryCount ?? 0).toBe(0);
   });
 
+  it.each(["invalid API key", "authentication failed", "insufficient permissions", "INVALID_API_KEY"])("stops explicit authorization failure before stream retry: %s", async detail => {
+    const fixture = createFixture("engineering");
+    const state = await runManagedTask(fixture.root, fixture.contract.taskId,
+      new FakeInvoker([new Error(`stream disconnected before completion: ${detail}; network 529 overloaded`)]), fixture.env);
+    expect(state.status).toBe("waiting_for_provider_change");
+    expect(state.executorInvocations).toBe(1);
+    expect(state.executorInvocationCredits ?? 0).toBe(0);
+    expect(state.connectivityRetryCount ?? 0).toBe(0);
+  });
+
   it("credits temporary concurrent capacity separately from quota", async () => {
     const fixture = createFixture("engineering");
     const state = await runManagedTask(
@@ -3016,9 +3026,10 @@ describe("managed work runner", () => {
   });
 
   it.each([
-    "API Error: Unable to connect to API (ConnectionRefused)",
-    "stream disconnected before completion",
-  ])("credits temporary connection failures and opens the existing three-attempt circuit: %s", async message => {
+    ["connection", Array(3).fill("API Error: Unable to connect to API (ConnectionRefused)")],
+    ["stream", Array(3).fill("stream disconnected before completion")],
+    ["mixed", ["connection reset", "STREAM DISCONNECTED BEFORE COMPLETION", "529 overloaded"]],
+  ] as const)("credits temporary connection failures and opens the existing three-attempt circuit: %s", async (_kind, messages) => {
     const fixture = createFixture();
     let state = fixture.state;
 
@@ -3027,7 +3038,7 @@ describe("managed work runner", () => {
         fixture.root,
         fixture.contract.taskId,
         new FakeInvoker([
-          new Error(message),
+          new Error(messages[attempt]),
         ]),
         fixture.env,
       );

@@ -85,7 +85,7 @@ function remediation(
 }
 
 export function isPermanentProviderFailure(message: string): boolean {
-  return /(?:usage[ _-]+limit[ _-]+(?:has[ _-]+been[ _-]+)?(?:reached|exceeded|exhausted)|(?:reached|exceeded)[^\n]{0,40}usage[ _-]+limit|token[ _-]+plan|credit[ _-]+balance[^\n]{0,40}(?:exhausted|depleted|insufficient)|insufficient[ _-]+credit[ _-]+balance|用量上限|套餐|quota.?exhaust|insufficient.?quota|error.?code\s*2056|\b2056\b|billing|payment required|auth[_ ]?unavailable\s*:|账号池没有可用账号)/i.test(
+  return /(?:\binvalid[ _-]+api[ _-]+key\b|\bauthentication[ _-]+failed\b|\binsufficient[ _-]+permissions?\b|usage[ _-]+limit[ _-]+(?:has[ _-]+been[ _-]+)?(?:reached|exceeded|exhausted)|(?:reached|exceeded)[^\n]{0,40}usage[ _-]+limit|token[ _-]+plan|credit[ _-]+balance[^\n]{0,40}(?:exhausted|depleted|insufficient)|insufficient[ _-]+credit[ _-]+balance|用量上限|套餐|quota.?exhaust|insufficient.?quota|error.?code\s*2056|\b2056\b|billing|payment required|auth[_ ]?unavailable\s*:|账号池没有可用账号)/i.test(
     message,
   );
 }
