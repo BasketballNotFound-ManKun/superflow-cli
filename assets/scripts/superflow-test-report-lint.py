@@ -1286,6 +1286,7 @@ def main() -> int:
     parser.add_argument("--require-complete", action="store_true")
     parser.add_argument("--warn-only", action="store_true")
     parser.add_argument("--task-index", action="store_true")
+    parser.add_argument("--markdown-body", action="store_true")
     args = parser.parse_args()
 
     if args.record_execution:
@@ -1296,6 +1297,15 @@ def main() -> int:
             return 2
     if not args.reports:
         parser.error("需要报告路径或 --record-execution PLAN")
+
+    if args.markdown_body:
+        # Navigation consumes the same body classification as task indexes.
+        if len(args.reports) != 1 or args.task_index:
+            parser.error("--markdown-body requires exactly one Markdown file")
+        lines, ambiguous = markdown_body_lines(
+            Path(args.reports[0]).read_text(encoding="utf-8"), task_index=True)
+        print(json.dumps({"lines": lines, "ambiguous": ambiguous}))
+        return 0
 
     if args.task_index:
         # The coverage checker uses this canonical body parser, not a second

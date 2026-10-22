@@ -875,12 +875,12 @@ export function validatePromptNavigation(root, review, prompts, issues) {
   const main = path.join(root, "prompt/implementation.md");
   const coverage = review?.coverage;
   if (!coverage) return;
+  const parser = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "superflow-test-report-lint.py",
+  );
   let tasks;
   try {
-    const parser = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "superflow-test-report-lint.py",
-    );
     const result = spawnSync(
       "python3",
       [parser, path.join(root, "tasks.md"), "--task-index"],
@@ -908,12 +908,29 @@ export function validatePromptNavigation(root, review, prompts, issues) {
       issues.push("Prompt 导航缺少主入口 prompt/implementation.md");
       return [];
     }
-    const text = fs
-      .readFileSync(file, "utf8")
-      .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, "");
+    let body;
+    try {
+      const parsed = spawnSync("python3", [parser, file, "--markdown-body"], {
+        encoding: "utf8",
+        timeout: 30000,
+      });
+      body = JSON.parse(parsed.stdout);
+      if (
+        parsed.status !== 0 ||
+        !Array.isArray(body.lines) ||
+        typeof body.ambiguous !== "boolean"
+      )
+        throw new Error("正文投影无效");
+      if (body.ambiguous) throw new Error("正文存在歧义");
+    } catch (error) {
+      issues.push(
+        `Prompt 导航无法读取真实正文: ${path.relative(root, file)}（${error.message}）`,
+      );
+      return [];
+    }
     const result = [];
     let columns;
-    for (const line of text.split("\n")) {
+    for (const line of body.lines) {
       if (!/^\s*\|/.test(line)) {
         columns = undefined;
         continue;

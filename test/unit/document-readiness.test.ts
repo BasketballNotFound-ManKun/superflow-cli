@@ -32,6 +32,15 @@ async function write(relative: string, content: string): Promise<void> {
   await fs.promises.writeFile(target, content);
 }
 
+async function refreshReviewIdentity(): Promise<void> {
+  const hash = handoffHash(change);
+  mutateReview(change, (review) => {
+    review.handoffHash = hash;
+    for (const round of review.rounds) round.inputHash = hash;
+  });
+  await write(".sdd/handoff/sdd-context.sha256", `${hash}\n`);
+}
+
 async function prepareReadyChange(): Promise<void> {
   change = path.join(tmp, "openspec", "changes", "cross-repo-demo");
   const promptLinks = ["[P00](prompt/p00.md)", "[P01](prompt/p01.md)"].join(
@@ -307,6 +316,79 @@ describe("document delivery readiness", () => {
     },
   );
 
+  it.each([
+    "indented-fence",
+    "longer-close",
+    "list-fence",
+    "quote-fence",
+    "indented-code",
+    "ambiguous-list",
+  ])("rejects example-only navigation in %s", async (example) => {
+    const main = path.join(change, "prompt/implementation.md");
+    const text = fs.readFileSync(main, "utf8");
+    const wrapped: Record<string, string> = {
+      "indented-fence": "   ```markdown\n" + text + "\n   ```\n",
+      "longer-close": "   ```markdown\n" + text + "\n   ````\n",
+      "list-fence":
+        "- ```markdown\n" +
+        text
+          .split("\n")
+          .map((line) => `  ${line}`)
+          .join("\n") +
+        "\n  ````\n",
+      "quote-fence":
+        "> ```markdown\n" +
+        text
+          .split("\n")
+          .map((line) => `> ${line}`)
+          .join("\n") +
+        "\n> ````\n",
+      "indented-code": text
+        .split("\n")
+        .map((line) => `    ${line}`)
+        .join("\n"),
+      "ambiguous-list":
+        "- ```markdown\n" +
+        text
+          .split("\n")
+          .map((line) => `  ${line}`)
+          .join("\n"),
+    };
+    fs.writeFileSync(main, wrapped[example]);
+    await refreshReviewIdentity();
+    await expect(execFileAsync("node", [AUDIT, change])).rejects.toMatchObject({
+      stderr: expect.stringContaining(
+        example === "ambiguous-list" ? "正文存在歧义" : "导航",
+      ),
+    });
+  });
+
+  it("accepts real navigation after indented list and quote examples", async () => {
+    const main = path.join(change, "prompt/implementation.md");
+    const text = fs.readFileSync(main, "utf8");
+    const example =
+      "| Prompt | Task IDs | Entry IDs | Case IDs |\n|---|---|---|---|\n| [Example](missing.md) | unknown-task | unknown-entry | unknown-case |\n";
+    fs.writeFileSync(
+      main,
+      "   ```markdown\n" +
+        example +
+        "   ````\n\n- ```markdown\n" +
+        example
+          .split("\n")
+          .map((line) => `  ${line}`)
+          .join("\n") +
+        "\n  ````\n\n> ```markdown\n" +
+        example
+          .split("\n")
+          .map((line) => `> ${line}`)
+          .join("\n") +
+        "\n> ````\n\n" +
+        text,
+    );
+    await refreshReviewIdentity();
+    await expect(execFileAsync("node", [AUDIT, change])).resolves.toBeDefined();
+  });
+
   it.each(["main-only", "single-batch", "multiple-batches"])(
     "accepts %s navigation",
     async (shape) => {
@@ -432,9 +514,7 @@ describe("document delivery readiness", () => {
       const file = path.join(change, "prompt", prompt);
       fs.writeFileSync(
         file,
-        fs
-          .readFileSync(file, "utf8")
-          .replaceAll(", C2", ""),
+        fs.readFileSync(file, "utf8").replaceAll(", C2", ""),
       );
     }
     const hash = handoffHash(change);
