@@ -255,10 +255,15 @@ write_markdown() {
       rel="$(source_relative "$file")"
       role="$(source_role "$rel")"
       printf '### `%s`\n\n' "$rel"
-      if [[ "$context_compression" == "references" ]] || { [[ "$context_compression" == "beta" ]] && ! is_beta_projected_role "$role"; }; then
+      # Execution reports are live evidence and never a canonical projection.
+      if [[ "${file##*/}" == "test-report.md" || "$context_compression" == "references" ]] || { [[ "$context_compression" == "beta" ]] && ! is_beta_projected_role "$role"; }; then
         printf '%s\n' "- Role: \`$role\`"
         printf '%s\n' "- SHA256: \`$(sha_file "$file")\`"
-        printf '%s\n\n' "- Full source remains canonical. Read \`$rel\` directly if needed."
+        if [[ "${file##*/}" == "test-report.md" ]]; then
+          printf '%s\n\n' "- Live execution evidence, outside the frozen contract. Read \`$rel\` directly."
+        else
+          printf '%s\n\n' "- Full source remains canonical. Read \`$rel\` directly if needed."
+        fi
         continue
       fi
       printf '```text\n'
@@ -294,7 +299,7 @@ write_json() {
       [[ "$first" -eq 0 ]] && printf ',\n'
       first=0
       projected=false
-      if [[ "$context_compression" == "off" ]] || { [[ "$context_compression" == "beta" ]] && is_beta_projected_role "$role"; }; then
+      if [[ "${file##*/}" != "test-report.md" ]] && { [[ "$context_compression" == "off" ]] || { [[ "$context_compression" == "beta" ]] && is_beta_projected_role "$role"; }; }; then
         projected=true
       fi
       printf '    {"path": "%s", "sha256": "%s", "lines": %s, "role": "%s", "projected": %s}' \
@@ -387,7 +392,6 @@ try:
     if actual != expected:
         raise ValueError("manifest/mode/source role/projected/hash mismatch")
     def normalize(text):
-        text = re.sub(r"(^### `test-report\.md`\n\n)```text\n.*?^```\n", r"\1", text, flags=re.M | re.S)
         text = re.sub(r"^- generated_at:.*$", "", text, flags=re.M)
         text = re.sub(r"(\| `[^`]+` \| `[^`]+` \| `[a-f0-9]{64}` \|) \d+ \|", r"\1 |", text)
         text = re.sub(r"^\s*(?:handoff_hash|context_hash):\s*\S*\s*$", "", text, flags=re.M)

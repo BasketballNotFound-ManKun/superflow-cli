@@ -303,6 +303,7 @@ require_tasks_complete() {
   local task_count unchecked_count
   require_file tasks.md
   [[ -f "$CHANGE_DIR/tasks.md" ]] || return 0
+  task_count="$(grep -Ec '^[[:space:]]*-[[:space:]]+\[[ xX]\]' "$CHANGE_DIR/tasks.md" || true)"
   unchecked_count="$(grep -Ec '^[[:space:]]*-[[:space:]]+\[[[:space:]]\]' "$CHANGE_DIR/tasks.md" || true)"
   [[ "$task_count" -gt 0 ]] || issues+=("tasks.md has no checkbox tasks")
   [[ "$unchecked_count" -eq 0 ]] || issues+=("$unchecked_count unchecked task(s) remain in tasks.md")

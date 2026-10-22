@@ -194,6 +194,35 @@ describe("handoff generated identity", () => {
   );
 });
 
+describe("handoff report reference policy", () => {
+  it.each(["skills", "skills-en"].flatMap((language) => ["off", "beta"].map((mode) => ({ language, mode }))))("$language $mode keeps nested report fences out of frozen identity", async ({ language, mode }) => {
+    const change = await fs.promises.mkdtemp(path.join(os.tmpdir(), "handoff-report-interval-"));
+    const script = path.join(ROOT, "assets", language, "superflow/scripts/superflow-handoff.sh");
+    try {
+      await write(path.join(change, ".sdd/config.yaml"), `context_compression: ${mode}\n`);
+      await write(path.join(change, "api.md"), "# API\nFrozen route.\n");
+      await write(path.join(change, "tasks.md"), "- [ ] 1.1 Preserve route\n");
+      await write(path.join(change, "tests.md"), "# Tests\n~~~text\nFollowing canonical section.\n~~~~\n");
+      for (const [fence, closing] of [["```", "```"], ["````", "`````"], ["~~~", "~~~~"]]) {
+        await write(path.join(change, "test-report.md"), `# Report\n${fence}bash\necho run\n${closing}\nResult: pending\n`);
+        await execFileAsync("bash", [script, change, "--write"]);
+        const manifest = JSON.parse(fs.readFileSync(path.join(change, ".sdd/handoff/sdd-context.json"), "utf8"));
+        expect(manifest.contextCompression).toBe(mode);
+        expect(manifest.sources.find((source: any) => source.path === "test-report.md").projected).toBe(false);
+        expect(fs.readFileSync(path.join(change, ".sdd/handoff/sdd-context.md"), "utf8")).not.toContain("echo run");
+        await write(path.join(change, "test-report.md"), `# Report\n${fence}bash\necho run\n${closing}\nResult: PASS\nExtra evidence\n`);
+        await expect(execFileAsync("bash", [script, change, "--check"])).resolves.toBeDefined();
+        const bodyFile = path.join(change, ".sdd/handoff/sdd-context.md");
+        const body = fs.readFileSync(bodyFile, "utf8");
+        fs.writeFileSync(bodyFile, body.replace("Following canonical section.", "Altered canonical section."));
+        await expect(execFileAsync("bash", [script, change, "--check"])).rejects.toThrow();
+      }
+    } finally {
+      await fs.promises.rm(change, { recursive: true, force: true });
+    }
+  }, 20_000);
+});
+
 describe("handoff contract fingerprint boundaries", () => {
   it.each(["skills", "skills-en"])(
     "%s defaults new packs to references without changing contract identity",

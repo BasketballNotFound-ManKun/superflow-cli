@@ -1369,6 +1369,17 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
       });
   });
 
+  it.each([GUARD, EN_GUARD])("accepts completed tasks through verify and archive: %s", async (guard) => {
+    const change = path.join(tmp, "openspec/changes/completed-tweak");
+    await write(path.join(change, "tasks.md"), "# Tasks\n- [x] 1.1 Finish documented tweak\n");
+    await write(path.join(change, "tests.md"), "# Tests\nCheck the documented result.\n");
+    await write(path.join(change, "test-report.md"), "# Report\nRED failure evidence; GREEN pass evidence.\nsuperflow-test-report-lint passed.\nVerification Result: PASS\nArchive Readiness: PASS\n");
+    await execFileAsync("bash", [STATE, "init", change, "tweak", "verify"]);
+    await execFileAsync("bash", [STATE, "set", change, "branch_status", "handled"]);
+    for (const phase of ["verify", "archive"])
+      await expect(execFileAsync("bash", [guard, change, phase, "--apply"])).resolves.toMatchObject({ stdout: expect.stringContaining(`guard passed for phase ${phase}`) });
+  });
+
   it("blocks archive without an explicit PASS closeout marker", async () => {
     const change = await makeContractChange(tmp);
     await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");
