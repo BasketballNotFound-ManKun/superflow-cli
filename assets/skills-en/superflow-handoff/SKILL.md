@@ -94,3 +94,8 @@ Hashes or a clean projection do not replace a real return. Missing required test
 open findings or absent re-review remain PARTIAL/Blocked, never a rewritten conclusion.
 
 Runtime test-report remains reference-only in every context_compression mode; progress is not a second frozen contract.
+
+For persistence/SQL, inherit testLayer, schemaSourceRefs, production statements,
+mockBoundary and databaseAssertions from the [single database contract](../superflow/references/document-review-coverage.md).
+The actual engine/version and required real database layer cannot be replaced by
+mocks; main navigation references that owner without creating another strategy.

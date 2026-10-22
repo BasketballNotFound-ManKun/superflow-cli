@@ -75,3 +75,7 @@ Blocked for docs，回对应阶段修复，不让实现Agent临场补合同。�
 代替真实返回。当前未决、缺必测或缺复评保持PARTIAL/Blocked，不为通过格式而改原结论。
 
 运行test-report在所有context_compression模式只引用，避免把执行进度投影成第二份冻结合同。
+
+涉及持久化或SQL时，沿[唯一数据库验证合同](../superflow/references/document-review-coverage.md)
+继承testLayer、schemaSourceRefs、生产statement、mockBoundary和databaseAssertions；
+项目真实引擎/版本及必要真实数据库层级不能由mock替代，主导航只引用，不另写策略。

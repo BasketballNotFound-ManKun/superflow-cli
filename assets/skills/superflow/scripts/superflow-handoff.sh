@@ -402,7 +402,7 @@ try:
     if (root / "sdd-context.sha256").read_text().strip() != expected["contextHash"]:
         raise ValueError("recorded context hash mismatch")
 except (OSError, ValueError, KeyError, TypeError) as error:
-    sys.stderr.write("superflow-handoff: current pack invalid; run --refresh / 当前交接包不一致，请刷新: " + str(error) + "\n")
+    sys.stderr.write("superflow-handoff: current pack invalid; run --refresh: " + str(error) + "\n")
     sys.exit(1)
 PYCHECK
 elif [[ "$MODE" == "--manifest" ]]; then
