@@ -155,7 +155,7 @@ beforeEach(() => {
     "| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |\n|---|---|---|---|---|\n| C1 | E11 | api | PASS | logs/C1.json |\n验证结果: PASS\n",
   );
   const receipt = JSON.parse(fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"));
-  fs.writeFileSync(path.join(dir, "baseline-review.md"), "DONE\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" + receipt.sources.map((source: any) => `| ${source.path.replace(/^\.\.\//, "")} | ${source.sha256} |`).join("\n"));
+  fs.writeFileSync(path.join(dir, "baseline-review.md"), "DONE\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" + receipt.sources.map((source: any) => `| ${source.path.replace(/^\.\.\//, "")} | ${source.sha256} |`).join("\n"));
   fs.appendFileSync(path.join(dir, "report.md"), "\n## Independent Review\n| Report |\n|---|\n| baseline-review.md |\n\n## Summary\n");
 });
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -185,7 +185,7 @@ describe("execution receipt boundary", () => {
     const receipt = fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8");
     expect(JSON.parse(receipt).executionContext.cwd).toBe(fs.realpathSync(dir));
     fs.writeFileSync(path.join(change, "current-review.md"),
-      "DONE\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" +
+      "DONE\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" +
       JSON.parse(receipt).sources.map((source: any) =>
         `| ${path.relative(dir, path.resolve(dir, "logs", source.path))} | ${source.sha256} |`).join("\n"));
     fs.mkdirSync(path.join(change, ".sdd/readiness"), { recursive: true });
@@ -241,7 +241,7 @@ describe("execution receipt boundary", () => {
   }
   function reviewed(files = ["application.ts", "build.cjs", "case.cjs"], state = "DONE", findings = "None") {
     fs.writeFileSync(path.join(dir, "code-review.md"),
-      `${state}\n## Findings\n${findings}\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n`
+      `${state}\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n## Findings\n${findings}\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n`
       + files.map(file => `| ${file} | ${digest(fs.readFileSync(path.join(dir, file), "utf8"))} |`).join("\n"));
     fs.appendFileSync(path.join(dir, "report.md"),
       "\n## Independent Review\n| Report |\n|---|\n| code-review.md |\n");
@@ -297,6 +297,35 @@ describe("execution receipt boundary", () => {
     reviewed();
     fs.rmSync(path.join(dir, "code-review.md"));
     expect(run({}, true).code).toBe(2);
+  });
+
+  it("consumes preserved review/Owner/recheck and checks every chain file against Git index", () => {
+    observedDelivery();
+    reviewed();
+    const currentFile = path.join(dir, "code-review.md");
+    const clean = fs.readFileSync(currentFile, "utf8");
+    const original = clean.replace("session:fixture/return", "session:fixture/original-return").replace("DONE\n", "DONE_WITH_CONCERNS\n").replace("## Findings\nNone", "## Concerns\nRecheck required\n## Findings\n- [F-001] application.ts:1: verify guard");
+    const owner = "## Finding Dispositions\n| ID | Disposition | Evidence |\n|---|---|---|\n| F-001 | dismissed | source:application.ts:1 |\n";
+    fs.writeFileSync(path.join(dir, "original.md"), original);
+    fs.writeFileSync(path.join(dir, "owner.md"), owner);
+    const chained = clean + `\n## Review Chain\n| Role | Path | SHA-256 |\n|---|---|---|\n| original | original.md | ${digest(original)} |\n| owner-response | owner.md | ${digest(owner)} |\n## Finding Rechecks\n| ID | Result | Evidence |\n|---|---|---|\n| F-001 | dismissed | source:application.ts:1 |\n`;
+    fs.writeFileSync(currentFile, chained);
+    expect(run({}, true).code).toBe(0);
+    fs.writeFileSync(currentFile, chained.replace("| F-001 | dismissed | source:application.ts:1 |", ""));
+    expect(run({}, true).code).toBe(2);
+    fs.writeFileSync(currentFile, chained);
+    execFileSync("git", ["init", "-q", dir]);
+    execFileSync("git", ["-C", dir, "add", "."]);
+    const checkIndex = () => spawnSync("python3", [path.join(dir, "capture-package/assets/scripts/lint.py"), "--require-complete", "--git-index-root", dir, "--review", path.join(dir, "review.json"), path.join(dir, "report.md")], { encoding: "utf8" });
+    expect(checkIndex().status).toBe(0);
+    const changedOwner = owner.replace("source:application.ts:1", "test:verified-guard");
+    fs.writeFileSync(path.join(dir, "owner.md"), changedOwner);
+    fs.writeFileSync(currentFile, chained.replace(digest(owner), digest(changedOwner)));
+    execFileSync("git", ["-C", dir, "add", "code-review.md"]);
+    const stale = checkIndex();
+    expect(stale.status, stale.stdout + stale.stderr).toBe(2);
+    expect(stale.stdout).toContain("owner.md");
+    expect(run().code).toBe(0);
   });
   it("accepts a current source-bound completed review", () => {
     observedDelivery();

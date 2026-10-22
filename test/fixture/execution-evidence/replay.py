@@ -145,7 +145,7 @@ ready.parent.mkdir(parents=True, exist_ok=True)
 ready.write_text(json.dumps({"schemaVersion": "superflow.coding-ready.v1", "codingReady": True,
                              "workflowPolicy": "observed-delivery.v1"}))
 (root / ".sdd/reviews/current-code-review.md").write_text(
-    "DONE\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" +
+    "DONE\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" +
     "\n".join(f"| {source['path']} | {source['sha256']} |" for source in sources))
 (root / "test-report.md").write_text("RED failure evidence; GREEN pass evidence.\n接口自动化 curl HTTP 200; DB SELECT; log checked; BUILD SUCCESS PID\nsuperflow-test-report-lint\nAnonymous SQLite harness only; not private E05/E11 acceptance or MySQL proof.\n| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |\n|---|---|---|---|---|\n" + "\n".join(rows) + "\n验证结果: PASS\nVerification Result: PASS\nArchive Readiness: PASS\n\n## Independent Review\n| Report |\n|---|\n| .sdd/reviews/current-code-review.md |\n\n## Summary\n")
 (root / "tasks.md").write_text("- [x] Anonymous verification\n")

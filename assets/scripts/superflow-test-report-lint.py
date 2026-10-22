@@ -1081,6 +1081,8 @@ console.log(JSON.stringify(input.reports.map(file=>auditReviewReport(fs.readFile
         if ready.is_file():
             dependencies.append(ready)
         for file, audit in zip(references, audits):
+            for dependency in audit.get("dependencies", []):
+                dependencies.append(verified_file(project, dependency))
             if (audit.get("state") != "DONE" or not audit.get("eligibleForTriage")
                     or audit.get("findings") != 0 or not audit.get("findingsClear")
                     or not audit.get("reviewedSources")):

@@ -15,6 +15,10 @@ afterEach(() => {
   }
 });
 function auditCurrentReport(content: string, root: string) {
+  if (!content.includes("## Review Identity")) {
+    const split = content.indexOf("\n");
+    content = content.slice(0, split + 1) + "## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n" + content.slice(split + 1);
+  }
   if (content.includes("## Reviewed Sources")) {
     return auditReviewReport(content, root);
   }
@@ -29,6 +33,54 @@ function auditCurrentReport(content: string, root: string) {
 }
 
 describe("reviewer four-state report", () => {
+
+  it.each(["unchanged", "changed", "removed"])("retains historical source identity when %s", evolution => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-chain-"));
+    const hash = (text: string) => createHash("sha256").update(text).digest("hex");
+    const identity = "## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:dispatch/1 |\n| Return | session:return/1 |\n";
+    fs.writeFileSync(path.join(root, "application.ts"), "before");
+    const original = `DONE_WITH_CONCERNS\n${identity}## Concerns\nFix required\n## Findings\n- [F-001] application.ts:1: guard missing\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| application.ts | ${hash("before")} |\n`;
+    const owner = "## Finding Dispositions\n| ID | Disposition | Evidence |\n|---|---|---|\n| F-001 | fixed | test:guard |\n";
+    fs.writeFileSync(path.join(root, "original.md"), original);
+    fs.writeFileSync(path.join(root, "owner.md"), owner);
+    if (evolution === "changed") fs.writeFileSync(path.join(root, "application.ts"), "after");
+    if (evolution === "removed") fs.unlinkSync(path.join(root, "application.ts"));
+    fs.writeFileSync(path.join(root, "current.ts"), "current");
+    const current = `DONE\n${identity.replace("session:return/1", "session:return/2")}## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| current.ts | ${hash("current")} |\n## Review Chain\n| Role | Path | SHA-256 |\n|---|---|---|\n| original | original.md | ${hash(original)} |\n| owner-response | owner.md | ${hash(owner)} |\n## Finding Rechecks\n| ID | Result | Evidence |\n|---|---|---|\n| F-001 | resolved | test:guard |\n`;
+    try {
+      expect(auditReviewReport(current, root).issues).toEqual([]);
+      expect(auditReviewReport(current, root).eligibleForTriage).toBe(true);
+      expect(auditReviewReport(current.replace("session:return/2", "session:return/1"), root).eligibleForTriage).toBe(false);
+      const combined = original + owner;
+      fs.writeFileSync(path.join(root, "original.md"), combined);
+      const sameFile = current.replace(hash(original), hash(combined)).replace(`owner.md | ${hash(owner)}`, `original.md | ${hash(combined)}`);
+      expect(auditReviewReport(sameFile, root).eligibleForTriage).toBe(false);
+      fs.writeFileSync(path.join(root, "original.md"), original);
+      for (const invalid of [current.replace("| F-001 | resolved", "| F-999 | resolved"), current.replace("| F-001 | resolved | test:guard |", ""), current.replace("| F-001 | resolved", "| F-001 | accepted"), current.replace("| Role | independent-reviewer |", "| Role | owner |")]) {
+        expect(auditReviewReport(invalid, root).eligibleForTriage).toBe(false);
+      }
+      fs.writeFileSync(path.join(root, "owner.md"), owner.replace("F-001", "F-999"));
+      const changedOwner = fs.readFileSync(path.join(root, "owner.md"), "utf8");
+      expect(auditReviewReport(current.replace(hash(owner), hash(changedOwner)), root).eligibleForTriage).toBe(false);
+      fs.writeFileSync(path.join(root, "owner.md"), owner);
+      const overwritten = original.replace("- [F-001] application.ts:1: guard missing", "None");
+      fs.writeFileSync(path.join(root, "original.md"), overwritten);
+      expect(auditReviewReport(current, root).eligibleForTriage).toBe(false);
+      expect(auditReviewReport(current.replace(hash(original), hash(overwritten)), root).eligibleForTriage).toBe(false);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+  it("rejects DONE with residual concerns", () => {
+    const result = auditCurrentReport("DONE\n## Findings\nNone\n## Concerns\nPending retry semantics\n", os.tmpdir());
+    expect(result.eligibleForTriage).toBe(false);
+  });
+  it("rejects Owner self-review and missing dispatch identity", () => {
+    for (const identity of ["| Role | owner |\n| Dispatch | d |\n| Return | r |", "| Role | independent-reviewer |\n| Return | r |"])
+      expect(auditCurrentReport(`DONE\n## Review Identity\n| Field | Value |\n|---|---|\n${identity}\n## Findings\nNone\n`, os.tmpdir()).eligibleForTriage).toBe(false);
+  });
+  it("rejects a missing original review instead of treating Owner response as recheck", () => {
+    expect(auditCurrentReport(`DONE\n## Findings\nNone\n## Review Chain\n| Role | Path | SHA-256 |\n|---|---|---|\n| original | missing.md | ${"a".repeat(64)} |\n`, os.tmpdir()).eligibleForTriage).toBe(false);
+  });
+
   it.each(["-", "+", "*", "1.", "1)"])(
     "counts unresolved findings using Markdown list marker %s", marker => {
       const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-list-"));
@@ -235,7 +287,7 @@ describe("reviewer four-state report", () => {
     fs.writeFileSync(path.join(root, "src", "A.java"), "a\nb\n");
     try {
       const result = auditCurrentReport(
-        "DONE\n## Findings\n- src/A.java:2: missing null guard\n",
+        "DONE\n## Findings\n- [F-001] src/A.java:2: missing null guard\n",
         root,
       );
       expect(result.eligibleForTriage).toBe(true);
