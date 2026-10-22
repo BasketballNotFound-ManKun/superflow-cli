@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   digest,
+  handoffHash,
   mutateReview,
   prepareCoverage,
   REVIEW,
@@ -94,6 +95,92 @@ describe("source investigation facts, never a semantic verdict", () => {
     prepareSourceInvestigation(change);
   });
   afterEach(() => fs.rmSync(change, { recursive: true, force: true }));
+  function currentHow(): void {
+    const text =
+      "# Current HOW\nImplement the declared request route using the frozen design.\n";
+    fs.writeFileSync(path.join(change, "technical-design.md"), text);
+    fs.appendFileSync(
+      path.join(change, ".sdd/state.yaml"),
+      "technical_design: technical-design.md\n",
+    );
+    const hash = handoffHash(change);
+    mutateReview(change, (r) => {
+      r.coverage.sources.push({
+        id: "how",
+        path: "technical-design.md",
+        role: "contract",
+        sha256: digest(text),
+      });
+      for (const round of r.rounds) round.inputHash = hash;
+    });
+  }
+  function negativeInvestigation(): void {
+    for (const file of ["caller.ts", "service.ts", "schema.sql"])
+      fs.rmSync(path.join(change, file));
+    fs.appendFileSync(path.join(change, ".sdd/state.yaml"), "workflow: full\n");
+    const text =
+      "# Negative source investigation\nNo implementation files or vendored dependency sources exist in the inspected project.\n";
+    fs.writeFileSync(path.join(change, "source-code-audit.md"), text);
+    fs.writeFileSync(
+      path.join(change, "tasks.md"),
+      "- [ ] 1.1 Implement the declared request route\n",
+    );
+    mutateReview(change, (r) => {
+      r.coverage.sources.find((source: any) => source.id === "audit").sha256 =
+        digest(text);
+      r.coverage.sources = r.coverage.sources.filter(
+        (source: any) => source.role !== "code",
+      );
+      for (const entry of r.coverage.entries) {
+        entry.sourceRefs = ["audit"];
+        entry.investigation.canonical.text = text.trim().split("\n")[1];
+        entry.investigation.scope = "no-existing-source";
+        entry.investigation.evidence = [entry.investigation.canonical];
+        entry.investigation.counterexample =
+          "An existing implementation or dependency source would invalidate this empty-source investigation.";
+      }
+      r.coverage.decisions.forEach((decision: any) => {
+        decision.sourceRefs = ["original", "audit"];
+      });
+      r.rounds[0].sourceChecks = r.coverage.entries.map((entry: any) => ({
+        entryId: entry.id,
+        scope: "no-existing-source",
+        result: "CONFIRMED",
+        evidence: entry.investigation.evidence,
+        rationale:
+          "Reviewed the recorded empty-source and dependency investigation.",
+        counterexample: entry.investigation.counterexample,
+      }));
+    });
+    currentHow();
+  }
+  it("accepts explicit negative investigation without fabricated code anchors", () => {
+    negativeInvestigation();
+    expect(audit()).toEqual([]);
+  });
+  it("rejects negative investigation when any code source exists", () => {
+    negativeInvestigation();
+    fs.writeFileSync(
+      path.join(change, "caller.ts"),
+      "// existing implementation\n",
+    );
+    mutateReview(change, (r) => {
+      r.coverage.sources.push({
+        id: "caller",
+        path: "caller.ts",
+        role: "code",
+        sha256: digest(fs.readFileSync(path.join(change, "caller.ts"))),
+      });
+    });
+    expect(audit().join("\n")).toContain("已有 code");
+  });
+  it("requires explicit independent negative investigation checks", () => {
+    negativeInvestigation();
+    mutateReview(change, (r) => {
+      delete r.rounds[0].sourceChecks[0].scope;
+    });
+    expect(audit().join("\n")).toContain("无既有源码调查复核");
+  });
   it("accepts verified anchors without adding business inference", () => {
     expect(audit()).toEqual([]);
   });
@@ -166,6 +253,97 @@ describe("source investigation facts, never a semantic verdict", () => {
     mutateReview(change, mutate);
     expect(audit().join("\n")).toContain(message);
   });
+  it("an existing READY cannot remove workflow to bypass full investigation", () => {
+    currentHow();
+    const hash = handoffHash(change);
+    mutateReview(change, (r) => {
+      delete r.coverage.sourceInvestigation;
+      for (const entry of r.coverage.entries) delete entry.investigation;
+      delete r.rounds[0].sourceChecks;
+    });
+    fs.writeFileSync(path.join(change, ".sdd/state.yaml"), `phase: implement\nhandoff_hash: ${hash}\n`);
+    const receiptFile = path.join(change, ".sdd/readiness/coding-ready.json");
+    const receipt = JSON.parse(fs.readFileSync(receiptFile, "utf8"));
+    receipt.handoffHash = hash;
+    receipt.reviewHash = digest(fs.readFileSync(path.join(change, REVIEW)));
+    fs.writeFileSync(receiptFile, JSON.stringify(receipt));
+    const checked = spawnSync(process.execPath, [script, change], { encoding: "utf8" });
+    expect(checked.status, checked.stderr).toBe(1);
+    expect(checked.stderr).toContain("workflow");
+  });
+  it("full workflow cannot delete the current technical_design declaration", () => {
+    fs.appendFileSync(path.join(change, ".sdd/state.yaml"), "workflow: full\n");
+    expect(audit().join("\n")).toContain("technical_design");
+  });
+  it("does not reuse source checks from an obsolete HOW review round", () => {
+    fs.writeFileSync(
+      path.join(change, "technical-design.md"),
+      "# Current HOW\n",
+    );
+    fs.appendFileSync(
+      path.join(change, ".sdd/state.yaml"),
+      "technical_design: technical-design.md\n",
+    );
+    const hash = handoffHash(change);
+    mutateReview(change, (r) => {
+      r.coverage.sources.push({
+        id: "how",
+        path: "technical-design.md",
+        role: "contract",
+        sha256: digest("# Current HOW\n"),
+      });
+      const historical = { ...r.rounds[0] };
+      for (const round of r.rounds) round.inputHash = hash;
+      delete r.rounds[0].sourceChecks;
+      r.rounds.push(historical);
+    });
+    expect(audit().join("\n")).toContain("独立源码核验");
+  });
+  it.each([true, false])(
+    "full workflow cannot omit all investigation markers (checkCode=%s)",
+    (checkCode) => {
+      prepareCoverage(change);
+      fs.appendFileSync(
+        path.join(change, ".sdd/state.yaml"),
+        "workflow: full\n",
+      );
+      expect(audit(checkCode).join("\n")).toContain("源码调查");
+    },
+  );
+  it("full workflow cannot remove existing investigation and markers", () => {
+    fs.appendFileSync(path.join(change, ".sdd/state.yaml"), "workflow: full\n");
+    mutateReview(change, (r) => {
+      delete r.coverage.sourceInvestigation;
+      for (const entry of r.coverage.entries) delete entry.investigation;
+    });
+    expect(audit().join("\n")).toContain("源码调查");
+  });
+  it.each(["missing", "wrong role", "stale input", "missing lens"])(
+    "rejects current HOW with %s",
+    (scenario) => {
+      const file = "technical-design.md";
+      fs.writeFileSync(path.join(change, file), "# Current HOW\n");
+      fs.appendFileSync(
+        path.join(change, ".sdd/state.yaml"),
+        `technical_design: ${file}\n`,
+      );
+      mutateReview(change, (r) => {
+        if (scenario !== "missing")
+          r.coverage.sources.push({
+            id: "how",
+            path: file,
+            role: scenario === "wrong role" ? "requirement" : "contract",
+            sha256: digest(fs.readFileSync(path.join(change, file))),
+          });
+        if (scenario === "missing lens") r.rounds.pop();
+      });
+      expect(audit().join("\n")).toContain(
+        scenario === "missing" || scenario === "wrong role"
+          ? "technical_design"
+          : "当前",
+      );
+    },
+  );
   it("cannot remove coverage marker to bypass a frozen requirement", () => {
     fs.writeFileSync(
       path.join(change, ".openspec.yaml"),
@@ -329,6 +507,8 @@ describe("source investigation facts, never a semantic verdict", () => {
     },
   );
   it("preserves implementation-stage source drift allowance", () => {
+    fs.appendFileSync(path.join(change, ".sdd/state.yaml"), "workflow: full\n");
+    currentHow();
     fs.writeFileSync(
       path.join(change, "service.ts"),
       "// implementation changes\n",
@@ -336,8 +516,16 @@ describe("source investigation facts, never a semantic verdict", () => {
     expect(audit(false)).toEqual([]);
     expect(audit(true).length).toBeGreaterThan(0);
   });
-  it("keeps legacy v1 readable without claiming the new investigation", () => {
-    prepareCoverage(change);
-    expect(audit()).toEqual([]);
-  });
+  it.each(["quick", ""])(
+    "does not impose full investigation on generic coverage (%s)",
+    (workflow) => {
+      prepareCoverage(change);
+      if (workflow)
+        fs.appendFileSync(
+          path.join(change, ".sdd/state.yaml"),
+          `workflow: ${workflow}\n`,
+        );
+      expect(audit()).toEqual([]);
+    },
+  );
 });

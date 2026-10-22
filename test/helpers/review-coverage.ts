@@ -35,11 +35,17 @@ export function prepareCoverage(
   write("caller.ts", "export const create = () => post('/operator/add');\n");
   if (!fs.existsSync(path.join(change, "tests.md")))
     write("tests.md", "# Test contract\n");
+  const stateFile = path.join(change, ".sdd/state.yaml");
+  const state = fs.existsSync(stateFile)
+    ? fs.readFileSync(stateFile, "utf8")
+    : "";
+  const technical = state.match(/^technical_design:\s*(.+)$/m)?.[1];
   const hash = handoffHash(change);
   const sources = [
     { id: "original", path: "source-requirements.txt", role: "requirement" },
     { id: "caller", path: "caller.ts", role: "code" },
     { id: "tests", path: "tests.md", role: "contract" },
+    ...(technical ? [{ id: "how", path: technical, role: "contract" }] : []),
   ].map((source) => ({
     ...source,
     sha256: digest(fs.readFileSync(path.join(change, source.path))),

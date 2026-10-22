@@ -1,10 +1,11 @@
+import { prepareSourceInvestigation } from "../helpers/source-investigation.js";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { assertCodingReadyForPrompt } from "../../src/domains/sdd-readiness.js";
-import { prepareCoverage, digest, REVIEW } from "../helpers/review-coverage.js";
+import { digest, REVIEW } from "../helpers/review-coverage.js";
 
 let root: string;
 let change: string;
@@ -24,7 +25,7 @@ describe("SDD coding-ready receipt", () => {
       path.join(change, ".sdd", "state.yaml"),
       `phase: implement\nhandoff_hash: ${hash}\n`,
     );
-    hash = prepareCoverage(change);
+    hash = prepareSourceInvestigation(change, { full: true, preserveContracts: true });
   });
 
   afterEach(() => {
@@ -72,9 +73,9 @@ describe("SDD coding-ready receipt", () => {
   );
 
   it("keeps task completion and test-report progress valid", () => {
-    fs.writeFileSync(path.join(change, "tasks.md"), "- [ ] A\n");
-    prepareCoverage(change);
-    fs.writeFileSync(path.join(change, "tasks.md"), "- [x] A\n");
+    fs.writeFileSync(path.join(change, "tasks.md"), "- [ ] A Preserve the request route\n");
+    prepareSourceInvestigation(change, { full: true, preserveContracts: true });
+    fs.writeFileSync(path.join(change, "tasks.md"), "- [x] A Preserve the request route\n");
     fs.writeFileSync(path.join(change, "test-report.md"), "new run results\n");
     expect(() => assertCodingReadyForPrompt(prompt)).not.toThrow();
   });

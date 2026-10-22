@@ -1,3 +1,4 @@
+import { prepareSourceInvestigation } from "../helpers/source-investigation.js";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -38,7 +39,7 @@ import type {
   ReviewResult,
 } from "../../src/domains/managed-work/types.js";
 
-import { prepareCoverage, digest, handoffHash, REVIEW } from "../helpers/review-coverage.js";
+import { digest, handoffHash, REVIEW } from "../helpers/review-coverage.js";
 import { writeExecutionReceipt, writeIndependentReview } from "../helpers/execution-receipt.js";
 
 const roots: string[] = [];
@@ -3243,7 +3244,7 @@ function createSddFixture(tasks: string[], initializeGit = false) {
     path.join(changeDir, "tasks.md"),
     `# Tasks\n\n${tasks.join("\n")}\n`,
   );
-  prepareCoverage(changeDir);
+  prepareSourceInvestigation(changeDir, { full: true, preserveContracts: true });
   const reviewFile = path.join(changeDir, REVIEW);
   const review = JSON.parse(fs.readFileSync(reviewFile, "utf8"));
   review.projectRoot = ".";
@@ -3266,7 +3267,7 @@ function createSddFixture(tasks: string[], initializeGit = false) {
   ready.reviewHash = digest(fs.readFileSync(reviewFile));
   fs.writeFileSync(readyFile, JSON.stringify(ready));
   fs.writeFileSync(path.join(changeDir, ".sdd/state.yaml"),
-    `phase: implement\nhandoff_hash: ${currentHash}\n`);
+    `workflow: full\ntechnical_design: technical-design.md\nphase: implement\nhandoff_hash: ${currentHash}\n`);
   if (initializeGit) initializeGitRepository(root);
   const env = {
     ...process.env,

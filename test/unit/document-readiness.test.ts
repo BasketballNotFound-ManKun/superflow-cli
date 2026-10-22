@@ -1,3 +1,4 @@
+import { prepareSourceInvestigation } from "../helpers/source-investigation.js";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -5,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { prepareCoverage, mutateReview } from "../helpers/review-coverage.js";
+import { mutateReview } from "../helpers/review-coverage.js";
 
 const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(__dirname, "../..");
@@ -217,7 +218,7 @@ describe("document delivery readiness", () => {
       path.join(os.tmpdir(), "superflow-doc-readiness-"),
     );
     await prepareReadyChange();
-    const hash = prepareCoverage(change);
+    const hash = prepareSourceInvestigation(change, { full: true, preserveContracts: true });
     const envFile = path.join(change, ".sdd/readiness/environment.json");
     const env = JSON.parse(fs.readFileSync(envFile, "utf8"));
     env.handoffHash = hash;

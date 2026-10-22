@@ -6,7 +6,8 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { makeContractChange, write } from "../helpers/contract-change.js";
 import { fixtureProcessEnv } from "../helpers/fixture-process-env.js";
-import { prepareCoverage, mutateReview } from "../helpers/review-coverage.js";
+import { mutateReview } from "../helpers/review-coverage.js";
+import { prepareSourceInvestigation } from "../helpers/source-investigation.js";
 import { assertCodingReadyForPrompt } from "../../src/domains/sdd-readiness.js";
 
 const ROOT = path.resolve(__dirname, "../..");
@@ -18,6 +19,14 @@ afterEach(() => {
 it.each([
   { buildMode: "team-prompt", scenario: "captured", ready: true },
   { buildMode: "owner", scenario: "captured", ready: true },
+  { buildMode: "owner", scenario: "omitted investigation", ready: false },
+  {
+    buildMode: "owner",
+    scenario: "removed investigation current receipt",
+    ready: false,
+  },
+  { buildMode: "owner", scenario: "missing HOW", ready: false },
+  { buildMode: "owner", scenario: "stale HOW input", ready: false },
   { buildMode: "owner", scenario: "fresh legacy", ready: false },
   { buildMode: "owner", scenario: "one legacy case", ready: false },
   { buildMode: "owner", scenario: "valid legacy receipt", ready: false },
@@ -102,11 +111,46 @@ it.each([
       review_mode: "standard",
     }))
       shell("superflow-state.sh", ["set", change, key, value]);
-    const hash = prepareCoverage(change, {
+    const hash = prepareSourceInvestigation(change, {
       persistState: false,
       persistReceipt: false,
+      preserveContracts: true,
     });
-    if (scenario !== "captured") {
+    const sourceFailure = scenario.includes("investigation");
+    const howFailure = scenario.includes("HOW");
+    if (sourceFailure) {
+      mutateReview(change, (review) => {
+        const coverage = review.coverage;
+        for (let i = 2; i < 9; i++) {
+          const entryId = `entry-${i + 1}`;
+          coverage.entries.push({ ...coverage.entries[1], id: entryId });
+          coverage.cases.push({
+            ...coverage.cases[1],
+            id: `C${i + 1}`,
+            entryId,
+          });
+          coverage.decisions.push({
+            ...coverage.decisions[1],
+            entryId,
+            caseIds: [`C${i + 1}`],
+          });
+          for (const round of review.rounds)
+            round.reviewedPairs.push(["R1", entryId]);
+        }
+        delete coverage.sourceInvestigation;
+        for (const entry of coverage.entries) delete entry.investigation;
+        delete review.rounds[0].sourceChecks;
+      });
+    } else if (howFailure) {
+      mutateReview(change, (review) => {
+        if (scenario === "missing HOW")
+          review.coverage.sources = review.coverage.sources.filter(
+            (source: any) => source.id !== "how",
+          );
+        else
+          for (const round of review.rounds) round.inputHash = "a".repeat(64);
+      });
+    } else if (scenario !== "captured") {
       mutateReview(change, (review) => {
         for (const test of review.coverage.cases) {
           if (scenario === "one legacy case" && test.id === "C1") continue;
@@ -186,7 +230,10 @@ it.each([
       "implement",
     );
     const receiptFile = path.join(change, ".sdd/readiness/coding-ready.json");
-    if (scenario.endsWith("legacy receipt")) {
+    if (
+      scenario.endsWith("legacy receipt") ||
+      scenario.endsWith("current receipt")
+    ) {
       const prior = {
         schemaVersion: "superflow.coding-ready.v1",
         codingReady: scenario !== "blocked legacy receipt",
@@ -214,10 +261,18 @@ it.each([
         ownerDecisions: 0,
         issues: [],
       };
+      if (scenario.endsWith("current receipt"))
+        Object.assign(prior, { workflowPolicy: "observed-delivery.v1" });
       if (scenario === "incomplete legacy receipt") prior.evidence = [];
       if (scenario === "stale legacy receipt")
         prior.reviewHash = "a".repeat(64);
       await write(receiptFile, JSON.stringify(prior));
+      if (sourceFailure)
+        expect(() =>
+          assertCodingReadyForPrompt(
+            path.join(change, "prompt/implementation.md"),
+          ),
+        ).toThrow();
     }
     const reviewBefore = fs.readFileSync(
       path.join(change, ".sdd/reviews/document-review.json"),
@@ -248,7 +303,15 @@ it.each([
     ).toBe(reviewBefore);
     if (!ready) {
       expect(receipt.documentReadiness).toBe("BLOCKED");
-      expect(receipt.issues.join("\n")).toContain("executionEvidence");
+      expect(receipt.issues.join("\n")).toContain(
+        sourceFailure
+          ? "源码调查"
+          : howFailure
+            ? scenario === "missing HOW"
+              ? "technical_design"
+              : "当前"
+            : "executionEvidence",
+      );
       expect(() =>
         assertCodingReadyForPrompt(
           path.join(change, "prompt/implementation.md"),

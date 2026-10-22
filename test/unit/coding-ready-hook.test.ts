@@ -1,9 +1,9 @@
+import { prepareSourceInvestigation } from "../helpers/source-investigation.js";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { prepareCoverage } from "../helpers/review-coverage.js";
 
 const ROOT = path.resolve(__dirname, "../..");
 const HOOK = path.join(ROOT, "assets", "scripts", "superflow-hook-guard.sh");
@@ -40,13 +40,13 @@ describe("coding-ready source edit hook", () => {
 
   it("allows runtime edits with a receipt bound to the current handoff hash", () => {
     fs.writeFileSync(path.join(change, "tests.md"), "# Tests\n");
-    prepareCoverage(change);
+    prepareSourceInvestigation(change, { full: true, preserveContracts: true });
     const result = runHook(sourceFile);
     expect(result.status).toBe(0);
   });
 
   it("blocks an otherwise current READY without the current workflow policy", () => {
-    prepareCoverage(change);
+    prepareSourceInvestigation(change, { full: true, preserveContracts: true });
     const file = path.join(change, ".sdd/readiness/coding-ready.json");
     const receipt = JSON.parse(fs.readFileSync(file, "utf8"));
     delete receipt.workflowPolicy;
@@ -56,7 +56,7 @@ describe("coding-ready source edit hook", () => {
 
   it("allows implementation edits but blocks changed contracts", () => {
     fs.writeFileSync(path.join(change, "tests.md"), "# Tests\n");
-    prepareCoverage(change);
+    prepareSourceInvestigation(change, { full: true, preserveContracts: true });
     fs.appendFileSync(
       path.join(change, "caller.ts"),
       "// intended implementation\n",

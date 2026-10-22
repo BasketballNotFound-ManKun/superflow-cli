@@ -127,7 +127,11 @@ export function validateCoverage(root, review, issues, checkCode = true) {
     ) {
       issues.push(`入口 ${entry.id} 缺少角色、实际路由或入口类型`);
     }
-    refs(entry.sourceRefs, "code", `入口 ${entry.id}`);
+    refs(
+      entry.sourceRefs,
+      entry.investigation?.scope === "no-existing-source" ? "contract" : "code",
+      `入口 ${entry.id}`,
+    );
     const database = entry.database;
     if (list(entry.persistence).length && !database)
       issues.push(
@@ -158,7 +162,9 @@ export function validateCoverage(root, review, issues, checkCode = true) {
   for (const test of cases.values()) {
     const entry = entries.get(test.entryId);
     if (test.executionEvidence !== "runner-captured.v1") {
-      issues.push(`用例 ${test.id} 必须冻结 executionEvidence: runner-captured.v1`);
+      issues.push(
+        `用例 ${test.id} 必须冻结 executionEvidence: runner-captured.v1`,
+      );
     }
     if (
       test.executionEvidence === "runner-captured.v1" &&
@@ -436,6 +442,65 @@ function validateSourceInvestigation(
   checkCode,
 ) {
   const coverage = review.coverage;
+  const statePath = path.join(root, ".sdd/state.yaml");
+  const state = fs.existsSync(statePath)
+    ? fs.readFileSync(statePath, "utf8")
+    : "";
+  const stateValue = (key) =>
+    state
+      .match(
+        new RegExp("^" + key + ":\\s*[\"']?([^\\r\\n\"']+?)[\"']?\\s*$", "m"),
+      )?.[1]
+      ?.trim();
+  const full = stateValue("workflow") === "full";
+  const technicalDesign = stateValue("technical_design");
+  if (full && (!technicalDesign || technicalDesign === "null"))
+    issues.push(
+      "完整 SDD 缺少当前 technical_design / Missing full workflow HOW",
+    );
+  let currentInputHash;
+  if (technicalDesign && technicalDesign !== "null") {
+    const how = [...sources.values()].find(
+      (source) =>
+        source.role === "contract" &&
+        nonempty(source.path) &&
+        path.resolve(root, source.path ?? "") ===
+          path.resolve(root, technicalDesign),
+    );
+    if (!how)
+      issues.push(
+        "当前 technical_design 未以 contract 来源纳入评审 / Missing current HOW source",
+      );
+    try {
+      const hash = currentHandoffHash(root);
+      currentInputHash = hash;
+      for (const lens of [
+        "source-contract",
+        "architecture-minimality",
+        "e2e-environment",
+      ]) {
+        if (
+          !list(review.rounds).some(
+            (round) =>
+              round?.lens === lens &&
+              round.inputHash === hash &&
+              Array.isArray(round.findings) &&
+              round.findings.every((finding) => finding?.status === "closed"),
+          )
+        )
+          issues.push(
+            `${lens} 缺少基于当前 HOW 输入的已关闭评审 / Missing current HOW review`,
+          );
+      }
+    } catch (error) {
+      issues.push(error.message);
+    }
+  }
+  const hasCode = [...sources.values()].some(
+    (source) => source.role === "code",
+  );
+  const noExistingSource = (entry) =>
+    entry?.investigation?.scope === "no-existing-source";
   const configPath = path.join(root, ".openspec.yaml");
   const config = fs.existsSync(configPath)
     ? fs.readFileSync(configPath, "utf8")
@@ -465,7 +530,9 @@ function validateSourceInvestigation(
       "源码调查配置必须使用明确 required 标量 / Invalid source investigation declaration",
     );
   const required =
-    configRequiresInvestigation || coverage.sourceInvestigation === "required";
+    full ||
+    configRequiresInvestigation ||
+    coverage.sourceInvestigation === "required";
   if (
     coverage.sourceInvestigation !== undefined &&
     coverage.sourceInvestigation !== "required"
@@ -507,14 +574,14 @@ function validateSourceInvestigation(
       return null;
     }
   };
-  const evidence = (anchors, label) => {
+  const evidence = (anchors, label, role = "code") => {
     if (!Array.isArray(anchors) || !anchors.length) {
       issues.push(
         `${label} 缺少源码调查依据 / Missing source investigation evidence`,
       );
       return;
     }
-    for (const anchor of anchors) anchorText(anchor, "code", label);
+    for (const anchor of anchors) anchorText(anchor, role, label);
   };
   for (const entry of entries.values()) {
     const research = entry.investigation;
@@ -537,7 +604,19 @@ function validateSourceInvestigation(
           "contract",
           `入口 ${entry.id} canonical`,
         );
-        evidence(research.evidence, `入口 ${entry.id}`);
+        if (research.scope !== undefined && !noExistingSource(entry))
+          issues.push(
+            `入口 ${entry.id} 源码调查 scope 无效 / Invalid investigation scope`,
+          );
+        if (noExistingSource(entry) && hasCode)
+          issues.push(
+            `入口 ${entry.id} 已有 code 来源，不能声明无既有源码 / Existing source contradicts investigation scope`,
+          );
+        evidence(
+          research.evidence,
+          `入口 ${entry.id}`,
+          noExistingSource(entry) ? "contract" : "code",
+        );
         if (!nonempty(research.counterexample))
           issues.push(`入口 ${entry.id} 缺少反例 / Missing counterexample`);
       }
@@ -654,12 +733,25 @@ function validateSourceInvestigation(
     }
   }
   const checks = list(review.rounds)
-    .filter((r) => r?.lens === "source-contract")
+    .filter(
+      (r) =>
+        r?.lens === "source-contract" &&
+        (currentInputHash === undefined || r.inputHash === currentInputHash),
+    )
     .flatMap((r) => list(r.sourceChecks));
   if (required && !checks.length)
     issues.push(
       "缺少关键结论的独立源码核验 / Missing independent source checks",
     );
+  for (const entry of entries.values()) {
+    if (
+      noExistingSource(entry) &&
+      !checks.some((check) => check?.entryId === entry.id)
+    )
+      issues.push(
+        `入口 ${entry.id} 缺少无既有源码调查的独立核验 / Missing negative investigation check`,
+      );
+  }
   const checked = new Set();
   for (const check of checks) {
     if (!entries.has(check?.entryId) || checked.has(check?.entryId))
@@ -671,7 +763,16 @@ function validateSourceInvestigation(
       issues.push(
         `独立源码核验 ${check?.entryId} ${check?.result ?? "SOURCE_INVESTIGATION"} 未关闭 / Source check unresolved`,
       );
-    evidence(check?.evidence, `独立源码核验 ${check?.entryId}`);
+    const entry = entries.get(check?.entryId);
+    if (noExistingSource(entry) && check?.scope !== "no-existing-source")
+      issues.push(
+        `独立源码核验 ${check?.entryId} 缺少无既有源码调查复核 / Missing negative investigation check`,
+      );
+    evidence(
+      check?.evidence,
+      `独立源码核验 ${check?.entryId}`,
+      noExistingSource(entry) ? "contract" : "code",
+    );
     if (!nonempty(check?.rationale) || !nonempty(check?.counterexample))
       issues.push(
         "独立源码核验缺少理由或反例 / Missing rationale or counterexample",
@@ -689,6 +790,10 @@ export function checkReceipt(root, { checkCode = false } = {}) {
       ),
     );
     const state = fs.readFileSync(path.join(root, ".sdd/state.yaml"), "utf8");
+    if (!/^workflow:\s*["']?(?:full|hotfix|tweak)["']?\s*$/m.test(state))
+      issues.push(
+        "当前 SDD 状态缺少有效 workflow；请补齐当前流程并重新评审 / Missing current workflow",
+      );
     const stateHash = state.match(
       /^handoff_hash:\s*["']?([a-f0-9]{64})["']?\s*$/m,
     )?.[1];

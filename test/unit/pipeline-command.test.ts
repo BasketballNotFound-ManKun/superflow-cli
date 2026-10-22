@@ -1,3 +1,4 @@
+import { prepareSourceInvestigation } from "../helpers/source-investigation.js";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -27,7 +28,6 @@ import {
   calculateManagedContractHash,
   createManagedTaskContract,
 } from "../../src/domains/managed-work/contract.js";
-import { prepareCoverage } from "../helpers/review-coverage.js";
 import { createManagedTaskFiles } from "../../src/domains/managed-work/storage.js";
 import { initManagedRunState } from "../../src/domains/managed-work/state.js";
 import type { ManagedRunState } from "../../src/domains/managed-work/types.js";
@@ -58,7 +58,7 @@ describe("pipeline managed task recovery", () => {
       const prompt = path.join(change, "prompt/implementation.md");
       fs.mkdirSync(path.dirname(prompt), { recursive: true });
       fs.writeFileSync(prompt, "# Implementation\n");
-      prepareCoverage(change);
+      prepareSourceInvestigation(change, { full: true, preserveContracts: true });
       const ready = path.join(change, ".sdd/readiness/coding-ready.json");
       const receipt = JSON.parse(fs.readFileSync(ready, "utf8"));
       if (!current) delete receipt.workflowPolicy;

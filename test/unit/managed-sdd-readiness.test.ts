@@ -1,3 +1,4 @@
+import { prepareSourceInvestigation } from "../helpers/source-investigation.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -14,7 +15,6 @@ import { initManagedRunState } from "../../src/domains/managed-work/state.js";
 import {
   createManagedTaskFiles, loadManagedRun, loadManagedTask, saveManagedRun,
 } from "../../src/domains/managed-work/storage.js";
-import { prepareCoverage } from "../helpers/review-coverage.js";
 import type { AgentInvoker, ManagedProfile } from "../../src/domains/managed-work/types.js";
 
 const roots: string[] = [];
@@ -26,7 +26,7 @@ function fixture(profile: ManagedProfile = "sdd", source: "sdd" | "direct_prompt
   const prompt = path.join(change, "prompt/implementation.md");
   fs.mkdirSync(path.dirname(prompt), { recursive: true });
   fs.writeFileSync(prompt, "# Implementation\n");
-  prepareCoverage(change);
+  prepareSourceInvestigation(change, { full: true, preserveContracts: true });
   const env = { ...process.env, SUPERFLOW_HOME: path.join(root, "home"),
     SUPERFLOW_DISABLE_OS_NOTIFICATIONS: "1" };
   const contract = createManagedTaskContract({

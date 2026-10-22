@@ -8,7 +8,6 @@ import { deployScripts } from "../../src/domains/skill/scripts.js";
 import {
   digest,
   mutateReview,
-  prepareCoverage,
   REVIEW,
 } from "../helpers/review-coverage.js";
 import { prepareSourceInvestigation } from "../helpers/source-investigation.js";
@@ -121,7 +120,7 @@ describe("review coverage installation closure", () => {
       const change = path.join(temporary, "change");
       fs.mkdirSync(change);
       fs.writeFileSync(path.join(change, "tests.md"), "# Tests\n");
-      prepareCoverage(change);
+      prepareSourceInvestigation(change, { full: true, preserveContracts: true });
       const run = () =>
         spawnSync(
           process.execPath,
@@ -136,7 +135,7 @@ describe("review coverage installation closure", () => {
           },
         );
       expect(run().status).toBe(0);
-      prepareSourceInvestigation(change);
+      prepareSourceInvestigation(change, { full: true });
       expect(run().status).toBe(0);
       const taskFile = path.join(change, "tasks.md");
       const indexTasks = () => {
@@ -167,7 +166,7 @@ describe("review coverage installation closure", () => {
         "- Parent\n    - [x] 1.1 Actual nested task\n",
       );
       expect(indexTasks()).toEqual({ ids: ["1.1"], ambiguous: false });
-      prepareSourceInvestigation(change);
+      prepareSourceInvestigation(change, { full: true });
       const literal = 'Desired value: "START_PENDING"\n';
       fs.writeFileSync(path.join(change, "literal.txt"), literal);
       for (const role of ["code", "contract", "requirement"]) {
@@ -218,13 +217,13 @@ describe("review coverage installation closure", () => {
         if (role === "requirement")
           expect(result.stderr).toContain("code|contract");
       }
-      prepareSourceInvestigation(change);
+      prepareSourceInvestigation(change, { full: true });
       fs.writeFileSync(
         path.join(change, "tasks.md"),
         "```md\n- [ ] 1.1 obsolete example\n```\n",
       );
       expect(run().status).toBe(1);
-      prepareCoverage(change);
+      prepareSourceInvestigation(change, { full: true, preserveContracts: true });
       fs.appendFileSync(path.join(change, "caller.ts"), "// drift\n");
       expect(run().status).toBe(1);
       expect(
