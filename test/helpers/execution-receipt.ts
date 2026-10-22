@@ -110,7 +110,7 @@ export function writeIndependentReview(directory: string, report = "test-report.
   const review = path.join(directory, ".sdd/reviews/current-code-review.md");
   fs.mkdirSync(path.dirname(review), { recursive: true });
   fs.writeFileSync(review,
-    "DONE\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" +
+    "DONE\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n## Concerns\nNone\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n" +
     [...sources].map(([file, hash]) => `| ${file} | ${hash} |`).join("\n"));
   fs.appendFileSync(path.join(directory, report),
     "\n## Independent Review\n| Report |\n|---|\n| .sdd/reviews/current-code-review.md |\n");

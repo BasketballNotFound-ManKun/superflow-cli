@@ -62,8 +62,8 @@ export function auditReviewReport(
   if (returnReference) nextReturns.add(returnReference);
   if (state === "DONE") {
     const concerns = sectionLines(lines, "Concerns", issues);
-    if (concerns !== null && !(concerns.length === 1 && /^(?:None|无)[。.]?$/i.test(concerns[0]))) {
-      issues.push("DONE cannot retain unresolved Concerns");
+    if (concerns === null || !(concerns.length === 1 && /^(?:None|无)[。.]?$/i.test(concerns[0]))) {
+      issues.push("DONE requires explicit Concerns None/无 without unresolved items");
     }
   }
   const findingIds: string[] = [];

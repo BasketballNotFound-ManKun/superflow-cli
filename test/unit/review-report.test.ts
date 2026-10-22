@@ -15,6 +15,9 @@ afterEach(() => {
   }
 });
 function auditCurrentReport(content: string, root: string) {
+  if (/^DONE\r?\n/.test(content) && !content.includes("Concerns")) {
+    content = content.replace(/^DONE\r?\n/, "DONE\n## Concerns\nNone\n");
+  }
   if (!content.includes("## Review Identity")) {
     const split = content.indexOf("\n");
     content = content.slice(0, split + 1) + "## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n" + content.slice(split + 1);
@@ -34,6 +37,16 @@ function auditCurrentReport(content: string, root: string) {
 
 describe("reviewer four-state report", () => {
 
+  it("rejects missing Concerns from DONE with otherwise current identity and sources", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-required-concerns-"));
+    fs.writeFileSync(path.join(root, "source.ts"), "source");
+    const hash = createHash("sha256").update("source").digest("hex");
+    try {
+      const result = auditReviewReport(`DONE\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:d/1 |\n| Return | session:r/1 |\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| source.ts | ${hash} |\n`, root);
+      expect(result.eligibleForTriage).toBe(false);
+      expect(result.issues.join("\n")).toContain("Concerns");
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
   it.each(["unchanged", "changed", "removed"])("retains historical source identity when %s", evolution => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-chain-"));
     const hash = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -46,15 +59,19 @@ describe("reviewer four-state report", () => {
     if (evolution === "changed") fs.writeFileSync(path.join(root, "application.ts"), "after");
     if (evolution === "removed") fs.unlinkSync(path.join(root, "application.ts"));
     fs.writeFileSync(path.join(root, "current.ts"), "current");
-    const current = `DONE\n${identity.replace("session:return/1", "session:return/2")}## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| current.ts | ${hash("current")} |\n## Review Chain\n| Role | Path | SHA-256 |\n|---|---|---|\n| original | original.md | ${hash(original)} |\n| owner-response | owner.md | ${hash(owner)} |\n## Finding Rechecks\n| ID | Result | Evidence |\n|---|---|---|\n| F-001 | resolved | test:guard |\n`;
+    const current = `DONE\n${identity.replace("session:return/1", "session:return/2")}## Concerns\nNone\n## Findings\nNone\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| current.ts | ${hash("current")} |\n## Review Chain\n| Role | Path | SHA-256 |\n|---|---|---|\n| original | original.md | ${hash(original)} |\n| owner-response | owner.md | ${hash(owner)} |\n## Finding Rechecks\n| ID | Result | Evidence |\n|---|---|---|\n| F-001 | resolved | test:guard |\n`;
     try {
       expect(auditReviewReport(current, root).issues).toEqual([]);
       expect(auditReviewReport(current, root).eligibleForTriage).toBe(true);
+      const historicalDone = original.replace("DONE_WITH_CONCERNS", "DONE").replace("## Concerns\nFix required\n", "");
+      fs.writeFileSync(path.join(root, "original.md"), historicalDone);
+      expect(auditReviewReport(current.replace(hash(original), hash(historicalDone)), root).eligibleForTriage).toBe(false);
+      fs.writeFileSync(path.join(root, "original.md"), original);
       const spaced = current.replace(/^(## .+)$/gm, "$1 ");
       expect(auditReviewReport(spaced, root).eligibleForTriage).toBe(true);
       expect(auditReviewReport(spaced.replace("| F-001 | resolved | test:guard |", ""), root).eligibleForTriage).toBe(false);
       expect(auditReviewReport(current.replace("| Return | session:return/2 |", "| Return | session:return/2 |\n| Return | session:return/1 |"), root).eligibleForTriage).toBe(false);
-      const second = current.replace("DONE\n", "DONE_WITH_CONCERNS\n").replace("## Findings\nNone", "## Concerns\nNew issue\n## Findings\n- [F-002] current.ts:1: new issue");
+      const second = current.replace("DONE\n", "DONE_WITH_CONCERNS\n").replace("## Concerns\nNone", "## Concerns\nNew issue").replace("## Findings\nNone", "## Findings\n- [F-002] current.ts:1: new issue");
       fs.writeFileSync(path.join(root, "second.md"), second);
       fs.writeFileSync(path.join(root, "second-owner.md"), owner.replace("F-001", "F-002"));
       const third = current.replace("original.md", "second.md").replace(hash(original), hash(second)).replace("owner.md", "second-owner.md").replace(hash(owner), hash(owner.replace("F-001", "F-002"))).replace("F-001", "F-002").replace("session:return/2", "session:return/3");
