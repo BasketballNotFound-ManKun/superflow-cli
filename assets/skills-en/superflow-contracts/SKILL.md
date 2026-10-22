@@ -230,7 +230,8 @@ For complex requirements, verify these before writing docs:
   implementation prompt generation. Also initialize
   `.sdd/state.yaml` with
   `../superflow/scripts/superflow-state.sh init <change-dir> docs`.
-- `sdd-quality-gate.md` records the handoff command, context hash, and
+- `sdd-quality-gate.md` records the handoff command, context path, state-file hash
+  binding, and
   `../superflow/scripts/superflow-guard.sh <change-dir> docs` result.
   Missing handoff/state evidence is `Blocked for context drift guard`.
 - `.sdd/state.yaml` records `phase: docs`, `workflow`, `handoff_context`,
@@ -398,8 +399,10 @@ Use references only as needed:
   compensation. Approved compatibility must include owner confirmation and
   exposure/removal rules.
 - `design.md` must include a "Superpowers Technical Design Handoff" placeholder
-  after the OpenSpec/SDD contract decisions are written. It records
-  `handoff_hash`, the intended technical design path, and states:
+  after the OpenSpec/SDD contract decisions are written. It links
+  `.sdd/state.yaml` (`handoff_hash`), the current `.sdd/handoff/sdd-context.sha256`
+  and manifest for identity checks, and the intended technical design path.
+  Do not embed raw hashes in canonical prose. It states:
   OpenSpec/SDD owns WHAT/API/DB/tests/gates; Superpowers owns source-level HOW,
   TDD/RED order, team split, worktree/port plan, and verification choreography.
   The final technical design is created by `$superflow-design`, not `$superflow-contracts`.

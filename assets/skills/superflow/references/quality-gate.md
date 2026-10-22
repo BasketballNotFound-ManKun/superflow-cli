@@ -127,7 +127,7 @@
 | 15  | **RED-GREEN 收口**   | 检查 test-report 同一用例的前后证据                               | 编码前 RED 失败输出存在且失败原因正确；编码后同一命令 GREEN 通过；测试后补或未观察 RED 一律阻塞                                           | Worker + Tester + Leader |
 | 16  | **接口自动化收口**   | 检查每个 L3/L4 用例证据                                           | 包含真实命令、请求体来源、响应断言、DB SELECT、日志关键词和环境信息；HTTP 200 或 DB-only 不能单独通过                                     | Tester + Leader          |
 | 17  | **五项硬门禁收口**   | 检查 prompt/test-report/design/tests                              | 字段语义合同、写入闭环、真实入口调用链、禁止 fallback 与猜测实现、Agent 执行前自检均有证据；任一缺失阻塞                                  | Reviewer + Leader        |
-| 18  | **上下文防漂移收口** | 检查 `.sdd/handoff/*`、`.sdd/state.yaml`、prompt、test-report     | state.yaml 与当前合同的 handoff_hash 一致；`superflow-guard.sh <change-dir> implement` 或 `verify` 通过；换会话/并行窗口后的执行报告证明已重读 handoff 和原始文档 | Leader                   |
+| 18  | **上下文防漂移收口** | 检查 `.sdd/handoff/*`、`.sdd/state.yaml`、prompt、test-report     | state.yaml 与当前合同的 handoff_hash 一致；`superflow-guard.sh <change-dir> implement` 或 `verify` 通过；换会话/并行窗口后的执行报告证明已核对 state 与当前 sha256/manifest 身份，按声明的 context_compression 索引重读风险所需 canonical 正文；不强制完整投影后再读同一原件，适用合同/项目规则/阶段技能仍须实际读取 | Leader                   |
 | 19  | **状态机收口**       | 检查 `.sdd/state.yaml` 和 `superflow-state.sh recover/next`       | verify 前 phase 已由 implement guard 推进；verify 后 verification_report、verify_result、verified_at 正确；archive 前必须等待用户确认     | Leader                   |
 
 ### 数据库迁移类任务特有加禁（触发条件：涉及表结构重构、旧数据迁移、状态字段变更、分页筛选依赖新表/新状态）

@@ -79,6 +79,12 @@ Team/Subagent 执行剧本。必需合同、适用测试和独立核验义务仍
 - Tester 必须与开发交叉验证，不能直接复用开发自测结论
 
 ## 必读文档（强制）
+
+保持声明的 `context_compression`，先核对 `.sdd/state.yaml` 的 `handoff_hash`
+与当前 `.sdd/handoff/sdd-context.sha256`/manifest，再按 handoff 索引定位以下
+文档的 canonical Decision/Entry/Case。风险所需正文必须完整读取，不强制完整投影
+再读同一原件；换会话、Agent 或 worktree 后同样核对并重读。适用合同、项目规则
+和阶段技能的必读范围保持；正文与 Prompt 只链接状态路径，不复制原始 hash。
 - [spec.md](../spec.md)
 - [design.md](../design.md)
 - [Superpowers 技术详设](../docs/superpowers/specs/YYYY-MM-DD-{change-id}-technical-design.md)

@@ -91,6 +91,12 @@ mode uses the generation contract above.
 
 List handoff, api.md, design.md, tests.md, tasks.md, traceability-matrix.md,
 review-checklist.md, sdd-quality-gate.md, test-report.md, and technical design.
+Preserve declared `context_compression`; check `.sdd/state.yaml` `handoff_hash`
+against the current `.sdd/handoff/sdd-context.sha256`/manifest. Use the index to
+locate canonical Decision/Entry/Case bodies and read risk-relevant bodies in full,
+without requiring a full projection followed by the same originals. Repeat this
+identity check and reading after session, agent or worktree switches. Required
+contracts, project rules and phase skills remain mandatory reading.
 
 ## Execution Rules
 

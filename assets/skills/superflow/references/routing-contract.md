@@ -348,7 +348,9 @@ SDD 的核心价值是可追溯事实链、接口验证、hook 质量监控、�
 - `.sdd/state.yaml` 的 `handoff_hash` 与
   `.sdd/handoff/sdd-context.sha256` 不一致，阻塞。
 - 会话压缩、换 agent、切 worktree 或并行窗口后，只凭聊天记忆继续设计/编码，
-  未先读 handoff 和原始文档，阻塞。
+  未核对 state 与当前 sha256/manifest 身份、未按声明的 `context_compression`
+  索引重读风险所需 canonical 正文，阻塞。不强制完整投影后再读同一原件；
+  适用合同、项目规则与阶段技能仍须实际读取，不静默改变模式。
 - Superpowers 输出与 OpenSpec/SDD 事实源冲突时，必须回到 SDD docs 修正；
   不得让实现 prompt 夹带第二套需求/API/DB/tests 合同。
 - `superflow-guard.sh <change-dir> docs|implement|verify|archive` 不通过时，不得推进到下一阶段。
@@ -840,8 +842,9 @@ RED预期失败 | GREEN预期通过 | DB核查 | 日志核查 | test-report证�
   `.sdd/handoff/sdd-context.json`, `.sdd/handoff/sdd-context.sha256`, and
   `.sdd/state.yaml` exist for the change/task. Generate them with
   `../scripts/superflow-handoff.sh <change-dir> --refresh` and
-  `../scripts/superflow-state.sh init <change-dir> docs`. The prompt must record and
-  inherit the same handoff hash.
+  `../scripts/superflow-state.sh init <change-dir> docs`. The prompt must link
+  the `.sdd/state.yaml` `handoff_hash` binding and check it against the current
+  sha256/manifest; do not embed raw hashes in prompt/canonical prose.
 - Do not generate implementation prompts before `tests.md` contains executable
   test cases, Red-Green expectations, interface automation commands, DB/log
   assertions, and matching `test-report.md` evidence placeholders.
@@ -906,7 +909,7 @@ RED预期失败 | GREEN预期通过 | DB核查 | 日志核查 | test-report证�
 2. 根 `tasks.md`、`prompt/implementation.md`、`traceability-matrix.md` 中任一处缺少该 prompt 引用
 3. `tests.md` 或 `test-report.md` 缺少该 PXX 的验证入口、失败证据或阻塞判定
 4. prompt 内引用的 `.md` 交接文档不是可点击相对链接，或链接目标不存在
-5. `.sdd/handoff/*` 或 `.sdd/state.yaml` 缺失，或 handoff hash 未被 prompt 继承
+5. `.sdd/handoff/*` 或 `.sdd/state.yaml` 缺失，或 prompt 未链接 state 的 handoff_hash 绑定并核对当前 sha256/manifest
 6. 当前阶段未生成 prompt，且用户没有明确禁止生成 prompt
 
 **以上任一条件触发时，必须阻止进入开发阶段，并在输出中显式报告：**

@@ -60,8 +60,12 @@ This file is a durable recovery checkpoint, not a casual status board.
 - Update this board at each handoff, context compression, or worktree switch.
 - Each row must link to real evidence: prompt, test-report section, command
   output, screenshot, curl result, or review checklist.
-- If `handoff_hash` changes, every active agent must reread the handoff and
-  original OpenSpec/SDD docs before continuing.
+- If `handoff_hash` changes, every active agent must recheck `.sdd/state.yaml`
+  against the current `.sdd/handoff/sdd-context.sha256` and manifest, then use
+  the declared `context_compression` index to locate affected Decision/Entry/Case
+  bodies and read risk-relevant originals in full before continuing. Do not
+  require both a full projection and the same originals or change the mode.
+  Required contracts, project rules and phase skills remain mandatory reading.
 - The coordinator must not execute implementation tasks directly when
   `build_mode: subagent-driven-development`; it dispatches fresh workers and
   reviewers, then records their commits/evidence here.
@@ -82,7 +86,10 @@ This file is a durable recovery checkpoint, not a casual status board.
 On context compression or new session:
 
 1. Run `superflow-state.sh recover <change-dir>`.
-2. Read `.sdd/handoff/sdd-context.md` and original `api.md`/`design.md`/`tests.md`.
+2. Recheck state/hash/manifest identity and use the declared `context_compression`
+   index to locate `api.md`/`design.md`/`tests.md` and `technical_design`. Read
+   risk-relevant canonical bodies in full; do not duplicate full projections
+   and originals or skip required contracts, project rules and phase skills.
 3. Read this file and resume from the exact `stage`.
 4. If `implementation_commit` is not visible in the current worktree, recover
    or merge it before continuing.

@@ -15,7 +15,11 @@ raw evidence and have implementers rerun invalidated or contract-required paths.
 - API contract generated before implementation.
 - spec/design/tasks/tests/review/quality/report files exist.
 - Traceability covers requirement, design, task, test, prompt, and report.
-- Handoff files exist and hash is current.
+- Handoff files exist and state binding matches the current sha256/manifest.
+  Preserve declared `context_compression` during execution and recovery: locate
+  canonical Decision/Entry/Case bodies via the index and read risk-relevant
+  originals in full, without requiring both full projections and the same
+  originals. Required contracts, project rules and phase skills remain mandatory.
 - design.md records OpenSpec/SDD as WHAT and Superpowers as HOW.
 - sdd-quality-gate.md records guard command and result.
 - design.md and sdd-quality-gate.md include a Minimal Design Review with reuse

@@ -213,6 +213,49 @@ describe.each(["skills", "skills-en"])("%s phase reading and refreeze", (languag
 describe.each(["skills", "skills-en"])(
   "%s source-to-delivery consumption",
   (language) => {
+    it("keeps raw handoff hashes out of canonical prose and prompt inheritance", () => {
+      const handoff = read(language, "superflow-handoff/SKILL.md");
+      expect(handoff).toContain(".sdd/state.yaml");
+      expect(handoff).toContain("sdd-context.sha256");
+      expect(handoff).not.toMatch(/record the exact `handoff_hash`/);
+      expect(handoff).not.toMatch(/禁止自由发挥项 \| handoff_hash \|/);
+      expect(handoff).not.toMatch(/clickable handoff link, handoff_hash,/);
+      expect(handoff).not.toMatch(
+        /the prompt and\s+`test-report.md` record the same hash/,
+      );
+      const contracts = read(language, "superflow-contracts/SKILL.md");
+      expect(contracts).not.toMatch(/records the handoff command, context hash/);
+      expect(contracts).not.toMatch(/It records\s+`handoff_hash`,/);
+      const routing = read(language, "superflow/references/routing-contract.md");
+      expect(routing).not.toContain("inherited handoff_hash and instructions");
+      expect(routing).not.toMatch(
+        /prompt must record and\s+inherit the same handoff hash/,
+      );
+      expect(routing).not.toContain("handoff hash 未被 prompt 继承");
+      // Recovery records retain actual runtime hashes; canonical prompts do not.
+      expect(read(language, "superflow/references/subagent-progress.md"))
+        .toContain("- handoff_hash: `<hash>`");
+    });
+
+    it("uses the declared compression index for prompt and recovery reading", () => {
+      for (const file of [
+        "superflow-handoff/SKILL.md",
+        "superflow/references/implementation-prompt-template.md",
+        "superflow/references/batch-prompt-template.md",
+        "superflow/references/subagent-progress.md",
+        "superflow/references/routing-contract.md",
+        "superflow/references/quality-gate.md",
+      ]) {
+        const body = read(language, file);
+        expect(body, file).toContain("context_compression");
+        expect(body, file).toContain("manifest");
+        expect(body, file).toMatch(/Decision\/Entry\/Case|canonical 正文/);
+        expect(body, file).not.toMatch(
+          /handoff plus original|先读 handoff，再回读原始|重新读 handoff 和原始文档|重读 handoff 和原始文档|未先读 handoff 和原始文档|reread the handoff and\s+original|Read `\.sdd\/handoff\/sdd-context\.md` and original/,
+        );
+      }
+    });
+
     it("routes existing-document implementation through owner repair", () => {
       const entry = read(language, "superflow/SKILL.md");
       expect(entry).toContain("flow-owner.md#existing-document-implementation");

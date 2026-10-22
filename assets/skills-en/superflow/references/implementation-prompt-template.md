@@ -92,6 +92,13 @@ If requirements, design, API, SQL, test contracts or task content change, rerun
 superflow-handoff.sh --refresh. Task checkbox progress and test-report updates
 do not invalidate the frozen contract hash.
 
+Before coding and after compaction, agent/worktree switches or a new terminal,
+check state against the current sha256/manifest identity. Preserve declared
+`context_compression`; use the handoff index to locate canonical Decision/Entry/Case
+bodies in API/design/tests and technical design. Read risk-relevant bodies in
+full, without requiring a full projection followed by the same originals.
+Required contracts, project rules and phase skills remain mandatory reading.
+
 ### Project Rules, Host Rules, And Applicable Skills
 
 - Read selected project rule files from the existing handoff/context manifest.

@@ -129,8 +129,10 @@ Worker 自测通过 ≠ 完成任务
 - Hash 绑定：`.sdd/state.yaml` 的 `handoff_hash` 单点维护，编码前核对其与 sdd-context.sha256 一致
 
 执行规则：
-1. Worker、Tester、Reviewer 都必须先读 handoff，再回读原始 [api.md](../api.md)、
-   [design.md](../design.md)、[tests.md](../tests.md) 和 Superpowers 技术详设。
+1. Worker、Tester、Reviewer 保持声明的 `context_compression`，用 handoff 索引
+   定位 [api.md](../api.md)、[design.md](../design.md)、[tests.md](../tests.md)
+   和 Superpowers 技术详设中的 canonical Decision/Entry/Case；风险所需正文
+   必须完整读取，不强制先读完整投影再读同一原件，不减少适用合同、项目规则和阶段技能的必读范围。
 2. 如果需求、设计、API、SQL、测试合同或任务内容发生修改，先执行（任务勾选和测试报告回填除外）：
    `~/.codex/skills/superflow/scripts/superflow-handoff.sh {change-dir} --refresh`
    并比较新的 `.sdd/handoff/sdd-context.sha256`。
@@ -140,7 +142,8 @@ Worker 自测通过 ≠ 完成任务
    `~/.codex/skills/superflow/scripts/superflow-guard.sh {change-dir} implement`
    失败则补文档或 prompt，不得把失败项写成通过。
 5. 会话压缩、换 agent、切 worktree 或开新终端后，不得只凭聊天记忆继续；
-   必须重新读 handoff 和原始文档。
+   必须核对 state 与当前 sha256/manifest 身份，再按声明的 `context_compression`
+   索引重读风险所需 canonical 正文，不能只读聊天摘要或重复整套投影与原件。
 
 ### 项目规则、Host 规范与适用技能
 

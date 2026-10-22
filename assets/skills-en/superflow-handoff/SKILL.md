@@ -103,10 +103,16 @@ continue build within existing implementation authorization; docs-only stops.
 
 Every implementation prompt must include these sections:
 
-- Required reading: handoff, API contract, design, tests, quality gate,
-  review checklist, traceability, and technical design.
-- Context drift and state inheritance: clickable handoff link, handoff_hash,
-  current phase, and refresh rules.
+- Required reading: use the handoff index under the declared
+  `context_compression` to locate canonical Decision/Entry/Case bodies in the
+  API contract, design, tests, quality gate, review checklist, traceability,
+  and technical design. Read risk-relevant bodies in full; do not require a
+  full projection followed by the same originals or change the mode.
+  Required contracts, project rules and phase skills remain mandatory reading.
+- Context drift and state inheritance: clickable handoff and `.sdd/state.yaml`
+  links, `handoff_hash` binding checked against the current
+  `.sdd/handoff/sdd-context.sha256` and manifest, current phase, and refresh
+  rules. Do not copy raw hashes into canonical prose or Prompts.
 - Applicable project rules selected in the frozen handoff and task-relevant
   skills found through the Host's normal skill discovery. The Host reads the
   relevant skill content and passes applicable rule statements through the

@@ -153,7 +153,8 @@ Before implementation phase can exit:
   (`docs/superpowers/specs/*-technical-design.md`) as the source-level HOW
   authority:
   `执行模式 | 团队角色 | 拆分建议 | TDD/RED切入点 | 独立Tester验证点 |
-  高风险猜测点 | 禁止自由发挥项 | handoff_hash | 进入prompt的强制要求`.
+  高风险猜测点 | 禁止自由发挥项 | 状态绑定路径 | 进入prompt的强制要求`.
+  状态绑定列只引用 `.sdd/state.yaml` 的 `handoff_hash`，不填写原始 hash。
   The prompt must say that OpenSpec/SDD docs remain the WHAT/API/DB/tests
   source of truth. Superpowers may own technical design, development,
   testing, review, worktrees, and verification choreography, but must not change
@@ -187,9 +188,14 @@ Before implementation phase can exit:
   and prove reconciliation identities in `test-report.md`.
 - Every implementation prompt must include a "上下文防漂移与状态继承" section.
   It must link `.sdd/handoff/sdd-context.md` as a clickable Markdown link,
-  record the exact `handoff_hash`, and require Worker/Tester/Reviewer to read
-  the handoff plus original `api.md`/`design.md`/`tests.md` and
-  `technical_design` before coding.
+  link `.sdd/state.yaml` (`handoff_hash`) and the current
+  `.sdd/handoff/sdd-context.sha256`/manifest for identity checks; never copy
+  raw hashes into canonical prose or Prompts. Worker/Tester/Reviewer must preserve the
+  declared `context_compression` and use the handoff index to locate canonical
+  Decision/Entry/Case bodies in `api.md`/`design.md`/`tests.md` and
+  `technical_design`, reading risk-relevant bodies in full before coding. Do
+  not require a full projection followed by the same originals. Required
+  contracts, project rules and phase skills remain mandatory reading.
   After any SDD doc change, the team must rerun `superflow-handoff.sh --refresh` and
   compare the new hash. A stale or mismatched hash blocks coding and delivery.
   The prompt must also require `.sdd/state.yaml` phase evidence and
@@ -433,9 +439,11 @@ Before saying a batch is complete:
   refund, or third-party state changed: the prompt and report list writers,
   readers, filters, derived/sync paths, consumers, intentional non-changes, and
   consumer tests. Missing reverse impact evidence means `Blocked`.
-- Verify context drift guard before accepting a batch: the prompt and
-  `test-report.md` record the same hash as `.sdd/handoff/sdd-context.sha256`,
-  `.sdd/state.yaml` exists, and
+- Verify context drift guard before accepting a batch: the prompt links the
+  `.sdd/state.yaml` `handoff_hash` binding, which matches the current
+  `.sdd/handoff/sdd-context.sha256` and manifest. Prompt/canonical prose does
+  not embed raw hashes; `test-report.md` may retain actual checked hashes as
+  runtime evidence. State exists, and
   `~/.codex/skills/superflow/scripts/superflow-guard.sh <change-dir> implement`
   or `verify` passes for the current phase. Stale hash, missing state, or guard
   failure means `Blocked`.

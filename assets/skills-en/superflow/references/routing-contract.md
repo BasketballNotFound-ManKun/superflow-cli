@@ -355,7 +355,11 @@ Rules:
 - The handoff_hash binding lives in .sdd/state.yaml. Prose documents reference
   the handoff context by path; do not copy the raw hash into every document.
 - After context compaction or session handoff, reload .sdd/state.yaml and
-  .sdd/handoff/sdd-context.md before acting.
+  .sdd/handoff/sdd-context.md before acting. Preserve declared
+  `context_compression`; check state against the current sha256/manifest, then
+  locate canonical Decision/Entry/Case bodies through the index and read
+  risk-relevant originals in full. Do not require both a full projection and
+  the same originals or skip required contracts, project rules and phase skills.
 
 ## Decision Points
 
@@ -476,7 +480,8 @@ Implementation prompts must require:
 
 - required reading list with handoff, api.md, design.md, tests.md,
   review-checklist.md, sdd-quality-gate.md, and technical_design when present;
-- inherited handoff_hash and instructions to refresh handoff after SDD doc edits;
+- links to the state-file `handoff_hash` binding and current sha256/manifest
+  identity, with refresh after SDD contract edits; no raw hash in prose/Prompts;
 - Superpowers technical design inheritance;
 - TDD red-green entry points;
 - exact allowed and forbidden file boundaries;
