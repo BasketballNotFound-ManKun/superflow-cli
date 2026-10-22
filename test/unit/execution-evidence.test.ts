@@ -160,6 +160,70 @@ beforeEach(() => {
 });
 afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 describe("execution receipt boundary", () => {
+  it("reports the declaration, base and resolved missing receipt path", () => {
+    fs.writeFileSync(path.join(dir, "report.md"),
+      fs.readFileSync(path.join(dir, "report.md"), "utf8")
+        .replace("logs/C1.json", "evidence/missing.json"));
+    const result = run();
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("声明值='evidence/missing.json'");
+    expect(result.output).toContain(`解析基准=${fs.realpathSync(dir)}`);
+    expect(result.output).toContain(
+      `实际路径=${path.join(fs.realpathSync(dir), "evidence/missing.json")}`,
+    );
+  });
+
+  it("rejects a PARTIAL receipt behind a PASS report row", () => {
+    const file = path.join(dir, "logs/C1.json");
+    const receipt = JSON.parse(fs.readFileSync(file, "utf8"));
+    receipt.status = "PARTIAL";
+    save(receipt);
+    const result = run();
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("执行凭证 status 与冻结用例不一致");
+  });
+
+  it("reports a missing source against the receipt directory", () => {
+    fs.rmSync(path.join(dir, "application.ts"));
+    const result = run();
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("声明值='../application.ts'");
+    expect(result.output).toContain(
+      `解析基准=${path.join(fs.realpathSync(dir), "logs")}`,
+    );
+    expect(result.output).toContain(
+      `实际路径=${path.join(fs.realpathSync(dir), "application.ts")}`,
+    );
+  });
+
+  it.each(["review", "build"])(
+    "reports a missing case plan %s against the plan directory", reference => {
+      prepareCapturedCase();
+      expect(captureBuild().code).toBe(0);
+      const result = record({
+        kind: "case", changeDir: ".", review: "review.json", caseId: "C1",
+        build: "logs/build.json", output: "logs/C1.json",
+        [reference]: "missing/reference.json",
+      });
+      expect(result.code).toBe(2);
+      expect(result.output).toContain("声明值='missing/reference.json'");
+      expect(result.output).toContain(`解析基准=${fs.realpathSync(dir)}`);
+      expect(result.output).toContain(
+        `实际路径=${path.join(fs.realpathSync(dir), "missing/reference.json")}`,
+      );
+      expect(fs.existsSync(path.join(dir, "invoked.txt"))).toBe(false);
+    },
+  );
+
+  it("rejects a PARTIAL report row beneath a final PASS summary", () => {
+    const file = path.join(dir, "report.md");
+    fs.writeFileSync(file, fs.readFileSync(file, "utf8")
+      .replace("| C1 | E11 | api | PASS |", "| C1 | E11 | api | PARTIAL |"));
+    const result = run();
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("用例 C1 为 PARTIAL，报告不能声明整体验证 PASS");
+  });
+
   function nestedCapture(cwd: string, changeDir: unknown) {
     prepareCapturedCase();
     expect(captureBuild().code).toBe(0);
@@ -228,6 +292,29 @@ describe("execution receipt boundary", () => {
       expect(result.code).toBe(2);
     },
   );
+
+  it("reports a frozen cwd against the explicit change root", () => {
+    const { change, result } = nestedCapture(
+      "../../../missing", "openspec/changes/sample",
+    );
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("声明值='../../../missing'");
+    expect(result.output).toContain(`解析基准=${fs.realpathSync(change)}`);
+    expect(result.output).toContain(
+      `实际路径=${path.join(fs.realpathSync(dir), "missing")}`,
+    );
+    expect(fs.existsSync(path.join(dir, "invoked.txt"))).toBe(false);
+  });
+
+  it("reports a missing change root against its plan directory", () => {
+    const { result } = nestedCapture("../../..", "missing-change");
+    expect(result.code).toBe(2);
+    expect(result.output).toContain("声明值='missing-change'");
+    expect(result.output).toContain(`解析基准=${fs.realpathSync(dir)}`);
+    expect(result.output).toContain(
+      `实际路径=${path.join(fs.realpathSync(dir), "missing-change")}`,
+    );
+  });
 
   function observedDelivery() {
     fs.writeFileSync(path.join(dir, "report.md"), fs.readFileSync(path.join(dir, "report.md"), "utf8").split("\n## Independent Review")[0]);

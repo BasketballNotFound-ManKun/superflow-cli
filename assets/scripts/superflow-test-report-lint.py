@@ -429,7 +429,8 @@ def verified_file(base: Path, value: str) -> Path:
         raise ValueError("需要本地可读取的执行证据，远端 URL 不能作为通过凭据")
     file = (base / value).resolve()
     if not file.is_file() or file.stat().st_size == 0:
-        raise ValueError(f"证据文件不存在或无内容：{value}")
+        raise ValueError(f"证据文件不存在或无内容：声明值={value!r}；"
+                         f"解析基准={base.resolve()}；实际路径={file}")
     return file
 
 
@@ -547,7 +548,9 @@ def validate_execution_context(receipt: dict, event: dict, case: dict, change: P
     cwd = (change / binding["cwd"]).resolve()
     if (not cwd.is_dir() or not isinstance(context["cwd"], str)
             or context["cwd"] != str(cwd)):
-        raise ValueError("执行工作目录与冻结 executionContext.cwd 不一致")
+        raise ValueError("执行工作目录与冻结 executionContext.cwd 不一致："
+                         f"声明值={binding['cwd']!r}；解析基准={change.resolve()}；"
+                         f"实际路径={cwd}；观测工作目录={context['cwd']!r}")
     expected = {
         key: hashlib.sha256(json.dumps(os.environ.get(key), ensure_ascii=False).encode()).hexdigest()
         for key in keys
@@ -860,8 +863,10 @@ def record_execution(plan_file: Path) -> int:
             raise ValueError("case plan.changeDir 必须明确为相对 plan 文件的 change 目录")
         change = (base / change_dir).resolve()
         if not change.is_dir():
-            raise ValueError("case plan.changeDir 指向的 change 目录不存在")
-        review_file = (base / plan["review"]).resolve()
+            raise ValueError("case plan.changeDir 指向的 change 目录不存在："
+                             f"声明值={change_dir!r}；解析基准={base.resolve()}；"
+                             f"实际路径={change}")
+        review_file = verified_file(base, plan["review"])
         coverage = json.loads(review_file.read_text())["coverage"]
         case = next(c for c in coverage["cases"] if c["id"] == plan["caseId"])
         if case.get("executionEvidence") != "runner-captured.v1":
@@ -876,7 +881,10 @@ def record_execution(plan_file: Path) -> int:
             {"executionContext": observed_context}, case, change)
         build_file = (base / plan["build"]).resolve()
         if build_file.parent != output.parent:
-            raise ValueError("capture 构建和用例凭证须保存在同一证据目录")
+            raise ValueError("capture 构建和用例凭证须保存在同一证据目录："
+                             f"声明值={plan['build']!r}；解析基准={base.resolve()}；"
+                             f"实际路径={build_file}；用例凭证目录={output.parent}")
+        build_file = verified_file(base, plan["build"])
         build = json.loads(build_file.read_text())
         validate_capture(output.parent, build, "build")
         hashed_file(output.parent, build["artifact"], build["sha256"])
