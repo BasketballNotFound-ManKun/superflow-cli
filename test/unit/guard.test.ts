@@ -1260,6 +1260,7 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
     });
   });
 
+  // Fifteen real build/case captures need headroom under parallel test load.
   it("requires frozen entry review before a full verify can lint its report", async () => {
     const change = await makeContractChange(tmp);
     await write(path.join(change, "tasks.md"), "# Tasks\n\n- [x] P01 route\n");
@@ -1334,7 +1335,7 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
           stdout: expect.stringContaining("guard passed for phase verify"),
         });
     }
-  });
+  }, 30_000);
 
   it("keeps a tweak verify usable without a full SDD entry review", async () => {
     const change = path.join(tmp, "openspec", "changes", "small-tweak");
