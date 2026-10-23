@@ -315,3 +315,23 @@ or repair correctness; Host semantic verification remains necessary.
 Runtime test-report is excluded from canonical hashing and remains reference-only
 in every context_compression mode. Do not preserve old projections with fence
 guessing or a parallel body interpreter.
+
+## Delivery depth and current facts (2026-10-23)
+
+Judge implementation, contracts and measurements against original goals, actual callers and
+counterexamples. Green tests, CHECKED axes, hashes or closure of listed findings do not establish
+goal completion. Owner selects real verification for actual wiring/caller risks, retaining light
+pure-function paths. Project prose owns snapshot/token lifecycles, commit and external effects;
+a fresh token alone never authorizes stale content.
+
+The main Prompt navigates current canonical contracts. Validate applicable detail at its sole
+owner and require the main entry to link that exact source; batches do not duplicate strategies
+or inapplicability lists. Concurrency contracts identify stable keys, actual atomic write/claim
+boundaries, transactions, outcomes/retries and external effects. Content conflicts without external
+actions do not invent pending/claim workflows. Agents still judge source-level sufficiency.
+
+Current summaries, one Case ledger and independent-review references must agree. Explicit history
+is historical; code/comment headings cannot change scope. Preserve original review returns/input
+identity and append dispositions/rechecks. Derive actuals from observations and propagate failures.
+Capture establishes execution facts, neither rejects legitimate actual/expected equality nor
+proves business semantics automatically.

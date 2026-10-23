@@ -6,7 +6,7 @@ import { fixtureProcessEnv } from "./fixture-process-env.js";
 // Vitest cannot interrupt execFileSync; bound this real loopback fixture itself.
 export function replayExecutionEvidence(
   directory: string,
-  mode: "omit" | "complete",
+  mode: "omit" | "complete" | "business-error",
   env = fixtureProcessEnv(directory),
 ): string {
   return execFileSync(

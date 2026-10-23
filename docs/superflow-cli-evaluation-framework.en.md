@@ -492,3 +492,30 @@ merge into the source-linked installed checkout, and compare installed fingerpri
 Revert affected wording if it removes mandatory tests, uses filename heuristics,
 bypasses contract/Quick identity, stalls for routine approval or adds a planner.
 Do not weaken deterministic verification; final results are recorded externally.
+
+## Delivery depth and canonical consumption (2026-10-23)
+
+Baseline 9e2d7c1 passed 1508 full checks. External analysis found missed real-wiring/caller
+counterexamples, measurements copied from expectations, repeated prompts/inapplicability lists
+and history mixed with current results. Much of the guidance already existed; missing reads and
+contradictory consumers also matter, so additional reminders alone cannot count as resolution.
+Owners remain existing semantic guidance, navigation and report gates.
+
+Preserve eight anonymous old-guidance applications, most already sound; evaluate the candidate
+under the same conditions without fabricating a detection-rate gain. Deterministic RED cases
+cover unmarked same-language conflicts, multiple current Case ledgers and history supplying
+current evidence. Independent review exposed HTML code headings/comment-table scope errors,
+which receive real repairs using the canonical body classifier without task-index syntax changes.
+Thin Prompts require exact current HOW links and full canonical contract checks instead of copied
+keywords. Content CAS and external-action claims describe their actual boundaries without a new
+classifier. A real anonymous HTTP200 business-failure/database process fixture compares response,
+state and persistence separately; equal observed/expected values may pass. This does not certify
+production databases or model compliance.
+
+Mirror assets and Registry, preserve original reviews and append dispositions/rechecks. Add no
+Skill/Hook/protocol/long-lived state/legacy exemption or external business fix. Commit on the same
+branch; use the existing isolated checkout for build/full verification without local installation
+or publication. Current external evidence owns final results, costs, limits and rollback. Revert
+on historical promotion, valid-evidence rejection, forced deployment for pure functions, admission
+without canonical detail, overwritten original reviews or changes to the installed host; never
+weaken goals or assertions.

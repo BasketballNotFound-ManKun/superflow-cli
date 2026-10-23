@@ -61,6 +61,27 @@ describe("anonymous application replay through the actual verify guard", () => {
     },
   );
 
+  it("rejects HTTP 200 business failure even when database writes succeed", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-business-failure-"));
+    try {
+      expect(JSON.parse(replayExecutionEvidence(dir, "business-error"))).toMatchObject({
+        httpRequests: 2, serversStopped: 2,
+      });
+      const receipt = JSON.parse(fs.readFileSync(path.join(dir, "logs/E11.json"), "utf8"));
+      expect(receipt.status).toBe("PARTIAL");
+      expect(receipt.command.exitCode).toBe(1);
+      expect(receipt.persistence[0].result).toBe("PASS");
+      expect(receipt.assertions.find((item: { id: string }) => item.id === "response"))
+        .toMatchObject({ actual: false, result: "FAIL" });
+      const review = path.join(dir, ".sdd/reviews/document-review.json");
+      const lint = path.resolve("assets/scripts/superflow-test-report-lint.py");
+      expect(() => execFileSync("python3", [lint, "--require-complete", "--review", review,
+        path.join(dir, "test-report.md")], { stdio: "pipe" })).toThrow();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it.each(["omit", "complete"] as const)(
     "verifies each service write in %s mode",
     (mode) => {

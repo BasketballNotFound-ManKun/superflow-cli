@@ -8,7 +8,8 @@ import subprocess
 import sys
 
 root = Path(sys.argv[1]).resolve()
-omit = sys.argv[2] == "omit"
+mode = sys.argv[2]
+omit = mode == "omit"
 linter = Path(sys.argv[3]).resolve()
 (root / "logs").mkdir(parents=True, exist_ok=True)
 source = '''from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -28,7 +29,7 @@ class Handler(BaseHTTPRequestHandler):
                 cursor = db.execute('UPDATE records SET status=1 WHERE id=? AND round=2', (data['id'],))
             else:
                 cursor = db.execute('UPDATE records SET status=1, external_code=? WHERE id=? AND round=2', (data['code'], data['id']))
-        self.send_response(200); self.end_headers(); self.wfile.write(json.dumps({'ok': True, 'affectedRows': cursor.rowcount}).encode())
+        self.send_response(200); self.end_headers(); self.wfile.write(json.dumps({'ok': not self.server.business_error, 'affectedRows': cursor.rowcount}).encode())
 '''
 (root / "application.py").write_text(source)
 schema = """CREATE TABLE records(id TEXT, round INTEGER, status INTEGER, external_code TEXT, PRIMARY KEY(id,round));
@@ -52,6 +53,7 @@ def snapshots(db, business_id):
 server = module.LoopbackHTTPServer(('127.0.0.1', 0), module.Handler)
 server.database = str(db_file)
 server.omit = mode == 'omit' and entry == 'E11'
+server.business_error = mode == 'business-error' and entry == 'E11'
 thread = threading.Thread(target=lambda: server.serve_forever(poll_interval=0.01), daemon=True)
 thread.start()
 business_id = 'synthetic-' + entry
@@ -84,8 +86,11 @@ event = {'event': 'superflow.measurement.v1', 'caseId': entry, 'executed': 1, 't
          'target': {'service': service, 'route': route, 'kind': 'api', 'buildId': build['id'],
                     'sourceFingerprint': build['sourceFingerprint'], 'buildSha256': build['sha256']}}
 print(json.dumps(event))
-# A successful HTTP response does not turn an omitted database write into PASS.
-sys.exit(0 if after == 'synthetic-code' else 1)
+# HTTP status, business response and persistence are distinct observed facts.
+passed = all(item['result'] == 'PASS' for item in assertions)
+passed = passed and write['result'] == 'PASS'
+passed = passed and all(item['result'] == 'PASS' for item in database['assertions'])
+sys.exit(0 if passed else 1)
 '''
 (root / "case.py").write_text(driver)
 sha = lambda data: hashlib.sha256(data).hexdigest()
@@ -126,7 +131,7 @@ for entry, service, route in [("E05", "service-a", "POST /a/notify"), ("E11", "s
                                  "schemaSourceRefs": ["schema"], "statements": statements}})
     cases.append({"id": entry, "entryId": entry, "level": "api", "evidenceKind": "real", "testLayer": "http-entry",
                   "executionEvidence": "runner-captured.v1", "executionContext": {
-                      "argv": [sys.executable, "case.py", entry, service, route, "omit" if omit else "complete"],
+                      "argv": [sys.executable, "case.py", entry, service, route, mode],
                       "cwd": ".", "environmentKeys": []},
                   "mockBoundary": boundary, "statements": statements,
                   "databaseAssertions": [{"id": "rows", "kind": "affectedRows", "expected": 1},
@@ -138,7 +143,7 @@ for entry, service, route in [("E05", "service-a", "POST /a/notify"), ("E11", "s
     review_path.write_text(json.dumps(review))
     record({"kind": "case", "changeDir": ".",
             "review": ".sdd/reviews/document-review.json", "caseId": entry,
-            "build": "logs/build.json", "output": f"logs/{entry}.json"}, allow_failure=omit and entry == "E11")
+            "build": "logs/build.json", "output": f"logs/{entry}.json"}, allow_failure=mode in {"omit", "business-error"} and entry == "E11")
     rows.append(f"| {entry} | {entry} | api | PASS | logs/{entry}.json |")
 ready = root / ".sdd/readiness/coding-ready.json"
 ready.parent.mkdir(parents=True, exist_ok=True)
@@ -150,4 +155,4 @@ ready.write_text(json.dumps({"schemaVersion": "superflow.coding-ready.v1", "codi
 (root / "test-report.md").write_text("RED failure evidence; GREEN pass evidence.\n接口自动化 curl HTTP 200; DB SELECT; log checked; BUILD SUCCESS PID\nsuperflow-test-report-lint\nAnonymous SQLite harness only; not private E05/E11 acceptance or MySQL proof.\n| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |\n|---|---|---|---|---|\n" + "\n".join(rows) + "\n验证结果: PASS\nVerification Result: PASS\nArchive Readiness: PASS\n\n## Independent Review\n| Report |\n|---|\n| .sdd/reviews/current-code-review.md |\n\n## Summary\n")
 (root / "tasks.md").write_text("- [x] Anonymous verification\n")
 (root / "tests.md").write_text("Frozen anonymous harness HTTP/SQLite real execution only; not private E05/E11 acceptance.\n")
-print(json.dumps({"mode": "omit" if omit else "complete", "httpRequests": 2, "database": "temporary SQLite", "serversStopped": 2}))
+print(json.dumps({"mode": mode, "httpRequests": 2, "database": "temporary SQLite", "serversStopped": 2}))
