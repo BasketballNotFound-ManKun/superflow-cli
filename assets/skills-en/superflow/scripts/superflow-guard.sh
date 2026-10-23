@@ -601,7 +601,7 @@ PY
 
 change_has_external_enum_risk() {
   grep -RIEiq \
-    'BEM|payOrigin|payMode|支付来源|支付方式|财务口径|第三方枚举|第三方字段|third[- ]party enum|source system|SDK.*枚举|枚举.*SDK' \
+    'BEM|payOrigin|payMode|payment source|payment method|financial meaning|third[- ]party enum|third[- ]party field|source system|SDK.*enum|enum.*SDK' \
     "$CHANGE_DIR/proposal.md" \
     "$CHANGE_DIR/api.md" \
     "$CHANGE_DIR/design.md" \
@@ -806,12 +806,12 @@ require_money_precision_contract() {
 require_external_enum_contract() {
   local path="$1"
   local label="$2"
-  require_grep 'External Enum Binding|外部枚举绑定|第三方字段语义绑定|外部字段.*外部枚举|外部枚举.*展示文案|owner.*确认' "$path" "$label"
-  require_grep '外部字段|外部系统字段|External field|target field' "$path" "$label external field column"
-  require_grep '外部枚举|外部字典|External enum|target enum' "$path" "$label external enum column"
-  require_grep '展示文案|业务语义|财务语义|display|business meaning' "$path" "$label display/business meaning column"
-  require_grep 'owner|确认|confirmed|approval' "$path" "$label owner confirmation column"
-  require_grep '不确定|阻塞|blocker|unknown|待确认' "$path" "$label unresolved/blocker column"
+  require_grep 'External Enum Binding|external field.*external enum|external enum.*display|owner.*confirmed' "$path" "$label"
+  require_grep 'External field|source system field|target field' "$path" "$label external field column"
+  require_grep 'External enum|external dictionary|target enum' "$path" "$label external enum column"
+  require_grep 'display|business meaning|financial meaning' "$path" "$label display/business meaning column"
+  require_grep 'owner|confirmed|approval' "$path" "$label owner confirmation column"
+  require_grep 'uncertain|blocked|blocker|unknown|pending confirmation' "$path" "$label unresolved/blocker column"
 }
 
 require_external_config_contract() {
