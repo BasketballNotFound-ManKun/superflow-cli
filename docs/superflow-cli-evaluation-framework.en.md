@@ -463,3 +463,32 @@ and installed fingerprint checks are recorded externally. Roll back the affected
 change if valid tasks/history are rejected, reports are washed clean, normal progress
 becomes contract drift, permissions receive credits or metadata is treated as
 authenticity proof. Preserve evidence without weakening goals or gates.
+
+## Owner-led test-strategy clarification (2026-10-23)
+
+Baseline b607ed1 passed 1508 tests and real isolated package installation. Existing
+guidance already selects signals from source risks, but frozen-plan/inherit-only/
+return-to-document-owner wording did not directly distinguish within-case input
+strengthening from new Case IDs/contexts, risking static checklists or repeated
+approval requests. Responsibility is existing test-guide, Owner/phase and Reviewer
+semantic judgment, not another automatic business-test classifier.
+
+Clarify pre-coding agreement, implementation discoveries and final counterexample
+review. Same-goal additions proceed autonomously; changed contract identity follows
+existing update paths. Business/acceptance baselines and permission decisions remain
+protected. Quick retains its approved spec and records proof/decisions alongside it.
+Label API/backend integration and browser E2E by actual scope, without a new format,
+Hook, state or old-rule exemption.
+
+Use six neutral old/new application scenarios: same-file pure logic, omitted batch
+callers, within-case/new-case boundary, unavailable required DB, UI evidence and
+undefined business semantics. Old guidance already made reasonable choices; do not
+invent baseline failure or improved detection rates. Keep results externally.
+Existing deployment consumers, fact gates, strict audit, full verification and
+isolated package installation establish wiring, not Agent compliance from prose.
+
+The user defers local installation. Retain commits in the isolated branch, never
+merge into the source-linked installed checkout, and compare installed fingerprints.
+Revert affected wording if it removes mandatory tests, uses filename heuristics,
+bypasses contract/Quick identity, stalls for routine approval or adds a planner.
+Do not weaken deterministic verification; final results are recorded externally.

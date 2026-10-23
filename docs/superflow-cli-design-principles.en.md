@@ -86,6 +86,20 @@ session cannot promise autonomous background continuation. Delivery, environment
 acceptance, archive, and Git/release follow their existing authorizations;
 missing required verification never permits a complete-delivery claim.
 
+
+### Owner test-strategy judgment
+
+Ordinary Flow Owner selects the smallest sufficient verification before coding
+from original goals, actual source/callers and project baselines, recording reasons
+in existing tests.md or within Quick's approved boundary. Strengthen same-goal
+boundaries/regressions without routine user approval; new Case IDs/frozen contexts
+still maintain existing contracts, traceability and affected readiness/review proof.
+Never lower expectations/required checks or disguise unavailable environments as
+inapplicable. Business meaning/scope/acceptance trade-offs and unavailable permissions
+need input. Scripts check facts; Owner and existing risk-required Reviewers judge
+sufficiency. No automatic test planner, fixed layer checklist, mandatory planning
+table or Test Agent is introduced. Quick retains its approved steps/digest.
+
 ## 2. Sources of Truth and Responsibility Layers
 
 Precedence is: confirmed user intent and source requirement, frozen OpenSpec/SDD
