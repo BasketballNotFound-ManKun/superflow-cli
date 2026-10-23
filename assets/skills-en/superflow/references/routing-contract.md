@@ -56,8 +56,10 @@ Users describe their goal and constraints. Select the existing phase or speciali
 ## Canonical test guidance entry
 
 Read [test-guide.md](test-guide.md) for test documentation, implementation
-preparation, or delivery review. Documents freeze required signals; implementation
-inherits and review verifies. Mock examples cannot override canonical DB contracts.
+preparation, or delivery review. Follow [Owner-led planning](test-guide.md#owner-led-test-planning):
+plan before coding, strengthen from source discoveries, and review under existing risk rules.
+Retain mandatory checks and contract/evidence identity, without inferring fixed levels from
+filenames. Mock examples cannot override canonical DB contracts.
 
 # SuperBridge Flow Pipeline
 

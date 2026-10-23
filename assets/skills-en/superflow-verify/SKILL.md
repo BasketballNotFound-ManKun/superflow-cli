@@ -23,11 +23,15 @@ files only as history or PARTIAL; missing current requirements block until compl
 
 ## Verification signal review
 
-Read the [test guide](../superflow/references/test-guide.md). Compare current
-changes, frozen cases, and actual execution counts; distinguish logic, database,
-and real-entry conclusions. Judge historical applicability before requesting
-affected reruns. Report formatting alone does not force full-chain reruns. Reviewers
-inspect raw output and source read-only.
+Use [Owner-led planning](../superflow/references/test-guide.md#owner-led-test-planning)
+to examine the original goal, actual diff and callers before challenging whether
+selected layers/assertions can falsify plausible wrong implementations or miss new,
+batch, exception or status paths. Completed old-case counts are insufficient. Return
+gaps to the current Owner to strengthen, execute and update the original plan/proof;
+only actual business choices need user input. Distinguish unit, API/backend integration,
+backend business flows and browser E2E scope. Judge historical applicability and rerun
+affected/contract-required checks only; formatting does not force full-chain replay.
+Reviewers remain read-only and inspect original output/source.
 
 Before semantic code review, run `superflow review-coverage --json` (or pass
 `--base <ref>` for a branch review). Use its included/excluded inventory and

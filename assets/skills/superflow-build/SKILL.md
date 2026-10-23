@@ -28,9 +28,10 @@ diff.patch/source-manifest 派发，区分 FIXED/MITIGATED/DEFERRED/NOT_A_DEFECT
 ## Superflow 实施验证入口
 
 在 Superflow 工作流中，实施首个任务前读取
-[测试指南](../superflow/references/test-guide.md)，加载已冻结的 tests.md 与项目测试。
-逐任务按既有用例执行 RED/GREEN 与必要真实验证，证据成立才勾选完成；缺合同回
-superflow-contracts，缺环境记录阻塞。普通 OpenSpec 使用项目自己的验证规则。
+[测试决策方法](../superflow/references/test-guide.md#owner-led-test-planning)，加载tests.md基线与项目测试。
+Owner根据实际diff、调用者和新发现自主补同目标边界/回归，执行适用RED/GREEN与必要真实验证，
+证据成立才勾选。新增Case/冻结上下文变化由同一Owner维护contracts/handoff及相关准入证据后
+继续，不例行问是否补测；不降低原预期或必测。必需环境缺失保留阻塞。普通OpenSpec沿项目规则。
 
 ## 持续交付责任
 
@@ -117,11 +118,11 @@ superflow-contracts，缺环境记录阻塞。普通 OpenSpec 使用项目自己
    - Show which task is being worked on
    - Make the code changes required
    - Keep changes minimal and focused
-   - Run the task's frozen signals; only after they pass, mark the task `- [ ]` → `- [x]`. Select only tasks whose actual predecessors are complete.
+   - Run the task's mandatory baseline plus source-driven strengthened signals; only after they pass, mark the task `- [ ]` → `- [x]`. Select only tasks whose actual predecessors are complete.
    - Continue to next task
 
    **Pause if:**
-   - Task is unclear → ask for clarification
+   - Test detail is unclear → inspect source and existing tests, supplement within the confirmed goal; unresolved business meaning → request the required decision
    - Implementation reveals a design issue → suggest updating artifacts
    - Repairable error within authorization → diagnose, repair, and rerun affected signals; actual decision/permission/environment blocker → persist evidence and stop dependent work.
    - User interrupts

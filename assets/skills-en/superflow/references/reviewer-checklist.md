@@ -29,6 +29,17 @@ behavior, retesting and actual rereview. Logging alone closes observability find
 functional errors remain open. Contract wording, extra logs and constant assertions cannot close
 risks to the user's original goal.
 
+### Test-plan sufficiency
+
+Follow [Owner-led planning](test-guide.md#owner-led-test-planning): first derive main
+failure modes independently from original goals, actual diffs and callers, then
+challenge whether selected cases would fail those wrong implementations. Inspect
+selection/omission reasons, new discoveries and actual strengthened evidence rather
+than only old-case counts. Owner supplements/executes within the same goal without
+routine approval stalls; business choices or required environment/permission remain
+separate. Preserve existing risk-tier independence duties without another mandatory
+Test Agent.
+
 ### Axis coverage
 
 | Axis | Focus | Minimum evidence |

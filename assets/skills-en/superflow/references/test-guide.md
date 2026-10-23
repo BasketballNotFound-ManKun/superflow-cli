@@ -1,5 +1,46 @@
 # Test Selection and Verification Loop
 
+## Owner-led test planning
+
+Flow Owner designs and evolves verification from confirmed goals, current source/diff,
+actual callers and project baselines. Owner and independent Reviewers judge scope,
+layers, assertions and sufficiency; scripts verify execution, references, identity
+and state facts. Filenames, line counts, test counts and keywords are investigation
+hints, not automatic full-suite/database/HTTP/browser obligations. Explicit user/project
+mandatory baselines remain binding; unavailable environments are not inapplicability.
+
+Before coding, record behavior/impact, main risks, test selection/reasons, counterexamples
+and assertions, reused commands/environment and uncovered scope in existing tests.md.
+A few lines suffice for a small task; reuse existing case tables for complex work,
+without another plan, fixed column count, level taxonomy or approval process. Quick
+retains approved spec acceptance/steps; put strengthened verification decisions and
+proof in its adjacent test-report, without changing approved steps/digest outside
+Quick's existing confirmation boundary.
+
+During implementation/repair the current Owner handles discoveries without asking
+whether to continue for routine test additions:
+- With unchanged goal, expected behavior, entry and executionContext, extend input
+  branches/boundaries/regressions within a case. Rerun affected signals and update
+  branch mapping, execution counts and current proof; old runs do not cover new inputs.
+- New Case IDs, production entries, frozen commands/context or acceptance contracts
+  require the same Owner to maintain tests/coverage/traceability, then refresh affected
+  handoff/review/readiness evidence through existing paths before continuing. Never
+  hand-edit hashes or receipts.
+- Adding tests is not itself a business decision. Ask only for undefined semantics,
+  scope/acceptance-baseline changes or unavailable permissions. Missing required
+  environments remain PARTIAL/Blocked while independent authorized work continues.
+
+Select the smallest set sufficient to falsify main plausible wrong implementations,
+retaining explicit mandatory checks. Before delivery, Reviewers challenge original
+objectives against actual diffs: would omitted writes, wrong branches or ineffective
+transactions still pass, and which assertion is missing? Owner strengthens, executes
+and returns evidence for review. Real API/DB calls normally prove interface/backend
+integration; backend end-to-end flows declare boundaries and real/simulated dependencies.
+For user-interface flows, browser actions support that user end-to-end conclusion;
+HTTP/DB success alone does not.
+
+Apply existing review_mode, actual risk and independence requirements; retain low-risk inline paths without adding fixed testing roles or Agent counts.
+
 ## Runner-Captured Execution
 
 All SDD executable cases require capture of actual build/case processes. Freeze
@@ -94,14 +135,14 @@ environments remain BLOCKED/PARTIAL; backend simulation cannot prove the whole d
 
 Read when generating tests.md, starting implementation, repairing findings, or
 verifying delivery. Inputs are confirmed requirements, source changes, existing
-project tests, and frozen contracts. Write outputs into existing tests.md / Quick
-Spec and test-report.md. Documentation-only work checks its contracts; pure
+project tests, and frozen contracts. Write outputs into existing tests.md and test-report.md; Quick follows the approved
+spec boundary described above. Documentation-only work checks its contracts; pure
 functions check their seam without inventing application or database requirements.
 
-superflow-contracts freezes the plan; the implementer executes and records evidence;
-superflow-verify / Host judges sufficiency and historical applicability. Existing
-coverage/receipt/lint checks deterministic facts; the existing state machine owns
-state. Database machine contracts come only from
+The current Flow Owner forms the pre-coding plan under superflow-contracts and
+evolves it using the method above. Implementation executes/retains proof;
+superflow-verify / Host independently challenges sufficiency and applicability.
+Existing coverage/receipt/lint checks facts; the existing state machine owns state. Database machine contracts come only from
 [document-review-coverage.md](document-review-coverage.md#database-layer-contract).
 Reuse testLayer, mockBoundary, and execution-receipt.v1, without another evidence
 format or level system. Superflow distributes this guide; no ake verification
@@ -109,12 +150,13 @@ skill installation or .ake memory is required.
 
 ## Select signals before implementation
 
-Search existing tests, build wiring, environment configuration, and project rules.
-Reuse seams, commands, and tools. Before production edits, map each affected
-behavior to these signals and freeze case IDs, commands, assertions, and evidence
-paths. Give source reasons for inapplicable signals. Missing environments for
-required cases mean BLOCKED/PARTIAL, never inapplicable. Implementers cannot
-remove frozen obligations; omissions return to the document owner.
+Use [Owner-led planning](#owner-led-test-planning) to inspect source, existing tests,
+build wiring, environment and project rules, reusing seams/commands/tools. The table
+is risk guidance, not an automatic classifier or all-items checklist. Before coding
+record baseline cases/commands/assertions/evidence. Explain inapplicability from
+source; unavailable required environments remain BLOCKED/PARTIAL. Never remove
+mandatory checks. The current Owner strengthens same-goal tests or maintains the
+original contract before continuing.
 
 | Change/risk | Signals to freeze |
 |---|---|

@@ -27,9 +27,10 @@ description: Superflow 内部能力：补齐接口、测试、追溯和质量合
 
 ## 测试方案入口
 
-写 tests.md 前读取[测试指南](../superflow/references/test-guide.md)，先复用项目测试与环境，
-把受影响行为映射到验证信号，在本阶段冻结用例、实际后端、mockBoundary、命令和断言。
-实现阶段只继承；不能把必要数据库验证留到编码时临场决定。
+写tests.md前由当前Flow Owner执行[源码驱动的测试决策](../superflow/references/test-guide.md#owner-led-test-planning)，
+复用项目测试/环境，将行为、真实调用者和主要风险落实为用例、后端/mockBoundary、命令及断言。
+本阶段约定验收底线和初始方案；实施中新发现的同目标用例由同一Owner补强并维护原合同/证据，
+不例行请求用户批准。必要DB等信号不能被删减、降成mock或因缺环境标不适用。
 
 完整文档交付必须读取并执行
 [需求×真实入口评审](../superflow/references/document-review-coverage.md)：
@@ -172,13 +173,14 @@ Binding` with:
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
   any gate is missing from `design.md`, `tests.md`, or quality gate, stop and
   complete the docs first.
-- Low-freedom means the Executor has no unresolved implementation or test-design
-  choice. `design.md` names reusable modules, exact change points, call/data flow,
-  transaction and concurrency boundaries, error behavior, and implementation
-  order. `tests.md` names environment, fixtures, startup command, steps,
-  automation command, response/DB/log assertions, cleanup, and evidence paths.
-  If two materially different implementations or acceptance paths remain valid,
-  return to clarification/design instead of delegating the choice to development.
+- Handoff makes business decisions, source-level HOW and mandatory acceptance
+  baselines explicit: design owns reuse/change points, call/data flow, transactions,
+  errors and order; tests owns selected environment, fixtures, commands, assertions,
+  cleanup and evidence. The Flow Owner may strengthen source-driven verification
+  under the confirmed goal while maintaining contract/evidence identity. An Executor
+  inherits required checks and cannot weaken them. Return unresolved business/HOW
+  choices or changed acceptance baselines to their owner; ordinary boundary inputs
+  and equivalent test-method choices do not require a new user decision.
 - For full workflow changes, `design.md` must include `复杂度减法评审` before
   docs freeze. Inventory every proposed table, field, API, Service/component,
   cache, async/MQ/event flow, scheduled job, compatibility layer, and new
@@ -413,11 +415,12 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
 禁止兜底边界已确认 | RED 测试已执行 | 允许修改文件 | 禁止修改文件 |
 阻塞项`.
 - `tasks.md`, `tests.md`, and later prompts must use the same field names as `api.md`.
-- `tests.md` is a pre-implementation contract. It must not be a vague checklist.
-  Every case must include:
-  `用例ID | 需求/Scenario | 层级L1/L2/L3/L4 | 前置数据 | 操作步骤 |
-  自动化命令 | 响应断言 | DB断言 | 日志断言 | RED预期失败 | GREEN预期通过 |
-  test-report证据位置`.
+- `tests.md` 是编码前的可执行测试合同。按
+  [Owner测试决策方法](../superflow/references/test-guide.md#owner-led-test-planning)，
+  从目标、源码与风险选择验证范围，并记录用例ID、需求/Scenario、前置条件、步骤、
+  可执行命令、业务断言和证据位置。响应、DB、日志及RED/GREEN断言按实际证明范围
+  补齐；保留既有捕获/上下文必填项和项目必测底线，不强造固定列数或L1/L2/L3/L4编号。
+  实施中的新发现沿同一方法补强；新增Case或冻结上下文变化维护合同与就绪证据。
 - For cross-page management or database-backed display changes, reconcile the
   frontend action/list inventory with real Controller, Service, exact Mapper
   statement and table anchors before freezing tasks. Put the confirmed chain

@@ -30,10 +30,12 @@ prose ownership and explicit history separation.
 
 ## Test plan entry
 
-Before writing tests.md, read the [test guide](../superflow/references/test-guide.md).
-Reuse project tests and environments, map affected behavior to signals, and freeze
-cases, actual backends, mockBoundary, commands, and assertions here. Implementation
-inherits the plan; required database verification is not an implementation-time choice.
+Before tests.md the current Flow Owner applies [source-driven test planning](../superflow/references/test-guide.md#owner-led-test-planning),
+reusing project tests/environment and connecting behavior, real callers and risks to
+cases, backend/mockBoundary, commands and assertions. Agree acceptance baselines and
+an initial plan here. The same Owner strengthens same-goal discoveries during work
+and maintains existing contracts/evidence without routine approval requests. Required
+DB signals cannot be removed, replaced by mocks or called inapplicable when unavailable.
 
 For full document delivery, read and apply
 [requirement × real-entry review](../superflow/references/document-review-coverage.md).
@@ -168,13 +170,14 @@ For complex requirements, verify these before writing docs:
   chain, no-fallback/no-guessing boundary, and pre-coding agent self-check. If
   any gate is missing from `design.md`, `tests.md`, or quality gate, stop and
   complete the docs first.
-- Low-freedom means the Executor has no unresolved implementation or test-design
-  choice. `design.md` names reusable modules, exact change points, call/data flow,
-  transaction and concurrency boundaries, error behavior, and implementation
-  order. `tests.md` names environment, fixtures, startup command, steps,
-  automation command, response/DB/log assertions, cleanup, and evidence paths.
-  If two materially different implementations or acceptance paths remain valid,
-  return to clarification/design instead of delegating the choice to development.
+- Handoff makes business decisions, source-level HOW and mandatory acceptance
+  baselines explicit: design owns reuse/change points, call/data flow, transactions,
+  errors and order; tests owns selected environment, fixtures, commands, assertions,
+  cleanup and evidence. The Flow Owner may strengthen source-driven verification
+  under the confirmed goal while maintaining contract/evidence identity. An Executor
+  inherits required checks and cannot weaken them. Return unresolved business/HOW
+  choices or changed acceptance baselines to their owner; ordinary boundary inputs
+  and equivalent test-method choices do not require a new user decision.
 - For full workflow changes, `design.md` must include a `Minimal Design Review`
   before docs freeze. Inventory every proposed table, field, API,
   service/component, cache, async/MQ/event flow, scheduled job, compatibility
@@ -413,11 +416,14 @@ Use references only as needed:
   No-fallback boundary confirmed | RED test executed | Allowed files | Forbidden files |
   Blockers`.
 - `tasks.md`, `tests.md`, and later prompts must use the same field names as `api.md`.
-- `tests.md` is a pre-implementation contract. It must not be a vague checklist.
-  Every case must include:
-  `Case ID | Requirement/scenario | Level L1/L2/L3/L4 | Precondition data | Steps |
-  Automation command | Response assertion | DB assertion | Log assertion | RED expected failure | GREEN expected pass |
-  test-report evidence location`.
+- `tests.md` is an executable pre-coding contract. Follow
+  [Owner-led planning](../superflow/references/test-guide.md#owner-led-test-planning)
+  to select scope from goals, source and risk, recording Case ID, requirement/scenario,
+  preconditions, steps, executable commands, business assertions and evidence locations.
+  Add response, DB, log and RED/GREEN assertions where relevant to the proof scope.
+  Retain required capture/context fields and project baselines without imposing fixed
+  columns or L1/L2/L3/L4 numbering. Strengthen tests as implementation reveals gaps;
+  new Cases or frozen-context changes update the contract and readiness evidence.
 - For cross-page management or database-backed display changes, reconcile the
   frontend action/list inventory with real Controller, Service, exact Mapper
   statement and table anchors before freezing tasks. Put the confirmed chain

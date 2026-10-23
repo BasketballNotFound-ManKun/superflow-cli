@@ -16,6 +16,18 @@ phase skill before invoking it. This contract owns continuity, not business
 design, test strategy, or a parallel state machine.
 
 
+## Test-strategy responsibility
+
+Use [Owner-led planning](test-guide.md#owner-led-test-planning) to investigate source
+and agree the smallest sufficient pre-coding plan, strengthen it from actual diff/
+new callers, then review sufficiency under existing risk, review_mode and independent-review
+requirements. Retain the low-risk inline path; never call self-review independent. Retain business expectations
+and mandatory baselines; the current Owner handles routine additions without approval
+stalls. New Case IDs/frozen commands still update the same contract/evidence identity.
+Quick retains approved steps and records stronger verification in its adjacent report.
+Automation checks facts, never replaces judgment with filenames or fixed layers.
+Small tasks do not acquire another planning table or testing Agent.
+
 ## Existing document implementation
 
 “Implement the tasks from existing documents and close delivery” authorizes the current Flow

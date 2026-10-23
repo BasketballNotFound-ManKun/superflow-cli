@@ -50,7 +50,8 @@ and stop before coding; readiness itself does not authorize implementation.
 ## 测试指导唯一入口
 
 生成测试文档、准备实施或核验交付时，读取 [test-guide.md](test-guide.md)。
-文档阶段冻结必要信号；实施继承，评审核验。Mock 边界和示例不得覆盖规范数据库合同。
+按[Owner测试决策](test-guide.md#owner-led-test-planning)前置约定、实施补强、按风险复核；
+保留必测与合同/证据身份，不按文件名强造层级。Mock边界和示例不得覆盖规范数据库合同。
 
 # SDD Spec Pipeline
 
@@ -793,19 +794,21 @@ superflow check <change> --level coding-ready
 
 ### 测试先行与接口自动化门禁（阻塞级）
 
-SDD 文档必须先冻结测试，再允许生成实现 prompt。研发 agent 不得先编码再临场补
-测试，也不得把人工随手调用、编译成功或接口 200 当作验收。
+SDD 文档必须先约定并冻结初始测试方案，再生成实现 prompt。Owner按
+[测试决策方法](test-guide.md#owner-led-test-planning)结合目标、源码和风险选最小充分验证，
+实施中继续补强新发现；不得省略初始计划或事后编造证据。新增Case或冻结上下文改变
+沿原合同、追溯、评审与准入路径更新；同Case参数补强按该方法执行。
 
 **测试冻结要求：**
 
-- `tests.md` 必须为每个 spec scenario、API、状态/枚举分支、DB 写入闭环和真实
-  消费入口生成可执行测试用例，包含：
-  `用例ID | 层级L1/L2/L3/L4 | 前置数据 | 操作步骤 | 自动化命令 | 断言 |
-RED预期失败 | GREEN预期通过 | DB核查 | 日志核查 | test-report证据位置`。
-- 涉及接口、CRUD、Mapper/XML、数据库字段、配置驱动行为或跨系统链路时，至少
-  有一个 L3/L4 自动化接口用例。用例必须写出完整 Base URL、token/cookie 获取
-  方式、curl/Postman/Newman/pytest/RestAssured 等可执行命令、请求体、响应断言、
-  DB SELECT 和日志关键词。
+- `tests.md` 为适用的spec scenario、真实消费入口及状态/写入分支定义可执行用例，
+  记录用例ID、前置数据、步骤、命令、业务断言和证据位置；按实际范围补齐响应、DB、
+  日志和RED/GREEN断言，并保留现有executionContext及capture必填要求。
+  复用项目既有层级，不强造固定列数或L1/L2/L3/L4编号。
+- 需要证明接口、持久化、配置生效或跨系统行为时，选择能到达实际分支的真实验证，
+  冻结适用的地址、认证取得方式、请求、断言、DB核查和日志证据。文件名或变更类别
+  只提示调查，不能单独裁决必须跑某层；纯函数变更也不能因位于Controller文件就
+  强制新增接口/DB测试。已经确认的必测项不得因此降低。
 - Bug fix、CR/Px follow-up 和回归修复必须写 Red-Green 用例：先定义修复前应失败
   的同一路径，再定义修复后同一路径应通过。没有 RED 失败证据，不得宣称该测试能
   防住回归。
@@ -818,7 +821,7 @@ RED预期失败 | GREEN预期通过 | DB核查 | 日志核查 | test-report证�
 **实现前阻塞规则：**
 
 - `tests.md` 没有可执行自动化命令，阻塞。
-- `test-report.md` 没有 Red-Green 证据占位和接口自动化证据表，阻塞。
+- `test-report.md` 缺少适用的Red-Green与真实接口验证证据位置，阻塞。
 - prompt 未引用 `tests.md` 的具体用例 ID、自动化命令和 RED/GREEN 要求，阻塞。
 - 研发 agent 未先执行 RED 测试或未记录失败原因就开始生产代码，阻塞。
 

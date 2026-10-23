@@ -21,9 +21,11 @@ diff.patch/source-manifest 派发，区分 FIXED/MITIGATED/DEFERRED/NOT_A_DEFECT
 
 ## 验证信号复核
 
-读取[测试指南](../superflow/references/test-guide.md)，核对当前差异、冻结用例及
-实际执行数；区分逻辑、数据库和真实入口结论。先判断历史证据是否失效，再要求实施方
-重跑受影响验证；仅报告格式变更不自动重跑全链路。评审方只读核验原始输出与源码。
+按[Owner测试策略](../superflow/references/test-guide.md#owner-led-test-planning)先核原目标、实际diff和调用者，
+再挑战所选层级/断言是否能推翻主要错误实现，是否遗漏新增、批量、异常或状态分支。不能只核
+旧用例完成数。缺口交当前Owner补强、执行和更新原计划证据；真实业务取舍才问用户。
+区分单元、接口/后端集成、后端业务链路和浏览器E2E的实际范围。复核历史证据适用性，只重跑
+受影响/合同必测，报告格式变更不自动重跑全链路；Reviewer仍只读核源码与原始证据。
 
 Before semantic code review, run `superflow review-coverage --json` (or pass
 `--base <ref>` for a branch review). Use its included/excluded inventory and

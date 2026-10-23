@@ -30,10 +30,13 @@ files only as history or PARTIAL; missing current requirements block until compl
 ## Superflow implementation verification entry
 
 Within the Superflow workflow, before the first task read the
-[test guide](../superflow/references/test-guide.md) and frozen tests.md/project
-tests. Execute inherited RED/GREEN and required real verification per task; mark
-complete only with evidence. Missing contracts return to superflow-contracts; missing
-environments remain blocked. Plain OpenSpec work follows project verification rules.
+[Owner-led planning](../superflow/references/test-guide.md#owner-led-test-planning),
+loading baseline tests.md and project tests. Owner adds same-goal boundaries/regressions
+from actual diffs/callers/discoveries, executes applicable RED/GREEN and required real
+checks, and completes tasks only with proof. New Case IDs/frozen contexts are maintained
+by the same Owner through contracts/handoff/readiness before continuing, without routine
+approval requests. Never lower expectations/required checks. Missing required environments
+stay blocked. Plain OpenSpec retains project rules.
 
 ## Continuous delivery ownership
 
@@ -122,11 +125,11 @@ finish other authorized work, retain PARTIAL, and use the Flow Owner delivery ma
    - Show which task is being worked on
    - Make the code changes required
    - Keep changes minimal and focused
-   - Run the task's frozen signals; only after they pass, mark the task `- [ ]` → `- [x]`. Select only tasks whose actual predecessors are complete.
+   - Run the task's mandatory baseline plus source-driven strengthened signals; only after they pass, mark the task `- [ ]` → `- [x]`. Select only tasks whose actual predecessors are complete.
    - Continue to next task
 
    **Pause if:**
-   - Task is unclear → ask for clarification
+   - Test detail is unclear → inspect source and existing tests, supplement within the confirmed goal; unresolved business meaning → request the required decision
    - Implementation reveals a design issue → suggest updating artifacts
    - Repairable error within authorization → diagnose, repair, and rerun affected signals; actual decision/permission/environment blocker → persist evidence and stop dependent work.
    - User interrupts

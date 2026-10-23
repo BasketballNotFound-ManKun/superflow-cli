@@ -19,6 +19,14 @@ List missing, failed and blocked rows explicitly. Restart only when code,
 configuration or process health requires it, and record the reason. Future release
 environments must not become gates for a development-only delivery.
 
+Owner selects/strengthens verification from current source using
+[test-guide](test-guide.md#owner-led-test-planning). Briefly record reasons, added
+branches and changed proof; do not add a mandatory decision table or count old
+checklists only. Distinguish within-case additions from new Case IDs/frozen contexts;
+old PASS does not cover new work. Failure/unavailable environments never lower
+business expectations or mandatory baselines. Label API/backend integration and
+browser E2E by actual boundaries.
+
 ## Test Case
 
 - ID:
