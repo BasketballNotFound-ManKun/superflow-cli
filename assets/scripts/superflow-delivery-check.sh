@@ -144,7 +144,8 @@ read_report_body() {
 import runpy, sys
 from pathlib import Path
 module = runpy.run_path(sys.argv[1])
-lines, ambiguous = module["markdown_body_lines"](Path(sys.argv[2]).read_text())
+text = module["current_report_text"](Path(sys.argv[2]).read_text())
+lines, ambiguous = module["markdown_body_lines"](text)
 if ambiguous:
     raise SystemExit("report Markdown body is ambiguous")
 print("\n".join(lines))
@@ -243,7 +244,7 @@ is_blocked_doc_freeze_report() {
 import runpy, sys
 from pathlib import Path
 module = runpy.run_path(sys.argv[1])
-text = Path(sys.argv[2]).read_text()
+text = module["current_report_text"](Path(sys.argv[2]).read_text())
 lines, ambiguous = module["markdown_body_lines"](text)
 if ambiguous:
     print("INVALID")

@@ -28,7 +28,7 @@ check_pattern() {
   local label="$2"
   local pattern="$3"
 
-  if ! grep -Eiq "$pattern" "$file"; then
+  if ! printf '%s\n' "$CURRENT_REPORT_BODY" | grep -Eiq "$pattern"; then
     echo "FAIL [$file] 缺少${label}证据"
     FAILED=1
   else
@@ -45,6 +45,14 @@ for REPORT in "$@"; do
 
   echo "== 检查 $REPORT =="
 
+  # Current scope is owned by the same canonical report parser as final lint.
+  LINT="$(dirname "${BASH_SOURCE[0]}")/superflow-test-report-lint.py"
+  if [ ! -f "$LINT" ] || ! CURRENT_REPORT_BODY="$(python3 "$LINT" --current-report "$REPORT")"; then
+    echo "FAIL [$REPORT] 无法提取当前报告；请核验安装与 Markdown 历史边界"
+    FAILED=1
+    continue
+  fi
+
   check_pattern "$REPORT" "编译/测试执行" \
     "BUILD SUCCESS|Tests run:|mvn .*test|gradle .*test|clean compile|compile"
   check_pattern "$REPORT" "应用启动" \
@@ -59,8 +67,7 @@ for REPORT in "$@"; do
     "Real integration passed|Partial real entry|Partially verified|Blocked|真实入口|API 集成|冒烟|Smoke"
 
   # Always use the linter from this installation, on both Codex and Claude.
-  LINT="$(dirname "${BASH_SOURCE[0]}")/superflow-test-report-lint.py"
-  if [ ! -f "$LINT" ] || ! python3 "$LINT" --require-complete "$REPORT"; then
+  if ! python3 "$LINT" --require-complete "$REPORT"; then
     FAILED=1
   fi
 

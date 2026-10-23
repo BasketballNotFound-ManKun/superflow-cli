@@ -18,8 +18,8 @@ describe('superflow-test-report-lint.py', () => {
     ['验证结果: PASS\n验证结果: 未知\n', 2],
     ['Verification Result: PASS\n验证结果: 失败\n', 2],
     ['验证结论: 通过\n', 0],
-    ['验证结果: FAIL\n验证结论: 通过\n', 0],
-    ['验证结论: FAIL\n验证结果: 通过\n', 0],
+    ['验证结果: FAIL\n验证结论: 通过\n', 2],
+    ['验证结论: FAIL\n验证结果: 通过\n', 2],
     ['验证结果: PASS\n验证结论: 失败\n', 2],
     ['Verification Result: PASS\n验证结论: 失败\n', 2],
   ])('normalizes final summary aliases without resurrecting early PASS: %s', async (summary, code) => {
@@ -35,6 +35,90 @@ describe('superflow-test-report-lint.py', () => {
       } else {
         await expect(command).rejects.toMatchObject({ code });
       }
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['验证结果: FAIL\n验证结果: PASS\n', 2],
+    ['Verification Result: FAIL\nVerification Result: PASS\n', 2],
+    ['## 历史记录\n验证结果: FAIL\n## 当前验证\n验证结果: PASS\n', 0],
+    ['## History\nVerification Result: FAIL\n### Old run\n验证结果: FAIL\n## Current verification\nVerification Result: PASS\n', 0],
+    ['## Historical Evidence\n验证结果: PASS\n', 2],
+    ['## History###\n验证结果: FAIL\n## Current verification\n验证结果: PASS\n', 2],
+    ['<pre>\n## History\n</pre>\n验证结果: FAIL\n## Current verification\nVerification Result: PASS\n', 2],
+    ['<div>\n## History\n</div>\n\n验证结果: FAIL\n## Current verification\nVerification Result: PASS\n', 2],
+    ['运行说明\n<span>\n验证结果: FAIL\n</span>\n\nVerification Result: PASS\n', 2],
+    ['<?target\n## History\n?>\n验证结果: FAIL\n## Current\nVerification Result: PASS\n', 2],
+    ['<![CDATA[\n## History\n]]>\n验证结果: FAIL\n## Current\nVerification Result: PASS\n', 2],
+    ['```html\n<pre>\n## History\n验证结果: FAIL\n</pre>\n```\n验证结果: PASS\n', 0],
+    ['<!-- 验证结果: FAIL -->\n验证结果: PASS\n', 0],
+    ['<!--\n## History\n-->\n验证结果: FAIL\n验证结果: PASS\n', 2],
+    ['```markdown\n## History\n```\n验证结果: FAIL\n验证结果: PASS\n', 2],
+  ])('separates explicit history from conflicting current summaries: %s', async (body, code) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-summary-'));
+    try {
+      const report = path.join(dir, 'test-report.md');
+      fs.writeFileSync(report, body);
+      const result = execFileAsync('python3', [LINT, '--require-complete', report]);
+      if (code === 0) await expect(result).resolves.toBeDefined();
+      else await expect(result).rejects.toMatchObject({ code });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it.each(['duplicate-current', 'explicit-history', 'history-only'])(
+    'keeps only the single current case ledger: %s', async (mode) => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-ledger-'));
+      try {
+        const report = path.join(dir, 'test-report.md');
+        const review = path.join(dir, 'document-review.json');
+        fs.writeFileSync(review, JSON.stringify({ coverage: {
+          schemaVersion: 'superflow.review-coverage.v1',
+          entries: [{ id: 'entry', route: 'POST /entry', kind: 'api' }],
+          cases: [{ id: 'C1', entryId: 'entry', level: 'api' }],
+          decisions: [{ disposition: 'FIX', caseIds: ['C1'] }],
+        } }));
+        writeExecutionReceipt(dir, 'C1', 'entry');
+        const table = (status: string) => [
+          '| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |',
+          '|---|---|---|---|---|',
+          `| C1 | entry | api | ${status} | logs/C1.json |`,
+        ].join('\n');
+        const body = mode === 'duplicate-current'
+          ? `${table('PASS')}\n\n## Another result\n${table('PARTIAL')}`
+          : mode === 'explicit-history'
+            ? `## 历史记录\n${table('PARTIAL')}\n## 当前验证\n${table('PASS')}`
+            : `## History\n${table('PASS')}\n## Current verification\n`;
+        fs.writeFileSync(report, body + '\n验证结果: PASS\n' +
+          (mode === 'explicit-history'
+            ? '<!--\n| Case ID | Entry ID | Acceptance level | Result | Evidence path |\n验证结果: FAIL\n-->\n' +
+              '\n    | Case ID | Entry ID | Acceptance level | Result | Evidence path |\n'
+            : ''));
+        const result = execFileAsync('python3', [LINT, '--review', review, report]);
+        if (mode === 'explicit-history') await expect(result).resolves.toBeDefined();
+        else await expect(result).rejects.toMatchObject({ code: 2 });
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it('does not borrow integration signals from explicit historical reports', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-history-signals-'));
+    try {
+      const report = path.join(dir, 'test-report.md');
+      const signals = 'gradle test BUILD SUCCESS PID HTTP SELECT log ERROR Real integration passed 真实入口 curl\n' +
+        '| 表/字段 | 写入方 | 读取/过滤方 | 跨仓/外部消费方 | 真实入口 | 反向状态场景 | 验证证据 |';
+      const verifier = path.join(ROOT, 'assets/scripts/superflow-verify-integration.sh');
+      fs.writeFileSync(report, `## History\n${signals}\n## Current verification\n验证结果: PASS\n`);
+      await expect(execFileAsync('bash', [verifier, report])).rejects.toMatchObject({ code: 2 });
+      fs.writeFileSync(report,
+        `## History\n验证结果: FAIL\nTests run: 9, Failures: 1, Errors: 0, Skipped: 0\n` +
+        `## Current verification\n${signals}\n验证结果: PASS\n`);
+      await expect(execFileAsync('bash', [verifier, report])).resolves.toBeDefined();
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

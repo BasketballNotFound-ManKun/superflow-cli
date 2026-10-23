@@ -145,6 +145,25 @@ describe("superflow delivery check", () => {
     });
   });
 
+  it.each(["old-pass", "old-blocked"])(
+    "uses current delivery scope instead of %s history", async (mode) => {
+      const historical = mode === "old-pass"
+        ? "TODO: old recovery point\n" +
+          "| 用例 ID | 入口 ID | 验收级别 | 结果 | 证据路径 |\n" +
+          "|---|---|---|---|---|\n| C1 | E1 | api | PASS | old.json |\n"
+        : "Blocked: SDD 文档范围冻结，未进入实现。\n";
+      const current = mode === "old-pass"
+        ? "验证结果: BLOCKED\nBlocked: SDD 文档范围冻结，未进入实现。\n"
+        : "验证结果: PASS\n";
+      await write("openspec/changes/sample/embedded-changes/p01-doc/test-report.md",
+        `## History\n${historical}\n## Current verification\n${current}`);
+      await execFileAsync("git", ["add", "openspec"], { cwd: tmp });
+      const result = execFileAsync("bash", [DELIVERY, "--check-staged", tmp]);
+      if (mode === "old-pass") await expect(result).resolves.toBeDefined();
+      else await expect(result).rejects.toMatchObject({ code: 2 });
+    },
+  );
+
   it("still rejects real body placeholders in blocked document closeout", async () => {
     await write(
       "openspec/changes/sample/embedded-changes/p01-doc/test-report.md",

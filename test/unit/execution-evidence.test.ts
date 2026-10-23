@@ -1005,7 +1005,7 @@ describe("execution receipt boundary", () => {
     const file = path.join(dir, "report.md");
     fs.writeFileSync(
       file,
-      "验证结果: PASS\n" +
+      "## History\n验证结果: PASS\n## Current verification\n" +
         fs
           .readFileSync(file, "utf8")
           .replace("| PASS |", "| PARTIAL |")

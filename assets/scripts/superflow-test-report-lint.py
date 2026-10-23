@@ -325,7 +325,8 @@ def task_comment_line(line: str, in_comment: bool) -> tuple[str, bool]:
     return "".join(visible), in_comment
 
 
-def markdown_body_lines(text: str, task_index: bool = False) -> tuple[list[str], bool]:
+def markdown_body_lines(text: str, task_index: bool = False,
+                        preserve_code: bool = False) -> tuple[list[str], bool]:
     """Structural report content only; preserve original line positions."""
     fence = None
     prefixes = []
@@ -333,6 +334,7 @@ def markdown_body_lines(text: str, task_index: bool = False) -> tuple[list[str],
     result = []
     columns: list[int] = []
     in_comment = False
+    unsupported_markup = False
     for line in text.splitlines():
         if task_index:
             line = line.expandtabs(4)
@@ -343,9 +345,20 @@ def markdown_body_lines(text: str, task_index: bool = False) -> tuple[list[str],
                     and len(marker[1]) >= len(fence)
                     and not marker[2].strip(" \t")):
                 fence = None
-            result.append("")
+            result.append(line if preserve_code else "")
             continue
         container = 0
+        if not task_index:
+            expanded = line.expandtabs(4)
+            indentation = len(expanded) - len(expanded.lstrip(" "))
+            if not in_comment and indentation >= 4:
+                result.append(line if preserve_code else "")
+                continue
+            line, in_comment = task_comment_line(line, in_comment)
+            # Raw HTML/XML needs block/paragraph semantics beyond this narrow
+            # Markdown classifier. Fail closed rather than erase current facts.
+            if re.match(r"^ {0,3}<(?:/?[A-Za-z]|[?!])", line):
+                unsupported_markup = True
         if task_index:
             if in_comment:
                 line, in_comment = task_comment_line(line, True)
@@ -379,10 +392,30 @@ def markdown_body_lines(text: str, task_index: bool = False) -> tuple[list[str],
         if marker and (marker[1][0] == "~" or "`" not in marker[2]):
             fence = marker[1]
             prefixes = next_prefixes
-            result.append("")
+            result.append(line if preserve_code else "")
         else:
             result.append(line)
-    return result, unsupported_tab or (fence is not None and bool(prefixes))
+    return result, unsupported_markup or unsupported_tab or (fence is not None and bool(prefixes))
+
+
+def current_report_text(text: str) -> str:
+    """Exclude explicitly bounded history, preserving raw evidence and line numbers."""
+    body, ambiguous = markdown_body_lines(text)
+    if ambiguous:
+        return text
+    raw_lines, _ = markdown_body_lines(text, preserve_code=True)
+    history_level = None
+    current = []
+    for raw, structural in zip(raw_lines, body):
+        heading = re.fullmatch(r" {0,3}(#{1,6})[ \t]+(.+?)(?:[ \t]+#+[ \t]*)?", structural)
+        if heading:
+            level, title = len(heading[1]), heading[2].strip()
+            if history_level is not None and level <= history_level:
+                history_level = None
+            if title.casefold() in {"history", "historical evidence", "历史记录", "历史证据"}:
+                history_level = level if history_level is None else min(level, history_level)
+        current.append(raw if history_level is None else "")
+    return "\n".join(current)
 
 
 def task_ids_from_body(lines: list[str]) -> list[str]:
@@ -392,8 +425,7 @@ def task_ids_from_body(lines: list[str]) -> list[str]:
 
 
 def final_report_result(text: str) -> str:
-    # Only the latest explicit summary per language is authoritative. Historical
-    # notes and fenced examples do not invalidate the final execution ledger.
+    # Current declarations must agree; only explicit history can retain old results.
     return report_summary_result(text, {"验证结果": "zh", "验证结论": "zh",
                                         "Verification Result": "en"},
                                  {"通过": "PASS", "失败": "FAIL"})
@@ -406,21 +438,20 @@ def archive_readiness_result(text: str) -> str:
 
 
 def report_summary_result(text: str, labels: dict[str, str], aliases: dict[str, str]) -> str:
-    lines, ambiguous = markdown_body_lines(text)
+    lines, ambiguous = markdown_body_lines(current_report_text(text))
     if ambiguous:
         return "INVALID"
     text = "\n".join(lines)
     pattern = "|".join(re.escape(label) for label in labels)
-    label_keys = {label.lower(): key for label, key in labels.items()}
-    results = {}
+    results = set()
     for match in re.finditer(rf"^({pattern})[ \t]*[:：][ \t]*([^\r\n]*)$", text, re.I | re.M):
         value = match[2].strip().upper()
         # MISSING denotes an absent summary, never an explicit unknown status.
         value = "UNKNOWN" if not value or value == "MISSING" else value
-        results[label_keys[match[1].lower()]] = aliases.get(value, value)
-    if len(set(results.values())) > 1:
+        results.add(aliases.get(value, value))
+    if len(results) > 1:
         return "CONFLICT"
-    return next(iter(results.values()), "MISSING")
+    return next(iter(results), "MISSING")
 
 
 def verified_file(base: Path, value: str) -> Path:
@@ -982,13 +1013,14 @@ def lint_case_evidence(report_path: Path, report_text: str, review_path: Path, i
     }
     if final_report_result(report_text) == "CONFLICT":
         issues.append(Issue("FAIL", report_path, 0, "中英文最终验证结果冲突"))
-    lines, ambiguous = markdown_body_lines(report_text)
+    lines, ambiguous = markdown_body_lines(current_report_text(report_text))
     if ambiguous:
-        return [Issue("FAIL", report_path, 0, "列表/引用代码块结构无法确定；用空格缩进并明确闭合后再核验，不能沿用早期 PASS")]
-    header_at = next(
-        (i for i, line in enumerate(lines) if CASE_EVIDENCE_HEADER.fullmatch(line.strip())),
-        None,
-    )
+        return [Issue("FAIL", report_path, 0, "列表/引用代码块结构无法确定或含原始 HTML/XML；请使用 Markdown/代码围栏并明确闭合，不能沿用早期 PASS")]
+    headers = [i for i, line in enumerate(lines)
+               if CASE_EVIDENCE_HEADER.fullmatch(line.strip())]
+    if len(headers) > 1:
+        return [Issue("FAIL", report_path, 0, "只能有一个当前逐用例执行证据表；历史结果请放 History/历史记录 节或独立证据文件")]
+    header_at = headers[0] if headers else None
     if header_at is None:
         return [Issue("FAIL", report_path, 0, "缺少逐用例执行证据表；不能用汇总通过数代替 R/E/C 回填")]
 
@@ -1054,7 +1086,7 @@ def lint_independent_review(report: Path, text: str, root: Path | None,
         if marker.get("codingReady") is not True:
             raise ValueError("完整 SDD READY codingReady 必须为 true；BLOCKED 不能完整交付")
         project = (report.parent / frozen["projectRoot"]).resolve() if frozen.get("projectRoot") else (root or report.parent).resolve()
-        lines, ambiguous = markdown_body_lines(text)
+        lines, ambiguous = markdown_body_lines(current_report_text(text))
         if ambiguous:
             raise ValueError("Independent Review Markdown 结构无法确定")
         sections = [i for i, line in enumerate(lines) if line.strip() == "## Independent Review"]
@@ -1143,7 +1175,7 @@ def infer_tests_path(report: Path) -> Path | None:
 def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None,
                 review_path: Path | None = None, index_root: Path | None = None) -> list[Issue]:
     issues: list[Issue] = []
-    text = path.read_text(encoding="utf-8", errors="replace")
+    text = current_report_text(path.read_text(encoding="utf-8", errors="replace"))
     lines = text.splitlines()
     command_tests: dict[str, set[tuple[int, int, int, int]]] = {}
     command_ratios: dict[str, set[tuple[int, int]]] = {}
@@ -1287,6 +1319,8 @@ def main() -> int:
     parser.add_argument("--warn-only", action="store_true")
     parser.add_argument("--task-index", action="store_true")
     parser.add_argument("--markdown-body", action="store_true")
+    parser.add_argument("--current-report", action="store_true",
+                        help="输出明确排除历史节的当前报告，保留命令代码块与行号")
     args = parser.parse_args()
 
     if args.record_execution:
@@ -1297,6 +1331,17 @@ def main() -> int:
             return 2
     if not args.reports:
         parser.error("需要报告路径或 --record-execution PLAN")
+
+    if args.current_report:
+        if len(args.reports) != 1 or args.task_index or args.markdown_body:
+            parser.error("--current-report requires exactly one report")
+        text = Path(args.reports[0]).read_text(encoding="utf-8")
+        _, ambiguous = markdown_body_lines(text)
+        if ambiguous:
+            print("FAIL 当前报告 Markdown 结构无法确定；原始 HTML/XML 请改用 Markdown 或代码围栏", file=sys.stderr)
+            return 2
+        print(current_report_text(text))
+        return 0
 
     if args.markdown_body:
         # Navigation consumes the same body classification as task indexes.
