@@ -59,9 +59,13 @@ Original sources/user confirmation → frozen spec/API/design/tests → project 
 Conflicts return to that phase for prose and consumer-reference repair, followed
 by refreshed handoff, review and readiness. Priorities, manually rebound hashes
 or receipts do not resolve contradictory current prose. Documents freeze business
-HOW; Prompts navigate it. Before tests, implementation or acceptance read
-[test-guide.md](references/test-guide.md), using frozen cases and real entries.
-Mocks, plans, handwritten PASS, hashes and checkboxes do not prove real acceptance.
+HOW; Prompts navigate it. Before tests, implementation or acceptance actually read
+the full [test-guide.md](references/test-guide.md). Start the first SDD build/case
+verification at [Runner-Captured Execution](references/test-guide.md#runner-captured-execution):
+prepare plans from the guide, call the installed
+`superflow-test-report-lint.py --record-execution`, then link its generated
+receipts/build fingerprints in the report. Use frozen cases and real entries;
+mocks, plans, handwritten PASS, hashes and checkboxes do not prove real acceptance.
 
 Ordinary work follows Flow Owner through progress reports and repairable failures.
 The Reviewer checklist owns readable diffs/both source versions, actual dispatch,

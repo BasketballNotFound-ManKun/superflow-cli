@@ -440,14 +440,17 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
   与 `test-report.md` 必须冻结资源身份字段、生产方与消费方的相等关系及每个不匹配时拒绝
   清理的用例（例如 nonce、PID、端口、进程签名）。复用未改动的认证 owner helper 时，
   只记录其完整性、任务参数、一次失败清理和最终零残留，不重复写成框架认证。
-- When a design uses a version field for optimistic locking, `design.md` must
-  freeze the database-level atomic compare-and-set boundary, conflict response,
-  and zero-row distinction between missing data and stale version. A
-  read-then-write check alone is blocked. `tests.md` must include two concurrent
-  requests holding the same old version and assert exactly one success, one
-  conflict, and one version increment. The implementation prompt only inherits
-  these frozen case IDs and commands; managed orchestration must not invent the
-  business design later.
+- 当已确认方案使用版本/快照控制保存时，`api.md`/`design.md` 冻结加载、保存成功后继续
+  保存、辅助刷新及内部/异步重存的生命周期：业务内容与 token 必须来自同一一致快照，
+  明确成功返回后下一次使用什么内容与 token；不能只重读最新 token 后提交旧内容。
+  区分内容写与状态/派生写，明确哪些路径推进版本、内容写与 bump 如何保持一致、
+  事务真实提交点、异常/回滚及外呼副作用。具体规则由项目正文按业务决策冻结，
+  不默认引入版本控制或替业务选择刷新、重试、事务方案。
+  已选乐观锁时仍冻结数据库原子 compare-and-set 边界、冲突响应与零行的不存在/陈旧区分，
+  先查后写不能替代原子保证。`tests.md` 按
+  [test-guide](../superflow/references/test-guide.md) 证明两个持同旧版本请求竞争的一胜一冲突一次递增、
+  成功后继续保存及适用辅助路径，并核同业务 ID 的内容/版本、实际提交与写后失败副作用；
+  不能只断言 token 或 mock 回滚。实现 Prompt 仅引用这些 Case/命令，托管层不补业务方案。
 - Each visible UI field, button action, list column, dropdown, and enum must map to API/DTO/DB/tests or be explicitly out of scope.
 - Every spec scenario must have at least one test case.
 - Every implementation batch must have at least one test that can fail before
@@ -481,26 +484,19 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
   `RED 失败证据`, `GREEN 通过证据`, `接口自动化证据`, `DB 核查证据`,
   `日志核查证据`, `未自动化/阻塞用例`, and `Partially verified 边界`.
   Each section must reference concrete `tests.md` case IDs.
-- `tests.md` must freeze runtime-specific acceptance instead of leaving it to
-  managed orchestration:
-  - Spring Boot/backend services: verified startup command, dynamic or planned
-    isolated port, readiness condition, at least one real HTTP invocation, and
-    failure evidence when the environment blocks startup.
-  - `.vue/.tsx/.jsx`, frontend API registration, page permission, or visible UI
-    behavior: frontend startup plus real-browser Playwright/Cypress cases and
-    page assertions; build, static inspection, and mocks are supplementary only.
-  - Controller/API DTO plus frontend request changes: backend Controller contract,
-    frontend request contract, and dynamic API export/call-resolution snapshot
-    when applicable.
-  - Named runtime backends such as MySQL, Testcontainers, a real browser, or a
-    real service: exact backend and command; H2, mocks, stubs, in-memory stores,
-    and compatibility modes never close the named gate.
-  - Multi-repository/service changes: build/runtime checks for every affected
-    repository plus the real cross-repository path; one repository's evidence
-    never substitutes for another.
-  `design.md` records why each runtime and repository is in scope; `tasks.md`
-  classifies local, environment, and release work; the implementation prompt
-  inherits the exact case IDs, commands, assertions, and evidence paths.
+- `tests.md` 按 [test-guide](../superflow/references/test-guide.md) 冻结适用的运行验收
+  （runtime-specific acceptance），不留给托管层临场决定：
+  - 注册/装配、配置、代理或路由绑定存在实际风险时，冻结已验证启动命令、隔离端口、
+    就绪条件及必要的真实 HTTP 冒烟；阻塞保留失败证据。纯函数沿原轻量 seam 验证，
+    不按语言、类名或文件扩展名自动强加运行义务。
+  - 实际影响页面权限或可见用户流程时，冻结前端启动、真实浏览器
+    （real-browser Playwright/Cypress）与页面断言；构建、静态检查和模拟仅作补充。
+  - 接口与前端请求绑定变化时，冻结两端实际契约及适用的动态导出/调用解析快照。
+  - 已选 MySQL、Testcontainers、真实浏览器或真实服务等后端，冻结精确后端与命令；
+    H2、mock、stub、内存存储或兼容模式不能替代该必测。
+  - 多仓/服务按各自实际影响验证构建/运行合同，并核真实跨仓路径；一仓证据不能替代另一仓。
+  `design.md` 记录实际风险与各环境/仓库适用依据，`tasks.md` 保持本地/环境/发布分类；
+  Prompt 仅继承 Case、命令、断言与证据。已确认必测不因选择理由而被删减。
 - For money-related changes, `test-report.md` must also include `Money Precision
   Boundary` evidence: original calculation inputs and precision, actual rounding
   boundary and mode, half-cent/residual/multi-detail cases, and reconciliation

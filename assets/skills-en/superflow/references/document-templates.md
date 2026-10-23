@@ -84,7 +84,7 @@ not create domain obligations or reduce applicable mandatory verification gates.
 ## tests.md
 
 - Case ID
-- Level L0-L4
+- Existing project level, where applicable
 - Preconditions
 - RED expectation
 - GREEN expectation
@@ -105,13 +105,17 @@ not create domain obligations or reduce applicable mandatory verification gates.
 
 ## tests.md: frozen verification signals
 
-Select applicable signals using [test-guide.md](test-guide.md), keeping project level numbers.
-Table: `Change/risk | Case ID | Signal | Actual environment/backend | Command | Assertion | Evidence path | Inapplicability reason/blocker`.
+Select applicable signals using [test-guide.md](test-guide.md), retaining existing project levels
+where applicable. Existing case prose/tables express change/risk, Case ID, signal, actual
+environment/backend, command, assertion, evidence and inapplicability/blockers; templates do not
+create fixed tables or levels.
 Database layers inherit only `testLayer` / `mockBoundary` from
 [document-review-coverage.md](document-review-coverage.md). Reuse project scenario
 regression assets for critical business flows and bug reproductions.
 
-Freeze operation chains, valid empty responses, anomaly regressions, and startup
-scripts under test-guide.md. tests.md references the existing single-command entry
-and verified settings; templates do not duplicate business policies. Report
-simulated/real/browser boundaries per case set.
+Freeze operation chains, valid empty responses, anomaly regressions and startup scripts under
+test-guide.md. Applicable version/snapshot cases inherit project decisions/Cases for loading,
+continued saving after success, auxiliary refresh/internal re-save, coherent content/token,
+content-write/bump consistency, real commit/rollback and external effects. tests.md references
+existing single-command entries and verified settings; templates do not choose business policies.
+Report simulated/real/browser boundaries per case set.

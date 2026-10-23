@@ -27,8 +27,15 @@ diff.patch/source-manifest 派发，区分 FIXED/MITIGATED/DEFERRED/NOT_A_DEFECT
 
 ## Superflow 实施验证入口
 
-在 Superflow 工作流中，实施首个任务前读取
-[测试决策方法](../superflow/references/test-guide.md#owner-led-test-planning)，加载tests.md基线与项目测试。
+在 Superflow 工作流中，实施首个任务前实际完整读取
+[test-guide.md](../superflow/references/test-guide.md)，按其中的
+[测试决策方法](../superflow/references/test-guide.md#owner-led-test-planning)加载tests.md基线与项目测试。
+首次 SDD 构建/用例验证按
+[Runner-Captured Execution](../superflow/references/test-guide.md#runner-captured-execution)
+准备 plan，使用已解析的安装脚本路径运行
+`python3 <installed-script-path>/superflow-test-report-lint.py --record-execution <plan.json>`。
+脚本生成 receipt、构建指纹和原始输出，实施者将生成路径写入
+[报告](../superflow/references/test-execution-template.md)，再继续验证；无需先手造凭证或哈希。
 Owner根据实际diff、调用者和新发现自主补同目标边界/回归，执行适用RED/GREEN与必要真实验证，
 证据成立才勾选。新增Case/冻结上下文变化由同一Owner维护contracts/handoff及相关准入证据后
 继续，不例行问是否补测；不降低原预期或必测。必需环境缺失保留阻塞。普通OpenSpec沿项目规则。

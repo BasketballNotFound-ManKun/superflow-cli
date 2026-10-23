@@ -448,13 +448,23 @@ Use references only as needed:
   PID, port, and process signature). When reusing an unchanged certified owner
   helper, record only its integrity, task parameters, one failure cleanup, and
   final zero residue; do not repeat framework certification.
-- When a design uses a version field for optimistic locking, `design.md` freezes
-  the database-level atomic compare-and-set boundary, conflict response, and
-  zero-row distinction between missing data and stale version. A read-then-write
-  check alone is blocked. `tests.md` includes two concurrent requests holding
-  the same old version and asserts exactly one success, one conflict, and one
-  version increment. The implementation prompt only inherits these frozen case
-  IDs and commands; managed orchestration never invents the business design.
+- When confirmed design uses versions/snapshots to control saves, `api.md`/`design.md`
+  freeze the lifecycle of loading, continued saving after success, auxiliary refresh and
+  internal/async re-save. Business content and token must share one coherent snapshot;
+  specify the content/token used after a successful response. Reading only the latest
+  token before submitting old content is insufficient. Distinguish content writes from
+  status/derived writes and identify which paths advance versions, content-write/bump
+  consistency, actual transaction commit points, errors/rollback and external side effects.
+  Project prose freezes these rules from business decisions; do not introduce version
+  control by default or choose business refresh, retry or transaction policy here.
+  Selected optimistic locking still freezes the database-level atomic compare-and-set boundary, conflict
+  responses and missing/stale zero-row distinctions; read-then-write is insufficient.
+  Under [test-guide](../superflow/references/test-guide.md), `tests.md` proves one winner,
+  one conflict and one increment for two competing requests holding the same old version,
+  continued saving after success and applicable auxiliary paths. Assert same-business-ID
+  content/version, actual commits
+  and post-write failure side effects, beyond token assertions or mocked rollback. Prompts
+  reference these Case IDs/commands; managed orchestration does not invent business design.
 - Each visible UI field, button action, list column, dropdown, and enum must map to API/DTO/DB/tests or be explicitly out of scope.
 - Every spec scenario must have at least one test case.
 - Every implementation batch must have at least one test that can fail before
@@ -488,26 +498,25 @@ Use references only as needed:
   `RED failure evidence`, `GREEN pass evidence`, `interface automation evidence`, `DB evidence`,
   `log evidence`, `manual/blocking cases`, and `Partially verified boundary`.
   Each section must reference concrete `tests.md` case IDs.
-- `tests.md` freezes runtime-specific acceptance instead of leaving it to
-  managed orchestration:
-  - Spring Boot/backend services: verified startup command, dynamic or planned
-    isolated port, readiness condition, at least one real HTTP invocation, and
-    failure evidence when the environment blocks startup.
-  - `.vue/.tsx/.jsx`, frontend API registration, page permission, or visible UI
-    behavior: frontend startup plus real-browser Playwright/Cypress cases and
-    page assertions; build, static inspection, and mocks are supplementary only.
-  - Controller/API DTO plus frontend request changes: backend Controller contract,
-    frontend request contract, and dynamic API export/call-resolution snapshot
-    when applicable.
-  - Named runtime backends such as MySQL, Testcontainers, a real browser, or a
-    real service: exact backend and command; H2, mocks, stubs, in-memory stores,
-    and compatibility modes never close the named gate.
-  - Multi-repository/service changes: build/runtime checks for every affected
-    repository plus the real cross-repository path; one repository's evidence
-    never substitutes for another.
-  `design.md` records why each runtime and repository is in scope; `tasks.md`
-  classifies local, environment, and release work; the implementation prompt
-  inherits the exact case IDs, commands, assertions, and evidence paths.
+- Under [test-guide](../superflow/references/test-guide.md), `tests.md` freezes applicable
+  runtime-specific acceptance instead of leaving it to managed orchestration:
+  - Actual registration/wiring, configuration, proxy or route-binding risks require
+    verified startup commands, isolated ports, readiness and necessary real HTTP smoke;
+    blockers retain failure evidence. Pure functions keep lightweight seam verification.
+    Language, class names or file extensions do not automatically impose runtime duties.
+  - Actual page-permission or visible user-flow impact requires frontend startup,
+    real-browser Playwright/Cypress and page assertions. Build, static checks and mocks
+    remain supplementary.
+  - Changed interface/frontend request bindings freeze both actual contracts and
+    applicable dynamic export/call-resolution snapshots.
+  - Selected backends such as MySQL, Testcontainers, real browsers or services freeze exact
+    backends/commands; H2, mocks, stubs, in-memory stores or compatibility modes cannot
+    replace that mandatory verification.
+  - Multi-repository/service work verifies each actual affected build/runtime contract
+    and real cross-repository paths; one repository's evidence never substitutes for another.
+  `design.md` records actual risk and runtime/repository applicability; `tasks.md` retains
+  local/environment/release categories. Prompts inherit Cases, commands, assertions and
+  evidence. Selection reasons never remove confirmed mandatory checks.
 - For money-related changes, `test-report.md` must also include `Money Precision
   Boundary` evidence: original calculation inputs and precision, actual rounding
   boundary and mode, half-cent/residual/multi-detail cases, and reconciliation

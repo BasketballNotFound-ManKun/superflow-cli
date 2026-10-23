@@ -13,7 +13,7 @@ into every batch.
 ## Output order
 
 1. Goal, confirmed authorization, exclusions and current workspace.
-2. **Canonical links** to spec/API/design/technical_design/tasks/tests, applicable contracts, quality gates and release-sql.
+2. **Canonical links**: the single shared reference list for spec/API/design/technical_design/tasks/tests, quality gates and specialized/SQL contracts selected by actual risk; record applicability once here when explanation is needed.
 3. **Execution navigation** below; **Acceptance IDs** come from existing coverage.
 4. Execution strategy and recovery location: declared modes, dependencies, next incomplete task and test-report.
 5. Delivery reconciliation: actual cases/entries/versions, open findings, independent re-review and resources; verify Git authorization separately.
@@ -48,7 +48,7 @@ Deliver the approved scope; Git, publication and archive each follow confirmed a
 | [This execution](implementation.md) | 1.1, 1.2 | E1, E2 | C1, C2 |
 ## Execution strategy
 Inherit declared modes and continuously implement, verify, review, repair and actually re-review ready tasks.
-Keep the recovery point and this run's evidence in ../test-report.md.
+Keep the current recovery point and this run's evidence in ../test-report.md; move earlier points/results to its History or link historical files.
 ```
 
 ## Contract inheritance
@@ -58,7 +58,8 @@ read canonical bodies required by the Decision/Entry/Case risk. Do not unconditi
 read a full projection and then every original again. `technical_design` owns
 source-level HOW. Reference Field And Status Reverse Impact and external enum,
 configuration, concurrency/idempotency or money precision contracts only where
-applicable. The navigator inherits constraints without redesigning business logic.
+applicable. A source-based sentence in the main entry suffices for no monetary
+impact; batches inherit that conclusion. The navigator inherits constraints without redesigning business logic.
 For database changes reference release-sql.md; copy its SQL verbatim to target_sql_path
 and verify sql_sha256 there. Prompts do not duplicate SQL, raw hashes or commands.
 

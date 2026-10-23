@@ -1,93 +1,166 @@
 # Test Execution Template
 
-Capture actual build/case processes through [Runner-Captured Execution](test-guide.md#runner-captured-execution).
-Reports link generated build/case receipts and raw stdout/stderr; never hand-fill capture fields or
-copy the example event as evidence. Legacy undeclared evidence retains its level; missing measured
-provenance remains PARTIAL.
+Before first verification actually read the full [test-guide.md](test-guide.md).
+For SDD build/case verification prepare plans through [Runner-Captured Execution](test-guide.md#runner-captured-execution)
+and call the installed `superflow-test-report-lint.py --record-execution`. The script
+generates build/Case receipts, fingerprints and redacted stdout/stderr. Link those
+artifacts without hand-filling capture fields. Historical evidence keeps its level;
+missing provenance remains PARTIAL.
 
-Read [test-guide.md](test-guide.md) first and inherit frozen tests.md / Quick Spec
-signals. Fill applicable cases; give source reasons for inapplicable fields and
-BLOCKED/PARTIAL for unavailable required environments. Existing coverage/receipts
-check facts; template examples never redesign tests or reduce frozen gates.
+Inherit commands, toolchains, runtime versions, startup/login/readiness/stop entries,
+environment, ports and assertions from current tests.md / the approved Quick Spec.
+Existing project scripts/tests are the execution entry; this template supplies no
+fixed cross-project command. Missing mandatory environments remain BLOCKED/PARTIAL
+while other authorized work continues. Local containers/mocks cannot replace an
+explicitly required shared environment; future release environments do not
+automatically become development-delivery gates.
 
-Use the environment frozen in tests.md; do not substitute local containers or
-mocks for an explicitly required shared development environment. When the user
-requires every endpoint to be exercised, freeze an endpoint/role/scenario matrix,
-reuse one healthy application instance and test accounts, and record redacted
-requests, response files, and expected versus actual database sets for every row.
-List missing, failed and blocked rows explicitly. Restart only when code,
-configuration or process health requires it, and record the reason. Future release
-environments must not become gates for a development-only delivery.
+Strengthen the existing plan through [Owner-led planning](test-guide.md#owner-led-test-planning),
+briefly recording reasons, added branches and changed proof. Distinguish within-Case
+parameters from new Cases/frozen contexts through the original contract. Low-risk
+reports keep a few applicable sections; specialized proof follows frozen Cases
+without an unrelated inapplicability checklist.
+Quick records approved-Spec steps and observations without adding R/E/C indexes or SDD receipts to fit this template.
 
-Owner selects/strengthens verification from current source using
-[test-guide](test-guide.md#owner-led-test-planning). Briefly record reasons, added
-branches and changed proof; do not add a mandatory decision table or count old
-checklists only. Distinguish within-case additions from new Case IDs/frozen contexts;
-old PASS does not cover new work. Failure/unavailable environments never lower
-business expectations or mandatory baselines. Label API/backend integration and
-browser E2E by actual boundaries.
+## One current record
 
-## Test Case
+Keep one current verdict, one current Case table and one set of current independent
+review/re-review references. Update the current recovery point as work proceeds;
+place older points, results and Case tables under explicit `## History`, or link
+existing historical files. Start the current record at a heading of the same level
+after History. Append new disposition/re-review files; preserve the original Reviewer
+report's state, finding IDs, file hash and conclusion.
 
-- ID:
-- Level: L0 unit, L1 component, L2 integration, L3 API, L4 real-entry
-- Preconditions:
-- Command:
-- RED expected failure:
-- GREEN expected pass:
-- Response assertion:
-- DB assertion:
-- Log assertion:
-- Evidence location:
+For full SDD fill every R/E/C from document-review.json through existing
+[coverage/receipts](document-review-coverage.md). The Case table is the only current
+result ledger; link detailed output as evidence. Separate contract Cases, parameter
+branches, test methods and repeated executions in counts.
 
-## Report Entry
+## Report shape
 
-- Environment:
-- Command executed:
-- Result:
-- Evidence:
-- Blocker if not executed:
+These are sections/fields of the existing report; fill the applicable scope:
 
-## Money Precision Boundary Evidence
+```markdown
+# Test Execution Report
 
-Required when monetary calculation, settlement, proration, allocation,
-reconciliation, or financial display changes:
+## History
 
-| Case | Identity/authoritative total | Currency/minor unit | Complement | Pre/post round | Strategy/residual recipient | Positive/zero/refund/tied residual | Reconciliation |
-|---|---|---|---|---|---|---|---|
-| TC-M01 | `original = discount + actual` / `original` | CNY/minor unit | `actual = original - discount` | | largest remainder / | | pass/blocked |
+- Earlier results/recovery points: <relative links to existing evidence/reports>
+- Original review and disposition: <original report, Owner response and actual re-review links>
 
-Prove that calculation-state values were not rounded before the confirmed final
-boundary and that original, discount, actual, refund, and allocated totals obey
-the design contract. When an authoritative total exists, prove the final
-component was derived by subtraction instead of independently calculated and
-rounded. Record currency, provider minor unit, pre/post-round values, residual
-recipient, and positive/zero/negative or refund, tied remainder, and idempotent
-recalculation evidence. FX cases also record base/quote, rate source, and target
-settlement rounding. A two-decimal display assertion alone is insufficient.
+## Current verification
 
-## Closeout
+### Environment and execution
 
-Verification Result: PASS / FAIL / BLOCKED / PARTIALLY_VERIFIED
-Archive Readiness: PASS / BLOCKED
+| Item | Observed information and source |
+|---|---|
+| Verification time | <current run> |
+| Workspace and source | <branch/commit and source identity reference> |
+| Build/runtime target | <captured build receipt; actual target when applicable> |
+| Toolchain and environment | <tests.md tools/versions/non-secret configuration sources> |
+| Execution entry | <tests.md command and relative cwd; build/Case plan links> |
+| Raw output | <current stdout/stderr, native test reports and receipt links> |
 
-Required for `verify_mode: full`:
-
-For full SDD changes, fill every R/E/C case from `document-review.json` in one
-execution table checked by `superflow-test-report-lint.py --review`:
+### Current Case results
 
 | Case ID | Entry ID | Acceptance level | Result | Evidence path |
 |---|---|---|---|---|
-| C1 | E1 | browser | PASS | logs/C1-receipt.json |
+| <C-ID> | <E-ID> | <frozen level> | <PASS/FAIL/BLOCKED/PARTIAL> | <current receipt path> |
 
-Use only `PASS/FAIL/BLOCKED/PARTIAL`; explain non-PASS results in the report.
-For database-backed display fields, record same-ID API/DB values on non-null
-data, historical NULL separately, and real browser rendering. Distinguish
-field-key checks, static frontend inspection and browser evidence.
+### Verification scope and open items
 
-- Test environment:
-- Branch/commit/build number or image:
-- Base URL:
-- Verification timestamp:
+- Goal and actual implementation: <goal, observed entry/call path and version reconciliation>
+- Test selection and strengthening: <reasons, added branches and affected proof>
+- Actual counts: <separate unit/API or backend integration/backend flows/browser sets with passed/failed/skipped/blocked>
+- Open items: <failed/blocked Cases and findings, cause, impact, disposition and needed coordination; state none when true>
+- External coordination and control: <unfinished integration; actual Git/release authorization and actions>
 
-Use [document-review-coverage.md](document-review-coverage.md) for receipts and persistence comparisons. Do not invent another format. Retain historical partial results; the latest consistent bilingual Verification Result is authoritative.
+## Owner Recovery
+
+<Current remaining tasks, valid evidence, owned resource identity and next action; state completion when true>
+
+## Independent Review
+
+| Report |
+|---|
+| .sdd/reviews/current-code-review.md |
+
+## Current conclusion
+
+Verification Result: PASS / FAIL / BLOCKED / PARTIALLY_VERIFIED
+Archive Readiness: PASS / BLOCKED
+```
+
+Current Case results use only PASS/FAIL/BLOCKED/PARTIAL; explain non-PASS in open
+items. Reconcile the current verdict with Cases, receipts, tasks and re-review.
+Full delivery runs the installed lint with `--require-complete`. For verify_mode:
+full also record environment, branch/commit/build or image, Base URL and verification
+time. Bilingual result markers must agree. Archive readiness grants no archive,
+Git or publication authority.
+
+Use the [Reviewer checklist](reviewer-checklist.md#finding-closure)'s existing four
+review states. The table references current actual returns; the new re-review's
+Review Chain links originals and Owner responses, recording each finding recheck.
+Changed source requires affected retesting and actual re-review. Missing mandatory
+independence, checks or re-review remains PARTIAL.
+
+## Detailed proof by applicable Case
+
+Keep the following in Case evidence or linked reports, without a second current
+Case result table.
+
+### RED/GREEN and observed assertions
+
+Applicable RED occurs before production edits; record command, actual failure
+output and expected business assertion. Environment, compilation, credential or
+test-code failures are not correct RED. GREEN uses the same command and business
+expectation. Response/state/forbidden effects come from this run's observations;
+native test output owns executed, failed and skipped counts. Strengthen gaps via
+test-guide without deleting or lowering assertions to turn failure into success.
+
+### Real entries, databases and user operation chains
+
+Inherit real parameters/sources, authentication entry, request/role/scenario and
+assertions from tests.md. Retain redacted requests, responses, database queries and
+before/after values plus correlated logs. Preserve frozen schema checks, migration
+SQL execution/rechecks and all consumer Entity/Mapper/SQL comparisons for shared
+tables. Missing columns remain blocked; adding obsolete columns to a test database
+cannot bypass the contract. Money/device/third-party/callback Cases follow their
+real-entry contracts.
+
+When every endpoint is required, exercise the tests.md endpoint/role/scenario matrix
+using one healthy application instance and test accounts. Record restarts required
+by code/configuration/health and verify current build/configuration identity. Reuse
+existing startup/readiness/log-assertion/stop scripts; clean only verified task-owned
+resources and record zero residue.
+
+Mocks, test Controllers and authentication bypasses support isolated/test-endpoint
+conclusions only. HTTP 200, nonempty fields, DB-only output, compilation, skipped
+tests or static frontend configuration alone cannot prove real business success.
+Real frontend/external payloads, responses, logs and DB closure support their actual
+scope. Label API/backend integration separately from browser E2E. Display fields
+need same-ID non-null API/DB comparisons, historical NULL separately and actual
+browser evidence. Missing real parameters/credentials/configuration/devices leave
+required Cases BLOCKED/PARTIAL; label simulations with their actual boundary.
+
+### Money Precision Boundary
+
+Money Cases inherit the frozen contract and record identities/authoritative totals,
+independent components, final complement/formula, currency/minor unit, calculation
+sources, intermediate precision, pre/post-round values, final rounding boundary/mode,
+allocation strategy and residual recipient. Verify original/discount/actual or refund/
+allocated totals reconcile, no early rounding, positive/zero/negative or refund,
+half-cent/residual/multiple details, tied remainders and idempotent recalculation.
+When the total is authoritative, derive the final component as total minus the other
+components; independent calculation/rounding does not prove that contract. FX adds
+base/quote, rate source and target-settlement rounding. Two-decimal display alone
+does not prove correct precision.
+
+## Before completion
+
+Check actual evidence for every tests.md mandatory signal and quality gate; mark
+tasks only when their signals hold. Independent Tester/Leader duties apply when the
+selected mode already requires them, using raw proof and rerunning affected or
+contract-required paths. Owner continues other authorized work; Reviewers stay
+read-only. Inherited valid evidence keeps its explicit version/scope; source, entry
+or context changes require affected new proof. Old PASS does not cover new impact.

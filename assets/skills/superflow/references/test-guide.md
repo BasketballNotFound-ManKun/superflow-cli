@@ -27,6 +27,29 @@ API真实请求＋数据库通常证明接口/后端集成；后端完整业务�
 
 按既有review_mode、实际风险和独评义务取得复核；低风险保留现有内联路径，不固定增加测试角色或代理数。
 
+## First verification action
+
+首次计划执行验证前完整读本节及Runner-Captured Execution，再读取tests.md冻结命令；
+先复用项目测试/验收wrapper。捕获由现有`superflow-test-report-lint.py --record-execution`
+负责，先运行一个最小build plan与Case plan验证路径，再扩展；不从字段名猜receipt、capture、
+事件、hash或来源清单，不手改生成结果。路径错误按声明/基准/解析路径修正。
+
+脚本与本指南同属一次Superflow安装。以本SKILL安装目录为基准：从
+`<scope>/.codex/skills/superflow/`向上到`.codex`后取`hooks/superflow-test-report-lint.py`；
+Claude同理取`.claude/scripts/`，scope为已选项目或用户目录。不得混用另一安装或扫描个人目录；
+缺脚本是安装问题，保留诊断，不重新编写一套捕获器。业务测试不因此依赖某次报告文件。
+
+## Source-driven regression choices
+
+- 改动装配/声明时连同相邻注解、字段/构造器归属和实际创建路径一起核查。反射赋值或
+  mock注入绕过了容器；Owner按实际风险选择项目已有真实装配或受影响HTTP冒烟，不能把
+  “注解重复”仅按风格修掉却留下失注入字段。纯函数且无装配影响不强制启动。
+- 改公共写方法时反查未改调用者、单条/批量、内部/异步、内容/状态和混合字段。测试应能
+  区分该推进的业务变化与不该推进的状态写；补反查父ID不等于已证明全部消费者语义正确。
+- 并发令牌/快照测试核绑定来源及生命周期：加载、修改、首次成功后继续保存、辅助刷新、
+  失败后重试与内部重存；不能给旧内容单独换新令牌。真实提交点和内容写/令牌推进窗口由
+  项目api/design冻结，测试选择受控交错和失败反例，不由通用指南指定事务方案。
+
 ## Runner-Captured Execution
 
 所有 SDD 执行用例必须捕获实际构建/用例进程，在既有 document-review coverage 用例冻结
@@ -69,7 +92,7 @@ build/case 输出必须在同一证据目录；case 命令只从冻结 execution
 验收命令 stdout 输出且仅输出一个匹配该 caseId 的 JSON 测量事件；其他诊断输出可保留：
 
 ```json
-{"event":"superflow.measurement.v1","caseId":"C1","executed":1,"assertions":[{"id":"response","expected":true,"actual":true,"result":"PASS"},{"id":"state","expected":true,"actual":true,"result":"PASS"},{"id":"forbiddenEffects","expected":true,"actual":true,"result":"PASS"}],"persistence":[],"target":{"service":"<observed>","route":"<observed>","kind":"<observed>","buildId":"<observed>","buildSha256":"<observed>","sourceFingerprint":"<observed>"}}
+{"event":"superflow.measurement.v1","caseId":"C1","executed":1,"assertions":[{"id":"response","expected":"<冻结值>","actual":"<真实观测值>","result":"<比较结果>"},{"id":"state","expected":"<冻结值>","actual":"<真实观测值>","result":"<比较结果>"},{"id":"forbiddenEffects","expected":"<冻结值>","actual":"<真实观测值>","result":"<比较结果>"}],"persistence":[],"target":{"service":"<observed>","route":"<observed>","kind":"<observed>","buildId":"<observed>","buildSha256":"<observed>","sourceFingerprint":"<observed>"}}
 ```
 
 这只是事件外形，不是可交付的已通过证据。assertions 至少包含 response/state/forbiddenEffects
@@ -253,6 +276,20 @@ PASS。原Case未完成保持PARTIAL，报告行、回执、任务及当前最�
 拒绝PARTIAL回执冒充PASS、PARTIAL行却宣称最终PASS。--require-complete通过才支持完整
 交付，delivery-check只核交付资产，不替代验收。历史记录放既有.sdd证据区并链接，不把旧
 全PASS摘要混在本轮当前结论中。运行数量区分合同Case、参数分支、JUnit方法和重复聚合。
+
+
+实际值与预期值相等可合法通过，不能用“相等即伪造”的规则；Reviewer核的是数据流：
+原响应/查询/测试报告→解析/比较→measurement→退出码。逐项找实测读取与失败分支，
+不接受从冻结assertions复制actual或无条件打印PASS。HTTP 200但业务失败、缺写、旧输出、
+状态已变却目标字段错，都应使相应用例失败；负向用例按冻结预期判断，不把success=false
+机械视为失败。手工观察可以保留其证明范围，不能给弱自动化脚本倒填通过。
+
+
+当前报告的所有验证/归档摘要必须一致；同语言后文PASS不能覆盖未标历史的FAIL。
+当前逐用例表唯一，修后更新同一张表；不能在尾部追加第二张PASS表。历史明确放在
+`## History`、`## Historical Evidence`、`## 历史记录`或`## 历史证据`下，或链接已有
+历史文件；同级/更高标题回到当前。历史保留原文/身份，但不提供当前Case、摘要或独评。
+代码块或注释里的标题不改变作用域；原始HTML/XML结构不参与报告解析，须改用Markdown/代码围栏。旧恢复点与步骤完成事实也按此分区，不留两个当前终态。
 
 ## Capture boundaries without test coupling
 

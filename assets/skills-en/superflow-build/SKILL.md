@@ -29,9 +29,17 @@ files only as history or PARTIAL; missing current requirements block until compl
 
 ## Superflow implementation verification entry
 
-Within the Superflow workflow, before the first task read the
-[Owner-led planning](../superflow/references/test-guide.md#owner-led-test-planning),
-loading baseline tests.md and project tests. Owner adds same-goal boundaries/regressions
+Within the Superflow workflow, before the first task actually read the full
+[test-guide.md](../superflow/references/test-guide.md), then use its
+[Owner-led planning](../superflow/references/test-guide.md#owner-led-test-planning)
+with baseline tests.md and project tests. For the first SDD build/case verification,
+prepare plans through [Runner-Captured Execution](../superflow/references/test-guide.md#runner-captured-execution)
+and run the resolved installed script:
+`python3 <installed-script-path>/superflow-test-report-lint.py --record-execution <plan.json>`.
+The script generates receipts, build fingerprints and raw output; link the generated
+paths in the [report](../superflow/references/test-execution-template.md) before
+continuing verification, without first constructing receipts or hashes manually.
+Owner adds same-goal boundaries/regressions
 from actual diffs/callers/discoveries, executes applicable RED/GREEN and required real
 checks, and completes tasks only with proof. New Case IDs/frozen contexts are maintained
 by the same Owner through contracts/handoff/readiness before continuing, without routine

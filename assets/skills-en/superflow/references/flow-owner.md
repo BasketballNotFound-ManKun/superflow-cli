@@ -27,6 +27,11 @@ stalls. New Case IDs/frozen commands still update the same contract/evidence ide
 Quick retains approved steps and records stronger verification in its adjacent report.
 Automation checks facts, never replaces judgment with filenames or fixed layers.
 Small tasks do not acquire another planning table or testing Agent.
+When actual impact involves registration/wiring, proxies, routing or annotation ownership,
+the Owner uses that same method to select necessary real wiring and HTTP smoke proving usable
+production bindings. Pure functions do not acquire application startup. Call paths and failure
+consequences determine strength, never language, class names or filenames. Project contracts
+retain concrete lifecycle, transaction and business assertions.
 
 ## Existing document implementation
 

@@ -23,6 +23,10 @@ files only as history or PARTIAL; missing current requirements block until compl
 
 ## Verification signal review
 
+Before first verification actually read the full [test-guide.md](../superflow/references/test-guide.md).
+For SDD check that build/case proof came through the installed
+`superflow-test-report-lint.py --record-execution` using
+[Runner-Captured Execution](../superflow/references/test-guide.md#runner-captured-execution).
 Use [Owner-led planning](../superflow/references/test-guide.md#owner-led-test-planning)
 to examine the original goal, actual diff and callers before challenging whether
 selected layers/assertions can falsify plausible wrong implementations or miss new,
@@ -205,11 +209,16 @@ explicit recorded risk.
 
 Before pass:
 
-1. `test-report.md` records commands, RED/GREEN expectations, actual output,
-   DB/log/API evidence, handoff hash, and phase state.
+1. `test-report.md` follows the [report template](../superflow/references/test-execution-template.md):
+   one current verdict, one current Case table and current independent/re-review
+   references, with commands, applicable RED/GREEN, actual output and DB/log/API
+   evidence. Link the canonical handoff identity and phase state. Earlier recovery
+   points/results belong under explicit `## History` or linked historical files.
+   Append Owner dispositions and actual re-review; preserve original Reviewer
+   reports, file hashes and conclusions.
 2. `~/.codex/hooks/superflow-verify-integration.sh <test-report.md>` passes when the
    report involves integration evidence.
-3. `~/.codex/hooks/superflow-test-report-lint.py --tests <tests.md> --review
+3. `~/.codex/hooks/superflow-test-report-lint.py --require-complete --tests <tests.md> --review
    <.sdd/reviews/document-review.json> <test-report.md>`
    passes. If `tests.md` declares L3/L4, real-entry, third-party, device,
    database, log, or dev-tool evidence, mock-only/unit-only reports are hard

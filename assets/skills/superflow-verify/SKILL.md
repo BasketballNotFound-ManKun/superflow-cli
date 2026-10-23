@@ -21,6 +21,9 @@ diff.patch/source-manifest 派发，区分 FIXED/MITIGATED/DEFERRED/NOT_A_DEFECT
 
 ## 验证信号复核
 
+首次验证前实际完整读取 [test-guide.md](../superflow/references/test-guide.md)。SDD 核对已按
+[Runner-Captured Execution](../superflow/references/test-guide.md#runner-captured-execution)
+通过已安装 `superflow-test-report-lint.py --record-execution` 取得构建/用例证据。
 按[Owner测试策略](../superflow/references/test-guide.md#owner-led-test-planning)先核原目标、实际diff和调用者，
 再挑战所选层级/断言是否能推翻主要错误实现，是否遗漏新增、批量、异常或状态分支。不能只核
 旧用例完成数。缺口交当前Owner补强、执行和更新原计划证据；真实业务取舍才问用户。
@@ -183,11 +186,14 @@ explicit recorded risk.
 
 Before pass:
 
-1. `test-report.md` records commands, RED/GREEN expectations, actual output,
-   DB/log/API evidence, handoff hash, and phase state.
+1. `test-report.md` 按[报告模板](../superflow/references/test-execution-template.md)保留
+   一份当前终态、一张当前 Case 表及当前独评/复评引用，记录命令、适用 RED/GREEN、
+   实际输出及 DB/日志/API 证据，链接规范 handoff 身份和阶段状态。旧恢复点/结果放明确
+   `## 历史记录` / `## History` 或链接历史文件；Owner 处置和实际复评追加，原 Reviewer
+   报告、文件 hash 与结论保留。
 2. `~/.codex/hooks/superflow-verify-integration.sh <test-report.md>` passes when the
    report involves integration evidence.
-3. `~/.codex/hooks/superflow-test-report-lint.py --tests <tests.md> --review
+3. `~/.codex/hooks/superflow-test-report-lint.py --require-complete --tests <tests.md> --review
    <.sdd/reviews/document-review.json> <test-report.md>`
    passes. If `tests.md` declares L3/L4, real-entry, third-party, device,
    database, log, or dev-tool evidence, mock-only/unit-only reports are hard

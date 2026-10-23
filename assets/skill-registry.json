@@ -31,7 +31,7 @@
         "implement approved change"
       ],
       "excludes": [
-        "test plan design or signal selection; inherit frozen project/Superflow contracts"
+        "business scope or acceptance-baseline redefinition; Owner may strengthen source-driven checks under existing contracts"
       ],
       "outputs": [
         "tasks.md progress and verification handoff"

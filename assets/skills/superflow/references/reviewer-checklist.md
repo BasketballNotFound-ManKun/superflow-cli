@@ -17,16 +17,23 @@ Reviewer 先从原需求独立列受影响范围和反例，再对照作者台�
 2. 合同及实现是否满足原目标？遗漏/相反正文回当前 Flow Owner 对应正文职责，修后重评。
 3. 实测是否证明行为及反例？证据缺口回实施方补真实验证。
 
-为关键守卫/批量分支/快照绑定提出可推翻的错误实现，指出哪条 Case 会打红；无对应断言即缺口。
-FIXED 必须改变原错误行为并重测、实际复评。只加日志仅关闭可观测性问题，原功能错误仍未关闭；
-不能以“合同这样写”、日志变多或常量断言关掉用户目标风险。
+为主要风险提出可推翻的错误实现，沿真实触发路径说明业务后果，并定位会打红的 Case、
+具体断言及其测量来源；无对应断言即缺口。FIXED 必须改变原错误行为并重测、实际复评。
+只加日志仅关闭可观测性问题，原功能错误仍未关闭；不能以“合同这样写”、日志变多或
+常量断言关掉用户目标风险。Finding 须有可复核触发条件与实际后果，不为凑五维或数量
+制造缺陷；措辞、格式和建议不能遮掉会导致错误写入、失效控制或不可用的实质问题。
 
 ### Test-plan sufficiency
 
-按[test-guide的Owner决策](test-guide.md#owner-led-test-planning)，先独立从原目标、源码diff及真实
-调用者列主要失败方式，再看作者所选用例能否打红这些错误。核选择/不测理由、实施中新发现和
-补强测试的实际证据，而不只点旧Case数量。缺口交Owner在同一目标内补强与执行，不转成例行
-用户审批；业务取舍与必要环境/权限才单列。按既有档位独立性要求复核，不新增强制测试Agent。
+按[test-guide的Owner决策](test-guide.md#owner-led-test-planning)，先独立从原目标、实际 diff
+及真实调用者列主要失败方式，再看作者用例能否打红。沿源码核对注册/装配与注解归属、
+单条/批量/内部异步路径、内容写与状态写的区别，不只检查已改方法或作者列出的入口。
+按实际风险核对所需真实装配/HTTP 冒烟及业务断言；纯函数保留对应 seam 的轻量验证。
+逐项追查 response/state/forbiddenEffects 的 actual 来自哪个真实响应、查询或观察点，
+确认调用的是当前生产绑定；捕获成功、CHECKED 和全绿测试均不能证明断言充分。
+核选择/不测理由、新发现与补强证据，而不只点旧 Case 数量。缺口交 Owner 在同一目标内
+补强与执行，不转成例行用户审批；业务取舍与必要环境/权限才单列。按既有档位独立性
+要求复核，不新增强制测试 Agent。
 
 ### 五维覆盖
 
@@ -158,12 +165,17 @@ finding ID / acceptanceContractRefs，协议、预算和状态 owner 不变；�
 沿现有四状态Markdown和同一审计器，当前报告必须有Review Identity、唯一Findings、
 明确Concerns及Reviewed Sources。Reviewer identity、Dispatch evidence和真实返回引用
 必须来自实际隔离派发；自由文本引用与hash不证明真实独立、阅读充分性或恶意防伪。
-Reviewer自己产出原结论与输入身份；Owner保留原文，另记响应，不能替Reviewer改DONE/None。
+Reviewer自己产出原结论与输入身份；Owner保留原文，另记响应，不能替Reviewer改DONE/None、
+Reviewed Sources 或其他原结论来满足格式。
 
 ### 源码结论的独立复核
 
 按[源码调查](document-review-coverage.md)反查写方法/SQL的全部消费者、真实请求、单条/批量、
-内部/异步重存、事务代理、内容/状态与外部副作用。已列入口的锚点通过不证明入口全集。
+内部/异步重存、事务代理、内容/状态与外部副作用。版本/快照场景沿加载、成功后继续保存、
+辅助刷新及内部重存核内容与 token 同源、内容写与 bump 的一致性及真实提交点；按
+[test-guide](test-guide.md)检查受控交错、写后失败与外呼副作用，不能用串行改版本或
+mock 调用次数代替。具体事务与刷新策略仍以项目正文为准，不由清单发明业务方案。
+已列入口的锚点通过不证明入口全集。
 用[追溯导航](traceability-matrix.md)回原需求及Task/Entry/Case；补新入口到同一coverage。
 Reviewed Sources是当前输入source-manifest；实际Reviewed diff、baseline/current及扩查理由写Impact，
 不声称每个依赖已全文读懂，不缩小冻结构建输入来通过门禁。

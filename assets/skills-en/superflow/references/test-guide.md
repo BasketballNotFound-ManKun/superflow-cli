@@ -41,6 +41,38 @@ HTTP/DB success alone does not.
 
 Apply existing review_mode, actual risk and independence requirements; retain low-risk inline paths without adding fixed testing roles or Agent counts.
 
+## First verification action
+
+Before executing verification, read this section and Runner-Captured Execution in full,
+then the frozen commands in tests.md; reuse project tests/acceptance wrappers first.
+The existing `superflow-test-report-lint.py --record-execution` owns capture. Run one
+minimal build plan and Case plan to establish paths before extending. Do not infer
+receipt/capture/event/hash fields or edit generated records; use declared/base/resolved
+path diagnostics to repair inputs.
+
+Resolve the script from the same Superflow installation as this guide: from
+`<scope>/.codex/skills/superflow/`, ascend to `.codex` and use
+`hooks/superflow-test-report-lint.py`; Claude uses `.claude/scripts/`. Scope is the
+selected project or user directory. Never mix installations or scan personal directories.
+Missing capture scripts require installation repair, not another capture implementation.
+Business tests remain independent from any one delivery report.
+
+## Source-driven regression choices
+
+- For wiring/declaration changes, inspect adjacent annotations, field/constructor ownership
+  and production creation paths. Reflection or mock injection bypasses the container.
+  Owner selects existing real-wiring or affected HTTP smoke evidence when the actual risk
+  requires it; fixing duplicate annotation style must not leave another dependency unwired.
+  Pure functions without wiring impact do not require application startup.
+- For shared write methods, inspect unchanged callers, single/batch paths, internal/async
+  calls and content/state/mixed fields. Tests distinguish intended business progression
+  from unrelated state updates. Looking up a missing parent ID does not prove every caller.
+- For concurrency tokens/snapshots, test binding provenance through load, edit, continued
+  saves after success, auxiliary refresh, retry and internal resave. Never attach a fresh
+  token to stale content alone. Project api/design owns commit boundaries and content/token
+  windows; tests choose controlled interleavings and failure examples without a universal
+  transaction strategy.
+
 ## Runner-Captured Execution
 
 All SDD executable cases require capture of actual build/case processes. Freeze
@@ -88,7 +120,7 @@ The acceptance command emits exactly one JSON measurement event matching caseId 
 other diagnostic output may be retained:
 
 ```json
-{"event":"superflow.measurement.v1","caseId":"C1","executed":1,"assertions":[{"id":"response","expected":true,"actual":true,"result":"PASS"},{"id":"state","expected":true,"actual":true,"result":"PASS"},{"id":"forbiddenEffects","expected":true,"actual":true,"result":"PASS"}],"persistence":[],"target":{"service":"<observed>","route":"<observed>","kind":"<observed>","buildId":"<observed>","buildSha256":"<observed>","sourceFingerprint":"<observed>"}}
+{"event":"superflow.measurement.v1","caseId":"C1","executed":1,"assertions":[{"id":"response","expected":"<frozen>","actual":"<observed>","result":"<comparison>"},{"id":"state","expected":"<frozen>","actual":"<observed>","result":"<comparison>"},{"id":"forbiddenEffects","expected":"<frozen>","actual":"<observed>","result":"<comparison>"}],"persistence":[],"target":{"service":"<observed>","route":"<observed>","kind":"<observed>","buildId":"<observed>","buildSha256":"<observed>","sourceFingerprint":"<observed>"}}
 ```
 
 This illustrates event shape, not valid passing evidence. assertions must cover frozen assertion
@@ -331,6 +363,24 @@ delivery; delivery-check verifies assets, not acceptance. Link historical record
 from existing .sdd evidence rather than mixing old all-PASS summaries into the
 current conclusion. Distinguish contract cases, input branches, JUnit methods and
 repeated aggregate scenarios.
+
+
+Equal actual/expected values may legitimately pass. Review data flow rather than banning
+matching values: raw response/query/test output -> parse/compare -> measurement -> exit code.
+Locate each observation and failure branch; copying actual from frozen assertions or always
+printing PASS is insufficient. HTTP 200 with business failure, omitted writes, stale output
+or incorrect fields must fail applicable checks. Negative cases follow frozen expectations;
+success=false is not universally a failed case. Retain the scope of manual observations
+without upgrading a weak automation script by copying their passing conclusion.
+
+
+All current verification/archive summaries must agree; a later PASS cannot override an
+unmarked earlier FAIL in the same language. Keep one current Case ledger, updating its rows
+rather than appending a second passing table. Put history under `## History`,
+`## Historical Evidence`, or link existing historical files.
+A heading at the same/higher level returns to current scope. History retains original text
+and identity but supplies no current Cases, summaries or independent-review references.
+Fenced/comment headings cannot change scope. Raw HTML/XML is unsupported for report structure; use Markdown/code fences. Separate old recovery points and progress in the same way.
 
 ## Capture boundaries without test coupling
 

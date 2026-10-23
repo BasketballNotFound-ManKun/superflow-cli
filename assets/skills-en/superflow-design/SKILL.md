@@ -88,8 +88,9 @@ writer. Independently required test/review evidence is retained in every mode.
    Before choosing HOW, read actual reusable method bodies and their callers,
    Mapper/DDL constraints and write/read effects using
    [the source investigation contract](../superflow/references/document-review-coverage.md).
-   Recheck re-reads, outer transactions, swallowed exceptions and loop boundaries;
-   no existing behavior may be inferred from method names or fingerprints.
+   Recheck registration/wiring and annotation ownership, actual proxy/entry paths,
+   re-reads, outer transactions, swallowed exceptions and loop boundaries. Follow
+   single/batch and internal/async callers; names or fingerprints cannot prove behavior.
 4. Use Superpowers `brainstorming` or equivalent deep design reasoning to
    decide source-level HOW.
 5. Write:
@@ -136,9 +137,10 @@ writer. Independently required test/review evidence is retained in every mode.
    auto-creation or pre-existing resources must not be treated as proof that
    production will provision them. Missing production provisioning evidence
    blocks design completion.
-9. For concurrent requests, batch issue/activation/renewal, duplicate callbacks,
-   duplicate consumption, or repeated external delivery, include
-   `Concurrency And Idempotency Ownership`. Use a stable business idempotency
+9. For concurrency or duplicate external-action risks, include
+   `Concurrency And Idempotency Ownership`. Separate content-save conflict control
+   from duplicate external-action claims by Decision ID. For external actions whose
+   contract requires an independent claim, use a stable business idempotency
    key and an application-layer atomic claim in a short transaction; persist
    `PENDING` before the external call, release database locks before calling
    externally, model success/failure/uncertain states, and reuse the original
@@ -150,9 +152,16 @@ writer. Independently required test/review evidence is retained in every mode.
    exact database atomic compare-and-set statement and affected-row decision:
    the update predicate contains both the stable row identity and expected
    version; a zero-row result distinguishes missing data from version conflict.
-   The TDD plan references the `tests.md` concurrent stale-version case proving
-   one winner, one conflict, and one increment. Do not defer this decision to
-   the managed Executor prompt.
+   For version/snapshot saves, freeze source-level HOW for loading, continued saves
+   after success, auxiliary refresh and internal/async re-save: trace content/token
+   as one coherent snapshot, distinguish content/status writes, and prove content-write/
+   bump consistency and actual commit points through production proxies and exception
+   boundaries. The TDD plan references the corresponding `tests.md` counterexamples
+   under [test-guide](../superflow/references/test-guide.md), including one winner, one
+   conflict and one increment for stale-version competition, post-success reuse and
+   post-write failure/external effects where applicable.
+   Keep concrete refresh/retry/transaction decisions in project prose; a generic claim
+   example must not choose them. Do not defer this decision to the managed Executor prompt.
 10. For field/status/enum/sync changes, include `Field And Status Reverse
    Impact` and prove writers, readers, filters, derived sync paths, consumers,
    and tests. Direct setter-only design is blocked.

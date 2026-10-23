@@ -26,12 +26,13 @@ description: Superflow 内部能力：将冻结合同与技术详设转成分批
 
 先读[主模板](../superflow/references/implementation-prompt-template.md#thin-prompt-contract)。
 生成prompt/implementation.md，按模板输出目标与授权→Canonical links→Execution navigation→
-执行策略/恢复位置→交付对账。主Prompt引用canonical业务决定、源码级HOW、tests、适用SQL及
-风险合同；不复制算法、SQL、原始hash或命令。约束仍完整，由主入口统一继承。
+执行策略/恢复位置→交付对账。主Prompt的Canonical links统一引用业务决定、源码级HOW、
+tests及实际风险适用的专项/SQL合同；完整约束由这些正文持有。有必要解释风险范围时，
+在主Prompt记录一次有源码依据的结论；无金额影响一句即可。
 
 只有实际分工需要时才按[批次模板](../superflow/references/batch-prompt-template.md)生成批次；
 单主Prompt可以完成交接，不为菜单或P编号制造分批。批次只含主链接、本批Task/Entry/Case ID、
-文件/依赖/恢复位置，不再每批重复完整检查表或不适用理由。
+文件/依赖/恢复位置，公共合同与适用性结论统一继承主入口。
 
 两端使用同一表头：`| Prompt | Task IDs | Entry IDs | Case IDs |`。主表链接各实际批次，
 批次表回链主入口且ID集合一致；仅主入口时表行链接自身。Task存在性来自tasks索引，
@@ -46,8 +47,8 @@ EXCLUDED不能伪造Case覆盖。已列ID检查不能证明入口全集；source
 已有授权正常推进，不逐阶段停问。上下文压缩后读恢复点及未完成任务继续。
 
 验证只继承[tests指南](../superflow/references/test-guide.md)和当前tests.md中的命令/断言/环境；
-敏感配置保存来源，不复制凭据或个人路径。启动、登录、DB、设备/浏览器只有冻结适用时执行，
-没有统一强塞的captcha、curl、Maven或端口。复用当前有效证据，只重跑受影响/合同必测路径。
+敏感配置保存来源，不复制凭据或个人路径。启动、登录、DB、设备/浏览器按冻结适用范围
+采用tests.md的项目入口和配置。复用当前有效证据，只重跑受影响/合同必测路径。
 
 ## Freeze and verify current handoff
 
@@ -71,8 +72,12 @@ Blocked for docs，回对应阶段修复，不让实现Agent临场补合同。�
 ## Review repair handoff
 
 [Reviewer](../superflow/references/reviewer-checklist.md)的原报告按原状态保存。Owner另写逐finding
-处置与证据；修复后实际独立复评创建新报告，引用原报告和Owner响应。哈希或无finding投影不能
+处置与证据；修复后实际独立复评追加新报告，引用原报告和Owner响应，保留原文件hash及结论。
+哈希或无finding投影不能
 代替真实返回。当前未决、缺必测或缺复评保持PARTIAL/Blocked，不为通过格式而改原结论。
+
+按[报告模板](../superflow/references/test-execution-template.md)维护一份当前终态、Case表及
+当前复评引用。旧恢复点和旧结果放明确的 `## 历史记录` / `## History`，或链接既有历史文件。
 
 运行test-report在所有context_compression模式只引用，避免把执行进度投影成第二份冻结合同。
 

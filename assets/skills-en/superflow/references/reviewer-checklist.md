@@ -23,22 +23,28 @@ Answer separately:
    the current Flow Owner's canonical responsibility, then rereview repairs.
 3. Do observations prove behavior and counterexamples? Return evidence gaps for real validation.
 
-For key guards, batch branches and snapshot binding, propose a falsifying wrong implementation
-and identify the Case that would fail; missing assertions are gaps. FIXED requires changed wrong
-behavior, retesting and actual rereview. Logging alone closes observability findings only;
-functional errors remain open. Contract wording, extra logs and constant assertions cannot close
-risks to the user's original goal.
+For major risks, propose a falsifying wrong implementation, trace its real trigger and business
+consequence, and identify the failing Case, assertion and measurement source. Missing assertions
+are gaps. FIXED requires changed wrong behavior, retesting and actual rereview. Logging alone
+closes observability findings; functional errors remain open. Contract wording, extra logs and
+constant assertions cannot close risks to the original goal. Findings require verifiable triggers
+and actual consequences, never quotas for axes or counts. Wording, format and advice cannot
+obscure material bad writes, ineffective controls or unavailability.
 
 ### Test-plan sufficiency
 
-Follow [Owner-led planning](test-guide.md#owner-led-test-planning): first derive main
-failure modes independently from original goals, actual diffs and callers, then
-challenge whether selected cases would fail those wrong implementations. Inspect
-selection/omission reasons, new discoveries and actual strengthened evidence rather
-than only old-case counts. Owner supplements/executes within the same goal without
-routine approval stalls; business choices or required environment/permission remain
-separate. Preserve existing risk-tier independence duties without another mandatory
-Test Agent.
+Follow [Owner-led planning](test-guide.md#owner-led-test-planning): independently derive major
+failure modes from original goals, actual diffs and real callers, then challenge whether selected
+cases would fail them. Inspect registration/wiring and annotation ownership, single/batch/internal
+async paths, and content versus status writes in source, beyond changed methods or the author's
+entry inventory. Check necessary real wiring/HTTP smoke and business assertions against actual
+risk; pure functions retain lightweight seam checks. Trace every response/state/forbiddenEffects
+actual to its real response, query or observation and confirm the current production binding.
+Successful capture, CHECKED and green tests do not establish sufficient assertions. Inspect
+selection/omission reasons, discoveries and strengthened evidence rather than only old-case
+counts. Owner supplements/executes within the same goal without routine approval stalls;
+business choices or required environment/permission remain separate. Preserve existing risk-tier
+independence duties without another mandatory Test Agent.
 
 ### Axis coverage
 
@@ -200,14 +206,20 @@ require Review Identity, one Findings section, explicit Concerns and Reviewed
 Sources. Reviewer identity and Dispatch evidence reference actual isolated calls
 and returns. Free-text references/hashes establish record identity, not genuine
 independence, actual reading or resistance to malicious local rewriting. Reviewer
-produces its report; Owner retains the original and writes a separate response.
+produces its verdict and input identity; Owner retains the original and writes a separate response,
+never editing DONE/None, Reviewed Sources or other original conclusions to satisfy format checks.
 
 ### Independent source-claim rechecks
 
 Follow [source investigation](document-review-coverage.md) through all write/SQL
 consumers, real payloads, single/batch and internal/async re-save routes,
 transaction proxies, content/status and side effects. Registered anchors do not
-prove entry completeness. Use [traceability](traceability-matrix.md) for original
+prove entry completeness. For version/snapshot paths, trace load, continued saving after success,
+auxiliary refresh and internal re-save: content/token share one coherent source, content writes
+and bumps remain consistent, and commit points are real. Use [test-guide](test-guide.md) to check
+controlled interleaving, failure after writes and external side effects; serial version changes
+or mock call counts cannot substitute. Project prose owns transaction/refresh policy; this
+checklist does not invent business designs. Use [traceability](traceability-matrix.md) for original
 requirements and Task/Entry/Case IDs; add discovered entries to the same coverage.
 The source-manifest binds current input identity, not complete understanding.
 Record Reviewed diff, baseline/current, actual inspection and expansion in Impact;

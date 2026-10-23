@@ -29,15 +29,16 @@ receipts/prompts must be regenerated and reviewed under current rules.
 
 Read the [main template](../superflow/references/implementation-prompt-template.md#thin-prompt-contract).
 Generate prompt/implementation.md in this order: goal/authorization, Canonical links,
-Execution navigation, strategy/recovery and delivery reconciliation. Reference
-canonical behavior, source HOW, tests, applicable SQL and risk contracts without
-copying algorithms, SQL, raw hashes or commands. Shared constraints remain binding
-through that one main entry.
+Execution navigation, strategy/recovery and delivery reconciliation. The main
+prompt's Canonical links reference behavior, source HOW, tests and specialized/SQL
+contracts applicable to actual risks. Their bodies own the full constraints. When
+risk scope needs explanation, record one source-based conclusion in the main prompt;
+a sentence suffices for no monetary impact.
 
 Generate [batches](../superflow/references/batch-prompt-template.md) only for actual
 work decomposition. A single main prompt is sufficient; batch numbers do not create
 a need for batches. Each batch holds the main link, its Task/Entry/Case IDs,
-files/dependencies/recovery, without duplicating full checklists or inapplicability prose.
+files/dependencies/recovery, inheriting shared contracts and applicability from the main entry.
 
 Use `| Prompt | Task IDs | Entry IDs | Case IDs |` on both hosts. Main rows link
 actual batches; batch rows link back with matching ID sets. A single-main row links
@@ -58,8 +59,8 @@ After compaction read the recovery point and resume incomplete actions.
 
 Verification inherits [the test guide](../superflow/references/test-guide.md) and
 current tests.md commands/assertions/environment. Keep credential sources rather
-than secrets or personal paths. Startup/login/DB/device/browser work applies only
-when frozen as required; no generic captcha, curl, Maven or port is imposed.
+than secrets or personal paths. Startup/login/DB/device/browser work uses project
+entries/configuration from tests.md within its frozen applicability.
 Reuse valid evidence and rerun affected or contract-required paths.
 
 ## Freeze and verify current handoff
@@ -89,9 +90,14 @@ readiness. Document-only work stops; authorized implementation continues via sup
 
 Preserve the [Reviewer](../superflow/references/reviewer-checklist.md)'s original
 state/report. Owner records per-finding responses and evidence separately. Actual
-independent re-review creates a new report linked to the original and response.
+independent re-review appends a new report linked to the original and response,
+preserving the original file hash and conclusion.
 Hashes or a clean projection do not replace a real return. Missing required tests,
 open findings or absent re-review remain PARTIAL/Blocked, never a rewritten conclusion.
+
+Use the [report template](../superflow/references/test-execution-template.md) for one
+current verdict, Case table and current re-review references. Keep old recovery
+points/results under explicit `## History`, or link existing historical files.
 
 Runtime test-report remains reference-only in every context_compression mode; progress is not a second frozen contract.
 
