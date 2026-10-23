@@ -89,7 +89,8 @@ it.each([
     for (const prompt of ["implementation.md", "p01.md"]) {
       await write(
         path.join(change, "prompt", prompt),
-        "# Implementation\n\nInherit technical_design and the canonical contract. Read .sdd/handoff/sdd-context.md; state handoff_hash is authoritative.\n",
+        "# Implementation\n\nInherit technical_design and the canonical contract. Read .sdd/handoff/sdd-context.md; state handoff_hash is authoritative.\n" +
+          `[HOW](../${technical})\n`,
       );
     }
     for (const document of [

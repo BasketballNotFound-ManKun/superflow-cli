@@ -34,6 +34,9 @@ if [[ " $* " == *" --explain "* ]]; then
   printf '  owner-decision: design.md with behavior keywords but no valid dated owner-decided body record (WARN by default; SUPERFLOW_OWNER_DECISION_ENFORCE=1 blocks)\n'
   printf '  audit verification: source-code-audit.md must declare a verification-command column (same enforce switch)\n'
   printf '  scenario consistency: co-occurring behavior words in spec THEN lines prompt Agent semantic review (advisory only)\n'
+  printf '  concurrency contract: stable business key, atomic write/claim boundary, transaction/commit/rollback, outcomes, retry and external-call boundary; Agent reviews applicability and sufficiency\n'
+  printf '  canonical Prompt reference: the main Prompt must link the current technical_design in real Markdown body; examples and copied keywords do not establish inheritance\n'
+  printf '  verification evidence: all report keyword checks read the canonical current-report projection; explicit History cannot supply current evidence and the original report remains read-only\n'
   exit 0
 fi
 
@@ -159,8 +162,30 @@ require_grep() {
   [[ -f "$path" ]] && target="$path"
   if [[ ! -f "$target" ]]; then
     issues+=("missing file for check: $path")
+  elif [[ "$PHASE" == "verify" && ( "$path" == "test-report.md" || "$path" == "$CHANGE_DIR/test-report.md" ) ]]; then
+    [[ "${current_verification_report_ready:-0}" == "1" ]] || return 0
+    if ! grep -Eiq "$pattern" <<< "$current_verification_report"; then
+      issues+=("$label not found in current verification report: $path")
+    fi
   elif ! grep -Eiq "$pattern" "$target"; then
     issues+=("$label not found in $path")
+  fi
+}
+
+# Read-only projection: canonical report parser owns History and syntax boundaries.
+load_current_verification_report() {
+  local report="$CHANGE_DIR/test-report.md"
+  local parser output
+  current_verification_report_ready=0
+  current_verification_report=""
+  [[ -f "$report" ]] || return 0
+  parser="${SUPERFLOW_REPORT_LINT:-$SCRIPT_DIR/../../../scripts/superflow-test-report-lint.py}"
+  [[ -f "$parser" ]] || parser="$SCRIPT_DIR/../../../hooks/superflow-test-report-lint.py"
+  if output="$(python3 "$parser" "$report" --current-report 2>&1)"; then
+    current_verification_report="$output"
+    current_verification_report_ready=1
+  else
+    issues+=("current verification report projection failed: $output")
   fi
 }
 
@@ -208,9 +233,11 @@ require_test_report_lint() {
 }
 
 require_markdown_links_valid() {
-  local output
+  local output parser
+  parser="${SUPERFLOW_REPORT_LINT:-$SCRIPT_DIR/../../../scripts/superflow-test-report-lint.py}"
+  [[ -f "$parser" ]] || parser="$SCRIPT_DIR/../../../hooks/superflow-test-report-lint.py"
   output="$(mktemp)"
-  if ! python3 - "$CHANGE_DIR" >"$output" 2>&1 <<'PY'
+  if ! python3 - "$CHANGE_DIR" "$PHASE" "$(state_get technical_design)" "$parser" >"$output" 2>&1 <<'PY'
 import os
 import re
 import sys
@@ -257,6 +284,35 @@ for file in files:
             bad.append(
                 f"{display_file} -> {target} "
                 f"(resolved: {os.path.relpath(resolved, change_dir)})"
+            )
+
+# A link must resolve to the declared current HOW. Keywords, existing wrong
+# files and example-only references cannot establish canonical inheritance.
+if sys.argv[2] == "implement" and sys.argv[3] not in ("", "null"):
+    import runpy
+    main = change_dir / "prompt" / "implementation.md"
+    canonical = (change_dir / sys.argv[3]).resolve()
+    if main.is_file():
+        parse = runpy.run_path(sys.argv[4])["markdown_body_lines"]
+        source = main.read_text(encoding="utf-8")
+        lines, ambiguous = parse(source, task_index=True)
+        report_lines, report_ambiguous = parse(source)
+        ambiguous = ambiguous or report_ambiguous
+        body = "\n".join(
+            re.sub(r"(`+).*?\1", lambda span: " " * len(span[0]), line)
+            for line, report_line in zip(lines, report_lines)
+            if report_line.strip() and not line.lstrip().startswith(">")
+        )
+        targets = [match.group(1).split("#", 1)[0] for match in link_re.finditer(body)]
+        linked = any(
+            (main.parent / target).resolve() == canonical
+            for target in targets
+            if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target)
+        )
+        if ambiguous or not linked:
+            bad.append(
+                "prompt canonical technical design reference missing or invalid: "
+                f"prompt/implementation.md must link current technical_design {sys.argv[3]}"
             )
 
 if bad:
@@ -543,6 +599,17 @@ PY
   require_grep 'verbatim' sdd-quality-gate.md "verbatim SQL copy quality gate"
 }
 
+change_has_external_enum_risk() {
+  grep -RIEiq \
+    'BEM|payOrigin|payMode|支付来源|支付方式|财务口径|第三方枚举|第三方字段|third[- ]party enum|source system|SDK.*枚举|枚举.*SDK' \
+    "$CHANGE_DIR/proposal.md" \
+    "$CHANGE_DIR/api.md" \
+    "$CHANGE_DIR/design.md" \
+    "$CHANGE_DIR/tests.md" \
+    "$CHANGE_DIR/spec.md" \
+    "$CHANGE_DIR"/specs/*/spec.md 2>/dev/null
+}
+
 change_contract_docs_without_complexity_budget() {
   local path
   for path in proposal.md api.md design.md tests.md spec.md; do
@@ -736,6 +803,17 @@ require_money_precision_contract() {
   fi
 }
 
+require_external_enum_contract() {
+  local path="$1"
+  local label="$2"
+  require_grep 'External Enum Binding|外部枚举绑定|第三方字段语义绑定|外部字段.*外部枚举|外部枚举.*展示文案|owner.*确认' "$path" "$label"
+  require_grep '外部字段|外部系统字段|External field|target field' "$path" "$label external field column"
+  require_grep '外部枚举|外部字典|External enum|target enum' "$path" "$label external enum column"
+  require_grep '展示文案|业务语义|财务语义|display|business meaning' "$path" "$label display/business meaning column"
+  require_grep 'owner|确认|confirmed|approval' "$path" "$label owner confirmation column"
+  require_grep '不确定|阻塞|blocker|unknown|待确认' "$path" "$label unresolved/blocker column"
+}
+
 require_external_config_contract() {
   local path="$1"
   local label="$2"
@@ -754,10 +832,12 @@ require_concurrency_idempotency_contract() {
   local path="$1"
   local label="$2"
   require_grep 'Concurrency And Idempotency Ownership|application.layer atomic claim|atomic claim' "$path" "$label"
-  require_grep 'business idempotency key|business key' "$path" "$label business idempotency key"
-  require_grep 'application.layer atomic claim|atomic claim' "$path" "$label application-layer atomic claim"
+  require_grep 'business idempotency key|business concurrency key|business key' "$path" "$label stable business key"
+  require_grep 'application.layer atomic claim|atomic claim|atomic write boundary|atomic compare.and.set' "$path" "$label atomic write/claim boundary"
   require_grep 'short transaction|transaction boundary' "$path" "$label short transaction boundary"
-  require_grep 'pending|success|failed|state machine' "$path" "$label state machine"
+  require_grep 'commit' "$path" "$label commit boundary"
+  require_grep 'roll.?back' "$path" "$label rollback boundary"
+  require_grep 'success|failed|failure|conflict|affected.row' "$path" "$label success/failure outcome"
   require_grep 'retry' "$path" "$label retry contract"
   require_grep 'external call|third.party call' "$path" "$label external-call boundary"
   require_grep 'unique index.*not.*default|do not.*default.*unique index' "$path" "$label unique index is not the default"
@@ -806,6 +886,35 @@ require_minimal_design_review() {
 require_minimal_design_pass() {
   local path="$1"
   require_grep '(Minimal Design Review|Complexity Reduction Review).*PASS|PASS.*(Minimal Design Review|Complexity Reduction Review)' "$path" "complexity reduction review PASS verdict"
+}
+
+require_technical_design_contract() {
+  local technical_design_rel
+  require_optional_state_path technical_design "technical_design"
+  technical_design_rel="$(state_get technical_design)"
+  if [[ -n "${technical_design_rel:-}" && "$technical_design_rel" != "null" ]]; then
+    require_grep 'Superpowers Technical Design|Superpowers Technical Design|Technical Design|source-level HOW' "$technical_design_rel" "Superpowers technical design"
+    require_grep 'OpenSpec/SDD|canonical|source of truth|must not override|must not override' "$technical_design_rel" "technical design canonical boundary"
+    if change_has_architecture_boundary_risk; then
+      require_grep 'Architecture Boundary And Call Direction|Architecture Boundary And Call Direction|module responsibility.*call direction|owner.*entry.*exit|no bypass' "$technical_design_rel" "architecture boundary and call direction matrix"
+    fi
+    if change_has_field_status_risk; then
+      require_grep 'Field And Status Reverse Impact|Field And Status Reverse Impact|write point.*read|read/filter points|derived/sync points' "$technical_design_rel" "field/status reverse impact matrix"
+    fi
+    if change_has_external_enum_risk; then
+      require_external_enum_contract "$technical_design_rel" "external enum binding matrix"
+    fi
+    if change_has_external_config_risk; then
+      require_external_config_contract "$technical_design_rel" "external integration configuration and deployment contract"
+    fi
+    if change_has_concurrency_idempotency_risk; then
+      require_concurrency_idempotency_contract "$technical_design_rel" "concurrency and idempotency ownership contract"
+    fi
+    if change_has_money_precision_risk; then
+      require_money_precision_contract "$technical_design_rel" "money precision boundary"
+    fi
+    require_minimal_design_review "$technical_design_rel" "technical design minimal design review"
+  fi
 }
 
 transition_event=""
@@ -865,6 +974,10 @@ case "$PHASE" in
     if change_has_money_precision_risk; then
       require_grep 'Money Precision Boundary' sdd-quality-gate.md "money precision quality gate"
     fi
+    if change_has_external_enum_risk; then
+      require_external_enum_contract api.md "external enum binding contract"
+      require_external_enum_contract sdd-quality-gate.md "external enum binding quality gate"
+    fi
     if change_has_external_config_risk; then
       require_external_config_contract api.md "external integration configuration contract"
       require_external_config_contract sdd-quality-gate.md "external integration deployment gate"
@@ -899,28 +1012,7 @@ case "$PHASE" in
       require_minimal_design_review design.md "complexity reduction review"
       require_grep 'Minimal Design Review|Complexity Reduction Review' sdd-quality-gate.md "complexity reduction quality gate"
       require_minimal_design_pass sdd-quality-gate.md
-      require_optional_state_path technical_design "technical_design"
-      technical_design_rel="$(state_get technical_design)"
-      if [[ -n "${technical_design_rel:-}" && "$technical_design_rel" != "null" ]]; then
-        require_grep 'Superpowers Technical Design|Superpowers Technical Design|Technical Design|source-level HOW' "$technical_design_rel" "Superpowers technical design"
-        require_grep 'OpenSpec/SDD|canonical|source of truth|must not override|must not override' "$technical_design_rel" "technical design canonical boundary"
-        if change_has_architecture_boundary_risk; then
-          require_grep 'Architecture Boundary And Call Direction|Architecture Boundary And Call Direction|module responsibility.*call direction|owner.*entry.*exit|no bypass' "$technical_design_rel" "architecture boundary and call direction matrix"
-        fi
-        if change_has_field_status_risk; then
-          require_grep 'Field And Status Reverse Impact|Field And Status Reverse Impact|write point.*read|read/filter points|derived/sync points' "$technical_design_rel" "field/status reverse impact matrix"
-        fi
-        if change_has_external_config_risk; then
-          require_external_config_contract "$technical_design_rel" "external integration configuration and deployment contract"
-        fi
-        if change_has_concurrency_idempotency_risk; then
-          require_concurrency_idempotency_contract "$technical_design_rel" "concurrency and idempotency ownership contract"
-        fi
-        if change_has_money_precision_risk; then
-          require_money_precision_contract "$technical_design_rel" "money precision boundary"
-        fi
-        require_minimal_design_review "$technical_design_rel" "technical design minimal design review"
-      fi
+      require_technical_design_contract
     fi
     require_grep 'Superpowers Technical Design Handoff|Superpowers Technical Design|technical_design|source-level HOW' design.md "Superpowers technical design handoff"
     require_grep 'technical_design|Superpowers Technical Design|source-level HOW' sdd-quality-gate.md "technical design quality gate"
@@ -941,22 +1033,12 @@ case "$PHASE" in
     require_grep 'OpenSpec/SDD|canonical design source|canonical|source of truth' design.md "canonical source boundary"
     while IFS= read -r prompt_rel; do
       [[ -n "${prompt_rel:-}" ]] || continue
-      require_grep 'Superpowers Technical Design inheritance|Superpowers execution strategy inheritance|technical_design|source-level HOW' "$prompt_rel" "prompt Superpower strategy inheritance"
       technical_design_rel="$(state_get technical_design)"
-      if [[ -n "${technical_design_rel:-}" && "$technical_design_rel" != "null" ]]; then
-        require_grep 'Superpowers Technical Design inheritance|technical_design|source-level HOW|Technical Design' "$prompt_rel" "prompt Superpowers technical design inheritance"
-        if change_has_field_status_risk; then
-          require_grep 'Field And Status Reverse Impact|Field And Status Reverse Impact|read/filter points|derived/sync points' "$prompt_rel" "prompt field/status reverse impact inheritance"
-        fi
-        if change_has_external_config_risk; then
-          require_external_config_contract "$prompt_rel" "prompt external integration configuration inheritance"
-        fi
-        if change_has_concurrency_idempotency_risk; then
-          require_concurrency_idempotency_contract "$prompt_rel" "prompt concurrency and idempotency ownership inheritance"
-        fi
-        if change_has_money_precision_risk; then
-          require_money_precision_contract "$prompt_rel" "prompt money precision inheritance"
-        fi
+      if [[ "$(state_get workflow)" == "full" || ( -n "${technical_design_rel:-}" && "$technical_design_rel" != "null" ) ]]; then
+        # The current canonical HOW owns risk obligations; the main Prompt links it.
+        require_technical_design_contract
+      else
+        require_grep 'Superpowers Technical Design inheritance|Superpowers execution strategy inheritance|technical_design|source-level HOW' "$prompt_rel" "prompt Superpower strategy inheritance"
       fi
       require_grep 'context anti-drift|handoff_hash|sdd-context' "$prompt_rel" "prompt context drift inheritance"
       if change_has_database_change; then
@@ -982,6 +1064,7 @@ case "$PHASE" in
     require_state_file
     require_tasks_complete
     require_file test-report.md
+    load_current_verification_report
     require_grep 'RED|failure evidence' test-report.md "RED evidence"
     require_grep 'GREEN|pass evidence' test-report.md "GREEN evidence"
     if [[ "$(state_get workflow)" == "full" ]]; then
@@ -993,6 +1076,9 @@ case "$PHASE" in
     require_grep 'superflow-verify-integration|superflow-delivery-check|superflow-test-report-lint' test-report.md "SuperBridge Flow hook/script evidence"
     if change_has_money_precision_risk; then
       require_money_precision_evidence test-report.md "money precision runtime evidence"
+    fi
+    if change_has_external_enum_risk; then
+      require_grep 'External Enum Binding|external display|display text|business meaning|financial meaning|BEM|real entry' test-report.md "external enum binding runtime evidence"
     fi
     if change_has_external_config_risk; then
       require_grep 'External Integration Configuration And Deployment Contract' test-report.md "external integration configuration runtime evidence"

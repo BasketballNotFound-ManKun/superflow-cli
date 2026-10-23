@@ -43,6 +43,26 @@ const EXTERNAL_CONFIG_CONTRACT = [
   "",
 ].join("\n");
 
+const CONTENT_CONCURRENCY_CONTRACT = [
+  "## Concurrency And Idempotency Ownership",
+  "Business concurrency key: stable record identity and its expected version.",
+  "Atomic write boundary: UPDATE content_record SET content = :content, version = version + 1 WHERE id = :id AND version = :expectedVersion.",
+  "Transaction boundary: the production proxy commits content and version together; exceptions roll back both before returning.",
+  "Success changes one row; a zero affected-row result distinguishes a missing record from a version conflict.",
+  "Retry uses a coherent reloaded content/version snapshot after the caller resolves the conflict.",
+  "External call boundary: this save makes no external call and has no external side effects.",
+  "A unique index is not the default concurrency protection.",
+  "",
+].join("\n");
+
+const EXTERNAL_ENUM_CONTRACT = [
+  "## External Enum Binding",
+  "External field: settlementCategory; external enum: POSTED.",
+  "Display/business meaning: posted settlement; owner approved the provider contract.",
+  "Unknown/blocker: none after provider resolution.",
+  "",
+].join("\n");
+
 async function makeExternalEnumChange() {
   const change = path.join(tmp, "openspec", "changes", "bem-pay-mode");
   await write(
@@ -237,6 +257,8 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "",
     "The business-entry owner calls the existing service entry and outbound adapter; no bypass is allowed.",
     "",
+    "## Field And Status Reverse Impact",
+    "The settlement entry writes amounts; existing consumers read the same exact-decimal fields.",
     "",
     options.legacyDesignContract
       ? LEGACY_MONEY_PRECISION_CONTRACT
@@ -263,6 +285,7 @@ async function makeMoneyPrecisionChange(options: MoneyPrecisionOptions = {}) {
     "# Prompt",
     "",
     "Superpower 技术详设继承: technical_design is the source-level HOW.",
+    "[HOW](../docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md)",
     "上下文防漂移: sdd-context and handoff_hash pending.",
     options.promptContract
       ? [
@@ -448,7 +471,7 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
         "", "## Concurrency And Idempotency Ownership",
         "business idempotency key: stable request identity",
         "application-layer atomic claim: claim before writing",
-        "short transaction boundary: claim and finalize independently",
+        "short transaction boundary: commit claim and finalize independently; roll back failed writes",
         "state machine: claimed -> success / failed",
         "retry contract: reuse identity after confirmed failure",
         "external call boundary: outside claim transaction; none in this fixture",
@@ -469,7 +492,7 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
         "", "## Concurrency And Idempotency Ownership",
         "business idempotency key: stable request identity",
         "application-layer atomic claim: claim before writing",
-        "short transaction boundary: claim and finalize independently",
+        "short transaction boundary: commit claim and finalize independently; roll back failed writes",
         "state machine: claimed -> success / failed",
         "retry contract: reuse identity after confirmed failure",
         "external call boundary: outside claim transaction; none in this fixture",
@@ -490,7 +513,7 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
         "", "## Concurrency And Idempotency Ownership",
         "business idempotency key: stable request identity",
         "application-layer atomic claim: claim before writing",
-        "short transaction boundary: claim and finalize independently",
+        "short transaction boundary: commit claim and finalize independently; roll back failed writes",
         "state machine: claimed -> success / failed",
         "retry contract: reuse identity after confirmed failure",
         "external call boundary: outside claim transaction; none in this fixture",
@@ -1047,6 +1070,88 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
     });
   });
 
+  describe.each([
+    ["zh", GUARD],
+    ["en", EN_GUARD],
+  ])("content concurrency contract (%s)", (_language, guard) => {
+    async function prepareContentConcurrency(withAtomicBoundary = true) {
+      const change = await makeContractChange(tmp);
+      const technical =
+        "docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md";
+      await write(
+        path.join(change, "proposal.md"),
+        "# Proposal\nSave a coherent content snapshot with version-based concurrency.\n",
+      );
+      await write(
+        path.join(change, ".openspec.yaml"),
+        "schema: spec-driven\napplicability:\n  database: false\n  external_config: false\n  concurrency: true\n  money: false\n",
+      );
+      const contract = withAtomicBoundary
+        ? CONTENT_CONCURRENCY_CONTRACT
+        : CONTENT_CONCURRENCY_CONTRACT.split("\n")
+            .filter((line) => !line.startsWith("Atomic write boundary:"))
+            .join("\n");
+      await fs.promises.appendFile(
+        path.join(change, technical),
+        [
+          "\n## Architecture Boundary And Call Direction",
+          "The existing content entry calls the existing content service; no new adapter.",
+          "## Field And Status Reverse Impact",
+          "The save writes a coherent content/version pair; existing readers consume that same snapshot.",
+          contract,
+        ].join("\n\n"),
+      );
+      await fs.promises.appendFile(
+        path.join(change, "sdd-quality-gate.md"),
+        `\n${contract}`,
+      );
+      await write(
+        path.join(change, "prompt/implementation.md"),
+        `# Navigation\n[HOW](../${technical})\n[Context](../.sdd/handoff/sdd-context.json)\n`,
+      );
+      for (const document of [
+        "tasks.md",
+        "traceability-matrix.md",
+        "sdd-quality-gate.md",
+        "test-report.md",
+      ])
+        await fs.promises.appendFile(
+          path.join(change, document),
+          "\n[Main](prompt/implementation.md) [Batch](prompt/p01.md)\n",
+        );
+      await execFileAsync("bash", [STATE, "init", change, "docs"]);
+      for (const [key, value] of Object.entries({
+        technical_design: technical,
+        build_mode: "team-prompt",
+        isolation: "worktree",
+        tdd_mode: "tdd",
+        review_mode: "standard",
+      }))
+        await execFileAsync("bash", [STATE, "set", change, key, value]);
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      return change;
+    }
+
+    it("accepts pure content CAS without an external action claim or pending state", async () => {
+      const change = await prepareContentConcurrency();
+      for (const phase of ["docs", "design", "implement"])
+        await expect(
+          execFileAsync("bash", [guard, change, phase]),
+        ).resolves.toMatchObject({
+          stdout: expect.stringContaining(`guard passed for phase ${phase}`),
+        });
+    });
+
+    it("rejects a content concurrency contract without its atomic boundary", async () => {
+      const change = await prepareContentConcurrency(false);
+      await expect(
+        execFileAsync("bash", [guard, change, "design"]),
+      ).rejects.toMatchObject({
+        stderr: expect.stringContaining("atomic write/claim boundary"),
+      });
+    });
+  });
+
   it("requires money precision boundary in settlement design", async () => {
     const change = await prepareMoneyPrecisionChange();
 
@@ -1168,13 +1273,185 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
     });
   });
 
-  it("requires money precision inheritance in implementation prompts", async () => {
+  it("requires the canonical precision source reference in implementation prompts", async () => {
     const change = await prepareMoneyPrecisionChange({ designContract: true });
+    const prompt = path.join(change, "prompt/implementation.md");
+    await write(
+      prompt,
+      fs
+        .readFileSync(prompt, "utf8")
+        .replace(
+          "[HOW](../docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md)",
+          "",
+        ),
+    );
+    await execFileAsync("bash", [HANDOFF, change, "--write"]);
 
     await expect(
       execFileAsync("bash", [GUARD, change, "implement"]),
     ).rejects.toMatchObject({
-      stderr: expect.stringContaining("prompt money precision inheritance"),
+      stderr: expect.stringContaining(
+        "prompt canonical technical design reference",
+      ),
+    });
+  });
+
+  describe.each([
+    ["zh", GUARD],
+    ["en", EN_GUARD],
+  ])("canonical prompt inheritance (%s)", (_language, guard) => {
+    const technicalDesign =
+      "docs/superpowers/specs/2026-06-22-appointment-route-technical-design.md";
+    const link = `[HOW](../${technicalDesign})`;
+
+    async function prepareCanonicalPrompt(copiedContract = false) {
+      const change = await prepareMoneyPrecisionChange({
+        designContract: true,
+        promptContract: copiedContract,
+      });
+      await write(
+        path.join(change, "prompt/implementation.md"),
+        [
+          "# Implementation navigation",
+          link,
+          "[Context](../.sdd/handoff/sdd-context.json)",
+          copiedContract ? MONEY_PRECISION_CONTRACT : "",
+        ].join("\n\n"),
+      );
+      await write(
+        path.join(change, "prompt/p01.md"),
+        "# Batch\n[Main](implementation.md)\n",
+      );
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      return change;
+    }
+
+    it("accepts a thin main prompt referencing the complete canonical risk contract", async () => {
+      const change = await prepareCanonicalPrompt();
+      await expect(
+        execFileAsync("bash", [guard, change, "implement"]),
+      ).resolves.toMatchObject({
+        stdout: expect.stringContaining("guard passed for phase implement"),
+      });
+    });
+
+    it("accepts inline code in a canonical link label", async () => {
+      const change = await prepareCanonicalPrompt();
+      const file = path.join(change, "prompt/implementation.md");
+      await write(file, fs.readFileSync(file, "utf8").replace(
+        link, "[`technical_design`](../" + technicalDesign + ")",
+      ));
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      await expect(execFileAsync("bash", [guard, change, "implement"])).resolves.toMatchObject({ stdout: expect.stringContaining("guard passed for phase implement") });
+    });
+
+    it.each(["pre", "script", "div"])("rejects HTML %s blocks as canonical navigation", async (tag) => {
+      const change = await prepareCanonicalPrompt();
+      const file = path.join(change, "prompt/implementation.md");
+      await write(file, fs.readFileSync(file, "utf8").replace(link, `<${tag}>\n${link}\n</${tag}>`));
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      await expect(execFileAsync("bash", [guard, change, "implement"])).rejects.toMatchObject({ stderr: expect.stringContaining("prompt canonical technical design reference") });
+    });
+
+    it.each(["enum", "owner"])("rejects missing external %s obligations in the canonical source", async (missing) => {
+      const change = await prepareCanonicalPrompt();
+      await fs.promises.appendFile(path.join(change, "proposal.md"), "\nIntegrate third-party enum bindings.\n");
+      await write(path.join(change, ".openspec.yaml"), "schema: spec-driven\napplicability:\n  database: false\n  external_config: false\n  concurrency: false\n  money: false\n");
+      const contract = missing === "enum"
+        ? EXTERNAL_ENUM_CONTRACT.replace("External Enum Binding", "External Binding").replace("external enum: POSTED.", "")
+        : EXTERNAL_ENUM_CONTRACT.replace("owner approved the provider contract.", "");
+      await write(path.join(change, "api.md"), `# API\n${contract}`);
+      await fs.promises.appendFile(path.join(change, "sdd-quality-gate.md"), `\n${EXTERNAL_ENUM_CONTRACT}`);
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      await expect(execFileAsync("bash", [guard, change, "docs"])).rejects.toMatchObject({ stderr: expect.stringContaining(missing === "enum" ? "external enum column" : "owner confirmation column") });
+    });
+
+    it("inherits applicable field, external enum/configuration and concurrency contracts from the canonical source", async () => {
+      const change = await prepareCanonicalPrompt();
+      await fs.promises.appendFile(
+        path.join(change, "proposal.md"),
+        "\nIntegrate a third-party SDK with third-party enum bindings and persist concurrent updates.\n",
+      );
+      await fs.promises.appendFile(
+        path.join(change, technicalDesign),
+        `\n${EXTERNAL_ENUM_CONTRACT}\n${EXTERNAL_CONFIG_CONTRACT}\n${CONTENT_CONCURRENCY_CONTRACT}`,
+      );
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      await expect(
+        execFileAsync("bash", [guard, change, "implement"]),
+      ).resolves.toMatchObject({
+        stdout: expect.stringContaining("guard passed for phase implement"),
+      });
+    });
+
+    it("rejects missing canonical obligations even when the prompt copies a complete contract", async () => {
+      const change = await prepareCanonicalPrompt(true);
+      const file = path.join(change, technicalDesign);
+      await write(
+        file,
+        fs
+          .readFileSync(file, "utf8")
+          .replace(
+            "Currency contract is CNY; the provider minor unit boundary is declared separately from internal scale.",
+            "",
+          ),
+      );
+      await execFileAsync("bash", [HANDOFF, change, "--write"]);
+      await expect(
+        execFileAsync("bash", [guard, change, "implement"]),
+      ).rejects.toMatchObject({
+        stderr: expect.stringContaining(
+          "money precision boundary minor-unit boundary",
+        ),
+      });
+    });
+
+    it.each([
+      "missing",
+      "wrong-existing",
+      "fenced",
+      "comment",
+      "quoted",
+      "inline-code",
+    ])(
+      "rejects %s canonical references even with copied keywords",
+      async (kind) => {
+        const change = await prepareCanonicalPrompt(true);
+        const file = path.join(change, "prompt/implementation.md");
+        const replacements: Record<string, string> = {
+          missing: "technical_design: source-level HOW",
+          "wrong-existing": "technical_design: [HOW](../design.md)",
+          fenced: `technical_design\n\`\`\`markdown\n${link}\n\`\`\``,
+          comment: `technical_design\n<!-- ${link} -->`,
+          quoted: `technical_design\n> ${link}`,
+          "inline-code": `technical_design: \`${link}\``,
+        };
+        await write(
+          file,
+          fs.readFileSync(file, "utf8").replace(link, replacements[kind]),
+        );
+        await execFileAsync("bash", [HANDOFF, change, "--write"]);
+        await expect(
+          execFileAsync("bash", [guard, change, "implement"]),
+        ).rejects.toMatchObject({
+          stderr: expect.stringContaining(
+            "prompt canonical technical design reference",
+          ),
+        });
+      },
+    );
+
+    it("rejects canonical source drift after a valid handoff", async () => {
+      const change = await prepareCanonicalPrompt();
+      await fs.promises.appendFile(
+        path.join(change, technicalDesign),
+        "\nChanged precision policy.\n",
+      );
+      await expect(
+        execFileAsync("bash", [guard, change, "implement"]),
+      ).rejects.toMatchObject({
+        stderr: expect.stringContaining("handoff"),
+      });
     });
   });
 
@@ -1188,7 +1465,7 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
     await expect(
       execFileAsync("bash", [GUARD, change, "implement"]),
     ).rejects.toMatchObject({
-      stderr: expect.stringContaining("prompt Superpower strategy inheritance"),
+      stderr: expect.stringContaining("prompt canonical technical design reference"),
     });
   });
 
@@ -1367,6 +1644,51 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
       .resolves.toMatchObject({
         stdout: expect.stringContaining("guard passed for phase verify"),
       });
+  });
+
+  describe.each([["zh", GUARD], ["en", EN_GUARD]])("current verification scope (%s)", (_language, guard) => {
+    async function prepareCurrentReport(risk: "red" | "concurrency", currentEvidence: boolean) {
+      const change = path.join(tmp, "openspec/changes/current-report");
+      await write(path.join(change, "tasks.md"), "# Tasks\n- [x] 1.1 Finish current work\n");
+      await write(path.join(change, "tests.md"), "# Tests\nCheck the current result.\n");
+      await write(path.join(change, ".openspec.yaml"), `schema: spec-driven\napplicability:\n  database: false\n  external_config: false\n  concurrency: ${risk === "concurrency"}\n  money: false\n`);
+      const evidence = risk === "red" ? "RED failure evidence." : "Concurrency And Idempotency Ownership: concurrent duplicate and retry cases passed.";
+      const report = [
+        "# Test Report",
+        "GREEN pass evidence.",
+        "superflow-test-report-lint passed.",
+        risk === "concurrency" ? "RED failure evidence." : "",
+        currentEvidence ? evidence : "",
+        "Verification Result: PASS",
+        "Archive Readiness: PASS",
+        "## History",
+        "Verification Result: FAIL",
+        "Archive Readiness: BLOCKED",
+        evidence,
+      ].join("\n");
+      await write(path.join(change, "test-report.md"), report);
+      await execFileAsync("bash", [STATE, "init", change, "tweak", "verify"]);
+      await execFileAsync("bash", [STATE, "set", change, "branch_status", "handled"]);
+      return { change, report };
+    }
+
+    it.each(["red", "concurrency"] as const)("does not let history supply current %s evidence", async (risk) => {
+      const { change, report } = await prepareCurrentReport(risk, false);
+      await expect(execFileAsync("bash", [guard, change, "verify"])).rejects.toMatchObject({ stderr: expect.stringContaining(risk === "red" ? "RED evidence" : "concurrency and idempotency runtime evidence") });
+      expect(fs.readFileSync(path.join(change, "test-report.md"), "utf8")).toBe(report);
+    });
+
+    it.each(["red", "concurrency"] as const)("accepts current %s evidence while retaining historical failure", async (risk) => {
+      const { change, report } = await prepareCurrentReport(risk, true);
+      await expect(execFileAsync("bash", [guard, change, "verify"])).resolves.toMatchObject({ stdout: expect.stringContaining("guard passed for phase verify") });
+      expect(fs.readFileSync(path.join(change, "test-report.md"), "utf8")).toBe(report);
+    });
+
+    it("does not let the caller directory supply another report's evidence", async () => {
+      const { change } = await prepareCurrentReport("red", false);
+      await write(path.join(tmp, "test-report.md"), "# Unrelated Report\nRED failure evidence. GREEN pass evidence. superflow-test-report-lint passed.\n");
+      await expect(execFileAsync("bash", [guard, change, "verify"], { cwd: tmp })).rejects.toMatchObject({ stderr: expect.stringContaining("RED evidence") });
+    });
   });
 
   it.each([GUARD, EN_GUARD])("accepts completed tasks through verify and archive: %s", async (guard) => {
