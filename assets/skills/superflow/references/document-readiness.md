@@ -32,6 +32,21 @@ HOW 回 design，验证回 tests 的 contracts 职责，导航回 handoff。当�
 缺项先补正文与实际评审，保持 BLOCKED。历史文件保留 PARTIAL；每份 PASS receipt 须实际 capture。
 仅实现源码演进继续沿 build 的 checkCode:false 核合同，不冻结实现代码不准变化。
 
+## Existing contract intake
+
+实施授权包含对现有合同的接入核验。先沿原目标与本分支源码读取当前正文，再读旧执行结论：
+- 复用事实和既有业务决定；不导入别轮的完成勾选、来源指纹、评审结论或运行凭证作为本轮结果。
+- 将实际主/批次Prompt与当前[导航模板](implementation-prompt-template.md)对照；重复业务方案、
+  不适用清单或全投影再全读时，由handoff改成唯一规范链接和本批ID导航，不把旧Prompt原样续用。
+- 从当前diff/公共写方法反查单条、批量、状态和内部调用者；核正文是否已约定主要失败路径。
+  发现同目标缺口由对应正文owner补齐，不以现有入口清单或“基线已有”排除新增副作用。
+- 修正文后复核受影响结论并实际独评；保留原评审，追加新输入与发现处置，不能批量改旧round的
+  inputHash后声称重新评审。无影响的当前正文不重写，不增加固定评审轮或新的调查表。
+
+按既有三视角冻结当前合同、HOW与测试后再核Coding Ready。结构门禁通过只证明准入事实，
+不能代替上述语义接入；Quick与非SDD任务保持原批准边界。继承外部材料须标来源并核本分支，
+不把已知旧问题的修复成果记为本轮独立发现。
+
 ## Final document review inputs
 
 full 必须先完成调查、正文与完整 HOW，设置 state.technical_design，并将其实际路径以

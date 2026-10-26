@@ -73,6 +73,10 @@ finish other authorized work, retain PARTIAL, and use the Flow Owner delivery ma
 
 **Superflow pre-coding gate (before reading apply readiness as permission)**
 
+   For existing documents, apply [contract intake](../superflow/references/document-readiness.md#existing-contract-intake)
+   before admission. Reconcile actual prompts/affected prose; format repair is not document rereview.
+
+
    Before the first source edit or initial implementation dispatch for a Superflow
    change, including one with missing `.sdd/state.yaml`, run
    `superflow check <change> --level coding-ready`. A failure means `Blocked for docs`;

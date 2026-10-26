@@ -25,6 +25,9 @@ state 脚本推进 SDD，test-guide 定义验证分层，reviewer-checklist 定�
 
 ## Existing document implementation
 
+先执行[现有合同接入](document-readiness.md#existing-contract-intake)，核当前实际消费正文，
+再进入下面阶段；不能用旧评审批量刷新hash代替本轮语义复核。
+
 “根据现有文档实现任务并闭环交付”已经授权当前 Flow Owner 先核查并修正文档。
 已有 full 任务缺调查、HOW 或当前评审时，先按 `superflow-clarify` 调查可查事实，
 由 `superflow-contracts` 修正行为/API/tests 正文，`superflow-design` 补齐逐入口 HOW，

@@ -109,6 +109,33 @@ against current code. Reviewers are read-only: no source edits, application
 management, business DB operations, or nested supervision. New runtime evidence
 returns to the implementer.
 
+### Review preparation
+
+Reuse the existing CLI rather than committing the workspace or hand-building diff/hashes:
+
+```bash
+superflow review-coverage --prepare <new-package-directory> --json
+# Add --base <ref> for a branch baseline; --path <project-relative-files...> selects context.
+```
+
+Capture baseline-to-working-tree committed/staged/unstaged changes and all untracked files,
+including tests. The result contains a diff, both snapshots, source-manifest and a NEEDS_CONTEXT
+report template. Use a new directory each round; never overwrite old returns. This is input only.
+The Owner checks the original goal, contracts and risk-related unchanged callers before dispatch.
+Have the reviewer independently enumerate failure paths before the author's coverage matrix.
+An omitted inventory entry is not out of scope; old writes do not excuse new side effects.
+The template is not reviewed-source evidence. The reviewer actually reads inputs, records actual
+scope and dispatch/return identity, then decides; missing input remains NEEDS_CONTEXT. Without a
+Git baseline, use the existing snapshot-comparison path below, never fake HEAD or commit early.
+
+Audit the first actual return with existing `review-coverage --report <file> --json` immediately.
+The reviewer completes valid output before its first reference; thereafter keep the original
+immutable and append a new actual return. Dispositions/Rechecks cover precisely original finding
+IDs; record concerns/new rereview findings separately and actually handle them. Do not put them in
+the original ID set, rewrite old reports or use placeholder hashes. Separate style suggestions
+from functional blockers. Do not alter verified source just to tick the final checklist; actual
+code changes still require current build/tests and real independent rereview.
+
 ### Directly readable review bundle
 
 Before dispatch the Owner actually writes and opens the artifacts below, allowing

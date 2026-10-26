@@ -85,6 +85,28 @@ Reviewer 先从原需求独立列受影响范围和反例，再对照作者台�
 与当前源码/合同漂移时返回 NEEDS_CONTEXT，不凭旧包评当前代码。Reviewer 只读，不改
 源码、运行应用、查写业务库或启动嵌套监督；需要新的运行证据交回实施方。
 
+### Review preparation
+
+复用现有CLI生成输入包，无需提交工作区或手造diff/hash：
+
+```bash
+superflow review-coverage --prepare <new-package-directory> --json
+# 指定分支基线：加 --base <ref>；只读上下文可用 --path <project-relative-files...>
+```
+
+命令同时捕获基线至当前工作树的已提交/暂存/未暂存变化、全部未跟踪文件（含测试），
+返回diff、两端快照、source-manifest与NEEDS_CONTEXT报告模板。每轮使用新目录，不覆盖旧返回。
+包仅是输入；Owner核原目标、合同及风险相关未改调用者后再派发。先让Reviewer独立列失败路径，
+再看作者覆盖矩阵；不能把“未列清单”当范围外，或把新增副作用因旧写行为而豁免。
+模板不等于已审来源；Reviewer实际读取后保留/补充真实范围、填写派发/返回身份和结论，
+缺真实输入保持NEEDS_CONTEXT。无Git基线时沿下方既有快照对比路径，不伪造HEAD或提前提交。
+
+首次实际返回即运行现有`review-coverage --report <file> --json`定位格式/路径问题。
+由Reviewer在首次引用前完成正确落盘；引用后的原件不可改，后续通过新的实际返回追加。
+原finding的ID集合精确进入Dispositions/Rechecks；Concern或复评新增finding另段记录并实际处置，
+不能塞进原ID集合、改旧报告或用空hash占位。仅风格建议与功能阻断分开裁决，不为最后清单全勾
+再改已验收源码；真实代码变更仍重建/重测并由Reviewer实际复评。
+
 ### 可直接读取的评审包
 
 派发前由 Owner 实际生成并打开核对以下文件；交给只有 Read 的 Reviewer 也可复核：

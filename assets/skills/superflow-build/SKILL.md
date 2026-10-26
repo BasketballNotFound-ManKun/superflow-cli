@@ -65,6 +65,10 @@ Owner根据实际diff、调用者和新发现自主补同目标边界/回归，�
 
 **Superflow pre-coding gate (before reading apply readiness as permission)**
 
+   已有文档实施先执行[现有合同接入](../superflow/references/document-readiness.md#existing-contract-intake)，
+   收敛实际主/批次导航和受影响正文后再核准入；不把格式修补当实际文档复评。
+
+
    Before the first source edit or initial implementation dispatch for a Superflow
    change, including one with missing `.sdd/state.yaml`, run
    `superflow check <change> --level coding-ready`. A failure means `Blocked for docs`;

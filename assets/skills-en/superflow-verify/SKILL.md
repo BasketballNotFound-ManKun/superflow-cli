@@ -101,18 +101,18 @@ implementation work claims completion and before archive or delivery.
 
 ## Behavior-preserving simplification
 
-After the implementation signals are green, inspect only the files changed by
-this change for missed reuse, duplicated logic, redundant defensive branches,
-and needless abstraction. Before removing a helper or guard, identify its
-callers, error behavior, side effects, and reason for existing. If that reason
-is unclear, leave it in place. Simplification is optional; clean code needs no
-ceremonial edit.
+Check reuse/style only in this change and its actual callers; do not manufacture cleanup work.
+The implementation Owner completes known nonfunctional cleanup before the first binding build/
+capture. After runtime evidence exists, new style-only suggestions normally become nonblocking
+follow-ups, not source edits that trigger full recapture just to tick a checklist. Fix valid
+functional/security defects immediately.
 
-The implementation owner applies one small simplification at a time; the reviewer stays read-only. Run the same tests and build signals
-without changing their assertions; if behavior, errors, or side effects change,
-revert that simplification. Keep simplification separately reviewable from the
-feature; commit only when authorized, and stop if it reaches files outside the original change. This is a
-readability pass, not a second code review or a license for unrelated cleanup.
+Before necessary simplification, check callers, errors, side effects and the reason for guards.
+Make one small change without lowering assertions. Changed source cannot inherit old builds/
+receipts merely because it is “semantically identical”; byte-check any restoration and retain
+current identity gates. Report/path-only repairs do not invalidate unrelated runtime evidence.
+The reviewer stays read-only; the implementation Owner reruns affected checks. Git still needs
+existing authorization.
 
 ## Entry Check (SDD only)
 

@@ -519,3 +519,32 @@ or publication. Current external evidence owns final results, costs, limits and 
 on historical promotion, valid-evidence rejection, forced deployment for pure functions, admission
 without canonical detail, overwritten original reviews or changes to the installed host; never
 weaken goals or assertions.
+
+
+## Existing-contract intake and review preparation (2026-10-26)
+
+Evidence and ownership: external runs still reused stale prose, mechanically rebound review
+identity, missed unchanged callers, retried report paths/enums/hashes and recaptured evidence after
+style-only edits. Owners are contract consumption, Agent semantic review and existing review-coverage
+preparation/diagnostics, not managed state or another supervisor.
+
+Baseline: 3817cef. An anonymized pressure probe already found batch omissions, status writes,
+snapshot/token lifecycle gaps and fake measurement with old guidance; do not claim improved model
+detection from more prose. Deterministic RED cases show the missing preparation option, nested-cwd
+report resolution and finding-set diagnostics without concrete missing/unexpected IDs.
+
+Hypothesis: extend review-coverage to produce exact diff, both snapshots including untracked tests
+and a NEEDS_CONTEXT template, avoiding early commits and hand-built omissions. Project-root paths
+and complete set diagnostics reduce retries. Guidance changes consumption order, intake and original
+preservation; nonfunctional cleanup moves before the first binding build without weakening identity.
+
+Examples cover unstaged/staged additions, removed directories, explicit baseline plus working tree,
+nested cwd, symlink escape, non-overwrite and executing the CLI from a real installed tarball.
+Keep four states, original identity, actual independent review and capture gates. No new Skill/Hook,
+long-lived state, semantic decision engine or old-policy exemption. Both languages/hosts reuse the
+single installer. Final tests/review/full verification/local installation are recorded externally.
+
+Synthetic cases do not prove overall model compliance or repaired external business behavior.
+Roll back affected changes if packages omit/duplicate changes, expose outside sources, overwrite
+returns, promote templates/rebound old hashes, reuse stale builds after source changes or force
+unrelated runtime work after documentation-only repairs. Preserve evidence and gates.

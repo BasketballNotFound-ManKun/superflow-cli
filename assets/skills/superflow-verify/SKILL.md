@@ -79,18 +79,13 @@ implementation work claims completion and before archive or delivery.
 
 ## Behavior-preserving simplification
 
-After the implementation signals are green, inspect only the files changed by
-this change for missed reuse, duplicated logic, redundant defensive branches,
-and needless abstraction. Before removing a helper or guard, identify its
-callers, error behavior, side effects, and reason for existing. If that reason
-is unclear, leave it in place. Simplification is optional; clean code needs no
-ceremonial edit.
+复用与规约检查仍只看本次修改及真实调用者，按Reviewer规范判断必要性；不制造清理任务。
+已知无功能整理应在首次绑定构建/采集前由实施Owner完成。取得运行证据后，新的纯风格建议
+通常记为非阻断后续项，不能为勾选而改源码触发全量重录。有效功能/安全问题仍立即修复。
 
-The implementation owner applies one small simplification at a time; the reviewer stays read-only. Run the same tests and build signals
-without changing their assertions; if behavior, errors, or side effects change,
-revert that simplification. Keep simplification separately reviewable from the
-feature; commit only when authorized, and stop if it reaches files outside the original change. This is a
-readability pass, not a second code review or a license for unrelated cleanup.
+确需简化时先核调用者、错误、副作用和原保护原因，一次做最小修改，原断言不降低。
+已改源码不得仅因“语义相同”复用旧构建/receipt；恢复源码须逐字节核验，当前身份仍按原门禁。
+仅报告/路径修复不使无关运行证据失效。Reviewer只读，实施Owner负责重测；Git仍需已有授权。
 
 ## Entry Check (SDD only)
 

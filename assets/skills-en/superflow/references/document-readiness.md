@@ -41,6 +41,27 @@ fields require prose repair and actual review while BLOCKED. Keep historical fil
 every PASS receipt requires capture. Source-only implementation evolution keeps build's
 checkCode:false contract checks without making implementation code immutable.
 
+## Existing contract intake
+
+Implementation authorization includes intake of existing contracts. Read the original goal and
+current-branch prose/source before old delivery conclusions:
+- Reuse facts and business decisions, not another run's completion marks, source fingerprints,
+  review conclusions or runtime receipts as this run's results.
+- Compare the actual main/batch prompts with the current [navigation template](implementation-prompt-template.md).
+  Handoff replaces repeated business plans, inapplicable checklists or full projection plus full
+  rereading with canonical links and batch IDs; do not resume the old prompt unchanged.
+- Trace shared writes to single, batch, status and internal callers and check the main failure
+  paths against prose. The existing prose owner repairs same-goal gaps; neither an inventory nor
+  “baseline behavior” excludes a newly introduced side effect.
+- Actually review affected conclusions after repair. Preserve original reviews and append new
+  input/dispositions; bulk editing old rounds' inputHash is not rereview. Keep conforming prose
+  intact; do not add fixed review rounds or another investigation table.
+
+Freeze the current contract, HOW and tests through the existing three lenses before Coding Ready.
+A structural gate proves admission facts, not semantic intake. Quick/non-SDD retain their approved
+boundaries. Attribute reused external material and verify this branch; inherited fixes are not
+this run's independent discoveries.
+
 ## Final document review inputs
 
 A full workflow first completes investigation, canonical prose and full HOW. Set

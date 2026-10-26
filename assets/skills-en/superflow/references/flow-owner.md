@@ -35,6 +35,9 @@ retain concrete lifecycle, transaction and business assertions.
 
 ## Existing document implementation
 
+First apply [existing contract intake](document-readiness.md#existing-contract-intake) to the
+prose actually consumed. Bulk refreshing old review hashes cannot replace current semantic review.
+
 “Implement the tasks from existing documents and close delivery” authorizes the current Flow
 Owner to investigate and repair those documents first. For a full task missing investigation,
 HOW or current reviews, use `superflow-clarify` for discoverable facts, `superflow-contracts`
