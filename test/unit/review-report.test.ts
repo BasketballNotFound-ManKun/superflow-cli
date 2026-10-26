@@ -86,6 +86,9 @@ describe("reviewer four-state report", () => {
       for (const invalid of [current.replace("| F-001 | resolved", "| F-999 | resolved"), current.replace("| F-001 | resolved | test:guard |", ""), current.replace("| F-001 | resolved", "| F-001 | accepted"), current.replace("| Role | independent-reviewer |", "| Role | owner |")]) {
         expect(auditReviewReport(invalid, root).eligibleForTriage).toBe(false);
       }
+      const wrongRecheck = auditReviewReport(current.replace("| F-001 | resolved", "| F-999 | resolved"), root);
+      expect(wrongRecheck.issues.join("\n")).toContain("missing=[F-001]");
+      expect(wrongRecheck.issues.join("\n")).toContain("unexpected=[F-999]");
       fs.writeFileSync(path.join(root, "owner.md"), owner.replace("F-001", "F-999"));
       const changedOwner = fs.readFileSync(path.join(root, "owner.md"), "utf8");
       expect(auditReviewReport(current.replace(hash(owner), hash(changedOwner)), root).eligibleForTriage).toBe(false);

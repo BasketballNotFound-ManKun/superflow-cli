@@ -90,6 +90,7 @@ export interface CliHelpText {
   reviewBaseOption: string;
   reviewPathOption: string;
   reviewReportOption: string;
+  reviewPrepareOption: string;
 }
 
 const CLI_TEXT: Record<Language, CliHelpText> = {
@@ -101,6 +102,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     initDocsForceOption: "Overwrite existing documents",
     reviewCoverageDescription:
       "Enumerate changed files, resolve path rules, and emit risk hints for Host impact assessment",
+    reviewPrepareOption:
+      "Prepare a new diff/source snapshot/report template package without committing",
     reviewBaseOption: "Review changes since a Git reference",
     reviewPathOption: "Review explicit files",
     reviewReportOption:
@@ -232,6 +235,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     initDocsForceOption: "覆盖已存在的文档",
     reviewCoverageDescription:
       "枚举改动文件、解析路径规则并提供风险提示；实际影响由 Host 判断",
+    reviewPrepareOption:
+      "生成新的差异、源码快照与报告模板包，不提交或覆盖已有报告",
     reviewBaseOption: "评审相对 Git 引用的改动",
     reviewPathOption: "评审指定文件",
     reviewReportOption: "核验报告状态与锚点；五维充分性由 Host 判断",

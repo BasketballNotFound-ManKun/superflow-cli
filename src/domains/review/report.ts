@@ -244,7 +244,12 @@ function auditReviewChain(lines: string[], root: string, issues: string[],
     if (new Set(ids).size !== ids.length || ids.length !== previous.findingIds.length
         || previous.findingIds.some(id => !ids.includes(id))
         || rows.some(row => !(allowed as readonly string[]).includes(row[1]))) {
-      issues.push(`${label} must cover every original finding ID with an explicit result and evidence`);
+      const missing = previous.findingIds.filter(id => !ids.includes(id));
+      const unexpected = ids.filter(id => !previous.findingIds.includes(id));
+      const invalid = rows.filter(row => !(allowed as readonly string[]).includes(row[1]));
+      issues.push(`${label} must cover every original finding ID with an explicit result and evidence; ` +
+        `missing=[${missing.join(",")}], unexpected=[${unexpected.join(",")}], ` +
+        `allowed=[${allowed.join(",")}], invalid=[${invalid.map(row => `${row[0]}:${row[1]}`).join(",")}]`);
     }
   }
 }

@@ -375,6 +375,7 @@ program
   .option("--base <ref>", helpText.reviewBaseOption)
   .option("--path <paths...>", helpText.reviewPathOption)
   .option("--report <path>", helpText.reviewReportOption)
+  .option("--prepare <directory>", helpText.reviewPrepareOption)
   .option("--json", helpText.jsonOption)
   .action(async (options) => {
     const { reviewCoverageCommand } =
@@ -383,6 +384,7 @@ program
       base: options.base,
       paths: options.path,
       report: options.report,
+      prepare: options.prepare,
       json: options.json,
     });
   });

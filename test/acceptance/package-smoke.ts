@@ -148,6 +148,54 @@ async function smoke(snapshotPath: string | undefined): Promise<{
       /init-docs/,
     );
     run(process.execPath, [cli, "skill-audit", "--strict"], consumer);
+    // Exercise the installed CLI's real Git snapshots without authorizing commits
+    // in the user's checkout or relying on source modules outside the tarball.
+    const reviewRoot = path.join(temporary, "review source");
+    fs.mkdirSync(reviewRoot);
+    run("git", ["init", "-q"], reviewRoot);
+    fs.writeFileSync(path.join(reviewRoot, "source.ts"), "before\n");
+    run("git", ["add", "."], reviewRoot);
+    run(
+      "git",
+      [
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "commit",
+        "-qm",
+        "baseline",
+      ],
+      reviewRoot,
+    );
+    fs.writeFileSync(path.join(reviewRoot, "source.ts"), "after\n");
+    fs.writeFileSync(path.join(reviewRoot, "source.test.ts"), "new test\n");
+    const prepared = JSON.parse(
+      run(
+        process.execPath,
+        [
+          cli,
+          "review-coverage",
+          "--prepare",
+          path.join(temporary, "review input"),
+          "--json",
+        ],
+        reviewRoot,
+      ).stdout,
+    ).package;
+    assert.deepEqual(prepared.files, ["source.test.ts", "source.ts"]);
+    assert.match(fs.readFileSync(prepared.diff, "utf8"), /\+new test/);
+    assert.equal(
+      fs.readFileSync(
+        path.join(prepared.directory, "baseline/source.ts"),
+        "utf8",
+      ),
+      "before\n",
+    );
+    assert.match(
+      fs.readFileSync(prepared.reportTemplate, "utf8"),
+      /^NEEDS_CONTEXT\n/,
+    );
     for (const language of ["zh", "en"]) {
       const project = path.join(temporary, `${language} project`);
       const change = path.join(project, "openspec", "changes", "sample-change");
