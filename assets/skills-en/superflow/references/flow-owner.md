@@ -77,6 +77,28 @@ Flow Owner defines continuity and cannot replace build/verify or another full ph
 contract. Before implementation/review read the full [Reviewer checklist](reviewer-checklist.md)
 and use its readable bundle for actual dispatch and rereview.
 
+## Owner-led delegation
+
+At startup and each return/integration point, the Owner chooses direct execution,
+serial delegation or parallel work by task size, actual prerequisites, file/runtime
+resource write conflicts, necessary context size and detail-loss risk, and dispatch/
+integration cost. Do small tasks directly. Give a sequential dependency chain to the
+same subagent, retaining discoveries, unresolved assumptions and valid evidence.
+Parallelize only independent branches without write conflicts. Ports, databases/test
+data, processes and cleanup are shared writes too: isolate them or serialize.
+The Owner retains shared contracts, cross-branch decisions and critical integration.
+
+Dispatch names a unique file/resource owner, necessary contract/source paths and
+precise inputs, applicable rules for actual touched paths, goals/exclusions,
+prerequisites, validation commands/assertions, and expected changes/evidence/open items.
+Carry needed sequential context without
+copying the entire chat or reducing unpersisted key decisions to a one-line summary.
+On return read actual diffs, raw validation evidence and open items, reconcile goals
+and caller coverage, then rerun affected integrated paths before the next batch.
+DONE or a summary cannot replace verification. Keep rationale/recovery in existing
+reports, without new plan states, fixed headcounts/time/Token thresholds or supervisors.
+Implementation delegation does not replace independent read-only review under reviewer-checklist.
+
 ## Continuous Execution Loop
 
 ```text
@@ -99,13 +121,14 @@ Read contract/progress -> select dependency-ready work -> implement and verify
   according to reviewer-checklist and honor a frozen independent-Tester
   requirement. If subagents are unavailable, record the actual gap; self-review
   cannot count as independent review.
-- Dispatch only necessary contract paths, exact diff, rules, evidence, and
-  acceptance goals, without the entire chat history. Reviewers do not edit,
-  start applications, or operate business databases; the implementer supplies
-  missing runtime evidence. Delegated development has explicit file ownership,
-  dependencies, and acceptance; parallelize only independent, nonconflicting work.
+- Use [Owner-led delegation](#owner-led-delegation) for implementation allocation
+  and returned work. Reviewers receive necessary contracts, exact diffs, rules,
+  evidence and acceptance goals under their checklist; they do not edit, start
+  applications or operate business databases. Implementers supply missing runtime evidence.
 - Verify, falsify, and merge all feedback. Automatically repair valid issues
-  within contract, rerun invalidated evidence, and review fixes and their impact.
+  within contract, batching repairs that can be completed together in one dispatch
+  while retaining per-finding acceptance/disposition; rerun invalidated evidence
+  and review fixes and their impact.
   Record self-review separately; changing role names is not context isolation.
 - For implementation defects, transition `verify-fail` and return to build.
   Contract changes return to documents, refreshed handoff, review, and Coding

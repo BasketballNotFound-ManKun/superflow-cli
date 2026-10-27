@@ -43,8 +43,10 @@ Owner根据实际diff、调用者和新发现自主补同目标边界/回归，�
 ## 持续交付责任
 
 普通已授权实施必须先读取 [Flow Owner](../superflow/references/flow-owner.md)。
-按所选执行模式持续覆盖全部任务、验证和整改；阶段进度用过程消息汇报后继续。
-当前 Owner 可编码和测试，独立评审按现有清单执行，不能用自评冒充。
+按所选执行模式持续覆盖全部任务、验证和整改；开工、每批选择与返回整合按
+[Owner 自主委派](../superflow/references/flow-owner.md#owner-led-delegation)权衡，
+核实际改动与证据后再推进。阶段进度用过程消息汇报后继续；当前 Owner 可编码和测试，
+独立评审按现有清单执行，不能用自评冒充。
 
 中高风险按 Reviewer 清单记录实际派发、身份、评审 diff、报告及 finding 闭环。
 评审后的实现变更按影响重测并交隔离 Reviewer 复评；无此能力时完成其余授权工作，
@@ -124,6 +126,9 @@ Owner根据实际diff、调用者和新发现自主补同目标边界/回归，�
    - Dynamic instruction from CLI
 
 6. **Implement tasks (loop until done or blocked)**
+
+   每轮从当前 tasks 与实际完成证据重算前置依赖，只选择已满足前置的未完成任务；
+   沿 Owner 委派方法分工，不把静态批次编号当可并行证明。
 
    For each pending task:
    - Show which task is being worked on

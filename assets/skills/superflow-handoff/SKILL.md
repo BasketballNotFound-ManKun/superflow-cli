@@ -30,9 +30,11 @@ description: Superflow 内部能力：将冻结合同与技术详设转成分批
 tests及实际风险适用的专项/SQL合同；完整约束由这些正文持有。有必要解释风险范围时，
 在主Prompt记录一次有源码依据的结论；无金额影响一句即可。
 
-只有实际分工需要时才按[批次模板](../superflow/references/batch-prompt-template.md)生成批次；
-单主Prompt可以完成交接，不为菜单或P编号制造分批。批次只含主链接、本批Task/Entry/Case ID、
-文件/依赖/恢复位置，公共合同与适用性结论统一继承主入口。
+只有按[Owner 自主委派](../superflow/references/flow-owner.md#owner-led-delegation)判断实际
+需要分工时才按[批次模板](../superflow/references/batch-prompt-template.md)生成批次；
+单主Prompt可以完成交接。批次只含主链接、本批Task/Entry/Case ID、文件/资源 owner、
+依赖/必要序列上下文与验证/返回位置，公共合同与适用性结论统一继承主入口。
+批次是执行导航，运行中的 Owner 在合同内按实际依赖和返回调整分工，不据编号强制并行。
 
 两端使用同一表头：`| Prompt | Task IDs | Entry IDs | Case IDs |`。主表链接各实际批次，
 批次表回链主入口且ID集合一致；仅主入口时表行链接自身。Task存在性来自tasks索引，

@@ -49,9 +49,11 @@ stay blocked. Plain OpenSpec retains project rules.
 ## Continuous delivery ownership
 
 For authorized ordinary implementation, read [Flow Owner](../superflow/references/flow-owner.md).
-Follow the selected mode through all tasks, verification, and repair. Progress
-updates are intermediate; the Owner may implement/test, obtaining required
-independent views through the existing checklist without claiming self-review is independent.
+Follow the selected mode through all tasks, verification and repair. At startup,
+each batch selection and returned-work integration use [Owner-led delegation](../superflow/references/flow-owner.md#owner-led-delegation),
+then inspect actual changes/evidence before advancing. Progress updates are
+intermediate; the Owner may implement/test, obtaining required independent views
+through the existing checklist without claiming self-review is independent.
 
 For medium/high risk, record actual dispatch, reviewer identity, reviewed diff,
 report, and finding closure under the Reviewer checklist. Rerun affected signals
@@ -132,6 +134,10 @@ finish other authorized work, retain PARTIAL, and use the Flow Owner delivery ma
    - Dynamic instruction from CLI
 
 6. **Implement tasks (loop until done or blocked)**
+
+   Each iteration recomputes prerequisites from current tasks and actual completion
+   evidence, selecting only unfinished dependency-ready work. Allocate under Owner-led
+   delegation; static batch numbers do not establish independence.
 
    For each pending task:
    - Show which task is being worked on

@@ -35,10 +35,14 @@ contracts applicable to actual risks. Their bodies own the full constraints. Whe
 risk scope needs explanation, record one source-based conclusion in the main prompt;
 a sentence suffices for no monetary impact.
 
-Generate [batches](../superflow/references/batch-prompt-template.md) only for actual
-work decomposition. A single main prompt is sufficient; batch numbers do not create
-a need for batches. Each batch holds the main link, its Task/Entry/Case IDs,
-files/dependencies/recovery, inheriting shared contracts and applicability from the main entry.
+Generate [batches](../superflow/references/batch-prompt-template.md) only when
+[Owner-led delegation](../superflow/references/flow-owner.md#owner-led-delegation)
+shows actual decomposition is needed; one main prompt can suffice. Batches hold
+the main link, Task/Entry/Case IDs, file/resource owners, dependencies/necessary
+sequential context and validation/return locations, inheriting shared contracts and
+applicability from the main entry. Batches navigate execution; the running Owner
+adjusts allocation within the contract from actual dependencies/returns, never
+parallelizing merely because batches have different numbers.
 
 Use `| Prompt | Task IDs | Entry IDs | Case IDs |` on both hosts. Main rows link
 actual batches; batch rows link back with matching ID sets. A single-main row links
