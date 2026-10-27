@@ -31,7 +31,8 @@ API真实请求＋数据库通常证明接口/后端集成；后端完整业务�
 
 首次计划执行验证前完整读本节及Runner-Captured Execution，再读取tests.md冻结命令；
 先复用项目测试/验收wrapper。捕获由现有`superflow-test-report-lint.py --record-execution`
-负责，先运行一个最小build plan与Case plan验证路径，再扩展；不从字段名猜receipt、capture、
+负责；先用`--check-execution-plan build-plan.json case-plan.json`一次预检本批计划，再实际运行
+一个最小build/Case验证测量接线，确认后扩展。不从字段名猜receipt、capture、
 事件、hash或来源清单，不手改生成结果。路径错误按声明/基准/解析路径修正。
 
 脚本与本指南同属一次Superflow安装。以本SKILL安装目录为基准：从
@@ -73,6 +74,7 @@ argv 是参数数组，不经 shell；cwd 相对 change 目录，environmentKeys
 使用当前宿主已安装脚本运行；下列 installed-script-path 替换为安装位置：
 
 ```sh
+python3 <installed-script-path>/superflow-test-report-lint.py --check-execution-plan build-plan.json case-plan.json
 python3 <installed-script-path>/superflow-test-report-lint.py --record-execution build-plan.json
 python3 <installed-script-path>/superflow-test-report-lint.py --record-execution case-plan.json
 ```
@@ -81,6 +83,35 @@ case plan 必填 changeDir，相对 plan 所在目录；output/review/build 也�
 build plan 的 cwd 相对 plan；仅 case executionContext.cwd 相对 changeDir。不得猜 review 目录。build 的 sources/artifact 相对
 build cwd。build.sources 覆盖实际相关源码、构建和验收脚本，不仅列无关小文件。
 build/case 输出必须在同一证据目录；case 命令只从冻结 executionContext 读取。
+
+### 先准备计划，再采集实测
+
+`--check-execution-plan PLAN [PLAN ...]`只读解析全部给定计划，汇总可确定错误；不运行
+构建/用例、不创建证据目录、不改写报告或现有捕获。`--record-execution`在创建输出目录及
+启动命令之前复用同一预检。修复plan中的路径/argv或coverage/tests中的冻结合同，再重查
+本批计划；不要靠重跑昂贵测试定位JSON字段形状。
+
+输出`PLAN_VALID`只表示可检查的计划字段成立。尚无build回执时，Case显示
+`dependency: "BUILD_NOT_RUN"`，可提前准备合同；运行Case前仍须真实build成功，再检查
+产物/源码/捕获身份。预检不生成receipt、actual或target，不证明命令成功、业务正确、部署
+身份或断言充分性。已存在build时会核验其真实capture及当前源码/产物指纹；不能拿旧build
+绕过漂移。批量同时给build plan时，还核对其sources覆盖当前Case入口冻结的代码引用。
+
+| 字段/输入 | 规范形状与修复入口 |
+|---|---|
+| `kind` | plan仅`build`或`case`；build包含argv/cwd/sources/artifact/output，case包含changeDir/review/caseId/build/output |
+| `argv` / `executionContext` | 非空字符串参数数组，不经隐式Shell；Case只读取coverage冻结的`{argv,cwd,environmentKeys}`，不能在case plan另填命令覆盖 |
+| `cwd` / 路径 | build cwd相对plan；Case cwd相对changeDir；output/review/build/changeDir相对plan；artifact/sources相对build cwd。按声明值/解析基准/实际路径诊断修正，不猜目录 |
+| `sources` | 显式非空文件数组，目录/通配符须由Owner先展开；文件应存在且非空，解析到同一文件的别名也算重复。覆盖实际代码、构建、验收及冻结的入口代码链，不能以目录字符串代替清单 |
+| `output` | 文件路径；stdout/stderr/capture/events派生文件一起检查，不得覆盖plan、review、来源、产物、依赖build及其原始输出，也不得与同批另一输出冲突。build回执作为Case的build依赖是允许的；build/Case共享证据目录 |
+| Case / Entry | coverage.cases/entries均为非空、唯一ID的对象数组；caseId找到唯一Case，entryId找到唯一Entry，Case.level与Entry.kind一致 |
+| `service` / `route` / `kind` | Entry.service若声明须非空字符串，未声明按既有合同使用Entry.id；route非空字符串；Entry.kind和Case.level为`browser/api/job/event/library/cli`。修复原coverage，不能为实际调用另一入口改receipt目标 |
+| `assertions` | 冻结合同为对象，response/state/forbiddenEffects为非空断言描述字符串；可选persistence为逐字段预期数组。实测事件另用断言对象数组`{id,expected,actual,result}`，不可把合同描述数组或实际值写回冻结合同 |
+| `testLayer` / `mockBoundary` | 已声明testLayer为`logic/sql-binding/database/http-entry`；mockBoundary为`{allowed:[字符串],forbidden:[字符串]}`且不相交，真实数据库层的forbidden非空；完整数据库义务仍按执行证据合同核验 |
+| `environmentKeys` | 不重复、仅选`PATH/PATHEXT/NODE_ENV/NODE_OPTIONS/LANG/LC_ALL/TZ/JAVA_HOME`；不放秘密。捕获绑定这些键的值hash，不把值写进凭证 |
+
+显式再次`--record-execution`仍会写同名生成证据；计划检查不自动归档或保留它们的旧副本。
+需要保留历史轮次时由Owner选新的既有证据目录并更新plan引用，不能把预检当成备份操作。
 
 嵌套示例：plan 在项目根，change 在 openspec/changes/sample，冻结 executionContext.cwd 为
 ../../..（项目根），其 argv 仍为项目根的 case.js；review 不决定工作目录：
@@ -300,7 +331,13 @@ actual/执行数/成功断言，测试失败必须退出非零；`test ... && ec
 
 现有artifact绑定一个真实文件；需证明完整产物集时让真实构建生成JAR/归档作为artifact，不能
 拿一个class或未逐文件验证的manifest冒称全部产物。来源hash、产物hash和运行目标实际身份
-分别核验；自读build回执不是部署身份实证。不新增测试框架或平行捕获协议。
+分别核验；自读build回执只能给出来源/产物身份，不能证明运行进程实际加载了该产物。
+部署/远端调用按项目既有版本端点、加载产物指纹或启动身份等真实可读观测绑定target；
+未取得时保留PARTIAL，不从本地build.json照填部署身份。不新增测试框架或平行捕获协议。
+
+重跑范围由“当前差异→受影响来源/产物/运行目标→失效Case”决定：实现或测试来源变化
+要重建、重捕相关Case；部署身份变化重验实际入口；仅计划路径/报告排版修正不自动要求
+重跑未受影响业务。旧证据仍须匹配当前冻结上下文和源码/构建身份，不能只刷新hash。
 
 路径按现有合同区分：plan引用相对plan文件，case的changeDir相对plan，executionContext.cwd
 相对change，回执文件引用相对回执目录。缺失时按错误展示的声明/基准/解析路径修复，不猜

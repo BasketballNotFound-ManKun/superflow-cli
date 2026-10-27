@@ -45,8 +45,9 @@ Apply existing review_mode, actual risk and independence requirements; retain lo
 
 Before executing verification, read this section and Runner-Captured Execution in full,
 then the frozen commands in tests.md; reuse project tests/acceptance wrappers first.
-The existing `superflow-test-report-lint.py --record-execution` owns capture. Run one
-minimal build plan and Case plan to establish paths before extending. Do not infer
+The existing `superflow-test-report-lint.py --record-execution` owns capture. First use
+`--check-execution-plan build-plan.json case-plan.json` to check this batch at once, then
+run one minimal build/Case to verify the measurement wiring before extending. Do not infer
 receipt/capture/event/hash fields or edit generated records; use declared/base/resolved
 path diagnostics to repair inputs.
 
@@ -97,6 +98,7 @@ Place these two minimal plans at the project root:
 Use the current Host's installed script; replace installed-script-path with its installed location:
 
 ```sh
+python3 <installed-script-path>/superflow-test-report-lint.py --check-execution-plan build-plan.json case-plan.json
 python3 <installed-script-path>/superflow-test-report-lint.py --record-execution build-plan.json
 python3 <installed-script-path>/superflow-test-report-lint.py --record-execution case-plan.json
 ```
@@ -107,6 +109,39 @@ the root from review directories. Build sources/artifact are
 relative to build cwd. build.sources covers relevant source, build and acceptance scripts, not
 unrelated small files. Build/case outputs must share one evidence directory. The case command
 comes only from frozen executionContext.
+
+### Prepare plans before capturing observations
+
+`--check-execution-plan PLAN [PLAN ...]` reads all supplied plans and reports deterministic errors
+in one invocation. It does not execute build/case commands, create evidence directories or modify
+reports/existing captures. `--record-execution` reuses the same preparation before creating output
+directories or invoking commands. Repair paths/argv in the plan or the frozen coverage/tests
+contract, then check the batch again; do not run expensive tests to discover JSON field shapes.
+
+`PLAN_VALID` means only that checkable plan fields are valid. Before a build receipt exists, a Case
+shows `dependency: "BUILD_NOT_RUN"` so its contract can be prepared first. Actual Case capture still
+requires a successful real build and checks artifact/source/capture identity. Preparation generates
+no receipt, actual or target; it proves neither command success, business correctness, deployment
+identity nor assertion sufficiency. Existing builds are checked against real capture and current
+source/artifact fingerprints. A supplied build plan also checks that its sources cover the Case
+entry's frozen code references; an old build cannot bypass drift.
+
+| Field/input | Required shape and repair owner |
+|---|---|
+| `kind` | Only `build` or `case`; build has argv/cwd/sources/artifact/output, case has changeDir/review/caseId/build/output |
+| `argv` / `executionContext` | Nonempty string argument array, no implicit Shell. Case commands come only from frozen coverage `{argv,cwd,environmentKeys}`; extra case-plan commands cannot override it |
+| `cwd` / paths | Build cwd is plan-relative; Case cwd is changeDir-relative; output/review/build/changeDir are plan-relative; artifact/sources are build-cwd-relative. Repair using declared/base/resolved diagnostics, never directory guesses |
+| `sources` | Explicit nonempty file array. Owner expands directories/globs before capture; files must exist and be nonempty; aliases resolving to one file are duplicates. Cover relevant code/build/acceptance files and frozen entry code chains, not directory strings |
+| `output` | File path, checked together with stdout/stderr/capture/events sidecars. Must not overwrite plans, review, sources, artifacts, dependency build/raw output or another batch output. A build receipt consumed by a Case is an allowed dependency; build/Case share one evidence directory |
+| Case / Entry | coverage.cases/entries are nonempty object arrays with unique nonempty IDs; caseId resolves one Case, entryId resolves one Entry, and Case.level matches Entry.kind |
+| `service` / `route` / `kind` | Declared Entry.service is a nonempty string; absent service uses Entry.id under the existing contract. route is a nonempty string; Entry.kind/Case.level is `browser/api/job/event/library/cli`. Repair coverage, never relabel a receipt for a different actual entry |
+| `assertions` | Frozen object with nonempty response/state/forbiddenEffects description strings and optional persistence field-expectation array. Observed events instead use assertion objects `[{id,expected,actual,result}]`; do not write observations into the frozen contract |
+| `testLayer` / `mockBoundary` | Declared testLayer is `logic/sql-binding/database/http-entry`; mockBoundary is `{allowed:[strings],forbidden:[strings]}` with no overlap; real database layers require nonempty forbidden. Full database obligations remain owned by the execution evidence contract |
+| `environmentKeys` | Unique selection from `PATH/PATHEXT/NODE_ENV/NODE_OPTIONS/LANG/LC_ALL/TZ/JAVA_HOME`, never secrets. Capture binds value hashes without storing raw values |
+
+An explicit later `--record-execution` still writes same-name generated evidence; plan checking does
+not archive or preserve previous copies. When history must be retained, Owner selects another
+existing evidence directory and updates plan references; preparation is not a backup operation.
 
 Nested example: plan at project root, change at openspec/changes/sample, frozen
 executionContext.cwd is ../../.. (project root), with argv still invoking root case.js.
@@ -395,8 +430,18 @@ does not ensure that.
 Existing artifact binds one real file. To prove a complete artifact set, have the
 real build produce a JAR/archive as artifact. One class or an unverified manifest
 is not proof of the whole set. Verify source identity, artifact identity and real
-runtime target separately; self-reading build receipts does not establish deployment.
-Do not add a test framework or parallel capture protocol.
+runtime target separately. Self-reading a build receipt gives source/artifact identity only;
+it does not prove that a running process loaded that artifact. For deployed/remote calls,
+bind target using the project's existing version endpoint, loaded-artifact fingerprint or
+startup identity observation. Without that evidence retain PARTIAL; never copy local
+build.json into a claimed deployment identity. Do not add a test framework or parallel
+capture protocol.
+
+Choose reruns by current diff → affected sources/artifacts/runtime targets → invalidated
+Cases. Changed implementation/test sources require rebuilding and recapturing affected Cases;
+changed deployment identity requires entry verification. Only plan-path/report-layout repair
+does not automatically require unrelated business reruns. Retained evidence must still match
+current frozen context and source/build identity; updating hashes alone is insufficient.
 
 Paths retain the current contract: plan references resolve from the plan file;
 case changeDir is plan-relative; executionContext.cwd is change-relative; receipt

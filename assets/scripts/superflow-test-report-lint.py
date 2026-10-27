@@ -711,12 +711,32 @@ def sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+def execution_file_identity(file: Path) -> tuple:
+    """Existing aliases share device/inode; future files use resolved paths."""
+    file = file.resolve()
+    try:
+        observed = file.stat()
+    except (FileNotFoundError, NotADirectoryError):
+        return ("path", str(file))
+    return ("file", observed.st_dev, observed.st_ino)
+
+
 def captured_sources(cwd: Path, sources: list, base: Path) -> list:
-    if not isinstance(sources, list) or not sources or len(set(sources)) != len(sources):
-        raise ValueError("capture 需要完整且不重复的显式源码清单")
-    return [{"path": os.path.relpath(verified_file(cwd, source), base),
-             "sha256": sha256_bytes(verified_file(cwd, source).read_bytes())}
-            for source in sources]
+    if (not isinstance(sources, list) or not sources
+            or any(not isinstance(source, str) or not source.strip() for source in sources)):
+        raise ValueError("capture sources 需要完整且不重复的显式文件清单；目录须先展开")
+    files, errors = [], []
+    for source in sources:
+        try:
+            files.append(verified_file(cwd, source))
+        except (OSError, ValueError) as error:
+            errors.append(str(error))
+    if errors:
+        raise ValueError("sources 需要显式非空文件，目录须先展开：" + "；".join(errors))
+    if len({execution_file_identity(file) for file in files}) != len(files):
+        raise ValueError("capture sources 解析后存在重复文件；请去重显式文件清单")
+    return [{"path": os.path.relpath(file, base),
+             "sha256": sha256_bytes(file.read_bytes())} for file in files]
 
 
 def source_fingerprint(sources: list) -> str:
@@ -757,8 +777,17 @@ console.log(JSON.stringify(values.map(v=>typeof v==='string'?redactManagedLog(v)
     return json.loads(result.stdout)
 
 
+class CaptureOutputConflict(ValueError):
+    """Recorder must stop without attempting another evidence write."""
+
+
+def write_capture_text(file: Path, value: str, write_guard) -> None:
+    write_guard()
+    file.write_text(value, encoding="utf-8")
+
+
 def observe_command(argv: list, cwd: Path, output: Path, kind: str,
-                    sources: list, redactor: Path) -> dict:
+                    sources: list, redactor: Path, write_guard) -> dict:
     if (not isinstance(argv, list) or not argv
             or any(not isinstance(arg, str) or not arg.strip() for arg in argv)):
         raise ValueError("capture 需要非空 argv 数组，不使用隐式 Shell")
@@ -778,7 +807,7 @@ def observe_command(argv: list, cwd: Path, output: Path, kind: str,
                 "startedNs": started, "finishedNs": finished, "sourcesBefore": before}
     for key, value in [("stdout", stdout_text), ("stderr", stderr_text)]:
         file = output.with_suffix("." + key + ".log")
-        file.write_text(value, encoding="utf-8")
+        write_capture_text(file, value, write_guard)
         captured[key] = {"path": file.name, "sha256": sha256_bytes(file.read_bytes())}
     try:
         captured["sourcesAfter"] = captured_sources(
@@ -788,7 +817,7 @@ def observe_command(argv: list, cwd: Path, output: Path, kind: str,
         captured["sourcesAfter"] = None
         captured["sourceObservationError"] = redact_capture([str(error)], redactor)[0]
     file = output.with_suffix(".capture.json")
-    file.write_text(json.dumps(captured, ensure_ascii=False), encoding="utf-8")
+    write_capture_text(file, json.dumps(captured, ensure_ascii=False), write_guard)
     return {"path": file.name, "sha256": sha256_bytes(file.read_bytes())}
 
 
@@ -850,28 +879,343 @@ def measurement_event(stdout: str, case_id: str) -> dict:
     return events[0]
 
 
-def write_capture_record(output: Path, record: dict, event: dict) -> None:
+def write_capture_record(output: Path, record: dict, event: dict, write_guard) -> None:
     event_file = output.with_suffix(".events.jsonl")
-    event_file.write_text(json.dumps(event, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_capture_text(event_file, json.dumps(event, ensure_ascii=False) + "\n", write_guard)
     record["command"].update(output=event_file.name, sha256=sha256_bytes(event_file.read_bytes()))
-    output.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
+    write_capture_text(output, json.dumps(record, ensure_ascii=False), write_guard)
+
+
+def execution_plan_path(base: Path, value, label: str) -> Path:
+    if (not isinstance(value, str) or not value.strip()
+            or re.match(r"^[a-z]+://", value, re.I)
+            or Path(value).is_absolute() or ntpath.isabs(value)
+            or bool(ntpath.splitdrive(value)[0])):
+        raise ValueError(f"{label} 必须是相对路径；解析基准={base.resolve()}")
+    return (base / value).resolve()
+
+
+def execution_output_files(output: Path) -> list:
+    return [output] + [output.with_suffix(suffix) for suffix in (
+        ".stdout.log", ".stderr.log", ".capture.json", ".events.jsonl")]
+
+
+def execution_id_index(items, label: str) -> dict:
+    if not isinstance(items, list) or not items:
+        raise ValueError(f"{label} ID 清单不能为空")
+    result = {}
+    for item in items:
+        if (not isinstance(item, dict) or not isinstance(item.get("id"), str)
+                or not item["id"].strip()):
+            raise ValueError(f"{label} 缺少非空 ID")
+        if item["id"] in result:
+            raise ValueError(f"{label} 重复 ID: {item['id']}")
+        result[item["id"]] = item
+    return result
+
+
+def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False) -> dict:
+    """One read-only preparation path for preview and actual capture."""
+    base = plan_file.parent
+    plan = json.loads(verified_file(base, plan_file.name).read_text(encoding="utf-8"))
+    if not isinstance(plan, dict):
+        raise ValueError("plan 必须为 JSON object")
+    prepared = {"plan": plan, "planFile": plan_file, "inputs": {plan_file},
+                "buildEvidence": set(), "errors": [], "dependency": None}
+    errors = prepared["errors"]
+
+    def check(label, action):
+        try:
+            return action()
+        except (OSError, ValueError, KeyError, TypeError, StopIteration) as error:
+            errors.append(f"{label}: {error}")
+            return None
+
+    def path_value(key, root=base):
+        return execution_plan_path(root, plan.get(key), f"plan.{key}")
+
+    output = check("output", lambda: path_value("output"))
+    prepared["output"] = output
+    if output:
+        for file in execution_output_files(output):
+            if file.exists() and not file.is_file():
+                errors.append(f"output 不是普通文件路径：{file}")
+        parent = output.parent
+        while not parent.exists() and parent != parent.parent:
+            parent = parent.parent
+        if not parent.is_dir():
+            errors.append(f"output 父路径不是目录：{parent}")
+    kind = plan.get("kind")
+    if kind == "build":
+        cwd = check("cwd", lambda: path_value("cwd"))
+        prepared["cwd"] = cwd
+        if cwd is not None and not cwd.is_dir():
+            errors.append(f"cwd 目录不存在：声明值={plan.get('cwd')!r}；"
+                          f"解析基准={base}；实际路径={cwd}")
+        argv = plan.get("argv")
+        if (not isinstance(argv, list) or not argv
+                or any(not isinstance(arg, str) or not arg.strip() for arg in argv)):
+            errors.append("argv 需要非空字符串数组，不使用隐式 Shell")
+        sources = check("sources", lambda: captured_sources(cwd or base, plan.get("sources"),
+                                                            output.parent if output else base))
+        prepared["sources"] = sources
+        if sources:
+            source_base = output.parent if output else base
+            prepared["inputs"].update((source_base / source["path"]).resolve() for source in sources)
+        artifact = check("artifact", lambda: path_value("artifact", cwd or base))
+        prepared["artifact"] = artifact
+        if artifact:
+            prepared["inputs"].add(artifact)
+            if artifact.exists() and not artifact.is_file():
+                errors.append(f"artifact 必须是一个真实文件产物：{artifact}")
+    elif kind == "case":
+        change = check("changeDir", lambda: path_value("changeDir"))
+        prepared["change"] = change
+        if change is not None and not change.is_dir():
+            errors.append(f"case plan.changeDir 指向的 change 目录不存在："
+                          f"声明值={plan.get('changeDir')!r}；解析基准={base}；实际路径={change}")
+        def review_input():
+            path_value("review")
+            return verified_file(base, plan.get("review"))
+        review = check("review", review_input)
+        if review:
+            prepared["inputs"].add(review)
+            coverage = check("review.coverage", lambda: json.loads(review.read_text())["coverage"])
+            prepared["coverage"] = coverage
+            if not isinstance(coverage, dict):
+                errors.append("review.coverage 必须是 JSON object，修复原 coverage 合同")
+            if isinstance(coverage, dict):
+                cases = check("Case", lambda: execution_id_index(coverage.get("cases"), "Case"))
+                entries = check("Entry", lambda: execution_id_index(coverage.get("entries"), "Entry"))
+                case = cases.get(plan.get("caseId")) if cases and isinstance(plan.get("caseId"), str) else None
+                prepared["case"] = case
+                if case is None:
+                    errors.append(f"caseId 必须对应唯一冻结 Case ID：{plan.get('caseId')!r}")
+                else:
+                    if case.get("executionEvidence") != "runner-captured.v1":
+                        errors.append("executionEvidence 必须冻结 runner-captured.v1")
+                    entry = entries.get(case.get("entryId")) if entries and isinstance(case.get("entryId"), str) else None
+                    prepared["entry"] = entry
+                    if entry is None:
+                        errors.append(f"entryId 缺少唯一冻结 Entry：{case.get('entryId')!r}")
+                    else:
+                        check("冻结入口/用例", lambda: validate_plan_case_shape(case, entry))
+                    context = case.get("executionContext")
+                    if isinstance(context, dict) and change:
+                        cwd = check("executionContext.cwd", lambda: execution_plan_path(
+                            change, context.get("cwd"), "executionContext.cwd"))
+                        prepared["cwd"] = cwd
+                        observed = {"cwd": str(cwd), "environmentSha256": {}}
+                        keys = context.get("environmentKeys")
+                        if isinstance(keys, list) and all(isinstance(key, str) for key in keys):
+                            observed["environmentSha256"] = {
+                                key: sha256_bytes(json.dumps(os.environ.get(key), ensure_ascii=False).encode())
+                                for key in keys}
+                        prepared["observedContext"] = observed
+                        check("executionContext", lambda: validate_execution_context(
+                            {"command": {"argv": context.get("argv")}, "executionContext": observed},
+                            {"executionContext": observed}, case, change))
+                    else:
+                        errors.append("executionContext 需要冻结 argv、相对 cwd 和 environmentKeys")
+        build_file = check("build", lambda: path_value("build"))
+        prepared["buildFile"] = build_file
+        if build_file:
+            if output and build_file.parent != output.parent:
+                errors.append("capture 构建和用例凭证须保存在同一证据目录："
+                              f"声明值={plan.get('build')!r}；解析基准={base}；"
+                              f"实际路径={build_file}；用例凭证目录={output.parent}")
+            if not build_file.exists() and allow_pending_build:
+                prepared["dependency"] = "BUILD_NOT_RUN"
+            else:
+                def load_build():
+                    file = verified_file(base, plan.get("build"))
+                    build = json.loads(file.read_text())
+                    capture = validate_capture(file.parent, build, "build")
+                    for reference in (build["capture"], build["command"], capture["stdout"], capture["stderr"]):
+                        prepared["buildEvidence"].add((file.parent / reference.get("path", reference.get("output"))).resolve())
+                    prepared["inputs"].add(hashed_file(file.parent, build["artifact"], build["sha256"]))
+                    prepared["inputs"].update((file.parent / item["path"]).resolve() for item in build["sources"])
+                    return build
+                prepared["build"] = check("build", load_build)
+    else:
+        errors.append("capture plan.kind 必须为 build 或 case")
+    return prepared
+
+
+def validate_plan_case_shape(case: dict, entry: dict) -> None:
+    """Check declared shapes, not the semantic sufficiency owned by review."""
+    problems = []
+    if entry.get("kind") not in ("browser", "api", "job", "event", "library", "cli"):
+        problems.append("entry.kind 无效")
+    if case.get("level") != entry.get("kind"):
+        problems.append("case.level 与 entry.kind 不一致")
+    for key in ("service", "route"):
+        value = entry.get(key, entry["id"] if key == "service" else None)
+        if not isinstance(value, str) or not value.strip():
+            problems.append(f"entry.{key} 需要非空字符串")
+    if case.get("evidenceKind", "real") not in ("real", "controlled-simulation", "unit"):
+        problems.append("case.evidenceKind 无效")
+    if "assertions" in case:
+        assertions = case["assertions"]
+        if (not isinstance(assertions, dict)
+                or any(not isinstance(assertions.get(key), str) or not assertions[key].strip()
+                       for key in ("response", "state", "forbiddenEffects"))
+                or not isinstance(assertions.get("persistence", []), list)):
+            problems.append("case.assertions 需要 response/state/forbiddenEffects 字符串及可选 persistence 数组")
+    if "testLayer" in case and case["testLayer"] not in ("logic", "sql-binding", "database", "http-entry"):
+        problems.append("case.testLayer 无效")
+    assertions = case.get("assertions")
+    writes = assertions.get("persistence", []) if isinstance(assertions, dict) else []
+    if isinstance(writes, list):
+        ids = []
+        for write in writes:
+            if (not isinstance(write, dict)
+                    or any(not isinstance(write.get(key), str) or not write[key].strip()
+                           for key in ("id", "table", "field"))
+                    or "expected" not in write
+                    or (write["expected"] is None and write.get("allowNull") is not True)):
+                problems.append("assertions.persistence 需要 id/table/field/expected；NULL 预期需 allowNull=true")
+                break
+            ids.append(write["id"])
+        if len(set(ids)) != len(ids):
+            problems.append("assertions.persistence 存在重复 ID")
+    if entry.get("database") and case.get("testLayer") not in ("logic", "sql-binding", "database", "http-entry"):
+        problems.append("数据库义务需要冻结有效 testLayer")
+    if (entry.get("persistence") or writes) and not entry.get("database"):
+        problems.append("persistence 义务需要冻结 Entry.database 合同")
+    real_database = bool(entry.get("database")) and case.get("testLayer") in ("database", "http-entry")
+    if "mockBoundary" in case or real_database:
+        boundary = case.get("mockBoundary")
+        if (not isinstance(boundary, dict)
+                or any(not isinstance(boundary.get(key), list)
+                       or any(not isinstance(value, str) or not value.strip() for value in boundary[key])
+                       for key in ("allowed", "forbidden"))
+                or (real_database and not boundary["forbidden"])
+                or set(boundary["allowed"]) & set(boundary["forbidden"])):
+            problems.append("case.mockBoundary 需要 allowed/非空 forbidden 字符串数组且不得相交")
+    if problems:
+        raise ValueError("；".join(problems) + "；修复原 coverage/tests 合同后重跑计划检查")
+
+
+def execution_output_issues(prepared: list, plan_files: list) -> list:
+    """Inspect current output identities without creating or changing files."""
+    errors = []
+    identities = {}
+
+    def identity(file):
+        if file is None:
+            return None
+        if file not in identities:
+            identities[file] = execution_file_identity(file)
+        return identities[file]
+
+    def same_file(left, right):
+        return left is not None and right is not None and identity(left) == identity(right)
+    inputs = set(plan_files)
+    for item in prepared:
+        inputs.update(item["inputs"])
+        item["buildEvidenceIdentities"] = {identity(file) for file in item["buildEvidence"]}
+    input_identities = {identity(file) for file in inputs}
+    outputs, output_identities = set(), set()
+    for item in prepared:
+        if not item["output"]:
+            continue
+        for file in execution_output_files(item["output"]):
+            file = file.resolve()
+            # Explicit plan/review/source/artifact inputs never receive an
+            # exemption, even if the same path also serves as a build receipt.
+            collision = (identity(file) in input_identities
+                         or any(file in source.parents or source in file.parents for source in inputs))
+            for other in prepared:
+                producer = (item["plan"].get("kind") == "build"
+                            and same_file(item["output"], other.get("buildFile")))
+                if same_file(file, other.get("buildFile")) and not (producer and same_file(file, item["output"])):
+                    collision = True
+                # These facts were discovered by reading the dependency, not
+                # declared as inputs. Its producer may regenerate its own logs;
+                # explicit review/source references above remain protected.
+                if identity(file) in other["buildEvidenceIdentities"] and not producer:
+                    collision = True
+            if (collision or identity(file) in output_identities
+                    or any(file in output.parents or output in file.parents for output in outputs)):
+                message = f"output 覆盖输入或同批输出：{file}"
+                item["errors"].append(message)
+                errors.append(f"{item['planFile']}: {message}")
+            outputs.add(file)
+            output_identities.add(identity(file))
+    return errors
+
+
+def check_execution_plans(plan_files: list, allow_pending_build: bool = True) -> tuple:
+    prepared, errors = [], []
+    for file in plan_files:
+        try:
+            item = prepare_execution_plan(file, allow_pending_build)
+            prepared.append(item)
+            errors.extend(f"{file}: {error}" for error in item["errors"])
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            errors.append(f"{file}: {error}")
+    for item in prepared:
+        if item["plan"].get("kind") != "case" or not item.get("case") or not item.get("entry"):
+            continue
+        producer = next((other for other in prepared if other["plan"].get("kind") == "build"
+                         and other["output"] is not None and item.get("buildFile") is not None
+                         and execution_file_identity(other["output"]) == execution_file_identity(item["buildFile"])), None)
+        source_paths = set()
+        if item.get("build"):
+            source_paths = {(item["buildFile"].parent / source["path"]).resolve()
+                            for source in item["build"]["sources"]}
+        elif producer and producer.get("sources"):
+            source_paths = {(producer["output"].parent / source["path"]).resolve()
+                            for source in producer["sources"]}
+        try:
+            coverage = item["coverage"]
+            if item["entry"].get("sourceRefs"):
+                index = execution_id_index(coverage.get("sources"), "来源 sources")
+                for ref in item["entry"]["sourceRefs"]:
+                    source = index.get(ref)
+                    if source is None:
+                        raise ValueError(f"sources 缺少冻结来源 ID：{ref}")
+                    if source.get("role") == "code":
+                        file = verified_file(item["change"], source.get("path"))
+                        item["inputs"].add(file)
+                        if ((item.get("build") or producer)
+                                and execution_file_identity(file) not in {execution_file_identity(source) for source in source_paths}):
+                            raise ValueError(f"sources 未覆盖该入口冻结的源码写入链：{file}")
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            message = f"sources: {error}"
+            item["errors"].append(message)
+            errors.append(f"{item['planFile']}: {message}")
+    errors.extend(execution_output_issues(prepared, plan_files))
+    return prepared, errors
 
 
 def record_execution(plan_file: Path) -> int:
-    plan = json.loads(plan_file.read_text(encoding="utf-8"))
-    base = plan_file.parent
-    output = (base / plan["output"]).resolve()
-    output.parent.mkdir(parents=True, exist_ok=True)
+    prepared, errors = check_execution_plans([plan_file], allow_pending_build=False)
+    if errors:
+        raise ValueError("\n".join(errors))
+    item = prepared[0]
+    plan = item["plan"]
+    output = item["output"]
+
+    def write_guard():
+        # Never reuse pre-command inode observations: the child may have created
+        # or replaced an output path. Preserve conflicting inputs, not PARTIAL.
+        issues = execution_output_issues([item], [plan_file])
+        if issues:
+            raise CaptureOutputConflict("\n".join(issues))
+
     redactor = capture_redactor()
     # Validate executable/module availability before running a side-effecting
     # command whose output would otherwise have no safe persistence path.
     redact_capture([], redactor)
+    output.parent.mkdir(parents=True, exist_ok=True)
     if plan.get("kind") == "build":
-        cwd = (base / plan["cwd"]).resolve()
-        sources = captured_sources(cwd, plan["sources"], output.parent)
-        capture = observe_command(plan["argv"], cwd, output, "build", sources, redactor)
+        cwd = item["cwd"]
+        sources = item["sources"]
+        capture = observe_command(plan["argv"], cwd, output, "build", sources, redactor, write_guard)
         facts = json.loads((output.parent / capture["path"]).read_text())
-        artifact = (cwd / plan["artifact"]).resolve()
+        artifact = item["artifact"]
         record = {"id": "build-" + uuid.uuid4().hex, "sources": sources, "status": "PARTIAL",
                   "sourceFingerprint": source_fingerprint(sources), "capture": capture,
                   "artifact": os.path.relpath(artifact, output.parent),
@@ -880,46 +1224,21 @@ def record_execution(plan_file: Path) -> int:
         event = {"event": "build", "buildId": record["id"],
                  "sourceFingerprint": record["sourceFingerprint"], "artifactSha256": record["sha256"],
                  "argv": facts["argv"], "exitCode": facts["exitCode"]}
-        write_capture_record(output, record, event)
+        write_capture_record(output, record, event, write_guard)
         validate_capture(output.parent, record, "build")
         if not record["sha256"]:
             raise ValueError("capture 构建未生成产物")
         record["status"] = "PASS"
-        output.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
+        write_capture_text(output, json.dumps(record, ensure_ascii=False), write_guard)
     elif plan.get("kind") == "case":
-        change_dir = plan.get("changeDir")
-        if (not isinstance(change_dir, str) or not change_dir.strip()
-                or Path(change_dir).is_absolute() or ntpath.isabs(change_dir)
-                or bool(ntpath.splitdrive(change_dir)[0])):
-            raise ValueError("case plan.changeDir 必须明确为相对 plan 文件的 change 目录")
-        change = (base / change_dir).resolve()
-        if not change.is_dir():
-            raise ValueError("case plan.changeDir 指向的 change 目录不存在："
-                             f"声明值={change_dir!r}；解析基准={base.resolve()}；"
-                             f"实际路径={change}")
-        review_file = verified_file(base, plan["review"])
-        coverage = json.loads(review_file.read_text())["coverage"]
-        case = next(c for c in coverage["cases"] if c["id"] == plan["caseId"])
-        if case.get("executionEvidence") != "runner-captured.v1":
-            raise ValueError("capture 用例未冻结 runner-captured.v1")
+        change = item["change"]
+        coverage = item["coverage"]
+        case = item["case"]
         context = case["executionContext"]
-        cwd = (change / context["cwd"]).resolve()
-        observed_context = {"cwd": str(cwd), "environmentSha256": {
-            key: sha256_bytes(json.dumps(os.environ.get(key), ensure_ascii=False).encode())
-            for key in context["environmentKeys"]}}
-        validate_execution_context(
-            {"command": {"argv": context["argv"]}, "executionContext": observed_context},
-            {"executionContext": observed_context}, case, change)
-        build_file = (base / plan["build"]).resolve()
-        if build_file.parent != output.parent:
-            raise ValueError("capture 构建和用例凭证须保存在同一证据目录："
-                             f"声明值={plan['build']!r}；解析基准={base.resolve()}；"
-                             f"实际路径={build_file}；用例凭证目录={output.parent}")
-        build_file = verified_file(base, plan["build"])
-        build = json.loads(build_file.read_text())
-        validate_capture(output.parent, build, "build")
-        hashed_file(output.parent, build["artifact"], build["sha256"])
-        capture = observe_command(context["argv"], cwd, output, "case", build["sources"], redactor)
+        cwd = item["cwd"]
+        observed_context = item["observedContext"]
+        build = item["build"]
+        capture = observe_command(context["argv"], cwd, output, "case", build["sources"], redactor, write_guard)
         facts = json.loads((output.parent / capture["path"]).read_text())
         stdout = (output.parent / facts["stdout"]["path"]).read_text()
         record = {"schemaVersion": "superflow.execution-receipt.v1", "caseId": case["id"],
@@ -936,12 +1255,14 @@ def record_execution(plan_file: Path) -> int:
             if facts["exitCode"] == 0:
                 record["status"] = "PASS"
             event = {**record, "command": dict(record["command"])}
-            write_capture_record(output, record, event)
+            write_capture_record(output, record, event, write_guard)
             validate_execution_receipt(output, case, coverage, change)
+        except CaptureOutputConflict:
+            raise
         except (ValueError, KeyError, TypeError):
             record["status"] = "PARTIAL"
             write_capture_record(output, record, {**record, "command": {
-                "argv": facts["argv"], "exitCode": facts["exitCode"]}})
+                "argv": facts["argv"], "exitCode": facts["exitCode"]}}, write_guard)
             raise
     else:
         raise ValueError("capture plan.kind 必须为 build 或 case")
@@ -1311,6 +1632,8 @@ def main() -> int:
     parser.add_argument("reports", nargs="*")
     parser.add_argument("--record-execution", metavar="PLAN", default="",
                         help="实际执行冻结 build/case plan 并保留脱敏 stdout/stderr")
+    parser.add_argument("--check-execution-plan", metavar="PLAN", nargs="+", default=[],
+                        help="只读批量检查 build/case plan；不执行命令、不创建证据、不代表测试通过")
     parser.add_argument("--tests", default="")
     parser.add_argument("--review", default="")
     parser.add_argument("--repo-root", default="")
@@ -1323,6 +1646,23 @@ def main() -> int:
                         help="输出明确排除历史节的当前报告，保留命令代码块与行号")
     args = parser.parse_args()
 
+    if args.check_execution_plan:
+        if args.record_execution or args.reports:
+            parser.error("--check-execution-plan 不能与报告或 --record-execution 混用")
+        try:
+            prepared, errors = check_execution_plans([Path(file).resolve() for file in args.check_execution_plan])
+        except OSError as error:
+            print(f"FAIL plan: 无法只读核验文件身份：{error}")
+            return 2
+        for error in errors:
+            print(f"FAIL plan: {error}")
+        for item in prepared:
+            if not item["errors"]:
+                print(json.dumps({"plan": str(item["planFile"]), "status": "PLAN_VALID",
+                                  "dependency": item["dependency"],
+                                  "cwd": str(item.get("cwd")), "output": str(item["output"])}, ensure_ascii=False))
+        print("计划检查未执行构建或用例，未生成 actual/target；不代表业务正确或测试通过")
+        return 2 if errors else 0
     if args.record_execution:
         try:
             return record_execution(Path(args.record_execution).resolve())
