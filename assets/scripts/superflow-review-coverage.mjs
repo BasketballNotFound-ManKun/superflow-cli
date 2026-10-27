@@ -53,6 +53,19 @@ function currentHandoffInput(root) {
   return input;
 }
 
+// Classify the actual mutable file, not a caller-selected path spelling.
+// Real paths cover symbolic links; inode identity also covers hard links.
+// A separate copy with the same bytes remains an independent frozen source.
+function sameFileIdentity(file, expected) {
+  if (!fs.existsSync(expected)) return false;
+  if (fs.realpathSync(file) === fs.realpathSync(expected)) return true;
+  const actual = fs.statSync(file, { bigint: true });
+  const target = fs.statSync(expected, { bigint: true });
+  return (
+    actual.ino !== 0n && actual.dev === target.dev && actual.ino === target.ino
+  );
+}
+
 const nonempty = (value) =>
   typeof value === "string" && value.trim().length > 0;
 const list = (value) => (Array.isArray(value) ? value : []);
@@ -114,6 +127,7 @@ export function validateCoverage(root, review, issues, checkCode = true) {
       issues.push(`${label}缺少 ${role} 来源`);
     }
   };
+  let taskInput;
   for (const source of sources.values()) {
     if (
       !nonempty(source.path) ||
@@ -125,7 +139,33 @@ export function validateCoverage(root, review, issues, checkCode = true) {
     }
     if (!checkCode && source.role === "code") continue;
     try {
-      if (fileHash(path.resolve(root, source.path)) !== source.sha256) {
+      const sourceFile = path.resolve(root, source.path);
+      if (
+        source.role !== "code" &&
+        sameFileIdentity(sourceFile, path.resolve(root, "test-report.md"))
+      ) {
+        issues.push(
+          `来源 ${source.id} 是运行报告，不能登记为冻结合同；保留报告引用，原始需求另存不可变来源`,
+        );
+        continue;
+      }
+      let identity;
+      if (
+        source.role !== "code" &&
+        sameFileIdentity(sourceFile, path.resolve(root, "tasks.md"))
+      ) {
+        // The handoff already owns progress normalization. Do not add another
+        // checkbox parser or permit changed task semantics during execution.
+        taskInput ??= currentHandoffInput(root).sources.find(
+          (item) => item.path === "tasks.md",
+        );
+        if (!taskInput)
+          throw new Error("当前 handoff 未包含 tasks.md，不能核任务正文身份");
+        identity = taskInput.sha256;
+      } else {
+        identity = fileHash(sourceFile);
+      }
+      if (identity !== source.sha256) {
         issues.push(`来源 ${source.id} 内容已变化，需要重新评审`);
       }
     } catch {

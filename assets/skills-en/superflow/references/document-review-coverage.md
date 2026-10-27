@@ -161,8 +161,7 @@ evidence is neither renamed untested nor used to prove a new source version sema
 
 Add the following `coverage` object to the existing three-round review; preserve its other
 fields. Paths are relative to the change and may reference authorized sibling repositories.
-Save online originals as local snapshots with URL and confirmation context. SHA-256 hashes
-file bytes, unlike the normalized handoff hash. Reference code, do not copy its body.
+Save online originals as local snapshots with URL and confirmation context. Sources normally use byte SHA-256. The current change's tasks.md uses the existing canonical handoff identity described below; live reports remain reference-only, not byte-frozen contracts. Reference code, do not copy its body.
 
 This is an index fragment. For full workflow, also fill each entry's investigation, FIX taskIds
 and source-contract sourceChecks as above. S_HOW must match state.technical_design and actual
@@ -374,3 +373,9 @@ entryId/caseIds. Main/batch Execution navigation uses the same Task/Entry/Case I
 not a duplicate business matrix. The validator checks declared relationships, not
 real call relationships, entry completeness or assertion sufficiency. Those remain
 Agent and independent Reviewer judgments.
+
+
+### Execution progress and contract-source identity
+
+When the current change's tasks.md is registered as a contract source, use its canonical sha256 from the existing handoff --manifest. Progress-only checkoff stays valid; changed task semantics still require actual review. Do not add another checkbox parser or a raw-byte fallback.
+The live test-report.md is reference-only and cannot be registered as a frozen contract/requirement source. Preserve an original defect report as a separate immutable source first. Other sources retain byte SHA-256; code execution, original reviews and receipt identity rules remain unchanged.

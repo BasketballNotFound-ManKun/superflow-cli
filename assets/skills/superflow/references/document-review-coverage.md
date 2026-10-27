@@ -139,7 +139,7 @@ CHAR/VARCHAR 声明；values 可引用 code 或 contract 中带引号/反引号�
 给每个 entry 填 investigation，FIX 填 taskIds，source-contract 填 sourceChecks；
 S_HOW 必须与 state.technical_design 和真实 handoff 成员一致。
 `sources.path` 相对 change 目录，可引用授权范围内的跨仓文件；在线来源保存带 URL、
-原文和确认上下文的本地快照。SHA-256 是文件字节哈希，不是 handoff 的规范化哈希。
+原文和确认上下文的本地快照。来源默认使用文件字节SHA-256；当前change的tasks.md按下文既有handoff规范化身份绑定，运行报告只引用，不做原字节冻结。
 不要复制源码正文；只登记定位与指纹。`sourceRefs` 均引用 sources 中的 ID。
 
 ```json
@@ -315,3 +315,9 @@ No existing source的明确负面调查，不伪造调用者。独立source-cont
 FIX通过现有taskIds引用tasks，Case通过entryId和caseIds关联。主/批Prompt的Execution navigation
 使用同一Task/Entry/Case ID，不复制另一份业务矩阵。检查器只核已声明引用闭合，不证明
 真实调用关系、入口完整性或断言充分性；这些结论仍由Agent及独立Reviewer持有。
+
+
+### 运行进度与契约来源身份
+
+当前change的tasks.md若登记为contract来源，其sha256取现有handoff --manifest中该文件的规范化身份；只勾选进度不失效，任务正文改变仍须实际重评。不另建checkbox解析器或原字节回退。
+运行test-report.md只被引用，不得登记成冻结contract/requirement来源；原始缺陷报告应先保留为独立不可变来源。其他来源继续使用文件字节SHA-256，代码执行身份/原始评审与运行凭证的哈希规则不变。
