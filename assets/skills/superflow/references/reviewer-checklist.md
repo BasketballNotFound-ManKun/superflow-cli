@@ -11,7 +11,7 @@
 
 ### Goal, contract and evidence
 
-Reviewer 先从原需求独立列受影响范围和反例，再对照作者台账/diff，按风险反查未改调用者、
+Reviewer 先读原需求、准确 diff，独立沿真实调用者、SQL/投影与写入消费者列受影响范围和可证伪反例，再对照作者台账，按风险反查未改调用者、
 批量直写、共享方法及状态消费者；入口清单不是范围完整的证明。分别回答：
 1. 实现是否符合当前冻结合同？实现缺陷回 build。
 2. 合同及实现是否满足原目标？遗漏/相反正文回当前 Flow Owner 对应正文职责，修后重评。
@@ -81,9 +81,11 @@ Reviewer 先从原需求独立列受影响范围和反例，再对照作者台�
 4. 实际风险判断与本 reviewer 分配的维度/文件；规范清单及四状态/锚点报告要求。
 
 包只保留必要内容与路径，不复制全部仓库、个人规则目录、凭据或整段聊天；遵守原任务
-可读取范围。reviewer 从 diff 起读，只因命名风险扩查相关调用方，记录扩查原因；发现包
+可读取范围。reviewer 先读原目标和 diff，沿命名风险扩查真实调用方、SQL/投影消费者，记录扩查原因；发现包
 与当前源码/合同漂移时返回 NEEDS_CONTEXT，不凭旧包评当前代码。Reviewer 只读，不改
 源码、运行应用、查写业务库或启动嵌套监督；需要新的运行证据交回实施方。
+
+编排保持中立：不预定结论、严重度上限或要求忽略某类问题；规格强制的缺陷也要标明来源并按原目标核验，不能因“设计如此”自动免责。证据不足说明缺什么，由Owner核实；不能把材料准备或固定维度数当发现深度。
 
 ### Review preparation
 
@@ -98,8 +100,35 @@ superflow review-coverage --prepare <new-package-directory> --json
 返回diff、两端快照、source-manifest与NEEDS_CONTEXT报告模板。每轮使用新目录，不覆盖旧返回。
 包仅是输入；Owner核原目标、合同及风险相关未改调用者后再派发。先让Reviewer独立列失败路径，
 再看作者覆盖矩阵；不能把“未列清单”当范围外，或把新增副作用因旧写行为而豁免。
-模板不等于已审来源；Reviewer实际读取后保留/补充真实范围、填写派发/返回身份和结论，
+实际派发必须引用包内 `dispatch-instructions.md` 和返回的 `reportTemplate` 绝对路径；
+直接使用同一规范模板，不得只发 diff 后由 Owner 另造样例。模板含五维表、合法 finding
+形状、身份引用要求和 concern 规则。`source-manifest.md` 显式列出未选脏文件；默认不按
+配置/临时文件名过滤。Owner 判断任务所有权、排除理由和隔离，不把前会话遗留默认为本任务。
+输入清单及其 hash 不代表已读，实际读取范围/扩查理由独立写 Impact；模板不填已读声明。
+Reviewer实际读取后保留/补充真实范围、填写派发/返回身份和结论，
 缺真实输入保持NEEDS_CONTEXT。无Git基线时沿下方既有快照对比路径，不伪造HEAD或提前提交。
+
+有原 finding 后复用同一准备入口，避免手猜标题、枚举和文件 hash：
+
+```bash
+# 原评审/Owner响应路径统一相对项目根；每步输出使用新目录
+superflow review-coverage --prepare <response-package> --original-review .sdd/reviews/original.md --json
+# Owner另存实际响应并完成受影响验证后，再准备实际复评
+superflow review-coverage --prepare <recheck-package> --original-review .sdd/reviews/original.md --owner-response .sdd/reviews/owner-response.md --json
+```
+
+第一步只生成 Owner 响应模板与原件身份/稳定 ID 清单，不制造 Reviewer 返回。
+完整且有实际身份、来源、finding 与明确 Concern 的 BLOCKED/NEEDS_CONTEXT 原件也可准备回应和
+补上下文；准备不晋升原状态，不等于评审完成。缺字段或无 finding 的模板仍不是实际原件。
+第二步读取完整原报告和实际 Owner 响应，用同一审计器核路径、身份、原 ID 集合及合法
+处置；只读保留原件快照，生成准确 Review Chain 哈希和逐 ID Finding Rechecks 占位。
+历史源码可正常演进，原报告的历史源码 hash 原样保留；原件/响应变化会使已绑定链诊断失败。
+所有模板保持 NEEDS_CONTEXT，不预填 fixed/resolved/None 或任何实际已读/已审声明。
+合法处置为 fixed/mitigated/deferred/dismissed，复评结果为 resolved/dismissed；
+Reviewer 根据真实新证据裁决，不能机械转换延期/缓解或代改 concern 来晋升。
+实际复评可据新证据解消或驳回旧 finding；新增 finding 与剩余 concern 仍如实保留。
+路径越界、文件缺失、原件不完整或响应缺/多 ID 时修复输入，保留原件，不能靠重写原结论过门。
+派发仅提供已确认原目标/合同路径、原始证据与规范模板，不传实现整聊天或作者业务结论。
 
 首次实际返回即运行现有`review-coverage --report <file> --json`定位格式/路径问题。
 由Reviewer在首次引用前完成正确落盘；引用后的原件不可改，后续通过新的实际返回追加。

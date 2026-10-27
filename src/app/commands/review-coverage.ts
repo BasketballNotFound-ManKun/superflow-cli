@@ -17,11 +17,16 @@ export interface ReviewCoverageOptions {
   paths?: string[];
   report?: string;
   prepare?: string;
+  originalReview?: string;
+  ownerResponse?: string;
 }
 
 export function reviewCoverageCommand(
   options: ReviewCoverageOptions = {},
 ): void {
+  if ((options.originalReview || options.ownerResponse) && !options.prepare) {
+    throw new Error("--original-review and --owner-response require --prepare");
+  }
   const cwd = process.cwd();
   const root = reviewProjectRoot(cwd);
   const system = readRules(
@@ -41,6 +46,13 @@ export function reviewCoverageCommand(
     ? prepareReviewPackage(cwd, options.prepare, {
         ...options,
         english: resolveCliLanguage() === "en",
+        reviewerChecklist: path.join(
+          ASSETS_DIR,
+          resolveCliLanguage() === "en" ? "skills-en" : "skills",
+          "superflow",
+          "references",
+          "reviewer-checklist.md",
+        ),
       })
     : undefined;
   const files =
@@ -73,10 +85,17 @@ export function reviewCoverageCommand(
         : `评审覆盖：${result.coverage.included}/${result.coverage.total} 纳入，` +
             `${result.coverage.excluded} 排除 | 路径风险提示 ${result.risk.tier}；实际影响由 Host 判断`,
     );
-    if (prepared)
+    if (prepared) {
       console.log(
         `${english ? "Review input package" : "评审输入包"}: ${prepared.directory}`,
       );
+      console.log(
+        `${english ? "Dispatch instructions" : "派发说明"}: ${prepared.dispatchInstructions}`,
+      );
+      console.log(
+        `${english ? "Use the exact template" : "直接使用此模板"}: ${prepared.reportTemplate ?? prepared.ownerResponseTemplate}`,
+      );
+    }
     for (const file of result.files) {
       console.log(
         `- ${file.path}: ${file.included ? file.rules.join("; ") || (english ? "generic review" : "通用五维评审") : file.reason}`,

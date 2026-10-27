@@ -14,8 +14,9 @@ Host owns actual risk and the final verdict.
 
 ### Goal, contract and evidence
 
-Reviewers first derive affected scope and counterexamples from original requirements, then
-compare the author's inventory/diff. Reverse-check unchanged callers, direct batch writes,
+Reviewers first read original requirements and the exact diff, then independently trace real callers,
+SQL/projection and write consumers to derive affected scope and falsifying counterexamples. Only then
+compare the author's inventory. Reverse-check unchanged callers, direct batch writes,
 shared methods and state consumers by risk; an entry inventory cannot prove completeness.
 Answer separately:
 1. Does implementation meet the current frozen contract? Route code defects to build.
@@ -103,11 +104,13 @@ or counted as complete independent coverage.
 
 Include only necessary text/paths, not entire repositories, personal rule
 folders, credentials, or chat history. Respect task read permissions. Start from
-diff and expand to related callers only for named risks, recording why. Bundle /
+the original goal and exact diff, trace real callers and SQL/projection consumers for named risks, and record why. Bundle /
 source / contract drift yields NEEDS_CONTEXT rather than reviewing old context
 against current code. Reviewers are read-only: no source edits, application
 management, business DB operations, or nested supervision. New runtime evidence
 returns to the implementer.
+
+Keep orchestration neutral: do not preselect verdicts, cap severity, or ask reviewers to ignore a class of issues. Report spec-mandated defects with their source and assess them against the original goal; “the design requires it” is not an automatic exemption. State missing evidence for the Owner to investigate. Prepared inputs or axis counts do not prove discovery depth.
 
 ### Review preparation
 
@@ -127,6 +130,39 @@ An omitted inventory entry is not out of scope; old writes do not excuse new sid
 The template is not reviewed-source evidence. The reviewer actually reads inputs, records actual
 scope and dispatch/return identity, then decides; missing input remains NEEDS_CONTEXT. Without a
 Git baseline, use the existing snapshot-comparison path below, never fake HEAD or commit early.
+
+Actual dispatch must reference `dispatch-instructions.md` and the returned absolute `reportTemplate`
+path. Use that same canonical template, including five axes, valid finding shape, identity and concern
+rules; do not dispatch only a diff and have the Owner invent another format. `source-manifest.md`
+explicitly exposes unselected dirty files. Never silently filter configuration/temporary files or
+assume prior-session assets belong to this task; the Owner judges ownership, exclusions and isolation.
+The input inventory/hashes are not actual reading; record actual scope/expansion in Impact independently.
+
+For existing findings reuse the same preparation owner instead of guessing headings, enums or hashes:
+
+```bash
+# Original/response paths are project-root relative; use a new output directory each time.
+superflow review-coverage --prepare <response-package> --original-review .sdd/reviews/original.md --json
+# Save an actual separate Owner response and perform affected verification, then prepare rereview.
+superflow review-coverage --prepare <recheck-package> --original-review .sdd/reviews/original.md --owner-response .sdd/reviews/owner-response.md --json
+```
+
+The first step prepares only an Owner response template and original identity/stable-ID inventory,
+not a Reviewer return.
+A complete BLOCKED/NEEDS_CONTEXT original with actual identity, sources, findings and explicit concerns
+can also prepare a response or missing context. Preparation never promotes its state or means review
+completion; templates with missing fields or no findings are not actual originals. The second reads complete original and actual response through the same auditor,
+checking paths, identity, exact original IDs and allowed dispositions. Read-only original snapshots remain
+verbatim; generated Review Chain hashes and Finding Rechecks rows use actual inputs. Source may evolve
+normally while original historical source hashes remain unchanged. Later input drift invalidates an
+already bound chain. All templates remain NEEDS_CONTEXT with no preset fixed/resolved/None or claims of
+actual reading/review. Allowed dispositions are fixed/mitigated/deferred/dismissed; recheck results are
+resolved/dismissed. Actual Reviewer judgments can resolve/dismiss with new evidence; never mechanically
+convert deferrals/mitigations or erase concerns to promote completion. Preserve new findings and concerns.
+Reject escaped/missing/incomplete originals and missing/extra response IDs; retain originals rather than
+rewriting verdicts for formatting. Dispatch confirmed original goal/contract paths, raw evidence and the
+canonical template without implementation chat history or author business conclusions. Investigate actual
+callers, SQL/projection consumers and failure counterexamples before comparing the author's matrix.
 
 Audit the first actual return with existing `review-coverage --report <file> --json` immediately.
 The reviewer completes valid output before its first reference; thereafter keep the original

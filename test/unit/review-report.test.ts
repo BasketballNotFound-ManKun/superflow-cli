@@ -47,6 +47,43 @@ describe("reviewer four-state report", () => {
       expect(result.issues.join("\n")).toContain("Concerns");
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
+  it.each(["mitigated", "deferred"])(
+    "allows actual independent rechecks to resolve historical %s dispositions with new evidence",
+    (disposition) => {
+      const root = fs.mkdtempSync(
+        path.join(os.tmpdir(), "review-disposition-"),
+      );
+      fixtureSources.push(root);
+      const hash = (text: string) =>
+        createHash("sha256").update(text).digest("hex");
+      fs.writeFileSync(path.join(root, "source.ts"), "source");
+      const identity =
+        "## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:d/1 |\n| Return | session:r/1 |\n";
+      const original = `DONE_WITH_CONCERNS\n${identity}## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| source.ts | ${hash("source")} |\n## Findings\n- [F-001] source.ts:1: original error\n## Concerns\nOriginal error remains.\n`;
+      const owner = `## Finding Dispositions\n| ID | Disposition | Evidence |\n|---|---|---|\n| F-001 | ${disposition} | still incomplete |\n`;
+      fs.writeFileSync(path.join(root, "original.md"), original);
+      fs.writeFileSync(path.join(root, "owner.md"), owner);
+      const current = `DONE\n${identity.replace("session:r/1", "session:r/2")}## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| source.ts | ${hash("source")} |\n## Findings\nNone\n## Concerns\nNone\n## Review Chain\n| Role | Path | SHA-256 |\n|---|---|---|\n| original | original.md | ${hash(original)} |\n| owner-response | owner.md | ${hash(owner)} |\n## Finding Rechecks\n| ID | Result | Evidence |\n|---|---|---|\n| F-001 | resolved | test:green |\n`;
+      const result = auditReviewReport(current, root);
+      expect(result.eligibleForTriage).toBe(true);
+      expect(
+        auditReviewReport(
+          current.replace(
+            "| F-001 | resolved | test:green |",
+            "| F-001 | dismissed | source:counterexample |",
+          ),
+          root,
+        ).eligibleForTriage,
+      ).toBe(true);
+      expect(
+        auditReviewReport(
+          current.replace("## Concerns\nNone", "## Concerns\nStill unresolved"),
+          root,
+        ).eligibleForTriage,
+      ).toBe(false);
+    },
+  );
+
   it.each(["unchanged", "changed", "removed"])("retains historical source identity when %s", evolution => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-chain-"));
     const hash = (text: string) => createHash("sha256").update(text).digest("hex");

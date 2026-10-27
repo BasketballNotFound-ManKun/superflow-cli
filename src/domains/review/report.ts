@@ -16,8 +16,13 @@ export interface ReviewReportAudit {
   reviewedSources: Array<{ path: string; sha256: string }> | null;
   dependencies: string[];
   findingIds: string[];
+  findingEntries: Array<{ id: string; text: string }>;
+  concerns: string[] | null;
   issues: string[];
 }
+
+export const REVIEW_DISPOSITIONS = ["fixed", "mitigated", "deferred", "dismissed"] as const;
+export const REVIEW_RECHECK_RESULTS = ["resolved", "dismissed"] as const;
 
 const STATES = new Set<ReviewerState>([
   "DONE", "DONE_WITH_CONCERNS", "BLOCKED", "NEEDS_CONTEXT",
@@ -67,6 +72,7 @@ export function auditReviewReport(
     }
   }
   const findingIds: string[] = [];
+  const findingEntries: ReviewReportAudit["findingEntries"] = [];
   let findings = 0;
   let inFindings = false;
   let findingsSections = 0;
@@ -84,7 +90,10 @@ export function auditReviewReport(
     findings += 1;
     const id = /^\s*(?:[-+*]|\d{1,9}[.)])\s+\[([A-Z][A-Z0-9]*-\d+)\]/.exec(line)?.[1];
     if (!id || findingIds.includes(id)) issues.push("finding requires a unique stable ID");
-    else findingIds.push(id);
+    else {
+      findingIds.push(id);
+      findingEntries.push({ id, text: line.trim() });
+    }
     const anchor = /(?:^|\s)([^\s:]+):([1-9]\d*)\b/.exec(line);
     if (!anchor || !(historical ? safeRelative(anchor[1]) : validAnchor(projectRoot, anchor[1], Number(anchor[2])))) {
       issues.push(`invalid finding anchor: ${line.trim()}`);
@@ -98,6 +107,7 @@ export function auditReviewReport(
   } else if (findings === 0 && !findingsClear) {
     issues.push("Findings must explicitly declare None or list anchored issues");
   }
+  const concerns = sectionLines(lines, "Concerns", issues);
   auditReviewChain(lines, projectRoot, issues, dependencies, ancestors, nextReturns);
   return {
     state,
@@ -108,6 +118,8 @@ export function auditReviewReport(
     reviewedSources,
     dependencies,
     findingIds,
+    findingEntries,
+    concerns,
     issues,
   };
 }
@@ -233,26 +245,63 @@ function auditReviewChain(lines: string[], root: string, issues: string[],
   dependencies.push(...previous.dependencies);
   issues.push(...previous.issues.map(issue => `original: ${issue}`));
   if (!previous.findingIds.length) issues.push("Review Chain original must retain finding IDs");
-  const owner = reportBodyLines(fs.readFileSync(files.get("owner-response")!, "utf8"));
-  if (owner.unclosedContainer || owner.unsupportedTabContainer) issues.push("invalid Owner response Markdown");
-  const dispositions = reportTable(owner.lines, "Finding Dispositions", ["ID", "Disposition", "Evidence"], issues);
-  for (const [label, rows, allowed] of [
-    ["Finding Dispositions", dispositions, ["fixed", "mitigated", "deferred", "dismissed"]],
-    ["Finding Rechecks", rechecks, ["resolved", "dismissed"]],
-  ] as const) {
-    const ids = rows.map(row => row[0]);
-    if (new Set(ids).size !== ids.length || ids.length !== previous.findingIds.length
-        || previous.findingIds.some(id => !ids.includes(id))
-        || rows.some(row => !(allowed as readonly string[]).includes(row[1]))) {
-      const missing = previous.findingIds.filter(id => !ids.includes(id));
-      const unexpected = ids.filter(id => !previous.findingIds.includes(id));
-      const invalid = rows.filter(row => !(allowed as readonly string[]).includes(row[1]));
-      issues.push(`${label} must cover every original finding ID with an explicit result and evidence; ` +
-        `missing=[${missing.join(",")}], unexpected=[${unexpected.join(",")}], ` +
-        `allowed=[${allowed.join(",")}], invalid=[${invalid.map(row => `${row[0]}:${row[1]}`).join(",")}]`);
-    }
-  }
+  const owner = auditOwnerResponse(fs.readFileSync(files.get("owner-response")!, "utf8"), previous.findingIds);
+  issues.push(...owner.issues);
+  auditFindingRows("Finding Rechecks", rechecks, previous.findingIds, REVIEW_RECHECK_RESULTS, issues);
 }
+
+export function auditOwnerResponse(
+  content: string,
+  findingIds: string[],
+): {
+  dispositions: string[][];
+  issues: string[];
+} {
+  const issues: string[] = [];
+  const body = reportBodyLines(content);
+  if (body.unclosedContainer || body.unsupportedTabContainer)
+    issues.push("invalid Owner response Markdown");
+  const dispositions = reportTable(
+    body.lines,
+    "Finding Dispositions",
+    ["ID", "Disposition", "Evidence"],
+    issues,
+  );
+  auditFindingRows(
+    "Finding Dispositions",
+    dispositions,
+    findingIds,
+    REVIEW_DISPOSITIONS,
+    issues,
+  );
+  return { dispositions, issues };
+}
+
+function auditFindingRows(
+  label: string,
+  rows: string[][],
+  findingIds: string[],
+  allowed: readonly string[],
+  issues: string[],
+): void {
+  const ids = rows.map((row) => row[0]);
+  if (
+    new Set(ids).size === ids.length &&
+    ids.length === findingIds.length &&
+    findingIds.every((id) => ids.includes(id)) &&
+    rows.every((row) => allowed.includes(row[1]))
+  )
+    return;
+  const missing = findingIds.filter((id) => !ids.includes(id));
+  const unexpected = ids.filter((id) => !findingIds.includes(id));
+  const invalid = rows.filter((row) => !allowed.includes(row[1]));
+  issues.push(
+    `${label} must cover every original finding ID with an explicit result and evidence; ` +
+      `missing=[${missing.join(",")}], unexpected=[${unexpected.join(",")}], ` +
+      `allowed=[${allowed.join(",")}], invalid=[${invalid.map((row) => `${row[0]}:${row[1]}`).join(",")}]`,
+  );
+}
+
 
 function normalizeSectionHeading(line: string): string {
   const heading = /^ {0,3}##[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/.exec(line);

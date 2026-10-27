@@ -2,6 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
+import { auditOwnerResponse, auditReviewReport } from "./report.js";
+import {
+  renderOwnerResponseTemplate,
+  renderReviewTemplate,
+  type ReviewInputReference,
+} from "./templates.js";
 
 export interface ReviewPackage {
   directory: string;
@@ -10,7 +16,11 @@ export interface ReviewPackage {
   files: string[];
   diff: string;
   sourceManifest: string;
-  reportTemplate: string;
+  reportTemplate?: string;
+  ownerResponseTemplate?: string;
+  reviewInputs?: string;
+  dispatchInstructions: string;
+  unselectedChanges: string[];
 }
 
 // The coverage command owns preparation; this is a disposable input, not a review
@@ -18,7 +28,14 @@ export interface ReviewPackage {
 export function prepareReviewPackage(
   cwd: string,
   destination: string,
-  options: { base?: string; paths?: string[]; english: boolean },
+  options: {
+    base?: string;
+    paths?: string[];
+    english: boolean;
+    originalReview?: string;
+    ownerResponse?: string;
+    reviewerChecklist?: string;
+  },
 ): ReviewPackage {
   const git = (...args: string[]) =>
     execFileSync("git", args, {
@@ -35,6 +52,67 @@ export function prepareReviewPackage(
     directory.startsWith(path.join(root, ".git") + path.sep)
   ) {
     throw new Error("Review package cannot be written inside .git");
+  }
+  if (options.ownerResponse && !options.originalReview) {
+    throw new Error(
+      "--owner-response requires --original-review and --prepare",
+    );
+  }
+  const references: ReviewInputReference[] = [];
+  let findingIds: string[] = [];
+  const inputSummary: string[] = [];
+  if (options.originalReview) {
+    const original = readReviewInput(root, "original", options.originalReview);
+    const audited = auditReviewReport(original.content, root, true);
+    if (
+      audited.issues.length ||
+      !audited.findingIds.length ||
+      !audited.concerns?.length
+    ) {
+      throw new Error(
+        `Invalid or incomplete original review ${original.path}: ${audited.issues.join("; ") || "requires a valid four-state original with finding IDs and explicit Concerns"}; preserve the original and obtain a new actual reviewer return`,
+      );
+    }
+    references.push(original);
+    findingIds = audited.findingIds;
+    inputSummary.push(
+      "## Original Findings",
+      "",
+      ...audited.findingEntries.map((finding) => finding.text),
+      "",
+      "## Original Concerns",
+      "",
+      ...audited.concerns!,
+      "",
+    );
+    if (options.ownerResponse) {
+      const owner = readReviewInput(
+        root,
+        "owner-response",
+        options.ownerResponse,
+      );
+      if (
+        fs.realpathSync(path.join(root, owner.path)) ===
+        fs.realpathSync(path.join(root, original.path))
+      )
+        throw new Error(
+          "Original review and Owner response must be separate files",
+        );
+      const response = auditOwnerResponse(owner.content, findingIds);
+      if (response.issues.length)
+        throw new Error(
+          `Invalid Owner response ${owner.path}: ${response.issues.join("; ")}`,
+        );
+      references.push(owner);
+      inputSummary.push(
+        "## Actual Owner Dispositions",
+        "",
+        "| ID | Disposition | Evidence |",
+        "|---|---|---|",
+        ...response.dispositions.map((row) => `| ${row.join(" | ")} |`),
+        "",
+      );
+    }
   }
   const baseline = git(
     "rev-parse",
@@ -66,6 +144,9 @@ export function prepareReviewPackage(
       ),
     ),
   ].sort();
+  const unselectedChanges = changed
+    .filter((file) => !files.includes(file))
+    .sort();
   const tracked = new Set(
     names(run("ls-tree", "-r", "--name-only", "-z", baseline)),
   );
@@ -133,7 +214,10 @@ export function prepareReviewPackage(
     "",
     `Baseline: ${baseline}`,
     "",
-    "Input identity only; the reviewer must inspect the diff and real callers.",
+    "Input identity only; the reviewer must inspect the original goal, diff and real callers before the author's matrix.",
+    `Selection: ${options.paths?.length ? "explicit --path" : "all changed and untracked files"}. No ownership or prior-session classification is inferred.`,
+    "Snapshot paths: baseline/<Path> and current/<Path>; absent means that side has no file.",
+    "Unselected changes are still visible below; Owner must decide task ownership, exclusions and isolation. Local configuration and temporary files are never silently filtered.",
     "",
     "| Path | Change | Baseline SHA-256 | Current SHA-256 |",
     "|---|---|---|---|",
@@ -142,8 +226,50 @@ export function prepareReviewPackage(
         `| ${s.file} | ${s.before === null ? "added" : s.current === null ? "deleted" : "modified"} | ${digest(s.before)} | ${digest(s.current)} |`,
     ),
     "",
+    "## Unselected Changes",
+    "",
+    ...unselectedChanges.map((file) => `- ${file}`),
+    ...(unselectedChanges.length ? [] : ["None"]),
+    "",
   ].join("\n");
-  const template = reportTemplate(sources, options.english);
+  const ownerOnly = Boolean(options.originalReview && !options.ownerResponse);
+  const template = ownerOnly
+    ? undefined
+    : renderReviewTemplate(
+        sources
+          .filter((source) => source.current !== null)
+          .map((source) => ({
+            path: source.file,
+            sha256: digest(source.current),
+          })),
+        options.english,
+        references,
+        findingIds,
+      );
+  const prepared: ReviewPackage = {
+    directory,
+    projectRoot: root,
+    baseline,
+    files,
+    unselectedChanges,
+    diff: path.join(directory, "diff.patch"),
+    sourceManifest: path.join(directory, "source-manifest.md"),
+    dispatchInstructions: path.join(directory, "dispatch-instructions.md"),
+    ...(template !== undefined
+      ? { reportTemplate: path.join(directory, "review-template.md") }
+      : {}),
+    ...(ownerOnly
+      ? {
+          ownerResponseTemplate: path.join(
+            directory,
+            "owner-response-template.md",
+          ),
+        }
+      : {}),
+    ...(references.length
+      ? { reviewInputs: path.join(directory, "review-inputs.md") }
+      : {}),
+  };
   // mkdir is exclusive even if another invocation creates the destination after
   // validation. Never replace an existing reviewer return or its original hash.
   fs.mkdirSync(path.dirname(directory), { recursive: true });
@@ -164,22 +290,58 @@ export function prepareReviewPackage(
     fs.writeFileSync(path.join(directory, "source-manifest.md"), manifest, {
       flag: "wx",
     });
-    fs.writeFileSync(path.join(directory, "review-template.md"), template, {
-      flag: "wx",
-    });
+    if (prepared.reportTemplate)
+      fs.writeFileSync(prepared.reportTemplate, template!, { flag: "wx" });
+    if (prepared.ownerResponseTemplate)
+      fs.writeFileSync(
+        prepared.ownerResponseTemplate,
+        renderOwnerResponseTemplate(findingIds, options.english),
+        { flag: "wx" },
+      );
+    if (prepared.reviewInputs) {
+      fs.mkdirSync(path.join(directory, "inputs"));
+      for (const input of references) {
+        fs.writeFileSync(
+          path.join(directory, "inputs", `${input.role}.md`),
+          input.content,
+          { flag: "wx", mode: 0o444 },
+        );
+      }
+      fs.writeFileSync(
+        prepared.reviewInputs,
+        [
+          "# Original input identities (read-only snapshots)",
+          "",
+          "Paths below are project-root relative. These are original bytes and historical source identities, not current review conclusions. Never rewrite or rebind their hashes.",
+          "",
+          "| Role | Path | SHA-256 | Snapshot |",
+          "|---|---|---|---|",
+          ...references.map(
+            (input) =>
+              `| ${input.role} | ${input.path} | ${input.sha256} | inputs/${input.role}.md |`,
+          ),
+          "",
+          `Original finding IDs: ${findingIds.join(", ")}`,
+          "",
+          ...inputSummary,
+        ].join("\n"),
+        { flag: "wx" },
+      );
+    }
+    fs.writeFileSync(
+      prepared.dispatchInstructions,
+      dispatchInstructions(
+        prepared,
+        options.english,
+        options.reviewerChecklist,
+      ),
+      { flag: "wx" },
+    );
   } catch (error) {
     fs.rmSync(directory, { recursive: true, force: true });
     throw error;
   }
-  return {
-    directory,
-    projectRoot: root,
-    baseline,
-    files,
-    diff: path.join(directory, "diff.patch"),
-    sourceManifest: path.join(directory, "source-manifest.md"),
-    reportTemplate: path.join(directory, "review-template.md"),
-  };
+  return prepared;
 }
 
 interface SourceInput {
@@ -233,46 +395,96 @@ function digest(content: Buffer | null): string {
     : createHash("sha256").update(content).digest("hex");
 }
 
-function reportTemplate(sources: SourceInput[], english: boolean): string {
-  const note = english
-    ? "Template only. Read the original goal, diff and callers before the author's checklist. Replace identity placeholders with actual dispatch/return references; never turn an unread manifest into reviewed evidence."
-    : "这只是模板。先读原目标、diff和真实调用者，再看作者清单。身份占位必须替换为实际派发/返回引用；输入清单不代表已阅读或已通过。";
+function readReviewInput(
+  root: string,
+  role: ReviewInputReference["role"],
+  candidate: string,
+): ReviewInputReference {
+  const absolute = path.resolve(root, candidate);
+  const relative = path.relative(root, absolute).split(path.sep).join("/");
+  if (
+    !relative ||
+    relative.startsWith("../") ||
+    path.isAbsolute(relative) ||
+    /[\r\n|]/.test(relative) ||
+    relative.split("/").includes(".git")
+  ) {
+    throw new Error(`Invalid project-relative ${role} path: ${candidate}`);
+  }
+  try {
+    const realRoot = fs.realpathSync(root);
+    const realFile = fs.realpathSync(absolute);
+    const resolved = path.relative(realRoot, realFile);
+    if (
+      resolved.startsWith("..") ||
+      path.isAbsolute(resolved) ||
+      !fs.statSync(realFile).isFile()
+    ) {
+      throw new Error("outside project or not a file");
+    }
+    const bytes = fs.readFileSync(absolute);
+    const content = bytes.toString("utf8");
+    if (!Buffer.from(content).equals(bytes))
+      throw new Error("report must be complete UTF-8 text");
+    return { role, path: relative, sha256: digest(bytes), content };
+  } catch (error) {
+    throw new Error(
+      `Cannot read ${role} input ${candidate}: ${(error as Error).message}`,
+    );
+  }
+}
+
+function dispatchInstructions(
+  prepared: ReviewPackage,
+  english: boolean,
+  checklist?: string,
+): string {
   return [
-    "NEEDS_CONTEXT",
+    english ? "# Dispatch instructions" : "# 派发说明",
     "",
-    note,
+    `${english ? "Project root" : "项目根"}: ${prepared.projectRoot}`,
+    `${english ? "Exact diff" : "准确差异"}: ${prepared.diff}`,
+    `${english ? "Input manifest and explicit scope" : "输入清单与显式范围"}: ${prepared.sourceManifest}`,
+    ...(checklist
+      ? [
+          `${english ? "Canonical reviewer checklist" : "规范评审清单"}: ${checklist}`,
+        ]
+      : []),
+    ...(prepared.reviewInputs
+      ? [
+          `${english ? "Original inputs and identities" : "原件与身份"}: ${prepared.reviewInputs}`,
+        ]
+      : []),
     "",
-    "## Review Identity",
+    ...(prepared.reportTemplate
+      ? [
+          `${english ? "Use this exact report template" : "直接使用此报告模板"}: ${prepared.reportTemplate}`,
+          "",
+          english
+            ? "Send this template path in the actual isolated reviewer dispatch; do not send only the diff and invent another report format later. The reviewer writes a new actual return, filling identity, inspected scope, axes, findings and concerns. Preparation never means review executed."
+            : "实际隔离派发必须引用此模板路径，不得仅发 diff 后另造报告格式。Reviewer 新建真实返回，填写身份、实际检查范围、五维、finding 和 concern；准备完成不等于评审已执行。",
+        ]
+      : [
+          `${english ? "Owner response template" : "Owner 响应模板"}: ${prepared.ownerResponseTemplate}`,
+          "",
+          english
+            ? "Fill and save a separate actual Owner response. Then run review-coverage --prepare <new-directory> --original-review <same-original> --owner-response <actual-response> to generate the actual rereview input and exact chain hashes. This step has not dispatched a reviewer."
+            : "填写并另存真实 Owner 响应，再运行 review-coverage --prepare <新目录> --original-review <同一原件> --owner-response <实际响应> 生成实际复评输入与准确链哈希；本步尚未派发 Reviewer。",
+        ]),
     "",
-    "| Field | Value |",
-    "|---|---|",
-    "| Role | independent-reviewer |",
-    "| Dispatch | <actual-dispatch-reference> |",
-    "| Return | <actual-return-reference> |",
+    english
+      ? "Owner supplies confirmed original goal/contract paths, applicable rules and raw evidence paths. Do not include full implementation chat or author business conclusions. Reviewer first investigates goal, diff, unchanged callers, write/SQL/projection consumers and failure counterexamples; only then compare the author's matrix. Record actual reading and expansion reasons in Impact."
+      : "Owner 补充已确认原目标/合同路径、适用规则与原始证据路径；不传整段实现聊天或作者业务结论。Reviewer 先核原目标、diff、未改调用者、写入/SQL/投影消费者与失败反例，再对照作者矩阵；实际阅读及扩查理由写 Impact。",
     "",
-    "## Impact",
+    english
+      ? "Read-only review: no source edits, application startup, business DB operations or nested supervision. Missing inputs remain NEEDS_CONTEXT. Snapshot identities are not claims of actual reading. Owner judges unselected dirty configuration/temporary files and task ownership; no silent exclusion."
+      : "只读评审：不改源码、不启动应用、不操作业务库、不启动嵌套监督。缺输入保持 NEEDS_CONTEXT；快照身份不是实际已读声明。Owner 判断未选脏配置/临时文件及任务所有权，不得静默排除。",
     "",
-    "<goal, actual diff, unchanged callers, failure paths and test sufficiency>",
+    "superflow review-coverage --report <actual-new-report-file> --json",
     "",
-    "## Axes",
-    "",
-    "<actual coverage and evidence; CHECKED is not correctness>",
-    "",
-    "## Findings",
-    "",
-    "<anchored findings or explicit None after actual review>",
-    "",
-    "## Concerns",
-    "",
-    "<unresolved concerns or explicit None>",
-    "",
-    "## Reviewed Sources",
-    "",
-    "| Path | SHA-256 |",
-    "|---|---|",
-    ...sources
-      .filter((s) => s.current !== null)
-      .map((s) => `| ${s.file} | ${digest(s.current)} |`),
+    english
+      ? "Audit the first actual return before referencing it. Retain referenced originals verbatim; format errors require a new actual reviewer return, not Owner rewrites. Preserve original findings/concerns and historical source hashes; use new current findings and actual rechecks for new judgments."
+      : "首次实际返回在引用前运行审计；引用后逐字保留原件，格式问题取得新的实际 Reviewer 返回，不能由 Owner 改结论。保留原 finding/concern 和历史源码哈希；新判断记录当前 finding 及实际复评。",
     "",
   ].join("\n");
 }

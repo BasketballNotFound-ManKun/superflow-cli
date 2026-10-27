@@ -12,7 +12,7 @@ afterEach(() => {
   for (const directory of temporary.splice(0))
     fs.rmSync(directory, { recursive: true, force: true });
 });
-function fixture() {
+function fixture(language = "en") {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "review-package-"));
   temporary.push(directory);
   const root = path.join(directory, "project");
@@ -20,7 +20,7 @@ function fixture() {
   const env = fixtureProcessEnv(path.join(directory, "home"), {
     ...process.env,
     NO_UPDATE_NOTIFIER: "1",
-    SUPERFLOW_LANG: "en",
+    SUPERFLOW_LANG: language,
   });
   const git = (...args: string[]) => {
     const result = spawnSync("git", args, { cwd: root, env, encoding: "utf8" });
@@ -60,6 +60,360 @@ function fixture() {
 }
 
 describe("review package preparation through the existing CLI", () => {
+  it.each(["en", "zh"])(
+    "dispatches the exact canonical template in %s and exposes unselected dirty files",
+    (language) => {
+      const f = fixture(language);
+      fs.writeFileSync(path.join(f.root, "application.ts"), "changed\n");
+      fs.writeFileSync(
+        path.join(f.root, "local.config"),
+        "pre-existing local value\n",
+      );
+      const result = f.run(
+        "--prepare",
+        path.join(f.directory, "review"),
+        "--path",
+        "application.ts",
+        "--json",
+      );
+      expect(result.status, result.stderr).toBe(0);
+      const prepared = JSON.parse(result.stdout).package;
+      expect(prepared.unselectedChanges).toEqual(["local.config"]);
+      const dispatch = fs.readFileSync(prepared.dispatchInstructions, "utf8");
+      expect(dispatch).toContain(prepared.reportTemplate);
+      expect(dispatch).toContain(prepared.sourceManifest);
+      expect(dispatch).toContain(
+        language === "en"
+          ? "Use this exact report template"
+          : "直接使用此报告模板",
+      );
+      const template = fs.readFileSync(prepared.reportTemplate, "utf8");
+      for (const axis of [
+        "security",
+        "performance",
+        "correctness",
+        "maintainability",
+        "architecture",
+      ])
+        expect(template).toContain(`| ${axis} | BLOCKED |`);
+      expect(template).toContain("[F-001]");
+      expect(template).toContain("<actual-read-range");
+      expect(fs.readFileSync(prepared.sourceManifest, "utf8")).toContain(
+        "local.config",
+      );
+      const promoted = path.join(f.directory, "promoted.md");
+      fs.writeFileSync(promoted, template.replace(/^NEEDS_CONTEXT/, "DONE"));
+      expect(
+        f.run("--report", promoted, "--path", "application.ts", "--json")
+          .status,
+      ).toBe(1);
+    },
+    15_000,
+  );
+
+  it.each(["DONE_WITH_CONCERNS", "BLOCKED", "NEEDS_CONTEXT"])(
+    "prepares Owner response and actual recheck from a %s original without rebinding source or verdicts",
+    (state) => {
+      const f = fixture();
+      const hash = (text: string) =>
+        createHash("sha256").update(text).digest("hex");
+      const original = `${state}\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:original/dispatch |\n| Return | session:original/return |\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| application.ts | ${hash("export const value = 1;\n")} |\n## Findings\n- [F-001] application.ts:1 [correctness][HIGH] missing guard\n- [F-002] application.ts:1 [architecture][MEDIUM] missing caller\n## Concerns\nF-001 and F-002 remain unresolved.\n`;
+      fs.writeFileSync(path.join(f.root, "original.md"), original);
+      const originalAudit = f.run(
+        "--report",
+        "original.md",
+        "--path",
+        "application.ts",
+        "--json",
+      );
+      expect(originalAudit.status).toBe(1);
+      const originalFacts = JSON.parse(originalAudit.stdout).report;
+      expect(originalFacts.state).toBe(state);
+      expect(originalFacts.issues).toEqual([]);
+      expect(originalFacts.eligibleForTriage).toBe(false);
+      fs.writeFileSync(path.join(f.root, "application.ts"), "after repair\n");
+      const responseResult = f.run(
+        "--prepare",
+        path.join(f.directory, "response"),
+        "--original-review",
+        "original.md",
+        "--path",
+        "application.ts",
+        "--json",
+      );
+      expect(responseResult.status, responseResult.stderr).toBe(0);
+      const responsePackage = JSON.parse(responseResult.stdout).package;
+      const responseTemplate = fs.readFileSync(
+        responsePackage.ownerResponseTemplate,
+        "utf8",
+      );
+      expect(responsePackage.reportTemplate).toBeUndefined();
+      expect(responseTemplate).toMatch(/^NEEDS_CONTEXT\n/);
+      expect(responseTemplate).toContain("| F-001 | <disposition> |");
+      expect(responseTemplate).toContain("| F-002 | <disposition> |");
+      expect(responseTemplate).toContain(
+        "fixed, mitigated, deferred, dismissed",
+      );
+      const owner =
+        "## Finding Dispositions\n| ID | Disposition | Evidence |\n|---|---|---|\n| F-001 | deferred | authorization:pending; still open |\n| F-002 | fixed | test:caller |\n";
+      fs.writeFileSync(path.join(f.root, "owner.md"), owner);
+      const nested = path.join(f.root, "nested");
+      fs.mkdirSync(nested);
+      const rereview = f.runFrom(
+        nested,
+        "--prepare",
+        path.join(f.directory, "recheck"),
+        "--original-review",
+        "original.md",
+        "--owner-response",
+        "owner.md",
+        "--path",
+        "application.ts",
+        "--json",
+      );
+      expect(rereview.status, rereview.stderr).toBe(0);
+      const prepared = JSON.parse(rereview.stdout).package;
+      const template = fs.readFileSync(prepared.reportTemplate, "utf8");
+      expect(template).toMatch(/^NEEDS_CONTEXT\n/);
+      const templateAudit = f.run(
+        "--report",
+        prepared.reportTemplate,
+        "--path",
+        "application.ts",
+        "--json",
+      );
+      expect(templateAudit.status).toBe(1);
+      expect(JSON.parse(templateAudit.stdout).report.eligibleForTriage).toBe(
+        false,
+      );
+      expect(template).toContain(
+        `| original | original.md | ${hash(original)} |`,
+      );
+      expect(template).toContain(
+        `| owner-response | owner.md | ${hash(owner)} |`,
+      );
+      expect(template).toContain("| F-001 | <result> |");
+      expect(template).toContain("| F-002 | <result> |");
+      expect(template).not.toContain("| F-001 | resolved |");
+      const inputs = fs.readFileSync(prepared.reviewInputs, "utf8");
+      expect(inputs).toContain("F-001 and F-002 remain unresolved.");
+      expect(inputs).toContain("deferred");
+      expect(fs.readFileSync(path.join(f.root, "original.md"), "utf8")).toBe(
+        original,
+      );
+      expect(fs.readFileSync(path.join(f.root, "owner.md"), "utf8")).toBe(
+        owner,
+      );
+      expect(
+        fs.readFileSync(
+          path.join(prepared.directory, "inputs/original.md"),
+          "utf8",
+        ),
+      ).toBe(original);
+      expect(
+        fs.statSync(path.join(prepared.directory, "inputs/original.md")).mode &
+          0o222,
+      ).toBe(0);
+      expect(inputs).toContain("[F-001] application.ts:1");
+      const completed = template
+        .replace(/^NEEDS_CONTEXT/, "DONE")
+        .replace("<actual-dispatch-reference>", "session:recheck/dispatch")
+        .replace("<actual-return-reference>", "session:recheck/return")
+        .replace(
+          /## Findings\n[\s\S]*?(?=\n## Concerns)/,
+          "## Findings\nNone\n",
+        )
+        .replace(/## Concerns\n[\s\S]*?(?=\n## )/, "## Concerns\nNone\n")
+        .replaceAll("<result>", "resolved")
+        .replaceAll(
+          "<actual-independent-recheck-evidence>",
+          "source:current/1; test:actual-rerun",
+        );
+      const completedFile = path.join(f.directory, "completed.md");
+      fs.writeFileSync(completedFile, completed);
+      const completedAudit = f.run(
+        "--report",
+        completedFile,
+        "--path",
+        "application.ts",
+        "--json",
+      );
+      expect(completedAudit.status, completedAudit.stderr).toBe(0);
+      expect(JSON.parse(completedAudit.stdout).report.dependencies).toEqual([
+        "original.md",
+        "owner.md",
+      ]);
+      fs.writeFileSync(
+        path.join(f.root, "owner.md"),
+        owner + "\nChanged after binding.\n",
+      );
+      const drifted = f.run(
+        "--report",
+        completedFile,
+        "--path",
+        "application.ts",
+        "--json",
+      );
+      expect(drifted.status).toBe(1);
+      expect(JSON.parse(drifted.stdout).report.issues.join("\n")).toContain(
+        "Review Chain invalid file/hash: owner.md",
+      );
+      fs.writeFileSync(path.join(f.root, "owner.md"), owner);
+      expect(fs.readFileSync(path.join(f.root, "original.md"), "utf8")).toBe(
+        original,
+      );
+      const filled = template
+        .replace(/^NEEDS_CONTEXT/, "DONE")
+        .replace("<actual-dispatch-reference>", "session:recheck/dispatch")
+        .replace("<actual-return-reference>", "session:recheck/return")
+        .replace(
+          /## Findings\n[\s\S]*?(?=\n## Concerns)/,
+          "## Findings\n- [F-003] application.ts:1 [correctness][HIGH] new failure\n",
+        )
+        .replace(
+          /## Concerns\n[\s\S]*?(?=\n## )/,
+          "## Concerns\nStill deferred and new failure.\n",
+        )
+        .replaceAll("<result>", "resolved");
+      const actual = path.join(f.directory, "current.md");
+      fs.writeFileSync(actual, filled);
+      const audit = f.run(
+        "--report",
+        actual,
+        "--path",
+        "application.ts",
+        "--json",
+      );
+      expect(audit.status).toBe(1);
+      const parsed = JSON.parse(audit.stdout).report;
+      expect(parsed.findingIds).toEqual(["F-003"]);
+      expect(parsed.findingsClear).toBe(false);
+    },
+    15_000,
+  );
+
+  it.each([
+    "incomplete-context-template",
+    "no-findings",
+    "missing-concerns",
+    "empty-concerns",
+  ])(
+    "rejects %s without preparing or altering the original",
+    (kind) => {
+      const f = fixture();
+      const sha = createHash("sha256")
+        .update("export const value = 1;\n")
+        .digest("hex");
+      let original = `BLOCKED\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| application.ts | ${sha} |\n## Findings\n- [F-001] application.ts:1: real blocker\n## Concerns\nF-001 remains open.\n`;
+      if (kind === "incomplete-context-template")
+        original = original
+          .replace(/^BLOCKED/, "NEEDS_CONTEXT")
+          .replace("session:fixture/dispatch", "<actual-dispatch-reference>")
+          .replace("session:fixture/return", "<actual-return-reference>");
+      if (kind === "no-findings")
+        original = original.replace(
+          "- [F-001] application.ts:1: real blocker",
+          "None",
+        );
+      if (kind === "missing-concerns")
+        original = original.replace("## Concerns\nF-001 remains open.\n", "");
+      if (kind === "empty-concerns")
+        original = original.replace("F-001 remains open.", "");
+      fs.writeFileSync(path.join(f.root, "original.md"), original);
+      const directory = path.join(f.directory, "rejected");
+      const result = f.run(
+        "--prepare",
+        directory,
+        "--original-review",
+        "original.md",
+        "--path",
+        "application.ts",
+        "--json",
+      );
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("Invalid or incomplete original review");
+      expect(fs.existsSync(directory)).toBe(false);
+      expect(fs.readFileSync(path.join(f.root, "original.md"), "utf8")).toBe(
+        original,
+      );
+    },
+    15_000,
+  );
+
+  it.each([
+    "missing-original",
+    "incomplete-original",
+    "outside-original",
+    "incomplete-owner",
+    "wrong-owner-ids",
+    "outside-owner",
+    "symlink-original",
+    "owner-without-original",
+  ])(
+    "rejects %s before creating a package",
+    (kind) => {
+      const f = fixture();
+      const output = path.join(f.directory, "review");
+      const args = ["--prepare", output, "--path", "application.ts", "--json"];
+      const missing = path.join(f.root, "missing.md");
+      fs.writeFileSync(
+        path.join(f.root, "incomplete.md"),
+        "DONE_WITH_CONCERNS\n## Findings\n- [F-001] application.ts:1: problem\n",
+      );
+      if (
+        ["incomplete-owner", "wrong-owner-ids", "outside-owner"].includes(kind)
+      ) {
+        const sha = createHash("sha256")
+          .update("export const value = 1;\n")
+          .digest("hex");
+        fs.writeFileSync(
+          path.join(f.root, "valid.md"),
+          `DONE_WITH_CONCERNS\n## Review Identity\n| Field | Value |\n|---|---|\n| Role | independent-reviewer |\n| Dispatch | session:fixture/dispatch |\n| Return | session:fixture/return |\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| application.ts | ${sha} |\n## Findings\n- [F-001] application.ts:1: problem\n## Concerns\nStill open\n`,
+        );
+        fs.writeFileSync(
+          path.join(f.root, "owner.md"),
+          kind === "wrong-owner-ids"
+            ? "## Finding Dispositions\n| ID | Disposition | Evidence |\n|---|---|---|\n| F-999 | fixed | test:evidence |\n"
+            : "## Finding Dispositions\n",
+        );
+        args.push(
+          "--original-review",
+          "valid.md",
+          "--owner-response",
+          kind === "outside-owner" ? "../outside.md" : "owner.md",
+        );
+      } else if (kind === "symlink-original") {
+        fs.writeFileSync(path.join(f.directory, "outside.md"), "private\n");
+        fs.symlinkSync(
+          path.join(f.directory, "outside.md"),
+          path.join(f.root, "link.md"),
+        );
+        args.push("--original-review", "link.md");
+      } else if (kind === "outside-original") {
+        fs.writeFileSync(path.join(f.directory, "outside.md"), "private\n");
+        args.push("--original-review", "../outside.md");
+      } else if (kind === "owner-without-original") {
+        args.push("--owner-response", "incomplete.md");
+      } else {
+        args.push(
+          "--original-review",
+          kind === "missing-original" ? missing : "incomplete.md",
+        );
+      }
+      const result = f.run(...args);
+      expect(result.status).not.toBe(0);
+      expect(fs.existsSync(output)).toBe(false);
+      expect(result.stderr).not.toMatch(/unknown option/);
+      if (kind === "wrong-owner-ids") {
+        expect(result.stderr).toContain("missing=[F-001]");
+        expect(result.stderr).toContain("unexpected=[F-999]");
+      }
+      if (kind === "incomplete-owner")
+        expect(result.stderr).toContain("Invalid Owner response");
+    },
+    15_000,
+  );
+
   it("captures unstaged, added and deleted sources without committing or rewriting them", () => {
     const f = fixture();
     fs.writeFileSync(

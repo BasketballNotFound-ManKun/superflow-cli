@@ -91,6 +91,8 @@ export interface CliHelpText {
   reviewPathOption: string;
   reviewReportOption: string;
   reviewPrepareOption: string;
+  reviewOriginalOption: string;
+  reviewOwnerResponseOption: string;
 }
 
 const CLI_TEXT: Record<Language, CliHelpText> = {
@@ -104,6 +106,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "Enumerate changed files, resolve path rules, and emit risk hints for Host impact assessment",
     reviewPrepareOption:
       "Prepare a new diff/source snapshot/report template package without committing",
+    reviewOriginalOption: "With --prepare, read an original project-root-relative review and prepare Owner response input",
+    reviewOwnerResponseOption: "With --prepare and --original-review, bind actual Owner response for a new rereview template",
     reviewBaseOption: "Review changes since a Git reference",
     reviewPathOption: "Review explicit files",
     reviewReportOption:
@@ -237,6 +241,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "枚举改动文件、解析路径规则并提供风险提示；实际影响由 Host 判断",
     reviewPrepareOption:
       "生成新的差异、源码快照与报告模板包，不提交或覆盖已有报告",
+    reviewOriginalOption: "配合 --prepare 读取项目根相对原评审，准备 Owner 响应输入",
+    reviewOwnerResponseOption: "配合 --prepare 和 --original-review 绑定实际 Owner 响应，生成新复评模板",
     reviewBaseOption: "评审相对 Git 引用的改动",
     reviewPathOption: "评审指定文件",
     reviewReportOption: "核验报告状态与锚点；五维充分性由 Host 判断",

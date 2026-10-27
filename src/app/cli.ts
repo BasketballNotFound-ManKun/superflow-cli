@@ -376,6 +376,8 @@ program
   .option("--path <paths...>", helpText.reviewPathOption)
   .option("--report <path>", helpText.reviewReportOption)
   .option("--prepare <directory>", helpText.reviewPrepareOption)
+  .option("--original-review <path>", helpText.reviewOriginalOption)
+  .option("--owner-response <path>", helpText.reviewOwnerResponseOption)
   .option("--json", helpText.jsonOption)
   .action(async (options) => {
     const { reviewCoverageCommand } =
@@ -385,6 +387,8 @@ program
       paths: options.path,
       report: options.report,
       prepare: options.prepare,
+      originalReview: options.originalReview,
+      ownerResponse: options.ownerResponse,
       json: options.json,
     });
   });
