@@ -548,3 +548,16 @@ Synthetic cases do not prove overall model compliance or repaired external busin
 Roll back affected changes if packages omit/duplicate changes, expose outside sources, overwrite
 returns, promote templates/rebound old hashes, reuse stale builds after source changes or force
 unrelated runtime work after documentation-only repairs. Preserve evidence and gates.
+
+
+## Delegation consumption, capture preflight and review preparation (2026-10-27)
+
+Baseline 258452f passed 88 targeted tests in three files; the previous full run of 1,587 tests is historical baseline evidence. External observations exposed mostly sequential Owner work, plan/path errors discovered after expensive execution, review-format/hash rework, and byte-freezing mutable task progress/live reports. Responsibility belongs to existing Agent consumption, capture/review preparation and source identity, not a new managed scheduler.
+
+Inspect reference source first: computing a dependency frontier differs from deciding how Agents execute it. Retain path rules, precise briefs, neutral orchestration and batched repairs; do not import fixed headcounts, model switching, per-ticket pauses or another checkpoint system. Old Owner guidance already supported reasonable decisions. Isolated old/new consumer probes observe application, not newly invented capabilities, discovery rates or runtime gains.
+
+Deterministic RED/GREEN cases cover batch plan diagnostics without command/output effects, unbuilt dependencies without fabricated PASS, actual build/case capture, canonical initial/response/re-review templates that remain NEEDS_CONTEXT, immutable original/historical source identities and legitimate new-evidence resolved/dismissed results, task checkoff remaining valid while semantic changes invalidate identity, and live reports rejected as contracts. Ordinary files/code/original reviews retain byte checks. A proposed blanket DONE block based on Owner mitigation/deferral words was rejected and is not counted as a gain.
+
+No new Skill, Hook or long-lived state; bilingual/dual-host deployment keeps its existing owner. Targeted tests, independent review, the single full verification entry and local installation are evidenced in the external run records, not inferred from templates or structural PASS. Installation is local-only under user authorization; no release.
+
+Rollback on preflight command execution/input replacement/hidden failure, overwritten original reviews or prepared inputs counted as actual review, status-word rules overriding semantics, changed tasks passing or progress-only edits failing, delegation conflicts/context loss/self-review relabeling, or installation damaging unknown assets. Repair the existing owner or revert the change; never weaken gates or rewrite history to claim success.

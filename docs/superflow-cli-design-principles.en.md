@@ -335,3 +335,14 @@ is historical; code/comment headings cannot change scope. Preserve original revi
 identity and append dispositions/rechecks. Derive actuals from observations and propagate failures.
 Capture establishes execution facts, neither rejects legitimate actual/expected equality nor
 proves business semantics automatically.
+
+
+## Owner delegation and execution preparation (2026-10-27)
+
+At startup and integration points, the Owner weighs task size, the dependency-ready frontier, shared files/runtime resources, required context and dispatch/integration cost. Small work can stay inline; a tightly sequential chain retains one subagent's context; only independent, non-conflicting branches run in parallel. Shared contracts and integration decisions remain with the Owner, and implementation delegation does not replace independent review. Add no fixed headcount, model policy, supervisor or scheduling state.
+
+Batch-check plans, resolved paths, sources, execution context and output conflicts through the existing capture owner before execution. Preflight runs no commands, writes no evidence and produces no business PASS. Recording reuses the same preparation while preserving exit codes, source/artifact/runtime identity and business assertions. Recapture according to actual changes; planned fields are not observations.
+
+Review preparation uses existing review-coverage templates and original snapshots in actual dispatch. Owner responses and actual re-reviews remain separate additions. Preparation does not prefill verdicts, reading claims or dispositions. Genuine new evidence may independently resolve an earlier finding; do not decide from an old Owner status word alone. Orchestration is neutral: no preset verdict/severity ceiling or automatic exemption for spec-mandated defects.
+
+Current task sources use the existing canonical handoff identity: checkoff does not force contract re-review, while changed task semantics still invalidate it. The live test-report is reference-only, never a frozen contract/requirement. Other files, code execution and original reviews retain their byte identities; add no parallel hash algorithm or raw-byte compatibility fallback.
