@@ -165,7 +165,7 @@ describe("旧 Git 入口的正式提交证据门", () => {
         command: { argv: receipt.command.argv, exitCode: 0 },
       };
       const raw = JSON.stringify(event) + "\n";
-      fs.writeFileSync(path.join(change, "logs/E11.events.jsonl"), raw);
+      fs.writeFileSync(path.resolve(change, "logs", receipt.command.output), raw);
       receipt.command.sha256 = digest(raw);
       fs.writeFileSync(receiptPath, JSON.stringify(receipt));
       git(["add", "."]);
@@ -223,7 +223,8 @@ describe("旧 Git 入口的正式提交证据门", () => {
         encoding: "utf8",
       });
       expect(complete.status, complete.stdout + complete.stderr).toBe(0);
-      const rawPath = "openspec/changes/anonymous/logs/E11.events.jsonl";
+      const currentReceipt = JSON.parse(fs.readFileSync(path.join(change, "logs/E11.json"), "utf8"));
+      const rawPath = path.relative(repo, path.resolve(change, "logs", currentReceipt.command.output));
       const retained = fs.readFileSync(path.join(repo, rawPath));
       git(["rm", rawPath]);
       fs.writeFileSync(path.join(repo, rawPath), retained);

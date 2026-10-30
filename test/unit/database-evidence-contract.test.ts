@@ -114,7 +114,7 @@ function receiptCheck(f: ReturnType<typeof fixture>, mutate = (_r: any) => {}) {
     command: { argv: receipt.command.argv, exitCode: 0 },
   };
   const output = JSON.stringify(event) + "\n";
-  fs.writeFileSync(path.join(f.dir, "logs/C2.events.jsonl"), output);
+  fs.writeFileSync(path.resolve(f.dir, "logs", receipt.command.output), output);
   receipt.command.sha256 = digest(output);
   fs.writeFileSync(path.join(f.dir, "logs/C2.json"), JSON.stringify(receipt));
   fs.writeFileSync(path.join(f.dir, "review.json"), JSON.stringify(f.review));
@@ -216,7 +216,8 @@ describe("数据库执行合同", () => {
           r.database.assertions[2].actual.rows[0].value = true;
       });
       if (scope === "raw") {
-        const file = path.join(f.dir, "logs/C2.events.jsonl");
+        const current = JSON.parse(fs.readFileSync(path.join(f.dir, "logs/C2.json"), "utf8"));
+        const file = path.resolve(f.dir, "logs", current.command.output);
         const event = JSON.parse(fs.readFileSync(file, "utf8"));
         event.assertions[0].actual = 1;
         const output = JSON.stringify(event) + "\n";

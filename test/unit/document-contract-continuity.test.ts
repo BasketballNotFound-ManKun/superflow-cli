@@ -69,6 +69,23 @@ describe.each(["skills", "skills-en"])("%s contract continuity", (language) => {
       expect(guide).toContain(field);
     }
   });
+
+  it("navigates one observed batch without replaying unbound test output", () => {
+    const guide = read(language, "superflow/references/test-guide.md");
+    for (const section of [
+      "## Observed batch and measurement diagnostics",
+      "--check-measurement",
+      "--measurement",
+      "MEASUREMENT_DIAGNOSTIC_ONLY",
+      '"cases"',
+      "Previous attempts",
+    ]) {
+      expect(guide).toContain(section);
+    }
+    const template = read(language, "superflow/references/test-execution-template.md");
+    expect(template).toContain("test-guide.md#observed-batch-and-measurement-diagnostics");
+    expect(guide).not.toContain("只表示离线检查通过");
+  });
 });
 
 describe("document contract installation continuity", () => {

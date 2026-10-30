@@ -677,6 +677,16 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
                           ("route", entry["route"]), ("kind", case["level"])]:
         if target.get(key) != expected:
             raise ValueError(f"真实运行目标 {key} 与冻结入口不一致")
+    validate_measurement_assertions(receipt, case)
+
+    # Every PASS needs observed execution, including cases without a declaration.
+    case_capture = validate_capture(file.parent, receipt, "case")
+    build_capture = validate_capture(file.parent, build, "build")
+    if case_capture["startedNs"] < build_capture["finishedNs"]:
+        raise ValueError("case capture 早于绑定构建完成，不能重绑新构建身份")
+
+
+def validate_measurement_assertions(receipt: dict, case: dict) -> None:
     assertions = receipt["assertions"]
     required = set(case.get("assertions", {})) - {"persistence"}
     required |= {"response", "state", "forbiddenEffects"}
@@ -701,10 +711,6 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
                 or (after["value"] is None and not expected.get("allowNull", False))
                 or actual.get("result") != "PASS"):
             raise ValueError("持久化值未达到预期；结构存在/全 NULL/跨业务 ID 不能替代写入")
-
-    # Every PASS needs observed execution, including cases without a declaration.
-    validate_capture(file.parent, receipt, "case")
-    validate_capture(file.parent, build, "build")
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -782,29 +788,35 @@ class CaptureOutputConflict(ValueError):
 
 
 def write_capture_text(file: Path, value: str, write_guard) -> None:
-    write_guard()
+    write_guard(file)
     file.write_text(value, encoding="utf-8")
 
 
 def observe_command(argv: list, cwd: Path, output: Path, kind: str,
-                    sources: list, redactor: Path, write_guard) -> dict:
+                    sources: list, redactor: Path, write_guard, case_ids=None) -> dict:
     if (not isinstance(argv, list) or not argv
             or any(not isinstance(arg, str) or not arg.strip() for arg in argv)):
         raise ValueError("capture 需要非空 argv 数组，不使用隐式 Shell")
     before = captured_sources(output.parent, [s["path"] for s in sources], output.parent)
     started = time.time_ns()
+    print(f"capture {kind} 开始；startedNs={started}", flush=True)
     try:
-        child = subprocess.run(argv, cwd=cwd, capture_output=True)
-        exit_code, stdout, stderr = child.returncode, child.stdout, child.stderr
+        child = subprocess.Popen(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print(f"capture {kind} 运行中；pid={child.pid}", flush=True)
+        stdout, stderr = child.communicate()
+        exit_code = child.returncode
     except OSError as error:
         exit_code, stdout, stderr = 127, b"", str(error).encode()
     finished = time.time_ns()
+    print(f"capture {kind} 结束；exitCode={exit_code}；elapsedMs={(finished-started)//1000000}", flush=True)
     stdout_text, stderr_text, safe_argv = redact_capture(
         [stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace"), argv], redactor)
     # The first persisted bytes already pass the same redactor as Runner logs.
     captured = {"schemaVersion": "superflow.execution-capture.v1", "kind": kind,
                 "argv": safe_argv, "cwd": str(cwd), "exitCode": exit_code,
                 "startedNs": started, "finishedNs": finished, "sourcesBefore": before}
+    if kind == "case":
+        captured["caseIds"] = case_ids
     for key, value in [("stdout", stdout_text), ("stderr", stderr_text)]:
         file = output.with_suffix("." + key + ".log")
         write_capture_text(file, value, write_guard)
@@ -856,6 +868,14 @@ def validate_capture(base: Path, record: dict, kind: str) -> dict:
     if kind == "case":
         if captured.get("cwd") != record.get("executionContext", {}).get("cwd"):
             raise ValueError("capture 实际工作目录与冻结执行上下文不一致")
+        case_ids = captured.get("caseIds")
+        if (not isinstance(case_ids, list) or not case_ids
+                or any(not isinstance(value, str) for value in case_ids)
+                or len(set(case_ids)) != len(case_ids) or record["caseId"] not in case_ids):
+            raise ValueError("capture 缺少唯一同次 Case 清单")
+        observed_ids = [event.get("caseId") for event in measurement_events(streams["stdout"])]
+        if sorted(observed_ids, key=str) != sorted(case_ids):
+            raise ValueError("capture measurement Case 清单遗漏、重复或包含未声明事件")
         measured = measurement_event(streams["stdout"], record["caseId"])
         for key in ("executed", "assertions", "persistence", "target", "database", "mockBoundary", "testLayer"):
             if not json_equal(measured.get(key), record.get(key)):
@@ -865,7 +885,7 @@ def validate_capture(base: Path, record: dict, kind: str) -> dict:
     return captured
 
 
-def measurement_event(stdout: str, case_id: str) -> dict:
+def measurement_events(stdout: str) -> list:
     events = []
     for line in stdout.splitlines():
         try:
@@ -874,13 +894,77 @@ def measurement_event(stdout: str, case_id: str) -> dict:
                 events.append(value)
         except ValueError:
             continue
-    if len(events) != 1 or events[0].get("caseId") != case_id:
-        raise ValueError("capture 缺少唯一实测事件；不能按 expected 生成 actual")
-    return events[0]
+    return events
+
+
+def measurement_event(stdout: str, case_id: str) -> dict:
+    selected = [event for event in measurement_events(stdout) if event.get("caseId") == case_id]
+    if len(selected) != 1:
+        raise ValueError(f"capture measurement 缺少唯一实测事件 {case_id}；不能按 expected 生成 actual")
+    return selected[0]
+
+
+def measurement_diagnostics(stdout: str, prepared: list) -> list:
+    """Read-only structural observations; only receipt validation can award PASS."""
+    events = measurement_events(stdout)
+    problems = []
+    selected = {item["case"]["id"] for item in prepared if item.get("case")}
+    for event in events:
+        if not isinstance(event.get("caseId"), str) or event["caseId"] not in selected:
+            problems.append(f"measurement 未声明 Case: {event.get('caseId')!r}")
+    for item in prepared:
+        case, entry = item["case"], item["entry"]
+        prefix = f"measurement {case['id']}: "
+        matches = [event for event in events if event.get("caseId") == case["id"]]
+        if len(matches) != 1:
+            problems.append(prefix + f"需要唯一事件，实际 {len(matches)}")
+            continue
+        event = matches[0]
+        if type(event.get("executed")) is not int or event["executed"] < 1:
+            problems.append(prefix + "executed 必须为正整数")
+        assertions = event.get("assertions")
+        required = (set(case.get("assertions", {})) - {"persistence"}) | {"response", "state", "forbiddenEffects"}
+        if (not isinstance(assertions, list) or any(not isinstance(value, dict) or not isinstance(value.get("id"), str) for value in assertions)
+                or {value.get("id") for value in assertions} != required or len(assertions) != len(required)):
+            problems.append(prefix + "assertions 缺少唯一冻结 response/state/forbiddenEffects")
+        else:
+            for assertion in assertions:
+                if (assertion.get("result") != "PASS" or "expected" not in assertion or "actual" not in assertion
+                        or not json_equal(assertion["expected"], assertion["actual"])):
+                    problems.append(prefix + f"assertions {assertion.get('id')} 失败或缺少 expected/actual")
+        target = event.get("target")
+        if not isinstance(target, dict):
+            problems.append(prefix + "target 缺少当前构建/源码/入口身份")
+        else:
+            expected = {"service": entry.get("service", entry["id"]), "route": entry["route"], "kind": case["level"]}
+            build = item.get("build")
+            if build:
+                expected.update(buildId=build["id"], buildSha256=build["sha256"], sourceFingerprint=build["sourceFingerprint"])
+            else:
+                problems.append(prefix + "target 当前构建尚未执行，无法核验构建身份")
+            for key, value in expected.items():
+                if not json_equal(target.get(key), value):
+                    problems.append(prefix + f"target.{key} 与冻结入口/当前构建不一致")
+        try:
+            validate_measurement_assertions(event, case)
+        except (ValueError, KeyError, TypeError, AttributeError) as error:
+            problems.append(prefix + f"assertions/persistence: {error}")
+        if not isinstance(event.get("persistence", []), list):
+            problems.append(prefix + "persistence 必须为数组")
+        elif len(event.get("persistence", [])) != len(case.get("assertions", {}).get("persistence", [])):
+            problems.append(prefix + "persistence 数量与冻结合同不一致")
+        try:
+            paths = {(item["output"].parent / source["path"]).resolve()
+                     for source in (item.get("build") or {}).get("sources", [])}
+            validate_database_receipt({"evidenceKind": case.get("evidenceKind", "real"), **event},
+                                      event, case, entry, item["coverage"], item["change"], paths)
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+            problems.append(prefix + f"database: {error}")
+    return problems
 
 
 def write_capture_record(output: Path, record: dict, event: dict, write_guard) -> None:
-    event_file = output.with_suffix(".events.jsonl")
+    event_file = output.with_name(output.stem + ".attempt-" + uuid.uuid4().hex + ".events.jsonl")
     write_capture_text(event_file, json.dumps(event, ensure_ascii=False) + "\n", write_guard)
     record["command"].update(output=event_file.name, sha256=sha256_bytes(event_file.read_bytes()))
     write_capture_text(output, json.dumps(record, ensure_ascii=False), write_guard)
@@ -914,10 +998,10 @@ def execution_id_index(items, label: str) -> dict:
     return result
 
 
-def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False) -> dict:
+def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False, override=None) -> dict:
     """One read-only preparation path for preview and actual capture."""
     base = plan_file.parent
-    plan = json.loads(verified_file(base, plan_file.name).read_text(encoding="utf-8"))
+    plan = override if override is not None else json.loads(verified_file(base, plan_file.name).read_text(encoding="utf-8"))
     if not isinstance(plan, dict):
         raise ValueError("plan 必须为 JSON object")
     prepared = {"plan": plan, "planFile": plan_file, "inputs": {plan_file},
@@ -1120,7 +1204,7 @@ def execution_output_issues(prepared: list, plan_files: list) -> list:
     for item in prepared:
         if not item["output"]:
             continue
-        for file in execution_output_files(item["output"]):
+        for file in dict.fromkeys(execution_output_files(item["output"]) + item.get("runtimeOutputs", [])):
             file = file.resolve()
             # Explicit plan/review/source/artifact inputs never receive an
             # exemption, even if the same path also serves as a build receipt.
@@ -1150,9 +1234,29 @@ def check_execution_plans(plan_files: list, allow_pending_build: bool = True) ->
     prepared, errors = [], []
     for file in plan_files:
         try:
-            item = prepare_execution_plan(file, allow_pending_build)
-            prepared.append(item)
-            errors.extend(f"{file}: {error}" for error in item["errors"])
+            plan = json.loads(file.read_text(encoding="utf-8"))
+            selected = plan.get("cases") if isinstance(plan, dict) else None
+            if selected is not None:
+                if (plan.get("kind") != "case" or not isinstance(selected, list) or not selected
+                        or "caseId" in plan or "output" in plan
+                        or any(not isinstance(value, dict) or set(value) != {"caseId", "output"}
+                               for value in selected)):
+                    raise ValueError("cases 需要非空 {caseId, output} 数组，不能混用顶层 caseId/output")
+                ids = [value["caseId"] for value in selected]
+                if any(not isinstance(value, str) for value in ids) or len(set(ids)) != len(ids):
+                    raise ValueError("cases caseId 必须唯一且为字符串")
+            group = []
+            for selection in selected if selected is not None else [None]:
+                expanded = {**plan, **selection} if selection is not None else plan
+                item = prepare_execution_plan(file, allow_pending_build, expanded)
+                prepared.append(item)
+                group.append(item)
+                errors.extend(f"{file}: {error}" for error in item["errors"])
+            if selected is not None:
+                contexts = [value.get("case", {}).get("executionContext") for value in group if value.get("case")]
+                if (len(contexts) != len(group) or any(not json_equal(contexts[0], value) for value in contexts)
+                        or len({value["output"].parent for value in group if value.get("output")}) != 1):
+                    raise ValueError("cases 同次执行必须共享冻结 executionContext 和证据目录")
         except (OSError, ValueError, KeyError, TypeError) as error:
             errors.append(f"{file}: {error}")
     for item in prepared:
@@ -1190,6 +1294,52 @@ def check_execution_plans(plan_files: list, allow_pending_build: bool = True) ->
     return prepared, errors
 
 
+def snapshot_owned_receipt(output: Path, kind: str, redactor: Path, write_guard) -> None:
+    """Only the verified current pointer is replaced; immutable attempts stay in place."""
+    if not output.exists():
+        return
+    if output.is_symlink() or not output.is_file():
+        raise CaptureOutputConflict("当前 output 不是已核实的普通回执；保留未知资产原位")
+    original = output.read_bytes()
+    try:
+        text = original.decode("utf-8")
+        record = json.loads(text)
+        if (not isinstance(record, dict) or record.get("status") not in {"PASS", "PARTIAL"}
+                or not isinstance(record.get("sources"), list)
+                or (kind == "case" and record.get("schemaVersion") != "superflow.execution-receipt.v1")
+                or (kind == "build" and not isinstance(record.get("id"), str))):
+            raise ValueError("不是当前 capture 回执")
+
+        def owned_reference(reference, path_key="path"):
+            value = reference[path_key]
+            if (not isinstance(value, str) or Path(value).name != value
+                    or not re.fullmatch(r".+\.attempt-[0-9a-f]{32}\.(capture\.json|events\.jsonl|stdout\.log|stderr\.log)", value)):
+                raise ValueError("引用不是同目录的不可变 attempt")
+            file = output.parent / value
+            if (file.is_symlink() or not file.is_file()
+                    or sha256_bytes(file.read_bytes()) != reference["sha256"]):
+                raise ValueError("attempt 引用不是已核实普通文件")
+            return file
+
+        capture = json.loads(owned_reference(record["capture"]).read_text(encoding="utf-8"))
+        if (capture.get("schemaVersion") != "superflow.execution-capture.v1"
+                or capture.get("kind") != kind
+                or capture.get("argv") != record["command"]["argv"]
+                or capture.get("exitCode") != record["command"]["exitCode"]):
+            raise ValueError("capture 身份与当前回执不一致")
+        owned_reference(record["command"], "output")
+        for stream in ("stdout", "stderr"):
+            owned_reference(capture[stream])
+        if not json_equal(redact_capture([record], redactor)[0], record):
+            raise ValueError("当前原件含未脱敏内容，拒绝复制")
+    except (UnicodeError, ValueError, KeyError, TypeError, AttributeError) as error:
+        raise CaptureOutputConflict(f"output 所有权无法核实；未知资产原位保留：{error}") from error
+    saved = output.with_name(output.stem + ".previous-" + uuid.uuid4().hex + output.suffix)
+    write_guard(saved)
+    with saved.open("xb") as stream:
+        stream.write(original)
+
+
 def record_execution(plan_file: Path) -> int:
     prepared, errors = check_execution_plans([plan_file], allow_pending_build=False)
     if errors:
@@ -1198,10 +1348,14 @@ def record_execution(plan_file: Path) -> int:
     plan = item["plan"]
     output = item["output"]
 
-    def write_guard():
+    def write_guard(file=None):
+        if file is not None and all(file not in execution_output_files(selected["output"]) for selected in prepared):
+            item.setdefault("runtimeOutputs", [])
+            if file not in item["runtimeOutputs"]:
+                item["runtimeOutputs"].append(file)
         # Never reuse pre-command inode observations: the child may have created
         # or replaced an output path. Preserve conflicting inputs, not PARTIAL.
-        issues = execution_output_issues([item], [plan_file])
+        issues = execution_output_issues(prepared, [plan_file])
         if issues:
             raise CaptureOutputConflict("\n".join(issues))
 
@@ -1210,10 +1364,16 @@ def record_execution(plan_file: Path) -> int:
     # command whose output would otherwise have no safe persistence path.
     redact_capture([], redactor)
     output.parent.mkdir(parents=True, exist_ok=True)
+    # Never infer ownership from legacy sidecar names, or copy their targets.
+    # Raw attempt files already have immutable names and need no duplicate copy.
+    for previous in prepared:
+        write_guard()
+        snapshot_owned_receipt(previous["output"], plan["kind"], redactor, write_guard)
+    attempt = output.with_name(output.stem + ".attempt-" + uuid.uuid4().hex + output.suffix)
     if plan.get("kind") == "build":
         cwd = item["cwd"]
         sources = item["sources"]
-        capture = observe_command(plan["argv"], cwd, output, "build", sources, redactor, write_guard)
+        capture = observe_command(plan["argv"], cwd, attempt, "build", sources, redactor, write_guard)
         facts = json.loads((output.parent / capture["path"]).read_text())
         artifact = item["artifact"]
         record = {"id": "build-" + uuid.uuid4().hex, "sources": sources, "status": "PARTIAL",
@@ -1231,39 +1391,43 @@ def record_execution(plan_file: Path) -> int:
         record["status"] = "PASS"
         write_capture_text(output, json.dumps(record, ensure_ascii=False), write_guard)
     elif plan.get("kind") == "case":
-        change = item["change"]
-        coverage = item["coverage"]
-        case = item["case"]
-        context = case["executionContext"]
-        cwd = item["cwd"]
-        observed_context = item["observedContext"]
         build = item["build"]
-        capture = observe_command(context["argv"], cwd, output, "case", build["sources"], redactor, write_guard)
+        context = item["case"]["executionContext"]
+        capture = observe_command(context["argv"], item["cwd"], attempt, "case",
+                                  build["sources"], redactor, write_guard,
+                                  [selected["case"]["id"] for selected in prepared])
         facts = json.loads((output.parent / capture["path"]).read_text())
         stdout = (output.parent / facts["stdout"]["path"]).read_text()
-        record = {"schemaVersion": "superflow.execution-receipt.v1", "caseId": case["id"],
-                  "entryId": case["entryId"], "level": case["level"], "status": "PARTIAL",
-                  "evidenceKind": case.get("evidenceKind", "real"), "sources": build["sources"],
-                  "build": build, "capture": capture,
-                  "command": {"argv": facts["argv"], "exitCode": facts["exitCode"]},
-                  "executionContext": observed_context}
-        try:
-            measured = measurement_event(stdout, case["id"])
-            for key in ("executed", "assertions", "persistence", "target", "database", "mockBoundary", "testLayer"):
-                if key in measured:
-                    record[key] = measured[key]
-            if facts["exitCode"] == 0:
-                record["status"] = "PASS"
-            event = {**record, "command": dict(record["command"])}
-            write_capture_record(output, record, event, write_guard)
-            validate_execution_receipt(output, case, coverage, change)
-        except CaptureOutputConflict:
-            raise
-        except (ValueError, KeyError, TypeError):
-            record["status"] = "PARTIAL"
-            write_capture_record(output, record, {**record, "command": {
-                "argv": facts["argv"], "exitCode": facts["exitCode"]}}, write_guard)
-            raise
+        diagnostics = measurement_diagnostics(stdout, prepared)
+        for selected in prepared:
+            case = selected["case"]
+            destination = selected["output"]
+            record = {"schemaVersion": "superflow.execution-receipt.v1", "caseId": case["id"],
+                      "entryId": case["entryId"], "level": case["level"], "status": "PARTIAL",
+                      "evidenceKind": case.get("evidenceKind", "real"), "sources": build["sources"],
+                      "build": build, "capture": capture,
+                      "command": {"argv": facts["argv"], "exitCode": facts["exitCode"]},
+                      "executionContext": selected["observedContext"]}
+            try:
+                measured = measurement_event(stdout, case["id"])
+                for key in ("executed", "assertions", "persistence", "target", "database", "mockBoundary", "testLayer"):
+                    if key in measured:
+                        record[key] = measured[key]
+                case_errors = [error for error in diagnostics if error.startswith(f"measurement {case['id']}:")
+                               or error.startswith("measurement 未声明")]
+                if facts["exitCode"] == 0 and not case_errors:
+                    record["status"] = "PASS"
+                write_capture_record(destination, record, {**record, "command": dict(record["command"])}, write_guard)
+                validate_execution_receipt(destination, case, selected["coverage"], selected["change"])
+            except CaptureOutputConflict:
+                raise
+            except (ValueError, KeyError, TypeError) as error:
+                record["status"] = "PARTIAL"
+                write_capture_record(destination, record, {**record, "command": {
+                    "argv": facts["argv"], "exitCode": facts["exitCode"]}}, write_guard)
+                diagnostics.append(f"{case['id']}: {error}")
+        if diagnostics:
+            raise ValueError("\n".join(dict.fromkeys(diagnostics)))
     else:
         raise ValueError("capture plan.kind 必须为 build 或 case")
     print("capture 已记录；业务充分性仍须独立评审")
@@ -1634,6 +1798,10 @@ def main() -> int:
                         help="实际执行冻结 build/case plan 并保留脱敏 stdout/stderr")
     parser.add_argument("--check-execution-plan", metavar="PLAN", nargs="+", default=[],
                         help="只读批量检查 build/case plan；不执行命令、不创建证据、不代表测试通过")
+    parser.add_argument("--check-measurement", metavar="PLAN", default="",
+                        help="只读集中诊断实际 measurement；不执行命令、不生成或晋升凭证")
+    parser.add_argument("--measurement", metavar="FILE", default="",
+                        help="--check-measurement 的实际脱敏 stdout/JSONL 文件")
     parser.add_argument("--tests", default="")
     parser.add_argument("--review", default="")
     parser.add_argument("--repo-root", default="")
@@ -1646,6 +1814,23 @@ def main() -> int:
                         help="输出明确排除历史节的当前报告，保留命令代码块与行号")
     args = parser.parse_args()
 
+    if args.check_measurement or args.measurement:
+        if (not args.check_measurement or not args.measurement or args.record_execution
+                or args.check_execution_plan or args.reports):
+            parser.error("--check-measurement PLAN --measurement FILE 必须成对且单独使用")
+        try:
+            prepared, errors = check_execution_plans([Path(args.check_measurement).resolve()])
+            if any(item["plan"].get("kind") != "case" for item in prepared):
+                errors.append("measurement 诊断需要 case plan")
+            if not errors:
+                errors.extend(measurement_diagnostics(Path(args.measurement).read_text(encoding="utf-8"), prepared))
+            for error in errors:
+                print(f"FAIL measurement: {error}")
+            print("MEASUREMENT_DIAGNOSTIC_ONLY：未执行命令、未生成或晋升回执；不证明真实来源或测试通过")
+            return 2 if errors else 0
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            print(f"FAIL measurement: {error}")
+            return 2
     if args.check_execution_plan:
         if args.record_execution or args.reports:
             parser.error("--check-execution-plan 不能与报告或 --record-execution 混用")

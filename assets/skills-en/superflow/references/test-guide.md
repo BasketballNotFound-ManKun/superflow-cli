@@ -41,6 +41,12 @@ HTTP/DB success alone does not.
 
 Apply existing review_mode, actual risk and independence requirements; retain low-risk inline paths without adding fixed testing roles or Agent counts.
 
+
+Apply [source authority and delivery scope](document-review-coverage.md#source-authority-and-delivery-scope)
+before assigning backend, frontend or rollout obligations. Missing evidence blocks only its approved
+delivery scope; frontend/external coordination notes do not automatically gate backend delivery.
+Do not relabel locally controlled API verification gaps as external coordination.
+
 ## First verification action
 
 Before executing verification, read this section and Runner-Captured Execution in full,
@@ -139,9 +145,10 @@ entry's frozen code references; an old build cannot bypass drift.
 | `testLayer` / `mockBoundary` | Declared testLayer is `logic/sql-binding/database/http-entry`; mockBoundary is `{allowed:[strings],forbidden:[strings]}` with no overlap; real database layers require nonempty forbidden. Full database obligations remain owned by the execution evidence contract |
 | `environmentKeys` | Unique selection from `PATH/PATHEXT/NODE_ENV/NODE_OPTIONS/LANG/LC_ALL/TZ/JAVA_HOME`, never secrets. Capture binds value hashes without storing raw values |
 
-An explicit later `--record-execution` still writes same-name generated evidence; plan checking does
-not archive or preserve previous copies. When history must be retained, Owner selects another
-existing evidence directory and updates plan references; preparation is not a backup operation.
+Each `--record-execution` retains unique attempt logs, capture and events, with redaction before
+first persistence. A previous current receipt is preserved as a historical snapshot. The current
+receipt records this attempt, including PARTIAL on failure; retained historical PASS is not current
+proof. Plan checking remains read-only and creates no attempts or history.
 
 Nested example: plan at project root, change at openspec/changes/sample, frozen
 executionContext.cwd is ../../.. (project root), with argv still invoking root case.js.
@@ -178,6 +185,50 @@ affected layers. actual must be observed; constant true, copying expected into a
 COUNT cannot prove unobserved fields or old rounds unchanged. Sensitive raw evidence may remain
 outside the repository: provide authorized successors accessible locations and hashes, without
 requiring large Git bundles or giving only inaccessible personal paths.
+
+## Observed batch and measurement diagnostics
+
+When one real suite proves several Cases, first align tests/coverage Case IDs, selectors, assertions
+and branch mappings. The batch requires identical frozen argv/cwd/environmentKeys and a shared
+evidence directory; do not merge different commands or conflicting runtime resources. Case count
+is not build-process count: do not require a full rebuild for each Case.
+
+```json
+{"kind":"case","changeDir":"openspec/changes/sample","review":"openspec/changes/sample/.sdd/reviews/document-review.json","build":"evidence/build.json","cases":[{"caseId":"C1","output":"evidence/C1.json"},{"caseId":"C2","output":"evidence/C2.json"}]}
+```
+
+The cases array excludes top-level caseId/output. Use the same `--check-execution-plan` and
+`--record-execution` owners. One actual process emits exactly one existing measurement event for
+each selected Case. Each receipt uses that capture's exit code, before/after sources, build, target
+and environment, with all original validation. Missing/duplicate events, failure, non-execution or
+drift cannot borrow another Case's success or old XML. A nonzero shared process cannot produce
+PASS; a zero exit alone does not establish sufficient business assertions.
+
+Connect one minimal real Case first. Then diagnose actual stdout without running business again:
+
+```sh
+python3 <installed-script-path>/superflow-test-report-lint.py --check-measurement case-plan.json --measurement evidence/<actual-attempt>.stdout.log
+```
+
+`MEASUREMENT_DIAGNOSTIC_ONLY` identifies offline diagnostic mode; FAIL issues and the exit code decide
+the result, with nonzero meaning failure. It means no command execution, receipt creation or
+promotion, nor proof that the supplied file came from current tests. Reference actual observations;
+never fill actual from expected. Repair adapter shape using aggregated diagnostics before real
+capture; do not rerun an expensive suite to discover one JSON field. Serialize observations through
+the project's JSON library; do not concatenate JSON or label the frozen statement list as executed.
+
+Previous attempts: resolve actual attempt log/capture paths from receipt references rather than
+fixed filenames. Put fixture/observation files in a run-owned directory outside build-tool-cleaned
+test-results; correlate execution ID, Case, exit code and sources. Existing XML timestamps, file
+presence or a historical green class never authorize skipping tests, fabricating internal exitCode=0
+and attaching a new build. Reuse still requires verifiable original execution identity.
+
+Capture stderr reports lifecycle such as start/PID/exit without exposing secret argv/output.
+Investigate the task-owned process, thread/DB waits and original errors before blaming proxies,
+network, transactions or fixtures; an "environment quirk" is not a diagnosis. Add no default hard
+timeout or broad process termination. Tools own normal progress observation; avoid model polling.
+Reconcile the current Case table, counts and review status with originals; move old recovery text
+to History.
 
 ## Production Entry State Assertions
 

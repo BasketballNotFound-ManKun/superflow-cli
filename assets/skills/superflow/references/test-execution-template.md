@@ -133,3 +133,5 @@ DB-only、编译成功、跳过测试或静态页面配置都不能单独证明�
 仅在已选模式要求时承担其既有职责，核验原始证据并重跑受影响或合同指定路径。Owner
 持续负责其余授权工作，Reviewer 保持只读。历史有效证据可继承其明确版本与范围；
 当前源码、入口或上下文变化时按影响取得新证据，旧 PASS 不覆盖新增影响。
+
+批量采集、真实观测离线诊断与历史attempt沿[同次执行合同](test-guide.md#observed-batch-and-measurement-diagnostics)，不手造当前计数或用旧XML补新build。

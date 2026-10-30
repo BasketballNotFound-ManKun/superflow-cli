@@ -48,7 +48,9 @@ describe("anonymous application replay through the actual verify guard", () => {
             schemaVersion: "superflow.execution-capture.v1", kind: "case", exitCode: 0,
           });
           expect(captured.argv[1]).toBe("case.py");
-          expect(receipt.build.capture.path).toBe("build.capture.json");
+          expect(receipt.build.capture.path).toMatch(
+            /^build\.attempt-[^.]+\.capture\.json$/,
+          );
           expect(
             receipt.database.assertions.every(
               (assertion: { result: string }) => assertion.result === "PASS",

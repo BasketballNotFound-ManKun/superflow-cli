@@ -27,6 +27,11 @@ API真实请求＋数据库通常证明接口/后端集成；后端完整业务�
 
 按既有review_mode、实际风险和独评义务取得复核；低风险保留现有内联路径，不固定增加测试角色或代理数。
 
+
+后端、前端与上线义务先按[来源控制与交付范围](document-review-coverage.md#source-authority-and-delivery-scope)
+确认。只有本轮已批准范围内的缺失证据才阻断相应交付；前端/外仓对接提示不自动成为
+后端任务门槛。不能把本地可控的接口验证缺口改名为外部协同。
+
 ## First verification action
 
 首次计划执行验证前完整读本节及Runner-Captured Execution，再读取tests.md冻结命令；
@@ -110,8 +115,9 @@ build/case 输出必须在同一证据目录；case 命令只从冻结 execution
 | `testLayer` / `mockBoundary` | 已声明testLayer为`logic/sql-binding/database/http-entry`；mockBoundary为`{allowed:[字符串],forbidden:[字符串]}`且不相交，真实数据库层的forbidden非空；完整数据库义务仍按执行证据合同核验 |
 | `environmentKeys` | 不重复、仅选`PATH/PATHEXT/NODE_ENV/NODE_OPTIONS/LANG/LC_ALL/TZ/JAVA_HOME`；不放秘密。捕获绑定这些键的值hash，不把值写进凭证 |
 
-显式再次`--record-execution`仍会写同名生成证据；计划检查不自动归档或保留它们的旧副本。
-需要保留历史轮次时由Owner选新的既有证据目录并更新plan引用，不能把预检当成备份操作。
+每次`--record-execution`保留唯一attempt的脱敏原始输出、capture和事件；重捕前的当前
+receipt另存只读历史快照。当前receipt记录本次实际结果，失败保持PARTIAL；历史PASS不因
+被保留就适用于当前源码。计划预检只读，不创建attempt或历史。批量消费见下节。
 
 嵌套示例：plan 在项目根，change 在 openspec/changes/sample，冻结 executionContext.cwd 为
 ../../..（项目根），其 argv 仍为项目根的 case.js；review 不决定工作目录：
@@ -143,6 +149,44 @@ Runner 通过规范脱敏器保留 stdout/stderr、退出码、执行前后源�
 恒 true、expected 复制 actual、COUNT 不变都不能证明未观测字段或旧轮次完整不变。
 敏感原始证据可留仓外；交付给授权接手方可访问的位置与 hash，不强制 Git 提交大包，
 也不能只给另一人无法读取的个人路径。
+
+## Observed batch and measurement diagnostics
+
+同一真实suite可证明多个Case时，先维护tests/coverage的Case、selector、断言与分支映射，
+再沿同一capture准备批计划。冻结的argv/cwd/environmentKeys必须完全一致；不同命令或
+共享资源未隔离的工作不能硬合并。Case数量不是构建进程数量，不强制逐Case全量重编译。
+
+```json
+{"kind":"case","changeDir":"openspec/changes/sample","review":"openspec/changes/sample/.sdd/reviews/document-review.json","build":"evidence/build.json","cases":[{"caseId":"C1","output":"evidence/C1.json"},{"caseId":"C2","output":"evidence/C2.json"}]}
+```
+
+该计划与单Case的顶层caseId/output互斥；使用同一`--check-execution-plan`与
+`--record-execution`。一次实际进程为每个选中Case输出恰好一个原格式measurement；
+原退出码、运行前后源码、构建、目标和环境绑定由同次capture承接，逐Case按原规则校验。
+缺失/重复事件、真实失败、未执行或漂移不能用其他Case成功/旧XML补齐；同次进程非零
+不能产生PASS。命令成功仍不证明每条业务断言充分。
+
+先打通一个最小真实Case；已有真实stdout后可只读集中诊断其测量结构：
+
+```sh
+python3 <installed-script-path>/superflow-test-report-lint.py --check-measurement case-plan.json --measurement evidence/<actual-attempt>.stdout.log
+```
+
+`MEASUREMENT_DIAGNOSTIC_ONLY`只标识离线诊断模式；逐项FAIL及退出码决定诊断结果，非零表示失败。
+它不运行命令、不生成或晋升receipt，
+也不证明文件确实来自当前测试。输入必须引用实际观测，不能以expected补actual。结构问题
+先集中修适配器，再实际capture；不为调一个JSON字段重跑整套业务。适配器用项目JSON库
+序列化真实结果，不手拼JSON，不把冻结statement全集补成已执行。
+
+Previous attempts：读取receipt实际引用的attempt日志与capture路径，不猜固定文件名。
+测试fixture/观测使用本次运行自有目录，避开构建工具会清空的test-results；建立同次执行
+ID、用例、退出码和来源对应。已有XML的mtime、文件存在或全类历史绿不能让适配器跳过
+实际测试、假填内部exitCode=0后绑定新build；同次执行的复用仍须可核验原执行身份。
+
+捕获stderr显示开始/PID/结束等生命周期，秘密argv/输出不因此直接打印。卡住先检查本任务
+进程、线程/数据库等待与原始错误，证据成立才归因代理、网络、事务或测试夹具；不把
+“环境怪癖”当结论，也不默认加硬超时或宽泛结束进程。正常诊断由工具承接，Agent不反复
+轮询。报告当前Case表、计数与独评状态以真实原件对账，旧恢复点进入History。
 
 ## Production Entry State Assertions
 

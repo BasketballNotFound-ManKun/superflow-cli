@@ -164,3 +164,5 @@ selected mode already requires them, using raw proof and rerunning affected or
 contract-required paths. Owner continues other authorized work; Reviewers stay
 read-only. Inherited valid evidence keeps its explicit version/scope; source, entry
 or context changes require affected new proof. Old PASS does not cover new impact.
+
+Follow [observed batch diagnostics and attempt history](test-guide.md#observed-batch-and-measurement-diagnostics); do not fabricate current counts or attach old XML to a new build.

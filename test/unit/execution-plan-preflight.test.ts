@@ -145,12 +145,15 @@ describe("execution plan preflight", () => {
   it("does not let capture overwrite the build's raw output", () => {
     expect(run("--record-execution", ["build-plan.json"]).status).toBe(0);
     fs.rmSync(path.join(dir, "invoked"));
-    const raw = fs.readFileSync(path.join(dir, "evidence/build.stdout.log"));
-    casePlan.output = "evidence/build.stdout.log"; save("case-plan.json", casePlan);
+    const receipt = JSON.parse(fs.readFileSync(path.join(dir, "evidence/build.json"), "utf8"));
+    const capture = JSON.parse(fs.readFileSync(path.join(dir, "evidence", receipt.capture.path), "utf8"));
+    const rawPath = path.join(dir, "evidence", capture.stdout.path);
+    const raw = fs.readFileSync(rawPath);
+    casePlan.output = path.relative(dir, rawPath); save("case-plan.json", casePlan);
     const result = run("--record-execution", ["case-plan.json"]);
     expect(result.status).toBe(2);
     expect(result.stdout).toContain("output");
-    expect(fs.readFileSync(path.join(dir, "evidence/build.stdout.log"))).toEqual(raw);
+    expect(fs.readFileSync(rawPath)).toEqual(raw);
     expect(fs.existsSync(path.join(dir, "invoked"))).toBe(false);
   });
   it.each(["stdout.log", "stderr.log", "capture.json", "events.jsonl"])(

@@ -8,6 +8,10 @@ import { writeExecutionReceipt, prepareCapturePackage } from "../helpers/executi
 
 const lint = path.resolve("assets/scripts/superflow-test-report-lint.py");
 let dir: string;
+function currentEvidence(name: string, field: "capture" | "command") {
+  const receipt = JSON.parse(fs.readFileSync(path.join(dir, `logs/${name}.json`), "utf8"));
+  return path.join(dir, "logs", field === "capture" ? receipt.capture.path : receipt.command.output);
+}
 function run(environment: NodeJS.ProcessEnv = {}, complete = false) {
   try {
     return {
@@ -493,7 +497,7 @@ describe("execution receipt boundary", () => {
       );
       expect(captureBuild().code).toBe(2);
       const capture = JSON.parse(
-        fs.readFileSync(path.join(dir, "logs/build.capture.json"), "utf8"),
+        fs.readFileSync(currentEvidence("build", "capture"), "utf8"),
       );
       expect(capture.exitCode).toBe(7);
       expect(capture.argv).toEqual([process.execPath, "build.cjs"]);
@@ -746,7 +750,7 @@ describe("execution receipt boundary", () => {
     if (kind === "case") delete receipt.capture;
     else {
       delete receipt.build.capture;
-      const eventFile = path.join(dir, "logs/C1.events.jsonl");
+      const eventFile = currentEvidence("C1", "command");
       const event = JSON.parse(fs.readFileSync(eventFile, "utf8"));
       event.build = receipt.build;
       const output = JSON.stringify(event) + "\n";
@@ -864,7 +868,7 @@ describe("execution receipt boundary", () => {
         NODE_ENV: digest(JSON.stringify(process.env.NODE_ENV ?? null)),
       },
     };
-    const outputFile = path.join(dir, "logs/C1.events.jsonl");
+    const outputFile = currentEvidence("C1", "command");
     const event = JSON.parse(fs.readFileSync(outputFile, "utf8"));
     event.executionContext = receipt.executionContext;
     const output = JSON.stringify(event) + "\n";
@@ -1023,11 +1027,11 @@ describe("execution receipt boundary", () => {
       fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
     );
     const raw = JSON.parse(
-      fs.readFileSync(path.join(dir, "logs/C1.events.jsonl"), "utf8"),
+      fs.readFileSync(currentEvidence("C1", "command"), "utf8"),
     );
     raw.target.service = "E05";
     const output = JSON.stringify(raw) + "\n";
-    fs.writeFileSync(path.join(dir, "logs/C1.events.jsonl"), output);
+    fs.writeFileSync(currentEvidence("C1", "command"), output);
     receipt.command.sha256 = digest(output);
     save(receipt);
     expect(run().code).toBe(2);
@@ -1103,7 +1107,7 @@ describe("execution receipt boundary", () => {
         command: { argv: receipt.command.argv, exitCode: 0 },
       };
       const output = JSON.stringify(raw) + "\n";
-      fs.writeFileSync(path.join(dir, "logs/C1.events.jsonl"), output);
+      fs.writeFileSync(currentEvidence("C1", "command"), output);
       receipt.command.sha256 = digest(output);
       save(receipt);
       expect(run().code).toBe(actual === "expected" ? 0 : 2);
@@ -1114,21 +1118,21 @@ describe("execution receipt boundary", () => {
       fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
     );
     const event = JSON.parse(
-      fs.readFileSync(path.join(dir, "logs/build.events.jsonl"), "utf8"),
+      fs.readFileSync(currentEvidence("build", "command"), "utf8"),
     );
     const buildOutput =
       JSON.stringify(event) +
       "\n" +
       JSON.stringify({ ...event, exitCode: 1 }) +
       "\n";
-    fs.writeFileSync(path.join(dir, "logs/build.events.jsonl"), buildOutput);
+    fs.writeFileSync(currentEvidence("build", "command"), buildOutput);
     receipt.build.command.sha256 = digest(buildOutput);
     const raw = {
       ...receipt,
       command: { argv: receipt.command.argv, exitCode: 0 },
     };
     const output = JSON.stringify(raw) + "\n";
-    fs.writeFileSync(path.join(dir, "logs/C1.events.jsonl"), output);
+    fs.writeFileSync(currentEvidence("C1", "command"), output);
     receipt.command.sha256 = digest(output);
     save(receipt);
     expect(run().code).toBe(2);
