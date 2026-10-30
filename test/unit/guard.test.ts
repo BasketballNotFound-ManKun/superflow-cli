@@ -1083,8 +1083,8 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
         "# Proposal\nSave a coherent content snapshot with version-based concurrency.\n",
       );
       await write(
-        path.join(change, ".openspec.yaml"),
-        "schema: spec-driven\napplicability:\n  database: false\n  external_config: false\n  concurrency: true\n  money: false\n",
+        path.join(change, ".sdd/applicability.yaml"),
+        "applicability:\n  database: false\n  external_config: false\n  concurrency: true\n  money: false\n",
       );
       const contract = withAtomicBoundary
         ? CONTENT_CONCURRENCY_CONTRACT
@@ -1171,9 +1171,8 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
       )
       .trim();
     await write(
-      path.join(change, ".openspec.yaml"),
+      path.join(change, ".sdd/applicability.yaml"),
       [
-        "schema: superflow/v1",
         "applicability:",
         "  database: false",
         "  external_config: false",
@@ -1356,7 +1355,7 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
     it.each(["enum", "owner"])("rejects missing external %s obligations in the canonical source", async (missing) => {
       const change = await prepareCanonicalPrompt();
       await fs.promises.appendFile(path.join(change, "proposal.md"), "\nIntegrate third-party enum bindings.\n");
-      await write(path.join(change, ".openspec.yaml"), "schema: spec-driven\napplicability:\n  database: false\n  external_config: false\n  concurrency: false\n  money: false\n");
+      await write(path.join(change, ".sdd/applicability.yaml"), "applicability:\n  database: false\n  external_config: false\n  concurrency: false\n  money: false\n");
       const contract = missing === "enum"
         ? EXTERNAL_ENUM_CONTRACT.replace("External Enum Binding", "External Binding").replace("external enum: POSTED.", "")
         : EXTERNAL_ENUM_CONTRACT.replace("owner approved the provider contract.", "");
@@ -1651,7 +1650,7 @@ describe("superflow-guard.sh", { timeout: 15_000 }, () => {
       const change = path.join(tmp, "openspec/changes/current-report");
       await write(path.join(change, "tasks.md"), "# Tasks\n- [x] 1.1 Finish current work\n");
       await write(path.join(change, "tests.md"), "# Tests\nCheck the current result.\n");
-      await write(path.join(change, ".openspec.yaml"), `schema: spec-driven\napplicability:\n  database: false\n  external_config: false\n  concurrency: ${risk === "concurrency"}\n  money: false\n`);
+      await write(path.join(change, ".sdd/applicability.yaml"), `applicability:\n  database: false\n  external_config: false\n  concurrency: ${risk === "concurrency"}\n  money: false\n`);
       const evidence = risk === "red" ? "RED failure evidence." : "Concurrency And Idempotency Ownership: concurrent duplicate and retry cases passed.";
       const report = [
         "# Test Report",

@@ -571,7 +571,7 @@ function validateSourceInvestigation(
   );
   const noExistingSource = (entry) =>
     entry?.investigation?.scope === "no-existing-source";
-  const configPath = path.join(root, ".openspec.yaml");
+  const configPath = path.join(root, ".sdd", "applicability.yaml");
   const config = fs.existsSync(configPath)
     ? fs.readFileSync(configPath, "utf8")
     : "";

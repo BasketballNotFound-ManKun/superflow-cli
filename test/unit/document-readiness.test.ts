@@ -46,10 +46,10 @@ async function prepareReadyChange(): Promise<void> {
   const promptLinks = ["[P00](prompt/p00.md)", "[P01](prompt/p01.md)"].join(
     " ",
   );
+  await write(".openspec.yaml", "schema: spec-driven\n");
   await write(
-    ".openspec.yaml",
+    ".sdd/applicability.yaml",
     [
-      "schema: superflow/v1",
       "applicability:",
       "  cross_repo: true",
       "  complex_logic: true",
@@ -239,6 +239,32 @@ describe("document delivery readiness", () => {
 
   afterEach(async () => {
     await fs.promises.rm(tmp, { recursive: true, force: true });
+  });
+
+  it("freezes Superflow applicability independently of native OpenSpec metadata", async () => {
+    const native = fs.readFileSync(path.join(change, ".openspec.yaml"), "utf8");
+    expect(native).toBe("schema: spec-driven\n");
+    const before = handoffHash(change);
+    const declaration = path.join(change, ".sdd/applicability.yaml");
+    fs.appendFileSync(declaration, "# Reviewed scope changed\n");
+    expect(handoffHash(change)).not.toBe(before);
+    expect(fs.readFileSync(path.join(change, ".openspec.yaml"), "utf8")).toBe(native);
+    await expect(execFileAsync("node", [AUDIT, change, "--json"])).rejects.toThrow();
+  });
+
+  it("rejects applicability aliases before freezing outside content", async () => {
+    const declaration = path.join(change, ".sdd/applicability.yaml");
+    const outside = path.join(tmp, "outside-applicability.yaml");
+    fs.writeFileSync(outside, "applicability:\n  database: false\n");
+    fs.rmSync(declaration);
+    fs.symlinkSync(outside, declaration);
+    expect(() => handoffHash(change)).toThrow(/regular project-local file/);
+  });
+
+  it("keeps generated readiness outside the frozen applicability inventory", async () => {
+    const before = handoffHash(change);
+    await write(".sdd/readiness/unrelated.yaml", "generated: true\n");
+    expect(handoffHash(change)).toBe(before);
   });
 
   it("nested workspace uses change-relative sources despite declared project root", async () => {

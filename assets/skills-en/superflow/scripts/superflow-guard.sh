@@ -503,10 +503,10 @@ change_has_field_status_risk() {
 }
 
 change_has_database_change() {
-  if grep -Eiq '^[[:space:]]*database:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+  if grep -Eiq '^[[:space:]]*database:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.sdd/applicability.yaml" 2>/dev/null; then
     return 1
   fi
-  if grep -Eiq '^[[:space:]]*database:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+  if grep -Eiq '^[[:space:]]*database:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.sdd/applicability.yaml" 2>/dev/null; then
     return 0
   fi
   grep -RIEiq \
@@ -628,10 +628,10 @@ change_all_docs_without_complexity_budget() {
 }
 
 change_has_external_config_risk() {
-  if grep -Eiq '^[[:space:]]*external_config:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+  if grep -Eiq '^[[:space:]]*external_config:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.sdd/applicability.yaml" 2>/dev/null; then
     return 1
   fi
-  if grep -Eiq '^[[:space:]]*external_config:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+  if grep -Eiq '^[[:space:]]*external_config:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.sdd/applicability.yaml" 2>/dev/null; then
     return 0
   fi
   local content
@@ -642,10 +642,10 @@ change_has_external_config_risk() {
 }
 
 change_has_concurrency_idempotency_risk() {
-  if grep -Eiq '^[[:space:]]*concurrency:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+  if grep -Eiq '^[[:space:]]*concurrency:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.sdd/applicability.yaml" 2>/dev/null; then
     return 1
   fi
-  if grep -Eiq '^[[:space:]]*concurrency:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+  if grep -Eiq '^[[:space:]]*concurrency:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.sdd/applicability.yaml" 2>/dev/null; then
     return 0
   fi
   grep -RIEiq \
@@ -659,10 +659,10 @@ change_has_concurrency_idempotency_risk() {
 }
 
 change_has_money_precision_risk() {
-  if grep -Eiq '^[[:space:]]*money:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+  if grep -Eiq '^[[:space:]]*money:[[:space:]]*false([[:space:]]*#.*)?$' "$CHANGE_DIR/.sdd/applicability.yaml" 2>/dev/null; then
     return 1
   fi
-  if grep -Eiq '^[[:space:]]*money:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.openspec.yaml" 2>/dev/null; then
+  if grep -Eiq '^[[:space:]]*money:[[:space:]]*true([[:space:]]*#.*)?$' "$CHANGE_DIR/.sdd/applicability.yaml" 2>/dev/null; then
     return 0
   fi
   grep -RIEiq \

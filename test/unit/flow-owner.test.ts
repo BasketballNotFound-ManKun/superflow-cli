@@ -215,3 +215,46 @@ describe("installed entry and final rereview example", () => {
     expect(review).toContain("SHA-256");
   });
 });
+
+describe("source authority and scoped delivery guidance", () => {
+  it.each(["skills", "skills-en"])("%s preserves source control and review boundaries", directory => {
+    const read = (file: string) => fs.readFileSync(
+      path.join(root, "assets", directory, "superflow/references", file), "utf8",
+    );
+    // Installation-contract checks only; these do not prove model compliance.
+    expect(read("document-review-coverage.md")).toContain("### Source authority and delivery scope");
+    expect(read("document-review-coverage.md")).toContain("Source identity | Read evidence | Access / owner / authorization | Delivery scope");
+    expect(read("document-templates.md")).toContain("document-review-coverage.md#source-authority-and-delivery-scope");
+    expect(read("flow-owner.md")).toContain("Delegation decision");
+    expect(read("flow-owner.md")).toContain("Context pressure");
+    expect(read("reviewer-checklist.md")).toContain("Findings: None");
+    expect(read("reviewer-checklist.md")).toContain("Concerns");
+  });
+});
+
+describe("scoped caller obligations at their original consumers", () => {
+  it.each(["skills", "skills-en"])("%s removes unconditional external delivery clauses", directory => {
+    const read = (file: string) => fs.readFileSync(
+      path.join(root, "assets", directory, file), "utf8",
+    );
+    const impact = read("superflow-table-impact-analysis/SKILL.md");
+    expect(impact).not.toContain("- a consumer or real entry point is unknown;");
+    expect(impact).toContain("in-scope consumer");
+    expect(impact).toContain("document-review-coverage.md#source-authority-and-delivery-scope");
+    expect(impact).not.toContain("- only the writer/sync path is tested;");
+    expect(impact).not.toContain("Verify at least one final business entry point, not only");
+    const routing = read("superflow/references/routing-contract.md");
+    expect(routing).not.toContain("Page/permission changes require frontend startup");
+    expect(routing).not.toContain("- 页面/权限变更必须启动前端");
+    expect(routing).not.toContain("没有证明消费该表的真实入口通过，阻塞");
+    const contracts = read("superflow-contracts/SKILL.md");
+    expect(contracts).not.toContain("must include at least one consumer");
+    expect(contracts).not.toContain("path and do not prove consumers, stop");
+    expect(contracts).toContain("user-approved delivery scope");
+    const ingestion = read("superflow/references/feature-gated-workflow.md");
+    expect(ingestion).toContain("document-review-coverage.md#source-authority-and-delivery-scope");
+    const coverage = read("superflow/references/document-review-coverage.md");
+    expect(coverage).not.toContain("then check\n   browser rendering.");
+    expect(coverage).not.toContain("值，并在浏览器核对展示");
+  });
+});

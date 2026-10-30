@@ -1,10 +1,12 @@
 # Document Templates
 
+Before deriving scope or source analysis, apply [source authority and delivery scope](document-review-coverage.md#source-authority-and-delivery-scope); record actual reading, control and current obligations in the existing freeze card.
+
 ## Behavior Decision Matrix
 
 Before generation, the Agent determines domains from actual changes, call chains and read/write
-impact. Freeze true/false in existing `.openspec.yaml` applicability.money / applicability.concurrency
-with document evidence; do not create a second applicability file. For false domains, generated
+impact. Freeze true/false in existing `.sdd/applicability.yaml` applicability.money / applicability.concurrency
+with document evidence; do not duplicate it in native OpenSpec configuration. For false domains, generated
 documents/Prompts omit those domain sections and repeated N/A keywords. Deleting prose, rewording
 or declaring false cannot hide real money/concurrency risks. Existing domain guards and Agent
 semantic review still assess applicable risks; unknown remains under investigation, not false.

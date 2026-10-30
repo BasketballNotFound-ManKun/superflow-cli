@@ -151,6 +151,16 @@ find "$CHANGE_DIR" -type f \
   ! -path "$CHANGE_DIR/.git/*" \
   | sort > "$TMP_LIST"
 
+# Applicability is a frozen Superflow input, not generated lifecycle state.
+if [[ -L "$CHANGE_DIR/.sdd" || -L "$CHANGE_DIR/.sdd/applicability.yaml" ]] ||
+   [[ -e "$CHANGE_DIR/.sdd/applicability.yaml" && ! -f "$CHANGE_DIR/.sdd/applicability.yaml" ]]; then
+  die "applicability must be a regular project-local file"
+fi
+if [[ -f "$CHANGE_DIR/.sdd/applicability.yaml" ]]; then
+  printf '%s\n' "$CHANGE_DIR/.sdd/applicability.yaml" >> "$TMP_LIST"
+  sort -u "$TMP_LIST" -o "$TMP_LIST"
+fi
+
 # The declared source-level HOW can live at the project root, outside change.
 # This remains the single source inventory used by hashing and every projection.
 DECLARED_TECHNICAL_REL=""

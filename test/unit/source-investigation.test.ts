@@ -412,7 +412,7 @@ describe("source investigation facts, never a semantic verdict", () => {
   );
   it("cannot remove coverage marker to bypass a frozen requirement", () => {
     fs.writeFileSync(
-      path.join(change, ".openspec.yaml"),
+      path.join(change, ".sdd/applicability.yaml"),
       "applicability:\n  source_investigation: required\n",
     );
     mutateReview(change, (r) => {
@@ -427,7 +427,7 @@ describe("source investigation facts, never a semantic verdict", () => {
   ])(
     "does not bypass investigation with alternative key syntax %s",
     (config) => {
-      fs.writeFileSync(path.join(change, ".openspec.yaml"), config + "\n");
+      fs.writeFileSync(path.join(change, ".sdd/applicability.yaml"), config + "\n");
       mutateReview(change, (r) => {
         delete r.coverage.sourceInvestigation;
         delete r.coverage.entries[0].investigation;
@@ -442,7 +442,7 @@ describe("source investigation facts, never a semantic verdict", () => {
     ">-\n    required",
   ])("does not silently ignore declared YAML requirement %s", (value) => {
     fs.writeFileSync(
-      path.join(change, ".openspec.yaml"),
+      path.join(change, ".sdd/applicability.yaml"),
       `applicability:\n  source_investigation: ${value}\n`,
     );
     mutateReview(change, (r) => {

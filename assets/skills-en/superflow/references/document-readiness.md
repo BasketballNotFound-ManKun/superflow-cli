@@ -6,11 +6,12 @@ The base review example below is not a complete receipt. From 0.5.10, also apply
 
 ## Applicability
 
-Declare applicability in `.openspec.yaml`. Keyword scans may suggest a risk but
+Declare applicability in `.sdd/applicability.yaml`. Keyword scans may suggest a risk but
 must not override an explicit, source-backed decision.
 
+Keep `.openspec.yaml` native to OpenSpec (for example `schema: spec-driven` and `created`); do not write Superflow extension fields or fall back to their former location. The same handoff source inventory freezes applicability; changes require review and a new readiness receipt.
+
 ```yaml
-schema: superflow/v1
 applicability:
   cross_repo: true
   complex_logic: true

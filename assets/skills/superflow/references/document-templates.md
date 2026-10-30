@@ -1,10 +1,12 @@
 # 文档格式模板
 
+生成范围与源码分析先消费[来源控制与交付范围](document-review-coverage.md#source-authority-and-delivery-scope)，在既有冻结卡记录实际读取、控制权和本轮义务。
+
 ## Behavior Decision Matrix
 
-生成前由 Agent 依据真实改动、调用链与读写影响判断适用域，在现有 `.openspec.yaml`
+生成前由 Agent 依据真实改动、调用链与读写影响判断适用域，在现有 `.sdd/applicability.yaml`
 的 `applicability.money` / `applicability.concurrency` 冻结 true/false 及对应文档依据；
-复用既有配置，不新增适用性文件。false 时实际交付文档/Prompt 不复制该领域章节或
+此文件是唯一适用性配置，不在 OpenSpec 原生配置重复声明。false 时实际交付文档/Prompt 不复制该领域章节或
 反复 N/A 关键词；不通过删正文、改措辞或设 false 掩盖真实金额/并发风险。已确认的
 适用风险仍由现有领域检查与 Agent 语义评审核验，未知保留待调查而非 false。
 

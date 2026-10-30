@@ -2,11 +2,12 @@
 
 ## 适用性声明
 
-在 change 的 `.openspec.yaml` 中显式声明适用范围。关键词扫描只能提示风险，不能覆盖
+在 change 的 `.sdd/applicability.yaml` 中显式声明适用范围。关键词扫描只能提示风险，不能覆盖
 明确的适用性结论。
 
+`.openspec.yaml` 仅保留 OpenSpec 原生字段（例如 `schema: spec-driven` 和 `created`）；不写 Superflow 扩展字段，也不从旧位置回退读取。适用性声明由同一 handoff 来源清单冻结，修改后须重新评审和签发就绪凭证。
+
 ```yaml
-schema: superflow/v1
 applicability:
   cross_repo: true
   complex_logic: true

@@ -130,7 +130,7 @@ function validateReview(review, currentHash, targetIssues) {
 }
 
 function validateMermaid(root, targetIssues) {
-  const configPath = path.join(root, ".openspec.yaml");
+  const configPath = path.join(root, ".sdd", "applicability.yaml");
   const config = fs.existsSync(configPath)
     ? fs.readFileSync(configPath, "utf-8")
     : "";
