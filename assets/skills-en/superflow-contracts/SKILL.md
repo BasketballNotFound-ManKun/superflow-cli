@@ -124,9 +124,12 @@ For complex requirements, verify these before writing docs:
 - For any database-backed design, the docs include table-to-code reverse impact
   evidence: every affected table/field, all writers/readers/filters, sibling
   repo or third-party consumers, real user-facing endpoints, reverse-state
-  scenarios, and validation cases. If the docs only describe the write/sync
-  path and do not prove consumers, stop and return to `$superflow-clarify`. Use
-  `$superflow-table-impact-analysis` when available.
+  scenarios, and validation cases. Apply the approved source-authority/delivery
+  boundary: investigate known external consumers, but require executable consumer
+  proof only for approved in-scope entries. A backend sync/write entry still needs
+  real response/state/forbidden-effect and reverse-state evidence, not exit-only
+  success. Uncontrolled downstream entries are coordination dependencies, not
+  invented required frontend work. Use `$superflow-table-impact-analysis`.
 - For any schema, index, constraint, seed-data, or historical-data change,
   docs MUST create `release-sql.md` before `$superflow-design` or implementation
   prompts. It contains exactly one complete executable `sql` block and front
@@ -283,7 +286,7 @@ applicable:
 - `tasks.md`
 - Every `tasks.md` checkbox must carry exactly one machine category:
   `[local_required]`, `[environment_required]`, or `[release_required]`.
-  Locally executable code, tests, startup, and browser checks are local_required;
+  Locally controlled and user-authorized code, tests, startup, and browser checks are local_required;
   free-form Blocker/owner prose cannot replace the category.
 - For each implementation task, review observable delivery, acceptance signal,
   requirement/scenario coverage, and actual predecessors. Show the currently
@@ -482,12 +485,13 @@ Use references only as needed:
   token/cookie setup, request payload, expected response fields and business
   assertions. It must also list the DB SELECT and log keywords that prove the
   request changed or read the correct state.
-- For every affected table/field, `tests.md` must include at least one consumer
-  test against a real business entry point, not only a table write or sync-task
-  assertion. If a field participates in filtering, startup checks, QR scan,
-  order creation, payment/refund, notification, scheduled jobs, or third-party
-  adapters, those consuming paths must be listed as required validation or
-  explicitly blocked.
+- For every affected table/field, `tests.md` identifies real consumer impact and
+  tests approved in-scope business entries. Filtering, startup checks, QR scan,
+  order creation, payment/refund, notification, jobs and third-party paths become
+  required validation only within the user-approved delivery scope. Uncontrolled
+  consumers carry source limits, external owner and completion conditions; do not
+  make them backend delivery blockers or claim their flow has passed. A scoped
+  sync/write task must still prove its real business state and reverse cases.
 - For every status/enum/sync field, `tests.md` must assert the consumer-facing
   business meaning of each involved value. Non-null checks, HTTP 200, successful
   sync-task execution, or "field exists" assertions are insufficient.
@@ -504,15 +508,15 @@ Use references only as needed:
     verified startup commands, isolated ports, readiness and necessary real HTTP smoke;
     blockers retain failure evidence. Pure functions keep lightweight seam verification.
     Language, class names or file extensions do not automatically impose runtime duties.
-  - Actual page-permission or visible user-flow impact requires frontend startup,
+  - Authorized page-permission or visible user-flow delivery with locally controlled frontend source requires frontend startup,
     real-browser Playwright/Cypress and page assertions. Build, static checks and mocks
     remain supplementary.
-  - Changed interface/frontend request bindings freeze both actual contracts and
+  - Authorized interface/frontend binding changes with locally controlled source on both sides freeze both actual contracts and
     applicable dynamic export/call-resolution snapshots.
   - Selected backends such as MySQL, Testcontainers, real browsers or services freeze exact
     backends/commands; H2, mocks, stubs, in-memory stores or compatibility modes cannot
     replace that mandatory verification.
-  - Multi-repository/service work verifies each actual affected build/runtime contract
+  - Authorized, locally controlled multi-repository/service work verifies each affected build/runtime contract
     and real cross-repository paths; one repository's evidence never substitutes for another.
   `design.md` records actual risk and runtime/repository applicability; `tasks.md` retains
   local/environment/release categories. Prompts inherit Cases, commands, assertions and

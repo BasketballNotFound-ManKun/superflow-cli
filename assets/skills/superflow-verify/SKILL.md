@@ -72,7 +72,7 @@ Reviewer 复核修复及原功能回归；旧 PASS 不能覆盖新 diff。交付
 沿 R/E/C ID 在现有 test-report 回填实际角色、页面动作、请求路由、最终状态与禁止副作用
 的原始证据。独立对照原始来源及实际调用方；API-only 不得冒充 browser E2E，计划不等于执行。
 横向字段改造还要复核页面请求命中的精确 Mapper statement，并查看非空记录的同 ID
-API/DB 值对照与浏览器显示。历史 NULL、字段键存在和静态列配置各自只能支持较弱结论。
+API/DB 值对照；本轮授权交付页面时还须核浏览器显示。历史 NULL、字段键存在和静态列配置各自只能支持较弱结论。
 
 Verification is a phase, not a final sentence. Use this skill after
 implementation work claims completion and before archive or delivery.

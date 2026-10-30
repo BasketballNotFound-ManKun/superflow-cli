@@ -194,7 +194,7 @@ Hard gates:
   status, read full events, or restart Executor. Hosts with longer tool limits may
   explicitly request up to twelve hours; semantic supervision runs only for attention.
 - When the user names a task-prompt document, pass its original path to start and verify the frozen SHA-256; never replace it with a host summary.
-- Page/permission changes require frontend startup and real-browser E2E; cross-stack API changes require both backend and frontend contract tests.
+- Page/permission delivery with authorized, locally controlled frontend source requires frontend startup and real-browser E2E; cross-stack API changes require both contracts when both sides are authorized and controlled.
 - `superflow-managed-work-check.mjs` must pass before delivery-ready status.
 - Record the single delivery-ready event only after the integrity script passes.
 - After the managed command returns a terminal state, read the task report and summarize it to the user instead of returning only a task ID.
@@ -471,8 +471,9 @@ The workflow must preserve these gates:
   required prechecks, DDL/DML, migration, and post-verification. Implementation
   agents may only copy the block verbatim and verify the hash; any SQL design
   omission returns to docs and requires a refreshed handoff.
-- Real-entry acceptance for integration, device, callback, payment, client, or
-  cross-system flows. Mock-only is never real integration.
+- Real-entry acceptance for authorized integration, device, callback, payment, client, or
+  cross-system delivery. Verify locally controlled consumers; record uncontrolled consumers
+  as coordination dependencies with owners/completion conditions. Mock-only is never real integration.
 - Delivery completeness: runtime code changes must update the relevant task
   docs and evidence docs.
 

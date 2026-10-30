@@ -104,8 +104,8 @@ service's PO/Entity/Mapper:
 - if code still queries a removed column, the fix is code/schema contract
   alignment, not adding obsolete columns back to test database
 
-The case is blocked if any consumer repository maps or queries a non-existent
-column.
+The affected case is blocked if an authorized, locally controlled consumer repository maps or queries a non-existent
+column. Uncontrolled repositories remain coordination dependencies with owners and completion conditions; do not claim their repair or end-to-end readiness.
 
 ## Red-Green Rule
 

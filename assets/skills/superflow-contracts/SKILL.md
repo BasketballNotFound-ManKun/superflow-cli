@@ -117,9 +117,12 @@ For complex requirements, verify these before writing docs:
 - For any database-backed design, the docs include table-to-code reverse impact
   evidence: every affected table/field, all writers/readers/filters, sibling
   repo or third-party consumers, real user-facing endpoints, reverse-state
-  scenarios, and validation cases. If the docs only describe the write/sync
-  path and do not prove consumers, stop and return to `$superflow-clarify`. Use
-  `$superflow-table-impact-analysis` when available.
+  scenarios, and validation cases. Apply the approved source-authority/delivery
+  boundary: investigate known external consumers, but require executable consumer
+  proof only for approved in-scope entries. A backend sync/write entry still needs
+  real response/state/forbidden-effect and reverse-state evidence, not exit-only
+  success. Uncontrolled downstream entries are coordination dependencies, not
+  invented required frontend work. Use `$superflow-table-impact-analysis`.
 - For any schema, index, constraint, seed-data, or historical-data change,
   docs MUST create `release-sql.md` during the contract-design phase, before
   `$superflow-design` or implementation prompts. It must contain exactly one
@@ -282,7 +285,7 @@ applicable:
 - `design.md`
 - `tasks.md`
 - `tasks.md` 每个 checkbox 必须带且只带一个机器分类：`[local_required]`、
-  `[environment_required]` 或 `[release_required]`。能够在本地完成的编码、测试、启动和浏览器
+  `[environment_required]` 或 `[release_required]`。已核实本地可控且在用户授权范围内的编码、测试、启动和浏览器
   验证必须是 local_required；不得用自由文本 Blocker/owner 代替分类。
 - For each implementation task, review observable delivery, acceptance signal,
   requirement/scenario coverage, and actual predecessors. Show the currently
@@ -468,12 +471,13 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
   token/cookie setup, request payload, expected response fields and business
   assertions. It must also list the DB SELECT and log keywords that prove the
   request changed or read the correct state.
-- For every affected table/field, `tests.md` must include at least one consumer
-  test against a real business entry point, not only a table write or sync-task
-  assertion. If a field participates in filtering, startup checks, QR scan,
-  order creation, payment/refund, notification, scheduled jobs, or third-party
-  adapters, those consuming paths must be listed as required validation or
-  explicitly blocked.
+- For every affected table/field, `tests.md` identifies real consumer impact and
+  tests approved in-scope business entries. Filtering, startup checks, QR scan,
+  order creation, payment/refund, notification, jobs and third-party paths become
+  required validation only within the user-approved delivery scope. Uncontrolled
+  consumers carry source limits, external owner and completion conditions; do not
+  make them backend delivery blockers or claim their flow has passed. A scoped
+  sync/write task must still prove its real business state and reverse cases.
 - For every status/enum/sync field, `tests.md` must assert the consumer-facing
   business meaning of each involved value. Non-null checks, HTTP 200, successful
   sync-task execution, or "field exists" assertions are insufficient.
@@ -489,12 +493,12 @@ DB 状态 | 结算/通知/展示消费点 | 真实验证方式`.
   - 注册/装配、配置、代理或路由绑定存在实际风险时，冻结已验证启动命令、隔离端口、
     就绪条件及必要的真实 HTTP 冒烟；阻塞保留失败证据。纯函数沿原轻量 seam 验证，
     不按语言、类名或文件扩展名自动强加运行义务。
-  - 实际影响页面权限或可见用户流程时，冻结前端启动、真实浏览器
+  - 本轮授权交付页面权限或可见用户流程且前端源码本地可控时，冻结前端启动、真实浏览器
     （real-browser Playwright/Cypress）与页面断言；构建、静态检查和模拟仅作补充。
-  - 接口与前端请求绑定变化时，冻结两端实际契约及适用的动态导出/调用解析快照。
+  - 本轮授权修改接口与前端请求绑定且两端源码本地可控时，冻结两端实际契约及适用的动态导出/调用解析快照。
   - 已选 MySQL、Testcontainers、真实浏览器或真实服务等后端，冻结精确后端与命令；
     H2、mock、stub、内存存储或兼容模式不能替代该必测。
-  - 多仓/服务按各自实际影响验证构建/运行合同，并核真实跨仓路径；一仓证据不能替代另一仓。
+  - 本轮授权且本地可控的多仓/服务按各自实际影响验证构建/运行合同，并核真实跨仓路径；一仓证据不能替代另一仓。
   `design.md` 记录实际风险与各环境/仓库适用依据，`tasks.md` 保持本地/环境/发布分类；
   Prompt 仅继承 Case、命令、断言与证据。已确认必测不因选择理由而被删减。
 - For money-related changes, `test-report.md` must also include `Money Precision

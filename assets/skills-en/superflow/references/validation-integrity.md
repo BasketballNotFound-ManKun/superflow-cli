@@ -8,6 +8,9 @@
 - Do not claim app verification from an old process.
 - Do not claim DB verification without SELECT, SHOW CREATE, or equivalent proof.
 - Do not claim log verification without checking current logs.
+- Reconcile shared-schema fields in every authorized, locally controlled consumer repository;
+  missing/uncontrolled consumers remain coordination dependencies with owners and completion
+  conditions. They do not authorize implementation or justify claiming end-to-end readiness.
 
 ## Allowed Outcomes
 

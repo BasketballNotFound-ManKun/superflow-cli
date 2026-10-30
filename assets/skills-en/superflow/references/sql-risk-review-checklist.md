@@ -11,7 +11,7 @@ script change.
 - Missing table, column, index, or seed-data owner.
 - Missing rollback or recovery note for DML.
 - Missing total version SQL alignment.
-- Cross-repo shared table not checked in every consumer repo.
+- Cross-repo shared table not checked in every authorized, locally controlled consumer repo; uncontrolled consumers lack recorded coordination owners/completion conditions.
 
 ## Warnings
 

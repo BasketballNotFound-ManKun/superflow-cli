@@ -341,8 +341,8 @@ hash后声称Reviewer实际复核。审计器只核当前格式、身份、逐ID
 | 2 | 实体与 Mapper XML 一致 | 对比 resultMap / 列名 | 无遗漏字段、无拼写错误 |
 | 3 | 实体与 DTO 一致 | 对比字段列表 | DTO 字段与设计意图一致 |
 | 4 | 枚举值与数据库约束一致 | 对比 enum 定义与 CHECK/字典表 | 枚举值在约束范围内 |
-| 4.1 | 跨仓实体与真实库字段一致 | 对比所有消费仓 `@TableName` 实体、BaseMapper、Mapper XML 和 `SHOW CREATE TABLE` / `information_schema.columns` | 不存在列不被实体映射；旧字段已删除或 `@TableField(exist = false)`；查询条件不依赖已迁移字段 |
-| 4.2 | 共享表消费仓完整枚举 | 搜索 sibling service、外部集成、回调、定时任务、测试端点是否读取同表 | 已列出全部消费仓并逐个给出对账结论；无法验证的消费仓标记阻塞 |
+| 4.1 | 跨仓实体与真实库字段一致 | 对比本轮授权且本地可控消费仓 `@TableName` 实体、BaseMapper、Mapper XML 和 `SHOW CREATE TABLE` / `information_schema.columns` | 不存在列不被实体映射；旧字段已删除或 `@TableField(exist = false)`；查询条件不依赖已迁移字段 |
+| 4.2 | 共享表消费仓完整枚举 | 搜索 sibling service、外部集成、回调、定时任务、测试端点是否读取同表 | 已列出已知消费仓；本轮授权可控仓逐个给出对账结论，必需且无法验证项阻塞；不可控仓标明协同owner与完成条件 |
 
 ## 健壮性检查
 
@@ -504,3 +504,5 @@ hash后声称Reviewer实际复核。审计器只核当前格式、身份、逐ID
 ```
 
 报告容器围栏使用空格缩进并明确闭合。列表/引用中含制表符的围栏目前明确拒绝结构核验；先规范格式，不用早期 DONE/PASS 绕过。原始执行日志中的制表符保留，不能为修格式改写证据。
+
+评审摘要须继承原四状态、未决 Concerns 及修后新增 diff 的实际复评结论。`Findings: None` 仅表示当前 finding 集为空，不证明所有风险已关闭；有残余风险须如实保留状态/范围，不能由 Owner 摘要洗成全通过。

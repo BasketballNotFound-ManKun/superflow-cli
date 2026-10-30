@@ -8,6 +8,8 @@ description: Use when a requirement, bug fix, sync task, migration, or test plan
 Use this skill before freezing design, writing implementation prompts, coding,
 or accepting test reports for database-backed behavior.
 
+First apply [source authority and delivery scope](../superflow/references/document-review-coverage.md#source-authority-and-delivery-scope). Investigating known consumers does not authorize external implementation or acceptance duties.
+
 ## Core Rule
 
 Do not start from the happy-path writer only. Start from every affected
@@ -51,23 +53,25 @@ Source field | Source enum | Target field | Target enum | Consumer meaning | Bus
    `Fallback trigger | Business basis | Masked anomaly | Monitoring/alert/exposure | Removal condition | Owner approval`.
 6. Put the impact table and semantic table into `design.md`, `tests.md`,
    `traceability-matrix.md`, implementation prompt, and `test-report.md`.
-7. Verify at least one final business entry point, not only the sync task or
-   DB update. Examples: applet QR scan, start charge, payment/refund,
-   notification, callback, scheduled job, third-party query.
+7. Verify the real business entry within approved delivery scope, including actual
+   response/state/forbidden effects and applicable reverse-state paths. A backend
+   sync task may be that scoped entry. Verify downstream client flows when they
+   are approved duties; otherwise record external owners and completion conditions
+   without claiming that end-to-end flow has passed.
 
 ## Blockers
 
 Mark the task `Blocked` when:
 
-- a consumer or real entry point is unknown;
-- only the writer/sync path is tested;
+- an in-scope consumer or real entry point is unknown and affects the confirmed business/acceptance decision;
+- an approved in-scope downstream entry remains untested (a scoped backend writer/sync entry does not by itself create external duties);
 - only the unavailable direction is tested;
 - a status field can retain an old invalid value;
 - a status/enum/sync value is treated as correct only because it is non-null,
   present, successful, or has any value;
 - fallback/default/keep-old-value/null-conversion/alternative-field logic is
   used without explicit business approval and exposure strategy;
-- cross-repo consumers are not enumerated;
+- known cross-repo consumers and external coordination dependencies are not enumerated;
 - `test-report.md` lacks the required impact table.
 
 ## Hook

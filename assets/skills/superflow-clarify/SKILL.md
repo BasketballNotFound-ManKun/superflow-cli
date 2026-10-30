@@ -15,6 +15,8 @@ any full SDD document or implementation prompt is generated.
 
 ## Hard Gates
 
+先按[来源控制与交付范围](../superflow/references/document-review-coverage.md#source-authority-and-delivery-scope)核实来源、实际读取、用户授权及本轮义务。以下调查必须覆盖真实调用者，但不可控外仓未知只列协同依赖；只有影响本轮已确认业务/验收决定的未知才阻塞相应冻结，不自动扩成前端或上线任务。
+
 - Before freezing any new requirement or bug fix, perform platform-level impact
   discovery. Prefer understand-anything artifacts when present, such as
   `.ua/`, `.understand-anything/`, `understand-anything.md`, `understand anything.md`,
@@ -53,8 +55,8 @@ any full SDD document or implementation prompt is generated.
   recovery paths, scheduled jobs, MQ consumers, frontend/applet endpoints,
   third-party adapters, and sibling-repo consumers. Include reverse cases such
   as unavailable -> available, deleted -> restored, missing -> reappearing, and
-  old invalid values left behind when upstream omits a field. If the final
-  user-facing entry points are unknown, block and ask; do not freeze a design
+  old invalid values left behind when upstream omits a field. If the in-scope final
+  user-facing entry points are unknown and affect a business decision, block that decision and ask; do not freeze a design
   that only proves the sync/write path.
   Use `$superflow-table-impact-analysis` for this step when available.
 - When a feature relies on a status, enum, sync field, derived field, default
@@ -151,7 +153,7 @@ Use the detailed workflow in:
 9. For database-backed behavior, add a table reverse impact table before
    freezing:
    `表/字段 | 写入方 | 读取/过滤方 | 跨仓/外部消费方 | 真实入口 | 反向状态场景 | 必测用例`.
-   If any consumer or real entry is unknown, mark the feature blocked.
+   If an in-scope consumer or real entry is unknown and affects the frozen business/acceptance decision, block that decision; record uncontrolled external consumers as coordination dependencies.
 10. For status/enum/sync/default behavior, add a semantic mapping table before
     freezing:
     `真源字段 | 真源枚举 | 目标字段 | 目标枚举 | 消费方解释 | 业务依据 | 不确定项`.

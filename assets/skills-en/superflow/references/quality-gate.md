@@ -30,6 +30,9 @@ raw evidence and have implementers rerun invalidated or contract-required paths.
   `source-code-audit.md` with a Source Fact Freeze Card, all writers and real
   callers, current/legacy/unmounted/data-model-only/owner-confirmed/blocked
   classifications, DB check or skip reason, conflict audit, and owner boundary.
+  Shared-schema field reconciliation is required for every authorized, locally controlled
+  consumer repository; uncontrolled repositories remain coordination dependencies with
+  owners and completion conditions, not claims of completed cross-repository readiness.
 - Database changes have `release-sql.md` with `database_change: true`, an exact
   placeholder-free `target_sql_path`, `copy_policy: verbatim`, a valid
   `sql_sha256`, and exactly one complete executable SQL block with required

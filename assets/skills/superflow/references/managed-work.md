@@ -181,7 +181,7 @@ superflow pipeline --resume-task <task-id> --submit-host-review <review.json>
   容器或残留时按成功空结果处理，不得为这两类元数据问题启动 Executor。
 - 状态同时展示物理调用、基础设施抵扣和有效研发调用。供应商切换通过
   `--provider-switched <reason>` 原地恢复；研发阶段仅在变化时通知 Host 会话。
-- 页面/权限变更机械要求前端启动和 Playwright/Cypress 真实浏览器 E2E；跨端 API 变更要求
+- 本轮授权交付且前端源码本地可控的页面/权限变更要求前端启动和 Playwright/Cypress 真实浏览器 E2E；两端均授权可控的跨端 API 变更要求
   后端 Controller 与前端请求合同测试和 API export snapshot。
 - 完整性脚本必须先通过，后台才允许写入唯一的 `run.delivery_ready` 事件；脚本失败时
   转入等待人工处理，不得留下“已可交付”的假证据。

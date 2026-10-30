@@ -93,7 +93,7 @@ final state and forbidden-effect evidence. Independently compare originals and a
 API-only is not browser E2E, and planned cases are not execution evidence.
 For cross-page field changes, recheck the exact Mapper statement reached by each
 page request and inspect same-ID API/DB comparisons on non-null records plus
-browser rendering. Historical NULL, field keys and static column configuration
+browser rendering when page delivery is in the authorized task scope. Historical NULL, field keys and static column configuration
 support narrower claims only.
 
 Verification is a phase, not a final sentence. Use this skill after

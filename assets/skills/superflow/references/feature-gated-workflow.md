@@ -46,6 +46,8 @@
 
 ### `source-ingestion.md`
 
+资料行按[来源控制与交付范围](document-review-coverage.md#source-authority-and-delivery-scope)记录来源身份、实际读取与未读部分；控制权/用户授权和本轮交付义务回链既有审计卡。
+
 记录原始资料摄取：
 
 | 顺序 | 资料 | 来源 | 已读取范围 | 图片/附件 | 结果 |

@@ -16,6 +16,8 @@ any full SDD document or implementation prompt is generated.
 
 ## Hard Gates
 
+First apply [source authority and delivery scope](../superflow/references/document-review-coverage.md#source-authority-and-delivery-scope) to verify provenance, actual reading, authorization and current obligations. Investigate real callers below, but unknowns in uncontrolled repositories are coordination dependencies; only unknowns affecting confirmed business/acceptance decisions block the affected freeze. Do not automatically expand into frontend or deployment work.
+
 - Before freezing any new requirement or bug fix, perform platform-level impact
   discovery. Prefer understand-anything artifacts when present, such as
   `.ua/`, `.understand-anything/`, `understand-anything.md`, `understand anything.md`,
@@ -56,8 +58,8 @@ any full SDD document or implementation prompt is generated.
   recovery paths, scheduled jobs, MQ consumers, frontend/applet endpoints,
   third-party adapters, and sibling-repo consumers. Include reverse cases such
   as unavailable -> available, deleted -> restored, missing -> reappearing, and
-  old invalid values left behind when upstream omits a field. If the final
-  user-facing entry points are unknown, block and ask; do not freeze a design
+  old invalid values left behind when upstream omits a field. If the in-scope final
+  user-facing entry points are unknown and affect a business decision, block that decision and ask; do not freeze a design
   that only proves the sync/write path.
   Use `$superflow-table-impact-analysis` for this step when available.
 - When a feature relies on a status, enum, sync field, derived field, default
@@ -155,7 +157,7 @@ Use the detailed workflow in:
 9. For database-backed behavior, add a table reverse impact table before
    freezing:
    `Table/field | Writer | Reader/filter | Cross-repo/external consumer | Real entry | Reverse-state scenario | Required test`.
-   If any consumer or real entry is unknown, mark the feature blocked.
+   If an in-scope consumer or real entry is unknown and affects the frozen business/acceptance decision, block that decision; record uncontrolled external consumers as coordination dependencies.
 10. For status/enum/sync/default behavior, add a semantic mapping table before
     freezing:
     `Source field | Source enum | Target field | Target enum | Consumer meaning | Business basis | Unknowns`.

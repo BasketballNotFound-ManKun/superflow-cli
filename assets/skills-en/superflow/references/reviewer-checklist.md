@@ -431,3 +431,7 @@ owning risk, dispatch, or final conclusions.
 - Did hooks and guard scripts pass?
 
 Use spaces and explicit closure for report container fences. Tab-delimited list/quote fences currently fail structural verification: normalize report formatting without using an earlier DONE/PASS to bypass it. Preserve tabs in original execution logs; do not rewrite evidence for formatting.
+
+For shared-schema changes, reconcile each authorized, locally controlled consumer; list uncontrolled consumers with coordination owners/completion conditions and do not claim their repair.
+
+Review summaries must carry forward the original four-state verdict, unresolved Concerns and actual re-review of post-fix diff. `Findings: None` means only that the current finding set is empty, not that every risk is closed. Preserve residual-risk status and scope; an Owner summary cannot rewrite them into full approval.

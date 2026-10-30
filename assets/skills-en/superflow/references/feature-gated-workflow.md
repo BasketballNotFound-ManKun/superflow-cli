@@ -5,7 +5,7 @@ requests. Process one feature at a time.
 
 ## Artifacts
 
-- source-ingestion.md: source list, section range, screenshots, and read status.
+- source-ingestion.md: source identity, actual read ranges, unread portions and screenshots; link control/authorization and current delivery obligations to the existing audit card under [source authority and delivery scope](document-review-coverage.md#source-authority-and-delivery-scope).
 - feature-inventory.md: feature list, priority, owner, and dependency.
 - feature-gates.md: per-feature status: pending, clarifying, frozen, blocked.
 - ui-contract.md: screen field to API/DTO/DB/test mapping.

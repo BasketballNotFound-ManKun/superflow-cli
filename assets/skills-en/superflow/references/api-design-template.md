@@ -8,7 +8,7 @@ Use api.md as the canonical contract before implementation.
 - Endpoint table: method, path, auth, request source, response, compatibility.
 - Request contract: Path, Query, Header, Body, required condition, enum, example.
 - Response contract: success body, error body, status codes, enum display rules.
-- Frontend mapping: screen field, API field, DTO/VO field, DB field, test case.
+- Frontend mapping: screen field, API field, DTO/VO field, DB field, test case. Read-only page sources inform backend contracts; frontend implementation requires locally controlled source and user authorization.
 - External dependency contract: SDK version, topic/path, parameter source,
   sample request/response, timeout and retry behavior.
 - External Integration Configuration And Deployment Contract for third-party

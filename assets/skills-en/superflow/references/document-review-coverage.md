@@ -24,7 +24,7 @@ investigate source-resolvable questions autonomously.
    downstream resources. Give different actor branches distinct entry IDs. Do not test only
    the newly selected API.
 5. Assert response, final state and forbidden effects. For read-only/pure-function work explain
-   why no persistent change applies; do not leave blanks. Browser paths require browser acceptance;
+   why no persistent change applies; do not leave blanks. Browser paths in the authorized delivery scope require browser acceptance;
    API checks can supplement, not replace them.
 6. For cross-page or field changes, inventory frontend routes, list columns and clickable actions
    independently from backend Controllers, exact Mapper statements and all writers. Reconcile both
@@ -34,8 +34,31 @@ investigate source-resolvable questions autonomously.
    or conflicting entries instead of treating matching totals as proof.
 7. A database-backed display case needs both a non-null fixture and a separate allowed historical
    NULL case. Compare API fields with authoritative DB values for the same business ID, then check
-   browser rendering. Field keys, HTTP 200, empty lists and historical NULL alone are insufficient.
+   browser rendering when page delivery is authorized in this task. Field keys, HTTP 200, empty lists and historical NULL alone are insufficient.
    Mutation cases also check write-then-read behavior and forbidden side effects.
+
+### Source authority and delivery scope
+
+Record provenance and delivery boundaries in the existing source-code-audit freeze card and
+source-ingestion; do not add an entry point or protocol:
+
+| Source identity | Read evidence | Access / owner / authorization | Delivery scope |
+|---|---|---|---|
+| Repository/path, branch or version; remote URL or static package identity | Files/ranges actually read, commands and unread portions | Read/write facts, resource owner and user authorization reference | Current implementation/verification obligation, or read-only investigation/coordination dependency and completion condition |
+
+Only source verified to exist locally with explicit user-granted control belongs in current
+implementation delivery obligations. Read-only investigation, remote references, archives and
+static build artifacts do not automatically constitute controllable source; filesystem write access
+alone is not authorization. Discovering an external caller requires impact investigation, not an
+automatic frontend change, browser acceptance or deployment obligation for a backend task.
+List missing/uncontrolled repositories as coordination dependencies with unknowns, owner and
+completion conditions. Complete local API/data behavior and authorized required tests; do not
+relabel unfinished local work as external coordination or silently delete required tests. When
+the original goal requires external results and its boundary is undecided, clarify business scope
+and acceptance. Never invent end-to-end completion or block unrelated local work mechanically.
+Apply the entry/caller investigation and browser obligations below within this confirmed delivery
+scope. Investigate in-scope unknowns; unavailable required permissions block the affected item.
+Source identities and hashes prove location, not actual reading or control.
 
 ## Investigate source before freezing design
 

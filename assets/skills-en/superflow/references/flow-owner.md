@@ -79,6 +79,8 @@ and use its readable bundle for actual dispatch and rereview.
 
 ## Owner-led delegation
 
+At startup and each integration, briefly record `Delegation decision` in the existing recovery point: actual candidate branches, dependencies/shared resources, chosen approach and reason. Apply the decision to this task instead of repeating “delegate as needed”.
+
 At startup and each return/integration point, the Owner chooses direct execution,
 serial delegation or parallel work by task size, actual prerequisites, file/runtime
 resource write conflicts, necessary context size and detail-loss risk, and dispatch/
@@ -241,3 +243,5 @@ independent re-review. Identity fields do not prove independence: verify origina
 tool returns rather than rewriting DONE/None or rebinding hashes. Reconcile cases,
 receipts, tasks and final state. PARTIAL discloses the gap and next step, never a
 claim that every goal was achieved.
+
+`Context pressure` triggers recovery notes, not subjective early closeout; continue executable work. Only an actual host limitation warrants an interruption handoff with the last action, evidence, open items and recovery command. An anticipated context limit is not an observed limitation.

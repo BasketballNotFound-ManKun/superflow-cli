@@ -212,7 +212,7 @@ Hard gates:
   development calls. Provider switches resume through
   `--provider-switched <reason>`, and stage changes notify the Host conversation
   without waking it for ordinary heartbeat.
-- Page/permission changes require frontend startup and Playwright/Cypress real-browser E2E. Cross-stack API changes require backend Controller and frontend request contracts plus an API-export snapshot.
+- Page/permission delivery with authorized, locally controlled frontend source requires frontend startup and Playwright/Cypress real-browser E2E. Cross-stack API changes require both contracts and an API-export snapshot when both sides are authorized and controlled.
 - Append the single `run.delivery_ready` event only after the integrity script passes. On failure, require human attention without leaving false delivery-ready evidence.
 - A passing run enters a three-stage source/environment/release state and still requires explicit Git approval.
 
