@@ -62,7 +62,7 @@ describe("delivery verification workflow", () => {
     expect(dependencies).toContain("npm ci");
     expect(dependencies).toContain("setup.log");
     const tools = steps.find((step: any) => step.id === "tools").run;
-    expect(tools).toContain("@fission-ai/openspec@1.14.1");
+    expect(tools).toContain("@fission-ai/openspec");
     expect(tools).toContain("--prefix");
     expect(tools).not.toMatch(/--global|npm i -g/);
     const command = steps.find((step: any) => step.id === "verification").run;

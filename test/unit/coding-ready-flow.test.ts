@@ -50,9 +50,8 @@ it.each([
     });
     expect(
       tool.status,
-      "OpenSpec 1.14.1 is required; install it into an isolated prefix and add its bin to PATH.",
+      "OpenSpec CLI must be available; readiness below verifies the commands and schema actually used.",
     ).toBe(0);
-    expect(tool.stdout.trim()).toBe("1.14.1");
     const change = await makeContractChange(temporary);
     const scripts = path.join(ROOT, "assets/skills/superflow/scripts");
     const shell = (name: string, args: string[]) => {

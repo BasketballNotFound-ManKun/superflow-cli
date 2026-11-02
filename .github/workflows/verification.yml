@@ -43,11 +43,12 @@ jobs:
         id: dependencies
         shell: bash
         run: npm ci >> "$RUNNER_TEMP/verification/setup.log" 2>&1
-      - name: 准备固定版本 OpenSpec
+      - name: 准备 OpenSpec 并记录实际版本
         id: tools
         shell: bash
         run: |
-          npm install --prefix "$RUNNER_TEMP/verification-tools" --no-audit --no-fund @fission-ai/openspec@1.14.1 >> "$RUNNER_TEMP/verification/setup.log" 2>&1
+          npm install --prefix "$RUNNER_TEMP/verification-tools" --no-audit --no-fund @fission-ai/openspec >> "$RUNNER_TEMP/verification/setup.log" 2>&1
+          "$RUNNER_TEMP/verification-tools/node_modules/.bin/openspec" --version >> "$RUNNER_TEMP/verification/setup.log" 2>&1
           echo "$RUNNER_TEMP/verification-tools/node_modules/.bin" >> "$GITHUB_PATH"
       - name: 执行唯一完整验证入口
         id: verification
