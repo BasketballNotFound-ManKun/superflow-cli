@@ -506,3 +506,7 @@ hash后声称Reviewer实际复核。审计器只核当前格式、身份、逐ID
 报告容器围栏使用空格缩进并明确闭合。列表/引用中含制表符的围栏目前明确拒绝结构核验；先规范格式，不用早期 DONE/PASS 绕过。原始执行日志中的制表符保留，不能为修格式改写证据。
 
 评审摘要须继承原四状态、未决 Concerns 及修后新增 diff 的实际复评结论。`Findings: None` 仅表示当前 finding 集为空，不证明所有风险已关闭；有残余风险须如实保留状态/范围，不能由 Owner 摘要洗成全通过。
+
+### Final delivered evidence
+
+评审范围包含最终交付时，实际读取当前报告及其[Delivery Evidence](test-execution-template.md#delivery-evidence)副本，不只查看工作结果目录或作者摘要。按原始观测核合同必需分支和真实入口层级。检查留存文件，在 Reviewed Sources 绑定实际项目相对路径/摘要；副本中的 PASS 标签不证明它等于终版执行。副本缺失/陈旧、当前状态矛盾均如实反馈。Owner 整合后由最终 verify guard 核结果；源码未变、仅格式整改不要求重跑业务测试。

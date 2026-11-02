@@ -435,3 +435,7 @@ Use spaces and explicit closure for report container fences. Tab-delimited list/
 For shared-schema changes, reconcile each authorized, locally controlled consumer; list uncontrolled consumers with coordination owners/completion conditions and do not claim their repair.
 
 Review summaries must carry forward the original four-state verdict, unresolved Concerns and actual re-review of post-fix diff. `Findings: None` means only that the current finding set is empty, not that every risk is closed. Preserve residual-risk status and scope; an Owner summary cannot rewrite them into full approval.
+
+### Final delivered evidence
+
+When final delivery is in scope, read the actual current report and its [Delivery Evidence](test-execution-template.md#delivery-evidence) copies, not only working results or the author's summary. Check mandatory contract branches and real entry layers against original observations. Bind inspected delivered paths/hashes in Reviewed Sources; copied PASS labels cannot prove equality with the final execution. Report missing/stale copies and contradictory current statuses. After Owner integration, the final verify guard checks the resulting delivery; unchanged source and format repairs do not require business test reruns.

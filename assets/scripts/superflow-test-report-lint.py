@@ -1547,6 +1547,42 @@ def lint_case_evidence(report_path: Path, report_text: str, review_path: Path, i
     return issues
 
 
+def delivery_evidence_files(report: Path, text: str) -> list[Path]:
+    """Verify declared retained copies; receipts remain the execution authority."""
+    lines, ambiguous = markdown_body_lines(current_report_text(text))
+    header = re.compile(r"^\|\s*Source\s*\|\s*Delivered copy\s*\|\s*SHA-256\s*\|$", re.I)
+    headers = [i for i, line in enumerate(lines) if header.fullmatch(line.strip())]
+    declared = any(line.strip() == "## Delivery Evidence" for line in lines)
+    if not headers and not declared:
+        return []
+    if ambiguous or len(headers) != 1:
+        raise ValueError("Delivery Evidence 需要唯一的 | Source | Delivered copy | SHA-256 | 表")
+    start = headers[0]
+    if start + 1 >= len(lines) or not re.fullmatch(r"\|[\s:|-]+\|", lines[start + 1].strip()):
+        raise ValueError("Delivery Evidence 表缺少分隔行")
+    files = []
+    delivered = set()
+    for line in lines[start + 2:]:
+        if not line.lstrip().startswith("|"):
+            break
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) != 3:
+            raise ValueError("Delivery Evidence 必须有 Source、Delivered copy、SHA-256 三列")
+        source, copy, digest = cells
+        try:
+            original = hashed_file(report.parent, source, digest)
+            retained = hashed_file(report.parent, copy, digest)
+        except (OSError, ValueError) as error:
+            raise ValueError(f"Delivery Evidence 原件/交付副本不一致：{error}") from error
+        if original == retained or retained in delivered:
+            raise ValueError("Delivery Evidence 副本必须独立且不能重复登记")
+        delivered.add(retained)
+        files.extend([original, retained])
+    if not delivered:
+        raise ValueError("Delivery Evidence 已声明但没有实际副本；直接引用原件时移除此节")
+    return files
+
+
 def lint_independent_review(report: Path, text: str, root: Path | None,
                             review_path: Path | None, index_root: Path | None) -> list[Issue]:
     """Identity/status only: this cannot prove reviewer independence or sufficiency."""
@@ -1632,6 +1668,9 @@ console.log(JSON.stringify(input.reports.map(file=>auditReviewReport(fs.readFile
                 receipt = json.loads(receipt_file.read_text())
                 for source in receipt["sources"]:
                     required.add(hashed_file(receipt_file.parent, source["path"], source["sha256"]))
+        copies = delivery_evidence_files(report, text)
+        dependencies.extend(copies)
+        required.update(copies[1::2])
         missing = required - reviewed
         if missing:
             raise ValueError("Independent Review 未覆盖当前源码/构建输入：" + ", ".join(sorted(map(str, missing))))
@@ -1661,6 +1700,12 @@ def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None,
                 review_path: Path | None = None, index_root: Path | None = None) -> list[Issue]:
     issues: list[Issue] = []
     text = current_report_text(path.read_text(encoding="utf-8", errors="replace"))
+    try:
+        copies = delivery_evidence_files(path, text)
+        if index_root is not None:
+            check_git_index_files(index_root, copies)
+    except (OSError, ValueError) as error:
+        issues.append(Issue("FAIL", path, 0, str(error)))
     lines = text.splitlines()
     command_tests: dict[str, set[tuple[int, int, int, int]]] = {}
     command_ratios: dict[str, set[tuple[int, int]]] = {}

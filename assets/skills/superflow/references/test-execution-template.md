@@ -135,3 +135,17 @@ DB-only、编译成功、跳过测试或静态页面配置都不能单独证明�
 当前源码、入口或上下文变化时按影响取得新证据，旧 PASS 不覆盖新增影响。
 
 批量采集、真实观测离线诊断与历史attempt沿[同次执行合同](test-guide.md#observed-batch-and-measurement-diagnostics)，不手造当前计数或用旧XML补新build。
+
+## Delivery Evidence
+
+优先直接引用 capture 原件及不可变 attempt，无交付副本就不需要此表。确有留存副本时，在当前报告增加下面的可选节，路径相对报告，SHA-256 来自原件。既有报告 lint 核两端字节与该摘要，拒绝缺失/重复副本，并要求实际独评绑定交付文件。历史映射进入明确 History。此表仅声明复制关系，不生成执行 receipt，也不证明业务正确。
+
+```markdown
+## Delivery Evidence
+
+| Source | Delivered copy | SHA-256 |
+|---|---|---|
+| <采集原件路径> | <留存副本路径> | <原件SHA-256> |
+```
+
+整改后先刷新受影响副本，再实际复评并运行最终 verify guard，不能重写历史 attempt。复制 receipt 仍须保持相对依赖路径可解析；直接引用原件可省去这项工作。只改报告不应重跑仍有效的业务测试。

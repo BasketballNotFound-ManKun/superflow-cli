@@ -480,6 +480,10 @@ function dispatchInstructions(
       ? "Read-only review: no source edits, application startup, business DB operations or nested supervision. Missing inputs remain NEEDS_CONTEXT. Snapshot identities are not claims of actual reading. Owner judges unselected dirty configuration/temporary files and task ownership; no silent exclusion."
       : "只读评审：不改源码、不启动应用、不操作业务库、不启动嵌套监督。缺输入保持 NEEDS_CONTEXT；快照身份不是实际已读声明。Owner 判断未选脏配置/临时文件及任务所有权，不得静默排除。",
     "",
+    english
+      ? "When final delivery is in scope, inspect the actual current report, execution receipts and declared Delivery Evidence copies. Check mandatory contract branches and retained bytes; record delivered paths/hashes in Reviewed Sources. Working results or the author's PASS summary cannot stand in for the final package."
+      : "范围包含最终交付时，检查实际当前报告、执行 receipt 与声明的 Delivery Evidence 副本；核合同必需分支和留存字节，将交付路径/摘要写入 Reviewed Sources。工作目录结果或作者 PASS 摘要不能代替最终交付包。",
+    "",
     "superflow review-coverage --report <actual-new-report-file> --json",
     "",
     english

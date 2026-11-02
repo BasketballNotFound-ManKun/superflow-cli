@@ -166,3 +166,17 @@ read-only. Inherited valid evidence keeps its explicit version/scope; source, en
 or context changes require affected new proof. Old PASS does not cover new impact.
 
 Follow [observed batch diagnostics and attempt history](test-guide.md#observed-batch-and-measurement-diagnostics); do not fabricate current counts or attach old XML to a new build.
+
+## Delivery Evidence
+
+Prefer direct references to captured originals and immutable attempts; no copy table is needed without delivered copies. When retaining copies, add this optional current-report section using paths relative to the report and the original file's SHA-256. Existing report lint checks both files against that digest, rejects missing/duplicate copies, and requires actual independent review to bind delivered files. Keep historical mappings inside explicit History. The table declares copy relationships only, not execution receipts or business correctness.
+
+```markdown
+## Delivery Evidence
+
+| Source | Delivered copy | SHA-256 |
+|---|---|---|
+| <captured-original-path> | <retained-copy-path> | <original-SHA-256> |
+```
+
+Refresh affected copies before actual rereview and the final verify guard; do not rewrite historical attempts. Copied receipts still need valid relative dependencies; direct references avoid that work. Report-only changes do not require rerunning valid business tests.
