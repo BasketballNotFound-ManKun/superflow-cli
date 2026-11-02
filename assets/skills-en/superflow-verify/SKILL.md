@@ -224,8 +224,8 @@ Before pass:
    database, log, or dev-tool evidence, mock-only/unit-only reports are hard
    failures unless the report is explicitly `Blocked` or `Partially verified`
    with the missing environment named.
-4. `~/.codex/hooks/superflow-delivery-check.sh <test-report.md>` passes before
-   delivery or branch closeout.
+4. The final verify guard below passes against the actual final report and evidence.
+   `superflow-delivery-check.sh` applies only to staged Git commits, not report arguments.
 5. Code review findings are either fixed or explicitly recorded with accepted
    risk.
 6. For money-related changes, `test-report.md` records the `Money Precision
@@ -268,3 +268,7 @@ Per-case PASS requires retained local execution receipts. Freeze service/entry, 
 Freeze and inherit `testLayer`, entry.database, production statements, mockBoundary,
 and data assertions from the [database contract](../superflow/references/document-review-coverage.md#database-layer-contract).
 Compare original events/receipts and source/build/entry/engine versions; preserve fixed-version historical evidence, require new evidence for changed sources.
+
+### Final package reconciliation
+
+Before the existing verify guard, apply [phase handoff and final package](../superflow/references/flow-owner.md#phase-handoff-and-final-package). Check declared [Delivery Evidence](../superflow/references/test-execution-template.md#delivery-evidence) copies and bind delivered bytes in the actual independent review's Reviewed Sources. Reconcile the final report after the return; do not append a PASS below stale current results. Format/copy repairs reuse valid captures without business test reruns. `superflow-delivery-check.sh` is a staged-commit hook; a report argument does not perform a delivery check. The final phase check is the existing `superflow-guard.sh <change-dir> verify --apply`; failure remains pending verification.

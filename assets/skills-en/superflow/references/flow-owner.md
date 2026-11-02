@@ -245,3 +245,11 @@ receipts, tasks and final state. PARTIAL discloses the gap and next step, never 
 claim that every goal was achieved.
 
 `Context pressure` triggers recovery notes, not subjective early closeout; continue executable work. Only an actual host limitation warrants an interruption handoff with the last action, evidence, open items and recovery command. An anticipated context limit is not an observed limitation.
+
+## Phase handoff and final package
+
+After implementation signals are complete, run the existing implement guard with `--apply`, then actually read the `READ` skill path returned by `next`. A build summary or reviewer reply does not execute verify. Follow its `CHECK` command after reconciling evidence; a missing/failed final guard is pending verification, never complete delivery. Preserve manual stage boundaries and existing Git/archive authorization.
+
+Use captured originals and immutable attempts directly. If delivery needs retained copies, declare only those copies in the existing report's [Delivery Evidence table](test-execution-template.md#delivery-evidence); the report lint checks source/copy identity. Do not hand-copy an entire evidence directory after every test. Refresh affected copies on repair and keep historical attempts separate.
+
+Give the isolated Reviewer the actual current report, receipts and declared delivered copies alongside the diff and original findings. Check mandatory contract clauses against actual observations before accepting the author's PASS count; a missing mandatory branch is not optional improvement. Bind reviewed delivered files in Reviewed Sources. After integrating the return and final report, run the existing verify guard. Wording/copy repairs reuse valid execution evidence without business test reruns; source changes still require affected tests and actual rereview.

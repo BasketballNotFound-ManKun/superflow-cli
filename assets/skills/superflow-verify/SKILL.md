@@ -194,8 +194,8 @@ Before pass:
    database, log, or dev-tool evidence, mock-only/unit-only reports are hard
    failures unless the report is explicitly `Blocked` or `Partially verified`
    with the missing environment named.
-4. `~/.codex/hooks/superflow-delivery-check.sh <test-report.md>` passes before
-   delivery or branch closeout.
+4. The final verify guard below passes against the actual final report and evidence.
+   `superflow-delivery-check.sh` applies only to staged Git commits, not report arguments.
 5. Code review findings are either fixed or explicitly recorded with accepted
    risk.
 6. For money-related changes, `test-report.md` records the `Money Precision
@@ -237,3 +237,7 @@ or repeatedly asking for continuation. Git and release retain their own authoriz
 按 [数据库合同](../superflow/references/document-review-coverage.md#数据库分层合同)
 冻结并继承 `testLayer`、entry.database、生产 statement、mockBoundary 和数据断言。
 核对原始事件与receipt、源码/构建/入口/引擎版本；旧固定版本证据保留，当前源码变化需新证据。
+
+### Final package reconciliation
+
+最终 verify guard 前执行[阶段承接与最终交付包](../superflow/references/flow-owner.md#phase-handoff-and-final-package)。核已声明的[Delivery Evidence](../superflow/references/test-execution-template.md#delivery-evidence)副本，将实际交付字节纳入独立评审的 Reviewed Sources。收到返回后再次对账最终报告，不在旧当前结果下面只追加新 PASS。格式/副本整改复用有效 capture，不重跑业务测试。`superflow-delivery-check.sh` 是暂存提交 Hook，给它传报告参数不构成交付检查；最终阶段检查使用既有 `superflow-guard.sh <change-dir> verify --apply`，失败仍为待验证。

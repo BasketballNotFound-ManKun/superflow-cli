@@ -145,7 +145,15 @@ describe("ordinary Flow Owner installed lifecycle", () => {
       const completed = state("transition", change, "implement-complete");
       expect(completed.status, completed.stderr).toBe(0);
       expect(state("phase", change).stdout.trim()).toBe("verify");
-      expect(state("next", change).stdout).toContain("SKILL: superflow-verify");
+      const navigation = state("next", change).stdout;
+      expect(navigation).toContain("SKILL: superflow-verify");
+      const skillFile = navigation.match(/^READ: (.+)$/m)?.[1];
+      expect(skillFile).toBe(path.join(target, "superflow-verify", "SKILL.md"));
+      const check = navigation.match(/^CHECK: (.+)$/m)?.[1];
+      expect(check).toBeDefined();
+      const rejected = spawnSync("bash", ["-c", check!], { cwd: project, env, encoding: "utf8" });
+      expect(rejected.status).not.toBe(0);
+      expect(state("phase", change).stdout.trim()).toBe("verify");
       // Failed verification returns to implementation without losing the contract.
       expect(state("transition", change, "verify-pass").status).toBe(1);
       expect(state("transition", change, "verify-fail").status).toBe(0);

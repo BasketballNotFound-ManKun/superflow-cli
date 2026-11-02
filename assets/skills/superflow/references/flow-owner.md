@@ -185,3 +185,11 @@ Git提交/推送/发布/归档分别核可定位的已有明确授权；后到�
 PARTIAL就披露缺口和下一步，不说全部目标已达成。
 
 `Context pressure` 是恢复点触发条件，不是主观提前收尾理由；继续可执行工作。只有实际宿主限制导致无法继续时如实交接最后动作、证据、未决项与恢复命令，不把预计上下文临界当已发生限制。
+
+## Phase handoff and final package
+
+实施信号完成后运行既有 implement guard `--apply`，再实际读取 next 返回的 `READ` 技能路径。build 摘要或 Reviewer 返回不代表 verify 阶段已执行。完成证据对账后按其 `CHECK` 命令核验；未执行或失败的最终 guard 是待验证，不能称完整交付。保留手动阶段边界及已有 Git/归档授权。
+
+直接引用 capture 原件与不可变 attempt；确需交付副本时，仅在既有报告的[Delivery Evidence 表](test-execution-template.md#delivery-evidence)登记这些副本，由报告 lint 核原件/副本身份。不要每轮测试手工复制整个证据目录。整改只刷新受影响副本，历史 attempt 单独保留。
+
+隔离 Reviewer 除 diff 和原 finding 外，还要取得实际当前报告、receipt 及已声明交付副本。先按合同必需子句核实际观测，再核作者 PASS 数量；缺必测分支不能改称可选补强。已核交付文件进入 Reviewed Sources。整合实际返回和最终报告后运行既有 verify guard；只修措辞/副本时保留有效执行证据，不重跑业务测试。源码变化仍按原影响范围重测并实际复评。

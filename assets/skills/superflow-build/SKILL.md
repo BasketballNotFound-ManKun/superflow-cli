@@ -218,3 +218,7 @@ This skill supports the "actions on a change" model:
 
 - **Can be invoked anytime**: Before all artifacts are done (if tasks exist), after partial implementation, interleaved with other actions
 - **Allows artifact updates**: If implementation reveals design issues, suggest updating artifacts - not phase-locked, work fluidly
+
+### Phase handoff
+
+实施完成按[阶段承接与最终交付包](../superflow/references/flow-owner.md#phase-handoff-and-final-package)运行 implement guard，实际读取返回的 verify 技能并继续最终检查，再给交付结论。

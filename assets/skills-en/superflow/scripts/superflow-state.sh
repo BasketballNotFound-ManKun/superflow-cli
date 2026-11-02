@@ -416,7 +416,16 @@ cmd_next() {
   fi
   printf 'SKILL: %s\n' "$skill"
   printf 'PHASE: %s\n' "$phase"
-  printf 'HINT: continue with $%s for phase %s.\n' "$skill" "$phase"
+  local scripts skills
+  scripts="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  skills="$(cd "$scripts/../.." && pwd)"
+  printf 'READ: %s/%s/SKILL.md\n' "$skills" "$skill"
+  if [[ "$phase" == "verify" ]]; then
+    printf 'CHECK: bash %q %q verify --apply\n' "$scripts/superflow-guard.sh" "$CHANGE_DIR"
+    printf 'HINT: read the verify skill, reconcile current evidence and run CHECK; pending or failed checks are not complete delivery. No Git/archive authorization is implied.\n'
+  else
+    printf 'HINT: continue with $%s for phase %s.\n' "$skill" "$phase"
+  fi
 }
 
 cmd_recover() {
