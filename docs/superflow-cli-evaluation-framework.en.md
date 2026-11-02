@@ -128,7 +128,7 @@ producing Coding Ready, incomplete-contract rejection, valid implementation cont
 contract-drift invalidation, recovery and upgrade tests. Handwritten success receipts cannot replace
 the complete positive chain.
 
-Tools are Node 20/24, Python 3.12 and OpenSpec 1.14.1; missing tools fail explicitly, never skip.
+CI covers Node 20/24 and Python 3.12. Validate OpenSpec through the commands, schemas and checks actually used, without an exact third-party version requirement. Record observed versions; missing required commands fail explicitly, never skip.
 Install OpenSpec into a temporary isolated prefix and add its `node_modules/.bin` to PATH if needed;
 a global install is not required. CI uses the same `--full --json` entry across Linux/macOS and
 Node 20/24, retaining reports and detailed logs even on failure. Setup failures retain the same
@@ -571,3 +571,9 @@ The hypothesis is to clarify authority/delivery scope in the canonical source in
 Existing rules already contained most authorization and continuity duties; added prose does not prove model compliance or speed. Actual before/after results, independent reviews, full verification and local installation remain external evidence. Roll back or repair the original owner if external unknowns are called complete, local requirements disappear, old output gains a new identity, failed/missing Cases PASS, originals are overwritten, secrets reach disk before redaction, permissions expand, default hard budgets appear or user assets are damaged. Do not weaken assertions to obtain green results.
 
 An actual readiness counterexample also showed native OpenSpec strict validation rejecting Superflow extension fields. Applicability now has a single frozen owner in `.sdd/applicability.yaml`, while native configuration retains its schema. Regressions check that applicability changes invalidate handoff, derived readiness does not create a hash cycle, and the old location has no compatibility fallback; retain actual OpenSpec strict output separately.
+
+## Final delivery package verification (2026-11-02)
+
+Observed issues include omitted verify execution after build, retained evidence copies older than working results, and review of working outputs while the current report mixes old states. Owners are phase navigation, existing report lint and semantic rereview. Existing final checks already reject malformed reports; more prose cannot establish model compliance. Baseline is the preceding complete verification plus reproducible synthetic failures. Hypothesis: actionable navigation, digest checks on declared copy relationships and independent review binding delivered files reduce omissions and copying rework. Direct references remain lightweight; no mandatory archive directory.
+
+Cases cover both hosts/languages/scopes, rejected CHECK preserving phase, changed originals, stale/missing/duplicate/self copies, missing independent coverage, valid copies, history/fenced examples and wording repairs without business execution. Before changes, stale copies were accepted; runtime tests verify rejection afterward. Results and full gates live in external verification reports, not claims of model compliance. Undeclared copies still need semantic review. Roll back false rejection of valid history/no-copy tasks, stale declared copies accepted, wrong phase advancement or unnecessary business reruns, retaining failure evidence and repairing the existing owner.

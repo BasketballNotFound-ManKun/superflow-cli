@@ -266,3 +266,7 @@ Owner在开工与整合点权衡任务规模、依赖已满足的frontier、共�
 Owner在开工/整合做实际委派判断，共享文件/Gradle结果/数据库资源须隔离或串行。主观上下文压力只触发紧凑恢复点，不结束可继续的授权工作。原评审四态与Concerns完整承接，Findings None不代表无风险，修后diff须实际复评。无新Skill、Hook、调度状态或默认硬预算；不改变托管三消息协议。
 
 适用性唯一声明位于`.sdd/applicability.yaml`并进入既有handoff冻结清单；原生`.openspec.yaml`仅保存OpenSpec支持字段，禁止旧位置回退或在两个文件重复声明。就绪和评审输出仍为派生凭证，不进入自身输入哈希。
+
+## 阶段承接与交付副本（2026-11-02）
+
+既有 next 返回实际阶段技能路径与 verify guard 命令；实施完成后实际进入 verify，未执行或失败的检查保留待验证，不能用摘要替代。直接引用 capture 原件和不可变 attempt；确需副本时在既有报告 Delivery Evidence 表记录原件、交付路径及原件摘要，由同一 report lint 核两端身份，完整独评绑定交付文件。原始 receipt 仍为执行事实源，复制关系不生成执行结论。Reviewer 核最终报告和交付证据，Owner 整合后再执行既有最终 guard。纯格式/复制整改复用有效测试；不新增 Hook、状态或固定代理调度。
