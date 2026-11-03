@@ -439,3 +439,5 @@ Review summaries must carry forward the original four-state verdict, unresolved 
 ### Final delivered evidence
 
 When final delivery is in scope, read the actual current report and its [Delivery Evidence](test-execution-template.md#delivery-evidence) copies, not only working results or the author's summary. Check mandatory contract branches and real entry layers against original observations. Bind inspected delivered paths/hashes in Reviewed Sources; copied PASS labels cannot prove equality with the final execution. Report missing/stale copies and contradictory current statuses. After Owner integration, the final verify guard checks the resulting delivery; unchanged source and format repairs do not require business test reruns.
+
+Trace actual observations at test assertions → adapter parsing → measurement → receipt. Method-level JUnit PASS cannot reconstruct unreported fields or replace three separate actuals. Missing required receipts remain delivery gaps, not optional reporting polish.

@@ -36,6 +36,7 @@ cases, backend/mockBoundary, commands and assertions. Agree acceptance baselines
 an initial plan here. The same Owner strengthens same-goal discoveries during work
 and maintains existing contracts/evidence without routine approval requests. Required
 DB signals cannot be removed, replaced by mocks or called inapplicable when unavailable.
+Also check verification prerequisites in tasks against the [first delivery chain](../superflow/references/test-guide.md#first-verification-action): reuse tests and connect missing required observations/adapters with the first batch. Full regression and final independent review depend on all features; capture capability is not deferred until then.
 
 For full document delivery, read and apply
 [requirement × real-entry review](../superflow/references/document-review-coverage.md).

@@ -31,6 +31,7 @@ with the current tasks index; check relationships using existing
 `coverage.decisions.taskIds/caseIds` and `coverage.cases.entryId`.
 VERIFY_EXISTING may have no new implementation task; EXCLUDED must not invent a
 case. Navigate every applicable case/task and satisfy actual predecessors.
+When planning batches, apply the [first delivery chain](test-guide.md#first-verification-action) to test/capture prerequisites. Required observations/adapters become ready with the first applicable batch, not a final test batch blocked by every feature. Commands remain in tests; navigation references existing tasks without duplicating pipelines or fixing a batch count.
 
 ## Example artifact
 

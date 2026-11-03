@@ -34,16 +34,29 @@ API真实请求＋数据库通常证明接口/后端集成；后端完整业务�
 
 ## First verification action
 
-首次计划执行验证前完整读本节及Runner-Captured Execution，再读取tests.md冻结命令；
-先复用项目测试/验收wrapper。捕获由现有`superflow-test-report-lint.py --record-execution`
-负责；先用`--check-execution-plan build-plan.json case-plan.json`一次预检本批计划，再实际运行
-一个最小build/Case验证测量接线，确认后扩展。不从字段名猜receipt、capture、
-事件、hash或来源清单，不手改生成结果。路径错误按声明/基准/解析路径修正。
+将首次验证做成一条最小交付链，而不是“先把业务测试跑完，最后接证据”。Owner 先读本节、
+Runner-Captured Execution 与 tests.md，复用项目测试/验收 wrapper 和已安装的 capture。
+按源码风险选择一个已就绪的代表 Case 或同上下文批组，不要求所有生产功能先完成。
 
-脚本与本指南同属一次Superflow安装。以本SKILL安装目录为基准：从
-`<scope>/.codex/skills/superflow/`向上到`.codex`后取`hooks/superflow-test-report-lint.py`；
-Claude同理取`.claude/scripts/`，scope为已选项目或用户目录。不得混用另一安装或扫描个人目录；
-缺脚本是安装问题，保留诊断，不重新编写一套捕获器。业务测试不因此依赖某次报告文件。
+1. 在 tasks 中核它的测试、观测输出与 adapter 前置依赖。它们须在首批旁一并实现或复用；
+   只有全量回归与最终独评依赖全部功能完成。若任务要求早期真实验证，却把唯一采集能力
+   阻塞到所有功能之后，这是合同顺序冲突，由原文档 owner 修依赖/导航并重新评审，不另写执行方案绕过。
+2. 从同一批真实断言处保留响应、状态与禁止副作用的实际观测；原生测试继续做业务断言，
+   不依赖交付 build.json。adapter 解析这些原始观测及精确执行结果，附身份后输出测量。
+   JUnit XML 通过数只证明方法结果，不能还原未输出的字段值或复制成三项 actual。
+3. 用现有 `--check-execution-plan build-plan.json case-plan.json` 预检，实际
+   `--record-execution` 构建与用例，将首份真实 receipt 接入当前 Case 表并运行报告 lint；
+   未执行项保持 PARTIAL。沿既有 RED/失败分支核错误观测会使测量/退出码失败，不能被方法绿数洗白。
+   首批接线可用后再扩展同一 adapter，保留每个 Case 的断言，不为每个 Case 重跑整类。
+
+本节不增加独评轮次或另建测试框架。首次接线失败按原输出修同一管线，不能拖到最终
+独评后或以“下个会话独立工程块”结束可继续的授权工作。命令字段不是观测，回执格式通过
+也不替代 Reviewer 对断言充分性与真实数据流的检查。
+
+脚本与本指南同属一次 Superflow 安装。以本 SKILL 安装目录为基准：从
+`<scope>/.codex/skills/superflow/` 向上到 `.codex` 后取 `hooks/superflow-test-report-lint.py`；
+Claude 同理取 `.claude/scripts/`，scope 为已选项目或用户目录。不得混用另一安装或扫描
+个人目录；缺脚本按安装问题诊断，不重新编写捕获器。业务测试不依赖某次报告文件。
 
 ## Source-driven regression choices
 

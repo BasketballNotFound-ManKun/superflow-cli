@@ -32,13 +32,11 @@ files only as history or PARTIAL; missing current requirements block until compl
 Within the Superflow workflow, before the first task actually read the full
 [test-guide.md](../superflow/references/test-guide.md), then use its
 [Owner-led planning](../superflow/references/test-guide.md#owner-led-test-planning)
-with baseline tests.md and project tests. For the first SDD build/case verification,
-prepare plans through [Runner-Captured Execution](../superflow/references/test-guide.md#runner-captured-execution)
-and run the resolved installed script:
-`python3 <installed-script-path>/superflow-test-report-lint.py --record-execution <plan.json>`.
-The script generates receipts, build fingerprints and raw output; link the generated
-paths in the [report](../superflow/references/test-execution-template.md) before
-continuing verification, without first constructing receipts or hashes manually.
+with baseline tests.md and project tests. For the first SDD verification, follow the [first delivery chain](../superflow/references/test-guide.md#first-verification-action):
+check task dependencies and complete actual assertion observations → adapter → capture → current
+report lint before expanding batches. If tests must run early but capture is documented after all
+features, the original document owner repairs ordering and affected review. Do not bypass frozen
+contracts or wait until final independent review to connect capture. Plain OpenSpec follows project rules.
 Owner adds same-goal boundaries/regressions
 from actual diffs/callers/discoveries, executes applicable RED/GREEN and required real
 checks, and completes tasks only with proof. New Case IDs/frozen contexts are maintained

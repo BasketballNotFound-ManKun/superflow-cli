@@ -28,6 +28,7 @@ Task存在性用当前tasks索引；Task/Entry/Case关系用现有
 `coverage.decisions.taskIds/caseIds`、`coverage.cases.entryId` 核验。
 VERIFY_EXISTING可无新增实现任务；EXCLUDED不伪造验收用例。
 所有适用用例和任务都必须可导航，批次先满足真实前置依赖。
+规划批次时按[首批交付链](test-guide.md#first-verification-action)核测试与采集前置：必需的观测/adapter随首个适用批次就绪，不统一塞到依赖全部功能的“最后测试批”。执行命令只在 tests 持有，导航引用现有任务，不复制管线或增固定批次数。
 
 ## 正文示例
 

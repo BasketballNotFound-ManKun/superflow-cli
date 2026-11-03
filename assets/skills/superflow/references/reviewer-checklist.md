@@ -510,3 +510,5 @@ hash后声称Reviewer实际复核。审计器只核当前格式、身份、逐ID
 ### Final delivered evidence
 
 评审范围包含最终交付时，实际读取当前报告及其[Delivery Evidence](test-execution-template.md#delivery-evidence)副本，不只查看工作结果目录或作者摘要。按原始观测核合同必需分支和真实入口层级。检查留存文件，在 Reviewed Sources 绑定实际项目相对路径/摘要；副本中的 PASS 标签不证明它等于终版执行。副本缺失/陈旧、当前状态矛盾均如实反馈。Owner 整合后由最终 verify guard 核结果；源码未变、仅格式整改不要求重跑业务测试。
+
+逐项追踪测试断言处的实际观测→adapter解析→measurement→receipt；JUnit方法级PASS不能还原未输出字段，也不能复制为三项actual。缺必需回执是交付缺口，不能降为可选报告补强。

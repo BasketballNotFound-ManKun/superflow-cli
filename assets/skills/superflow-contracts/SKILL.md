@@ -31,6 +31,7 @@ description: Superflow 内部能力：补齐接口、测试、追溯和质量合
 复用项目测试/环境，将行为、真实调用者和主要风险落实为用例、后端/mockBoundary、命令及断言。
 本阶段约定验收底线和初始方案；实施中新发现的同目标用例由同一Owner补强并维护原合同/证据，
 不例行请求用户批准。必要DB等信号不能被删减、降成mock或因缺环境标不适用。
+同时按[首批交付链](../superflow/references/test-guide.md#first-verification-action)核 tasks 的验证前置依赖：已有测试复用，缺必需观测/adapter随首批接通；全量回归与最终独评才依赖全部功能，不把采集能力留到最后。
 
 完整文档交付必须读取并执行
 [需求×真实入口评审](../superflow/references/document-review-coverage.md)：

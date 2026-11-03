@@ -49,19 +49,38 @@ Do not relabel locally controlled API verification gaps as external coordination
 
 ## First verification action
 
-Before executing verification, read this section and Runner-Captured Execution in full,
-then the frozen commands in tests.md; reuse project tests/acceptance wrappers first.
-The existing `superflow-test-report-lint.py --record-execution` owns capture. First use
-`--check-execution-plan build-plan.json case-plan.json` to check this batch at once, then
-run one minimal build/Case to verify the measurement wiring before extending. Do not infer
-receipt/capture/event/hash fields or edit generated records; use declared/base/resolved
-path diagnostics to repair inputs.
+Make the first verification a minimal delivery chain, rather than running all business tests
+before connecting evidence. Read this section, Runner-Captured Execution and tests.md first;
+reuse project tests/wrappers and installed capture. Choose a dependency-ready representative
+Case or identical-context batch according to source risks, without waiting for all features.
+
+1. Check its test, raw-observation output and adapter dependencies in tasks. Reuse or implement
+   them alongside the first batch. Only full regression and final independent review depend
+   on all features. Early real verification with the sole capture capability blocked behind
+   every feature is a contract-order conflict: the original document owner repairs dependency/
+   navigation and obtains affected review, rather than inventing another execution plan.
+2. Preserve actual response, state and forbidden-effect observations at those same assertions.
+   Native tests retain business assertions without depending on delivery build.json. The adapter
+   parses those raw observations and precise execution results, then attaches identity. JUnit
+   XML pass counts establish method results; they cannot reconstruct unreported field values
+   or stand in for three separate actuals.
+3. Preflight with existing `--check-execution-plan build-plan.json case-plan.json`, actually
+   `--record-execution` the build and Case, connect the first real receipt to the current Case
+   ledger and run report lint. Unexecuted Cases remain PARTIAL. Use existing RED/failure paths
+   to check that wrong observations fail measurement/exit rather than borrowing green method
+   counts. Extend the same adapter after wiring works, preserving each Case's assertions
+   without rerunning the entire class per Case.
+
+Add no independent-review round or test framework. Repair first-wiring failures in the same
+pipeline; do not postpone until final review or another session while authorized work can
+continue. Planned fields are not observations, and receipt format validation does not replace
+Reviewer judgment of assertion sufficiency and actual data flow.
 
 Resolve the script from the same Superflow installation as this guide: from
 `<scope>/.codex/skills/superflow/`, ascend to `.codex` and use
 `hooks/superflow-test-report-lint.py`; Claude uses `.claude/scripts/`. Scope is the
 selected project or user directory. Never mix installations or scan personal directories.
-Missing capture scripts require installation repair, not another capture implementation.
+Missing capture scripts require installation diagnosis, not another capture implementation.
 Business tests remain independent from any one delivery report.
 
 ## Source-driven regression choices
