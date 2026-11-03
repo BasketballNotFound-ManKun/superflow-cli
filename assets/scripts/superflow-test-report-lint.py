@@ -593,9 +593,20 @@ def validate_execution_context(receipt: dict, event: dict, case: dict, change: P
 def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: Path) -> None:
     if case.get("executionEvidence") != "runner-captured.v1":
         raise ValueError("executionEvidence 必须冻结 runner-captured.v1；capture 不能替代缺失合同")
-    receipt = json.loads(file.read_text(encoding="utf-8"))
+    recovery = ("按 test-guide.md 的首批验证闭环，使用已安装 superflow-test-report-lint.py "
+                "--check-execution-plan BUILD_PLAN CASE_PLAN 预检，再 --record-execution PLAN 实际采集；"
+                "不转换旧输出或补造实际值，未采集保持 PARTIAL")
+    raw = file.read_text(encoding="utf-8")
+    try:
+        receipt = json.loads(raw)
+    except json.JSONDecodeError as error:
+        kind = "JUnit/XML" if raw.lstrip().startswith("<") else "JSONL/非回执 JSON"
+        raise ValueError(f"{kind} 不是 execution-receipt.v1：{recovery}") from error
+    if not isinstance(receipt, dict):
+        raise ValueError(f"执行回执需要 JSON object：{recovery}")
     if receipt.get("schemaVersion") != "superflow.execution-receipt.v1":
-        raise ValueError("缺少 execution-receipt.v1；旧证据应保留为 PARTIAL")
+        label = "measurement 仅为测试观测，" if receipt.get("event") == "superflow.measurement.v1" else ""
+        raise ValueError(f"{label}缺少 execution-receipt.v1：{recovery}")
     for key, expected in [("caseId", case["id"]), ("entryId", case["entryId"]),
                           ("level", case["level"]), ("status", "PASS")]:
         if receipt.get(key) != expected:

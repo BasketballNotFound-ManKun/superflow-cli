@@ -497,3 +497,29 @@ process.exit(Number(process.env.FAIL||0));`);
     } finally { fs.rmSync(f.dir, { recursive: true, force: true }); }
   });
 });
+
+describe('raw evidence diagnostics', () => {
+  it.each([
+    ['<testsuite tests="1" failures="0"/>', 'JUnit/XML'],
+    ['{"event":"superflow.measurement.v1","caseId":"C1"}', 'measurement'],
+    ['{"caseId":"C1"}\n{"caseId":"C2"}\n', 'JSONL'],
+    ['[]', 'JSON object'],
+  ])('rejects %s with the actual capture recovery entry', async (raw, label) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-raw-evidence-'));
+    try {
+      writeExecutionReceipt(dir, 'C1', 'E1');
+      const review = JSON.parse(fs.readFileSync(path.join(dir, 'capture-review.json'), 'utf8'));
+      review.coverage.schemaVersion = 'superflow.review-coverage.v1';
+      review.coverage.decisions = [{ disposition: 'FIX', caseIds: ['C1'] }];
+      fs.writeFileSync(path.join(dir, 'capture-review.json'), JSON.stringify(review));
+      fs.writeFileSync(path.join(dir, 'logs/C1.json'), raw);
+      fs.writeFileSync(path.join(dir, 'test-report.md'),
+        '| Case ID | Entry ID | Acceptance level | Result | Evidence path |\n' +
+        '|---|---|---|---|---|\n| C1 | E1 | api | PASS | logs/C1.json |\nVerification Result: PASS\n');
+      const result = await execFileAsync('python3', [LINT, '--review', path.join(dir, 'capture-review.json'),
+        path.join(dir, 'test-report.md')]).catch(error => error);
+      expect(result).toMatchObject({ code: 2, stdout: expect.stringContaining(label) });
+      expect(result.stdout).toContain('--record-execution');
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  });
+});
