@@ -44,10 +44,24 @@ Runner-Captured Execution 与 tests.md，复用项目测试/验收 wrapper 和�
 2. 从同一批真实断言处保留响应、状态与禁止副作用的实际观测；原生测试继续做业务断言，
    不依赖交付 build.json。adapter 解析这些原始观测及精确执行结果，附身份后输出测量。
    JUnit XML 通过数只证明方法结果，不能还原未输出的字段值或复制成三项 actual。
-3. 用现有 `--check-execution-plan build-plan.json case-plan.json` 预检，实际
-   `--record-execution` 构建与用例，将首份真实 receipt 接入当前 Case 表并运行报告 lint；
-   未执行项保持 PARTIAL。沿既有 RED/失败分支核错误观测会使测量/退出码失败，不能被方法绿数洗白。
+3. 沿现有 `superflow verify` 预检并显式执行原计划（命令见下），将实测 receipt
+   同步到当前 Case 表并运行报告 lint；未执行项保持 PARTIAL。沿既有 RED/失败分支核
+   错误观测会使测量/退出码失败，不能被方法绿数洗白。
    首批接线可用后再扩展同一 adapter，保留每个 Case 的断言，不为每个 Case 重跑整类。
+
+```sh
+superflow verify <change-dir> --execution-plan build-plan.json
+superflow verify <change-dir> --execution-plan build-plan.json --run
+superflow verify <change-dir> --execution-plan case-plan.json
+superflow verify <change-dir> --execution-plan case-plan.json --run --sync-report
+superflow verify <change-dir> --execution-status
+```
+
+计划路径相对调用目录；Case 计划必须绑定所选 change。预检不运行命令，只有 `--run`
+实际执行。`--sync-report` 仅投影当前 Case 表并将整体结果保留为 PARTIAL/NOT_READY，
+保留原历史与解释；不改计划、合同或评审原件。`--execution-status` 只读核实际回执及
+当前源码/构建身份；命令成功退出不等于用例或交付通过，应读取 counts、逐项结果和诊断。
+Owner 选择计划、必测与执行顺序，不手工维护多份通过数；完整交付仍走原独评和最终门禁。
 
 本节不增加独评轮次或另建测试框架。首次接线失败按原输出修同一管线，不能拖到最终
 独评后或以“下个会话独立工程块”结束可继续的授权工作。命令字段不是观测，回执格式通过

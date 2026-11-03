@@ -77,6 +77,13 @@ Flow Owner defines continuity and cannot replace build/verify or another full ph
 contract. Before implementation/review read the full [Reviewer checklist](reviewer-checklist.md)
 and use its readable bundle for actual dispatch and rereview.
 
+At recovery/integration, read the observed `EXECUTION` snapshot from `recover`/`next`.
+For missing evidence, follow `EVIDENCE_CHECK` and [test-guide](test-guide.md#first-verification-action)
+through the same verification entry. The snapshot covers current Case evidence only, not independent
+review or delivery approval. Choose the next action from individual diagnostics and continue authorized
+work independent of failures. Do not reconstruct passed counts from handwritten summaries or treat an
+unrelated successful tool call as recovery of a failing test.
+
 ## Owner-led delegation
 
 At startup and each integration, briefly record `Delegation decision` in the existing recovery point: actual candidate branches, dependencies/shared resources, chosen approach and reason. Apply the decision to this task instead of repeating “delegate as needed”.

@@ -58,6 +58,11 @@ state 脚本推进 SDD，test-guide 定义验证分层，reviewer-checklist 定�
 不能代替 build/verify 或其他阶段全文。实施/评审前完整读取
 [Reviewer 清单](reviewer-checklist.md)，实际派发与复评按其可读包执行。
 
+恢复/整合时读取 `recover`/`next` 返回的 `EXECUTION` 实测快照；缺证据按
+`EVIDENCE_CHECK` 和 [test-guide](test-guide.md#first-verification-action) 接入同一验证入口。
+快照只证明当前 Case 证据，不能替代独评或交付结论。根据逐项诊断选择下一步，继续不依赖
+失败项的授权工作；不根据手写汇总重新猜测已通过数量或把任意成功工具调用当作测试恢复。
+
 ## Owner-led delegation
 
 开工与每次整合在现有恢复点简记 `Delegation decision`：实际候选分支、依赖/共享资源、选择及理由；不能仅复述“按需委派”而不作当前判断。

@@ -18,6 +18,10 @@ export interface CliHelpText {
   implementDescription: string;
   pipelineDescription: string;
   verifyDescription: string;
+  verifyExecutionPlanOption: string;
+  verifyRunOption: string;
+  verifySyncReportOption: string;
+  verifyExecutionStatusOption: string;
   archiveDescription: string;
   statusDescription: string;
   mcpDescription: string;
@@ -127,7 +131,11 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "Require a Coding Ready receipt before implementation",
     pipelineDescription:
       "Route SDD phases or manage an implementation prompt to terminal delivery",
-    verifyDescription: "Check SuperBridge Flow verify skill deployment",
+    verifyDescription: "Run the verify gate, check skill deployment, or inspect execution evidence",
+    verifyExecutionPlanOption: "Read-only preflight of an existing build/Case plan; does not execute tests or report business PASS",
+    verifyRunOption: "With --execution-plan, explicitly execute the frozen command and capture evidence",
+    verifySyncReportOption: "With a matching Case --execution-plan and --run, sync observed Case results into the selected test-report.md",
+    verifyExecutionStatusOption: "Read the selected change's current Case evidence snapshot; PARTIAL is possible and this is not full delivery approval",
     archiveDescription: "Check SuperBridge Flow archive skill deployment",
     statusDescription:
       "Show active managed tasks, SDD changes, and next commands",
@@ -259,7 +267,11 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     implementDescription: "通过 Coding Ready 门禁后进入执行交接阶段",
     pipelineDescription:
       "路由 SDD 阶段，或托管实现 Prompt 直到双 Agent 交付终态",
-    verifyDescription: "校验 SuperBridge Flow verify 阶段技能部署状态",
+    verifyDescription: "执行 verify 门禁、校验技能部署或查看执行证据",
+    verifyExecutionPlanOption: "只读预检现有构建/Case 计划；不执行测试，不产生业务 PASS",
+    verifyRunOption: "配合 --execution-plan 显式执行冻结命令并采集证据",
+    verifySyncReportOption: "配合匹配的 Case --execution-plan 和 --run，将实测 Case 结果同步至所选 test-report.md",
+    verifyExecutionStatusOption: "只读查看所选 change 的当前 Case 证据快照；可能为 PARTIAL，不代表完整交付通过",
     archiveDescription: "校验 SuperBridge Flow archive 阶段技能部署状态",
     statusDescription: "查看当前项目的托管任务、SDD changes 和下一步命令",
     mcpDescription: "安装、移除或检查 Superflow 托管 MCP 集成",

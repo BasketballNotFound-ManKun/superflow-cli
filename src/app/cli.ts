@@ -246,6 +246,10 @@ program
   .command("verify [change]")
   .description(helpText.verifyDescription)
   .option("--agent <agent>", helpText.agentOption, "both")
+  .option("--execution-plan <PLAN>", helpText.verifyExecutionPlanOption)
+  .option("--run", helpText.verifyRunOption)
+  .option("--sync-report", helpText.verifySyncReportOption)
+  .option("--execution-status", helpText.verifyExecutionStatusOption)
   .action(async (change, options) => {
     const { verifyCommand } = await import("./commands/verify.js");
     await verifyCommand(change, options);

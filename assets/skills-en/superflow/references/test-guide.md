@@ -64,12 +64,28 @@ Case or identical-context batch according to source risks, without waiting for a
    parses those raw observations and precise execution results, then attaches identity. JUnit
    XML pass counts establish method results; they cannot reconstruct unreported field values
    or stand in for three separate actuals.
-3. Preflight with existing `--check-execution-plan build-plan.json case-plan.json`, actually
-   `--record-execution` the build and Case, connect the first real receipt to the current Case
-   ledger and run report lint. Unexecuted Cases remain PARTIAL. Use existing RED/failure paths
+3. Use existing `superflow verify` to preflight and explicitly execute the original plans
+   (commands below), sync observed receipts into the current Case ledger and run report lint.
+   Unexecuted Cases remain PARTIAL. Use existing RED/failure paths
    to check that wrong observations fail measurement/exit rather than borrowing green method
    counts. Extend the same adapter after wiring works, preserving each Case's assertions
    without rerunning the entire class per Case.
+
+```sh
+superflow verify <change-dir> --execution-plan build-plan.json
+superflow verify <change-dir> --execution-plan build-plan.json --run
+superflow verify <change-dir> --execution-plan case-plan.json
+superflow verify <change-dir> --execution-plan case-plan.json --run --sync-report
+superflow verify <change-dir> --execution-status
+```
+
+Plan paths are relative to the invoking directory; Case plans must bind the selected change.
+Preflight does not run commands; only `--run` executes them. `--sync-report` projects only the
+current Case ledger and retains overall PARTIAL/NOT_READY, preserving history and explanations;
+it does not change plans, contracts or review originals. `--execution-status` reads actual receipts
+and current source/build identity. Successful command exit is not Case or delivery approval:
+read counts, individual results and diagnostics. Owner selects plans, mandatory checks and ordering
+without maintaining duplicate pass counts; full delivery still requires independent review and final gates.
 
 Add no independent-review round or test framework. Repair first-wiring failures in the same
 pipeline; do not postpone until final review or another session while authorized work can

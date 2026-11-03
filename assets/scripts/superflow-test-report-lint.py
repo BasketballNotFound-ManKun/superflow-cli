@@ -1351,13 +1351,14 @@ def snapshot_owned_receipt(output: Path, kind: str, redactor: Path, write_guard)
         stream.write(original)
 
 
-def record_execution(plan_file: Path) -> int:
+def record_execution(plan_file: Path, report_file: Path | None = None) -> int:
     prepared, errors = check_execution_plans([plan_file], allow_pending_build=False)
     if errors:
         raise ValueError("\n".join(errors))
     item = prepared[0]
     plan = item["plan"]
     output = item["output"]
+    report_sync = prepare_report_sync(report_file, prepared, plan_file) if report_file else None
 
     def write_guard(file=None):
         if file is not None and all(file not in execution_output_files(selected["output"]) for selected in prepared):
@@ -1437,6 +1438,8 @@ def record_execution(plan_file: Path) -> int:
                 write_capture_record(destination, record, {**record, "command": {
                     "argv": facts["argv"], "exitCode": facts["exitCode"]}}, write_guard)
                 diagnostics.append(f"{case['id']}: {error}")
+        if report_sync:
+            sync_execution_report(report_sync, prepared)
         if diagnostics:
             raise ValueError("\n".join(dict.fromkeys(diagnostics)))
     else:
@@ -1488,6 +1491,132 @@ def check_receipt_index(file: Path, report: Path, review: Path, root: Path) -> N
     check_git_index_files(root, dependencies)
 
 
+def execution_case_table(text: str) -> tuple:
+    lines, ambiguous = markdown_body_lines(current_report_text(text))
+    if ambiguous:
+        return {}, 0, 0, [(0, "列表/引用代码块结构无法确定或含原始 HTML/XML；请使用 Markdown/代码围栏并明确闭合，不能沿用早期 PASS")]
+    headers = [i for i, line in enumerate(lines) if CASE_EVIDENCE_HEADER.fullmatch(line.strip())]
+    if len(headers) != 1:
+        message = ("只能有一个当前逐用例执行证据表；历史结果请放 History/历史记录 节或独立证据文件" if headers
+                   else "缺少逐用例执行证据表；不能用汇总通过数代替 R/E/C 回填")
+        return {}, 0, 0, [(0, message)]
+    header = headers[0]
+    receipts, issues = {}, []
+    end = header + 2
+    for index in range(header + 2, len(lines)):
+        line = lines[index]
+        if not line.startswith("|"):
+            break
+        end = index + 1
+        columns = [column.strip() for column in line.strip().strip("|").split("|")]
+        if len(columns) != 5:
+            issues.append((index + 1, "逐用例执行证据表必须有五列"))
+            continue
+        case_id, entry_id, level, result, evidence = columns
+        if case_id in receipts:
+            issues.append((index + 1, f"用例 {case_id} 重复回填"))
+        receipts[case_id] = (entry_id, level, result.upper(), evidence)
+    return receipts, header, end, issues
+
+
+def execution_status(report: Path, review_file: Path, text: str | None = None) -> dict:
+    coverage = json.loads(review_file.read_text(encoding="utf-8"))["coverage"]
+    if coverage.get("schemaVersion") != "superflow.review-coverage.v1":
+        raise ValueError("unsupported coverage schema")
+    cases = execution_id_index(coverage.get("cases"), "Case")
+    required = {case_id for decision in coverage["decisions"] if decision.get("disposition") != "EXCLUDED"
+                for case_id in decision.get("caseIds", [])}
+    if not required or required - cases.keys():
+        raise ValueError("coverage 缺少有效必测 Case")
+    rows, _, _, issues = execution_case_table(report.read_text(encoding="utf-8") if text is None else text)
+    if issues or rows.keys() - required:
+        raise ValueError("; ".join(message for _, message in issues) or "当前表含未知/非必测 Case")
+    results = []
+    for case_id, case in cases.items():
+        if case_id not in required:
+            continue
+        entry, level, claimed, evidence = rows.get(case_id, (case["entryId"], case["level"], "PARTIAL", "NOT_RUN"))
+        result, diagnostics = "PARTIAL", []
+        if entry != case["entryId"] or level != case["level"]:
+            result, diagnostics = "INVALID", ["入口或验收级别与冻结合同不一致"]
+        else:
+            try:
+                receipt = verified_file(report.parent, evidence.split("#", 1)[0])
+                validate_execution_receipt(receipt, case, coverage, report.parent)
+                result = "PASS"
+            except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+                result = "INVALID" if claimed == "PASS" else "PARTIAL"
+                diagnostics = [str(error)]
+        results.append({"caseId": case_id, "entryId": case["entryId"], "level": case["level"],
+                        "result": result, "evidence": evidence, "diagnostics": diagnostics})
+    counts = {"required": len(results), "passed": sum(row["result"] == "PASS" for row in results),
+              "partial": sum(row["result"] == "PARTIAL" for row in results),
+              "invalid": sum(row["result"] == "INVALID" for row in results)}
+    complete = counts["required"] == counts["passed"]
+    return {"schemaVersion": "superflow.execution-status.v1", "snapshotOnly": True,
+            "status": "VERIFIED" if complete else "PARTIAL", "caseVerificationComplete": complete,
+            "counts": counts, "cases": results,
+            "boundary": "仅核当前 Case 执行证据，不证明独评、业务充分性或完整交付；不执行命令、不晋升阶段"}
+
+
+def prepare_report_sync(report: Path, prepared: list, plan_file: Path) -> dict:
+    item = prepared[0]
+    if item["plan"].get("kind") != "case":
+        raise ValueError("--sync-report 只用于实际 Case capture")
+    if report.is_symlink() or report.parent.resolve() != item["change"].resolve() or report.name != "test-report.md":
+        raise ValueError("--sync-report 必须是本 change 的普通 test-report.md")
+    text = report.read_bytes().decode("utf-8")
+    review = verified_file(plan_file.parent, item["plan"]["review"])
+    execution_status(report, review, text)
+    identities = {execution_file_identity(file) for selected in prepared
+                  for file in selected["inputs"] | selected["buildEvidence"] | {plan_file}}
+    identities.update(execution_file_identity(file) for selected in prepared
+                      for file in execution_output_files(selected["output"]))
+    if execution_file_identity(report) in identities:
+        raise ValueError("报告不得覆盖执行输入或输出")
+    for selected in prepared:
+        relative = os.path.relpath(selected["output"], report.parent)
+        if any(char in relative for char in "#|\r\n"):
+            raise ValueError("回执路径不能含证据锚点分隔符 # 或破坏 Markdown 表")
+        selected["inputs"].add(report)
+    return {"report": report, "text": text, "identity": execution_file_identity(report),
+            "review": review, "reviewBytes": review.read_bytes(),
+            "reviewIdentity": execution_file_identity(review)}
+
+
+def sync_execution_report(sync: dict, prepared: list) -> None:
+    report, original = sync["report"], sync["text"]
+    if execution_file_identity(report) != sync["identity"] or report.read_bytes().decode("utf-8") != original:
+        raise ValueError("执行期间报告已改变；保留实际回执并重新核对，不能覆盖他人更新")
+    if (execution_file_identity(sync["review"]) != sync["reviewIdentity"]
+            or sync["review"].read_bytes() != sync["reviewBytes"]):
+        raise ValueError("执行期间评审合同已改变；保留实际回执并重新核对，不能投影旧合同结果")
+    rows, header, end, _ = execution_case_table(original)
+    for selected in prepared:
+        case = selected["case"]
+        rows[case["id"]] = (case["entryId"], case["level"], "PARTIAL",
+                            os.path.relpath(selected["output"], report.parent))
+    lines = original.splitlines(keepends=True)
+    newline = "\r\n" if "\r\n" in original else "\n"
+    # Project only the canonical table. Original history and explanation stay verbatim.
+    staged = lines[:header + 2] + ["| " + " | ".join((case_id, *row)) + " |" + newline for case_id, row in rows.items()] + lines[end:]
+    status = execution_status(report, sync["review"], "".join(staged))
+    rendered = ["| " + " | ".join((row["caseId"], row["entryId"], row["level"],
+                                   "PASS" if row["result"] == "PASS" else "PARTIAL", row["evidence"])) + " |" + newline
+                for row in status["cases"]]
+    staged = lines[:header + 2] + rendered + lines[end:]
+    body, _ = markdown_body_lines(current_report_text("".join(staged)))
+    for index, line in enumerate(body):
+        ending = staged[index][len(staged[index].rstrip("\r\n")):]
+        if re.match(r"^\s*(?:Verification Result|验证结果|验证结论)\s*[:：]", line, re.I):
+            staged[index] = re.split(r"[:：]", line, maxsplit=1)[0] + ": PARTIAL" + ending
+        elif re.match(r"^\s*(?:Archive Readiness|归档就绪)\s*[:：]", line, re.I):
+            staged[index] = re.split(r"[:：]", line, maxsplit=1)[0] + ": NOT_READY" + ending
+    # This is a mutable report projection; capture attempts and review originals remain untouched.
+    report.write_bytes("".join(staged).encode("utf-8"))
+    print(json.dumps(status, ensure_ascii=False))
+
+
 def lint_case_evidence(report_path: Path, report_text: str, review_path: Path, index_root: Path | None = None) -> list[Issue]:
     """Check the frozen R/E/C index against per-case execution receipts."""
     issues: list[Issue] = []
@@ -1509,29 +1638,10 @@ def lint_case_evidence(report_path: Path, report_text: str, review_path: Path, i
     }
     if final_report_result(report_text) == "CONFLICT":
         issues.append(Issue("FAIL", report_path, 0, "中英文最终验证结果冲突"))
-    lines, ambiguous = markdown_body_lines(current_report_text(report_text))
-    if ambiguous:
-        return [Issue("FAIL", report_path, 0, "列表/引用代码块结构无法确定或含原始 HTML/XML；请使用 Markdown/代码围栏并明确闭合，不能沿用早期 PASS")]
-    headers = [i for i, line in enumerate(lines)
-               if CASE_EVIDENCE_HEADER.fullmatch(line.strip())]
-    if len(headers) > 1:
-        return [Issue("FAIL", report_path, 0, "只能有一个当前逐用例执行证据表；历史结果请放 History/历史记录 节或独立证据文件")]
-    header_at = headers[0] if headers else None
-    if header_at is None:
-        return [Issue("FAIL", report_path, 0, "缺少逐用例执行证据表；不能用汇总通过数代替 R/E/C 回填")]
-
-    receipts: dict[str, tuple[str, str, str, str]] = {}
-    for index, line in enumerate(lines[header_at + 2 :], start=header_at + 3):
-        if not line.startswith("|"):
-            break
-        columns = [column.strip() for column in line.strip().strip("|").split("|")]
-        if len(columns) != 5:
-            issues.append(Issue("FAIL", report_path, index, "逐用例执行证据表必须有五列"))
-            continue
-        case_id, entry_id, level, result, evidence = columns
-        if case_id in receipts:
-            issues.append(Issue("FAIL", report_path, index, f"用例 {case_id} 重复回填"))
-        receipts[case_id] = (entry_id, level, result.upper(), evidence)
+    receipts, _, _, table_issues = execution_case_table(report_text)
+    issues.extend(Issue("FAIL", report_path, line, message) for line, message in table_issues)
+    if not receipts and table_issues:
+        return issues
 
     for case_id in sorted(required):
         if case_id not in receipts:
@@ -1858,6 +1968,10 @@ def main() -> int:
                         help="只读集中诊断实际 measurement；不执行命令、不生成或晋升凭证")
     parser.add_argument("--measurement", metavar="FILE", default="",
                         help="--check-measurement 的实际脱敏 stdout/JSONL 文件")
+    parser.add_argument("--execution-status", metavar="REPORT", default="",
+                        help="只读当前 Case 回执状态，不执行或晋升完整交付")
+    parser.add_argument("--sync-report", metavar="REPORT", default="",
+                        help="实际 Case capture 后同步现有逐用例表，不宣告整体 PASS")
     parser.add_argument("--tests", default="")
     parser.add_argument("--review", default="")
     parser.add_argument("--repo-root", default="")
@@ -1870,6 +1984,19 @@ def main() -> int:
                         help="输出明确排除历史节的当前报告，保留命令代码块与行号")
     args = parser.parse_args()
 
+    if args.execution_status:
+        if (not args.review or args.reports or args.record_execution or args.sync_report
+                or args.check_execution_plan or args.check_measurement or args.measurement):
+            parser.error("--execution-status REPORT --review REVIEW 必须单独使用")
+        try:
+            print(json.dumps(execution_status(Path(args.execution_status).resolve(), Path(args.review).resolve()), ensure_ascii=False))
+            return 0
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+            print(f"FAIL execution status: {error}", file=sys.stderr)
+            return 2
+    if args.sync_report and (not args.record_execution or args.reports or args.check_execution_plan
+                            or args.check_measurement or args.measurement):
+        parser.error("--sync-report 仅配合 --record-execution 使用")
     if args.check_measurement or args.measurement:
         if (not args.check_measurement or not args.measurement or args.record_execution
                 or args.check_execution_plan or args.reports):
@@ -1906,7 +2033,10 @@ def main() -> int:
         return 2 if errors else 0
     if args.record_execution:
         try:
-            return record_execution(Path(args.record_execution).resolve())
+            if args.reports or args.review or args.tests or args.require_complete:
+                parser.error("--record-execution 不与报告检查参数混用")
+            return record_execution(Path(args.record_execution).resolve(),
+                                    Path(args.sync_report).absolute() if args.sync_report else None)
         except (OSError, ValueError, KeyError, TypeError, StopIteration) as error:
             print(f"FAIL capture: {error}")
             return 2

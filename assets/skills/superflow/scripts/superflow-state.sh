@@ -371,6 +371,28 @@ cmd_status() {
   cat "$STATE_FILE"
 }
 
+execution_feedback() {
+  local phase mode scripts parser report review result
+  phase="$(field_value phase 2>/dev/null || printf 'docs')"
+  mode="$(field_value build_mode 2>/dev/null || printf 'null')"
+  [[ "$mode" == "owner" && ( "$phase" == "implement" || "$phase" == "verify" ) ]] || return 0
+  report="$CHANGE_DIR/test-report.md"
+  review="$CHANGE_DIR/.sdd/reviews/document-review.json"
+  printf 'EVIDENCE_CHECK: superflow verify %q --execution-status\n' "$CHANGE_DIR"
+  if [[ ! -f "$report" || ! -f "$review" ]]; then
+    printf 'EXECUTION: UNAVAILABLE (current report/review missing; no verification implied)\n'
+    return 0
+  fi
+  scripts="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  parser="${SUPERFLOW_REPORT_LINT:-$scripts/../../../scripts/superflow-test-report-lint.py}"
+  [[ -f "$parser" ]] || parser="$scripts/../../../hooks/superflow-test-report-lint.py"
+  if result="$(python3 "$parser" --execution-status "$report" --review "$review" 2>&1)"; then
+    printf 'EXECUTION: %s\n' "$result"
+  else
+    printf 'EXECUTION: UNAVAILABLE (evidence diagnostic only; phase unchanged): %s\n' "$result"
+  fi
+}
+
 cmd_next() {
   [[ -f "$STATE_FILE" ]] || die "state not found: $STATE_FILE"
   local phase workflow auto archived skill prompt
@@ -416,6 +438,7 @@ cmd_next() {
   fi
   printf 'SKILL: %s\n' "$skill"
   printf 'PHASE: %s\n' "$phase"
+  execution_feedback
   local scripts skills
   scripts="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   skills="$(cd "$scripts/../.." && pwd)"
@@ -462,6 +485,7 @@ cmd_recover() {
   printf 'verification_report: %s\n' "$report"
   printf 'verify_result: %s\n' "$verify_result"
   printf 'archived: %s\n' "$archived"
+  execution_feedback
 
   case "$phase" in
     docs)
