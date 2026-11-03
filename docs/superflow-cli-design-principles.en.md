@@ -360,3 +360,8 @@ Applicability has one owner in `.sdd/applicability.yaml`, included in the existi
 ## Phase handoff and delivered copies (2026-11-02)
 
 Existing next output identifies the phase skill and verify guard command. Actual verify execution follows implementation; missing/failed checks stay pending. Prefer captured originals and immutable attempts. Retained copies use the existing report Delivery Evidence table to declare source, delivered path and original digest; the same report lint checks both identities and full independent review binds delivered files. Receipts remain the execution authority; copy mappings create no execution verdict. Reviewer inspects the final report and evidence, and Owner runs the final guard after integration. Format/copy repairs reuse valid tests; no new Hook, state or fixed agent scheduling.
+
+
+## Dependency closure for first verification (2026-11-03)
+
+When existing tasks require early real verification, the necessary observations and capture adapter must be ready with that batch, not simultaneously deferred behind every feature. The document owner repairs the sole order in tasks/tests; handoff navigates and build uses existing capture to close actual assertion observations → adapter → receipt → current report check before expanding. Full regression and final independent review remain after integration. Never reconstruct business actuals from method counts. Add no plan generator, Hook or scheduling state, or replace Owner judgment with mechanical phase rules.
