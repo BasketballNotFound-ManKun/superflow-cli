@@ -16,12 +16,36 @@ EDIT_WINDOW = 600
 FAILURE_WINDOW = 300
 EDIT_LIMIT = 5
 FAILURE_LIMIT = 3
+# These bounds limit advisory observation, never the Agent's tool execution.
+MAX_OBSERVED_FILES = 128
+MAX_OBSERVED_BYTES = 8 * 1024 * 1024
+MAX_FILE_BYTES = 1024 * 1024
+GIT_TIMEOUT = 1
 
 
-def project_root():
-    result = subprocess.run(["git", "rev-parse", "--show-toplevel"],
-                            capture_output=True, text=True, check=False)
-    return Path(result.stdout.strip()).resolve() if result.returncode == 0 else None
+def working_directory(payload):
+    return Path(payload.get("cwd") or os.getcwd()).expanduser().resolve()
+
+
+def project_root(payload):
+    cwd = working_directory(payload)
+    result = subprocess.run(["git", "-C", str(cwd), "rev-parse",
+                             "--show-toplevel"], capture_output=True,
+                            text=True, check=False, timeout=GIT_TIMEOUT)
+    if result.returncode:
+        return None, None
+    repository = Path(result.stdout.strip()).resolve()
+    # Reuse the existing planning-home marker conventions without a recursive
+    # repository search: only cwd's ancestry can select this Hook's project.
+    for candidate in (cwd, *cwd.parents):
+        if not candidate.is_relative_to(repository):
+            break
+        if ((candidate / "openspec").is_dir() or
+                (candidate / "doc" / "openspec").is_dir() or
+                (candidate / ".sdd").is_dir() or
+                (candidate / ".sdd-enforced").is_file()):
+            return candidate, repository
+    return None, repository
 
 
 def state_path(root, payload):
@@ -41,8 +65,13 @@ def load_state(file):
     try:
         data = json.loads(file.read_text(encoding="utf-8"))
         if isinstance(data, dict):
-            return {"edits": data.get("edits", {}),
-                    "failures": data.get("failures", {})}
+            state = {"edits": data.get("edits", {}),
+                     "failures": data.get("failures", {})}
+            if isinstance(data.get("contents"), dict):
+                state["contents"] = data["contents"]
+            if isinstance(data.get("git_paths"), list):
+                state["git_paths"] = data["git_paths"]
+            return state
     except (OSError, ValueError):
         pass
     return {"edits": {}, "failures": {}}
@@ -69,7 +98,8 @@ def edited_paths(root, payload):
         if not isinstance(raw, str) or not raw:
             continue
         candidate = Path(raw).expanduser()
-        candidate = (candidate if candidate.is_absolute() else root / candidate).resolve()
+        candidate = (candidate if candidate.is_absolute() else
+                     working_directory(payload) / candidate).resolve()
         try:
             result.add(candidate.relative_to(root).as_posix())
         except ValueError:
@@ -77,12 +107,125 @@ def edited_paths(root, payload):
     return result
 
 
-def observe_success(root, payload, state, now):
+def operation_identity(payload):
     tool = str(payload.get("tool_name") or "unknown")
-    state["failures"].pop(tool, None)
-    if not re.search(r"(?:^|[._])(Edit|Write|MultiEdit|apply_patch)$", tool, re.I):
+    tool_input = payload.get("tool_input") or {}
+    if re.search(r"(?:^|[._])(Bash|exec_command|shell_command)$", tool, re.I):
+        operation = tool_input.get("command") or tool_input.get("cmd")
+        if not isinstance(operation, str) or not operation.strip():
+            return None
+    else:
+        if not isinstance(tool_input, dict) or not tool_input:
+            return None
+        operation = tool_input
+    cwd = working_directory(payload)
+    declared_cwd = tool_input.get("workdir") or tool_input.get("cwd")
+    if declared_cwd:
+        cwd = (cwd / Path(declared_cwd).expanduser()).resolve()
+    identity = json.dumps([tool, str(cwd), operation],
+                          sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(identity.encode()).hexdigest()
+
+
+def path_content(root, raw, budget):
+    candidate = root / raw
+    # Do not follow directory symlinks outside the selected project.
+    if not candidate.parent.resolve().is_relative_to(root):
+        return None
+    if candidate.is_symlink():
+        return "symlink:" + os.readlink(candidate), 0
+    if not candidate.exists():
+        return "missing", 0
+    if not candidate.is_file():
+        return None
+    maximum = min(MAX_FILE_BYTES, budget)
+    if candidate.stat().st_size > maximum:
+        return None
+    with candidate.open("rb") as source:
+        data = source.read(maximum + 1)
+    if len(data) > maximum:
+        return None
+    return hashlib.sha256(data).hexdigest(), len(data)
+
+
+def dirty_contents(root, repository, previous_paths):
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain=v1", "-z",
+             "--untracked-files=all", "--", "."],
+            capture_output=True, check=False, timeout=GIT_TIMEOUT,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode:
+        return None
+    records = iter(result.stdout.split(b"\0"))
+    paths = set(previous_paths)
+    dirty = set()
+    for record in records:
+        if not record:
+            continue
+        # -z quotes no paths; a rename/copy also carries the original path.
+        raw_paths = [record[3:]]
+        if b"R" in record[:2] or b"C" in record[:2]:
+            raw_paths.append(next(records, b""))
+        for raw in raw_paths:
+            candidate = repository / os.fsdecode(raw)
+            if candidate.is_relative_to(root):
+                dirty.add(candidate.relative_to(root).as_posix())
+        paths.update(dirty)
+        if len(paths) > MAX_OBSERVED_FILES:
+            return None
+    contents = {}
+    remaining = MAX_OBSERVED_BYTES
+    for raw in paths:
+        observed = path_content(root, raw, remaining)
+        if observed is None:
+            return None
+        contents[raw], size = observed
+        remaining -= size
+    return contents, sorted(dirty)
+
+
+def observe_success(root, repository, payload, state, now):
+    operation = operation_identity(payload)
+    if operation:
+        state["failures"].pop(operation, None)
+    tool = str(payload.get("tool_name") or "unknown")
+    direct = bool(re.search(r"(?:^|[._])(Edit|Write|MultiEdit|apply_patch)$",
+                            tool, re.I))
+    if not direct and not re.search(
+            r"(?:^|[._])(Bash|exec_command|shell_command)$", tool, re.I):
         return
-    for path in edited_paths(root, payload):
+    previous = state.get("contents")
+    had_git_baseline = "git_paths" in state
+    observed = dirty_contents(root, repository, state.get("git_paths", []))
+    contents = {}
+    if observed is not None:
+        contents, state["git_paths"] = observed
+    else:
+        state.pop("git_paths", None)
+    explicit = edited_paths(root, payload) if direct else set()
+    # Explicit editor paths remain observable when Git ignores a file or the
+    # repository-wide snapshot exceeds its budget. Both sources share digests.
+    remaining = MAX_OBSERVED_BYTES
+    for raw in sorted(explicit)[:MAX_OBSERVED_FILES]:
+        if raw in contents:
+            continue
+        observed_path = path_content(root, raw, remaining)
+        if observed_path is not None:
+            contents[raw], size = observed_path
+            remaining -= size
+    if previous is None:
+        changed = {raw for raw in explicit & contents.keys()
+                   if contents[raw] != "missing"}
+    else:
+        changed = {path for path, digest in contents.items()
+                   if previous.get(path) != digest and
+                   (digest != "missing" or path in previous) and
+                   (had_git_baseline or path in explicit)}
+    state["contents"] = {**(previous or {}), **contents}
+    for path in sorted(changed):
         entry = state["edits"].get(path, {})
         stamps = recent(entry.get("times", []), now, EDIT_WINDOW)
         was_warned = bool(entry.get("warned")) and bool(stamps)
@@ -96,15 +239,18 @@ def observe_success(root, payload, state, now):
 
 def observe_failure(payload, state, now):
     tool = str(payload.get("tool_name") or "unknown")
-    entry = state["failures"].get(tool, {})
+    operation = operation_identity(payload)
+    if operation is None:
+        return
+    entry = state["failures"].get(operation, {})
     stamps = recent(entry.get("times", []), now, FAILURE_WINDOW)
     was_warned = bool(entry.get("warned")) and bool(stamps)
     stamps.append(now)
-    state["failures"][tool] = {"times": stamps, "warned": was_warned}
+    state["failures"][operation] = {"times": stamps, "warned": was_warned}
     if len(stamps) >= FAILURE_LIMIT and not was_warned:
-        print(f"[Superflow 失败提醒] {tool} 在 5 分钟内连续失败 "
+        print(f"[Superflow 失败提醒] {tool} 同一操作在 5 分钟内失败 "
               f"{len(stamps)} 次；先分析原因，再决定是否重试。", file=sys.stderr)
-        state["failures"][tool]["warned"] = True
+        state["failures"][operation]["warned"] = True
 
 
 def prune_state(state, now):
@@ -121,16 +267,22 @@ def prune_state(state, now):
 def main():
     try:
         payload = json.loads(sys.stdin.read() or "{}")
-        root = project_root()
-        if not root or not ((root / "openspec").exists() or
-                            (root / ".sdd").exists() or
-                            (root / ".sdd-enforced").exists()):
+        root, repository = project_root(payload)
+        if "--end" in sys.argv:
+            if not repository:
+                return 0
+            for candidate in (working_directory(payload),
+                              *working_directory(payload).parents):
+                if not candidate.is_relative_to(repository):
+                    break
+                file = state_path(candidate, payload)
+                if file:
+                    file.unlink(missing_ok=True)
+            return 0
+        if not root:
             return 0
         file = state_path(root, payload)
         if file is None:
-            return 0
-        if "--end" in sys.argv:
-            file.unlink(missing_ok=True)
             return 0
         state = load_state(file)
         now = time.time()
@@ -138,9 +290,9 @@ def main():
         if "--failure" in sys.argv:
             observe_failure(payload, state, now)
         else:
-            observe_success(root, payload, state, now)
+            observe_success(root, repository, payload, state, now)
         save_state(file, state)
-    except (OSError, ValueError, TypeError, AttributeError):
+    except Exception:
         pass
     return 0
 
