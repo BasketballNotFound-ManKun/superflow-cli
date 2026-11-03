@@ -365,3 +365,22 @@ Existing next output identifies the phase skill and verify guard command. Actual
 ## Dependency closure for first verification (2026-11-03)
 
 When existing tasks require early real verification, the necessary observations and capture adapter must be ready with that batch, not simultaneously deferred behind every feature. The document owner repairs the sole order in tasks/tests; handoff navigates and build uses existing capture to close actual assertion observations → adapter → receipt → current report check before expanding. Full regression and final independent review remain after integration. Never reconstruct business actuals from method counts. Add no plan generator, Hook or scheduling state, or replace Owner judgment with mechanical phase rules.
+## Execution facts and autonomous decisions (2026-11-03)
+
+The existing verify entry reuses original-plan preflight and capture. Only explicit run executes
+the frozen command. Case capture can project actual receipts into the report's single current
+ledger, preserving history and original reviews rather than creating another contract or pass
+count. Read-only execution-status uses the same receipt validator; recover/next show current facts
+and diagnostics without execution or phase promotion. Complete Case evidence is not independent
+review or full delivery approval. Owner still decides test sufficiency, ordering and delegation.
+
+The existing loop observer finds the nearest fixed SDD marker from cwd up to the Git root,
+including nested document roots. It counts failures by actual operation identity; unrelated
+successful calls do not clear them. Bounded content snapshots observe Shell file changes and
+share file buckets with explicit Edit. Bounds limit observer overhead, not Agent commands.
+Unknown/over-limit observations are skipped without reconstructing unknown counts on recovery;
+explicit single-file edits retain a bounded fallback. Feedback stays advisory, without deciding
+business failures, automatically delegating/stopping, or adding a Hook, supervisor or durable state.
+Project ownership follows the host's session cwd. A tool workdir distinguishes operation identity
+but does not silently switch the session into another subproject. Start in that project's directory
+to observe it; SessionEnd cleans up along the same ownership boundary.

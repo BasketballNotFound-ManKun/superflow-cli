@@ -584,3 +584,29 @@ Cases cover both hosts/languages/scopes, rejected CHECK preserving phase, change
 Baseline 62ed091 passed 1756 full-verification tests. An observed Owner had read the test guide yet followed batches that required early real tests while blocking the sole adapter behind all features; another batch allowed earlier work. Only final gating exposed method aggregates rather than business observations. This supports a document dependency conflict and consumption failure, not a claim that capture caused all elapsed time. Owners are tasks/tests/navigation, the original Agent and existing report diagnostics. A proposed preparation command did not address the observed main cause and was withdrawn before commit, not counted as a gain.
 
 Hypothesis: repair prerequisites for first verification so raw observations at native assertions flow through the same adapter/capture into the report early; extend remaining Cases without expanding scheduling or evidence formats. Incrementally review the actual dependency repair through the existing three lenses. Synthetic counterexamples reject XML, JSONL, measurement and non-object inputs as receipts with existing check/record recovery navigation, retaining failure semantics. Preserve the withdrawn proposal's original review and actual re-review of the narrowed scope; full verification and dual-host installation results remain external. Guidance alone proves neither compliance nor speed. A later run checks whether the first valid receipt precedes full implementation and reduces observation rework/reruns without lowering coverage. Repair the original owner or revert on unrelated forced pipeline rebuilding, dependency cycles, aggregate laundering or valid-evidence rejection; never weaken gates.
+## Execution feedback repair (2026-11-03)
+
+Baseline 66966f4 passed the complete 1760-test verification. External execution showed that reading
+skills did not ensure capture use; nested document roots did not activate the existing observer,
+Shell edits were missed, and unrelated successful calls cleared another operation's failures.
+Responsibility lies in existing verify/capture/report, state recovery projections and observer,
+not another prompt checklist or scheduling state machine. The hypothesis is that timely observed
+facts and execution-side projection into the single ledger reduce late evidence rework and
+misleading feedback, while Owner retains strategy decisions.
+
+Representative RED cases cover failing processes printing PASS, changed sources, ambiguous tables,
+in-flight report/review changes, CRLF history, input/output aliases, cross-change plans, preflight
+execution, nested markers, Shell edits and unrelated success resets. Positive cases cover valid
+receipts, read-only queries, non-SDD work, explicit edits and bounded-snapshot fallback. Complete
+Case evidence never promotes overall PASS; existing final gates remain intact. Both languages
+and hosts reuse the same installation owner. Complete verification, review and installation stay external.
+
+These examples establish fact consumption and overhead boundaries, not model test selection,
+real task speedup or general compliance. Observe first valid receipt timing, evidence rework and
+same-failure retries in future runs, without inferring business success from tool success counts.
+The observer does not activate when the session cwd is outside SDD and only a tool workdir points
+into a subproject. This is a declared limitation, not covered behavior, and adds no cross-project
+state registry or scan.
+False edit/failure reports, observer delays, queries executing tests, overwritten history/reviews,
+false approval or damaged unknown assets require repair of the original owner or rollback,
+retaining evidence without weakening assertions.
