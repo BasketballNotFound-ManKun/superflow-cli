@@ -50,8 +50,9 @@ description: Superflow 用户总入口：日常任务由当前 Agent 持续负�
 评审与就绪凭证，不让实现者选优先级或手改 hash/凭证。业务方案由文档冻结，Prompt 只导航。
 生成测试、实施或验收前实际完整读取 [test-guide.md](references/test-guide.md)。SDD 首次
 构建/用例验证从 [Runner-Captured Execution](references/test-guide.md#runner-captured-execution)
-进入：按指南准备 plan，调用已安装 `superflow-test-report-lint.py --record-execution`，
-由脚本生成 receipt/构建指纹，再把路径回填报告。沿冻结用例和真实入口取证；Mock、计划、
+进入：按指南准备 plan，通过 `superflow verify <change> --execution-plan <plan>` 预检，
+再显式 `--run`；Case 用 `--sync-report` 回填同一当前表。脚本生成 receipt/构建指纹，
+沿冻结用例和真实入口取证；Mock、计划、
 手填 PASS、哈希与任务勾选不证明真实验收。
 
 普通任务沿 Flow Owner 闭环，阶段汇报和可修复失败后继续。独立评审按 Reviewer 清单

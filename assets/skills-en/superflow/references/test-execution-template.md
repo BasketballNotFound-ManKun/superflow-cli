@@ -2,7 +2,8 @@
 
 Before first verification actually read the full [test-guide.md](test-guide.md).
 For SDD build/case verification prepare plans through [Runner-Captured Execution](test-guide.md#runner-captured-execution)
-and call the installed `superflow-test-report-lint.py --record-execution`. The script
+and preflight using `superflow verify <change> --execution-plan <plan>`, then explicitly
+`--run`, with `--sync-report` for Cases. The script
 generates build/Case receipts, fingerprints and redacted stdout/stderr. Link those
 artifacts without hand-filling capture fields. Historical evidence keeps its level;
 missing provenance remains PARTIAL.
@@ -35,6 +36,11 @@ For full SDD fill every R/E/C from document-review.json through existing
 [coverage/receipts](document-review-coverage.md). The Case table is the only current
 result ledger; link detailed output as evidence. Separate contract Cases, parameter
 branches, test methods and repeated executions in counts.
+Read current Case pass counts from the observed `superflow verify <change> --execution-status`
+snapshot. Recovery and final prose reference that same table/snapshot rather than maintaining
+several handwritten totals. Distinguish native method success from missing Case receipts.
+Report lint success proves only its actual check level; independent review and the final guard
+still own complete delivery, even when a PARTIAL report is structurally valid.
 
 ## Report shape
 
@@ -71,7 +77,7 @@ These are sections/fields of the existing report; fill the applicable scope:
 
 - Goal and actual implementation: <goal, observed entry/call path and version reconciliation>
 - Test selection and strengthening: <reasons, added branches and affected proof>
-- Actual counts: <separate unit/API or backend integration/backend flows/browser sets with passed/failed/skipped/blocked>
+- Actual counts: <current Case table/observed snapshot reference; native method/parameter/repetition counts link their original output and actual validation scope>
 - Open items: <failed/blocked Cases and findings, cause, impact, disposition and needed coordination; state none when true>
 - External coordination and control: <unfinished integration; actual Git/release authorization and actions>
 

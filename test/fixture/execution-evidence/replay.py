@@ -141,7 +141,7 @@ for entry, service, route in [("E05", "service-a", "POST /a/notify"), ("E11", "s
                            "entries": entries, "cases": cases,
                            "decisions": [{"disposition": "FIX", "caseIds": [case["id"]]} for case in cases]}}
     review_path.write_text(json.dumps(review))
-    record({"kind": "case", "changeDir": ".",
+    record({"kind": "case", "changeDir": ".", "sources": ["case.py"],
             "review": ".sdd/reviews/document-review.json", "caseId": entry,
             "build": "logs/build.json", "output": f"logs/{entry}.json"}, allow_failure=mode in {"omit", "business-error"} and entry == "E11")
     rows.append(f"| {entry} | {entry} | api | PASS | logs/{entry}.json |")

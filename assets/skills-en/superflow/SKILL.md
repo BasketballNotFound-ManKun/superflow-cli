@@ -62,9 +62,10 @@ or receipts do not resolve contradictory current prose. Documents freeze busines
 HOW; Prompts navigate it. Before tests, implementation or acceptance actually read
 the full [test-guide.md](references/test-guide.md). Start the first SDD build/case
 verification at [Runner-Captured Execution](references/test-guide.md#runner-captured-execution):
-prepare plans from the guide, call the installed
-`superflow-test-report-lint.py --record-execution`, then link its generated
-receipts/build fingerprints in the report. Use frozen cases and real entries;
+prepare plans from the guide, preflight with
+`superflow verify <change> --execution-plan <plan>`, then explicitly `--run`;
+Case capture uses `--sync-report` for the same current ledger. Scripts generate
+receipts/build fingerprints. Use frozen cases and real entries;
 mocks, plans, handwritten PASS, hashes and checkboxes do not prove real acceptance.
 
 Ordinary work follows Flow Owner through progress reports and repairable failures.

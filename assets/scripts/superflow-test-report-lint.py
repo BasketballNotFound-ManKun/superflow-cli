@@ -644,22 +644,31 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
     if not isinstance(sources, list) or not sources:
         raise ValueError("缺少当前源码/构建指纹")
     paths = set()
-    source_tokens = []
     for source in sources:
         paths.add(hashed_file(file.parent, source["path"], source["sha256"]))
-        source_tokens.append(source["path"] + ":" + source["sha256"])
+    build = receipt["build"]
+    build_sources = build.get("sources")
+    if not isinstance(build_sources, list) or not build_sources:
+        raise ValueError("构建缺少独立的生产输入来源")
+    build_paths = set()
+    case_inputs = {(str((file.parent / source["path"]).resolve()), source["sha256"])
+                   for source in sources}
+    for source in build_sources:
+        path = hashed_file(file.parent, source["path"], source["sha256"])
+        if (str(path), source["sha256"]) not in case_inputs:
+            raise ValueError("用例执行来源未完整继承构建输入，不能重绑旧构建")
+        build_paths.add(path)
     entry = next((e for e in coverage.get("entries", []) if e["id"] == case["entryId"]), None)
     if entry is None:
         raise ValueError("执行凭证缺少冻结入口定义")
     source_index = {s["id"]: s for s in coverage.get("sources", [])}
     for ref in entry.get("sourceRefs", []):
         source = source_index[ref]
-        if source.get("role") == "code" and (change / source["path"]).resolve() not in paths:
+        if source.get("role") == "code" and (change / source["path"]).resolve() not in build_paths:
             raise ValueError("执行凭证未覆盖该入口冻结的源码写入链")
     validate_database_receipt(receipt, event, case, entry, coverage, change, paths)
-    build = receipt["build"]
     target = receipt["target"]
-    fingerprint = hashlib.sha256("\n".join(sorted(source_tokens)).encode()).hexdigest()
+    fingerprint = source_fingerprint(build_sources)
     if build.get("sourceFingerprint") != fingerprint or target.get("sourceFingerprint") != fingerprint:
         raise ValueError("构建与运行目标未绑定当前源码指纹")
     hashed_file(file.parent, build["artifact"], build["sha256"])
@@ -759,6 +768,24 @@ def captured_sources(cwd: Path, sources: list, base: Path) -> list:
 def source_fingerprint(sources: list) -> str:
     return sha256_bytes("\n".join(sorted(s["path"] + ":" + s["sha256"]
                                         for s in sources)).encode())
+
+
+def combined_capture_sources(base: Path, *groups: list) -> list:
+    """Observe execution inputs without changing the bound build's identity."""
+    declared = {}
+    for group in groups:
+        for source in group:
+            file = (base / source["path"]).resolve()
+            if file in declared and declared[file] != source["sha256"]:
+                raise ValueError(f"构建与执行输入身份不一致：{file}")
+            declared[file] = source["sha256"]
+    # Exact path overlap is ordinary shared input. Distinct hard-link aliases
+    # remain distinct paths and are rejected by the existing source observer.
+    observed = captured_sources(base, [str(file) for file in declared], base)
+    for source in observed:
+        if source["sha256"] != declared[(base / source["path"]).resolve()]:
+            raise ValueError("构建或执行输入在准备期间发生变化，不能更新旧身份")
+    return observed
 
 
 def canonical_module(relative: str, label: str = "规范模块") -> Path:
@@ -966,7 +993,7 @@ def measurement_diagnostics(stdout: str, prepared: list) -> list:
             problems.append(prefix + "persistence 数量与冻结合同不一致")
         try:
             paths = {(item["output"].parent / source["path"]).resolve()
-                     for source in (item.get("build") or {}).get("sources", [])}
+                     for source in item.get("sources", [])}
             validate_database_receipt({"evidenceKind": case.get("evidenceKind", "real"), **event},
                                       event, case, entry, item["coverage"], item["change"], paths)
         except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
@@ -1132,6 +1159,14 @@ def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False, o
                     prepared["inputs"].update((file.parent / item["path"]).resolve() for item in build["sources"])
                     return build
                 prepared["build"] = check("build", load_build)
+        execution_sources = check("sources", lambda: captured_sources(
+            prepared.get("cwd") or base, plan.get("sources"), output.parent if output else base))
+        if execution_sources:
+            source_base = output.parent if output else base
+            prepared["inputs"].update((source_base / source["path"]).resolve()
+                                      for source in execution_sources)
+            prepared["sources"] = check("sources", lambda: combined_capture_sources(
+                source_base, (prepared.get("build") or {}).get("sources", []), execution_sources))
     else:
         errors.append("capture plan.kind 必须为 build 或 case")
     return prepared
@@ -1406,7 +1441,7 @@ def record_execution(plan_file: Path, report_file: Path | None = None) -> int:
         build = item["build"]
         context = item["case"]["executionContext"]
         capture = observe_command(context["argv"], item["cwd"], attempt, "case",
-                                  build["sources"], redactor, write_guard,
+                                  item["sources"], redactor, write_guard,
                                   [selected["case"]["id"] for selected in prepared])
         facts = json.loads((output.parent / capture["path"]).read_text())
         stdout = (output.parent / facts["stdout"]["path"]).read_text()
@@ -1416,7 +1451,7 @@ def record_execution(plan_file: Path, report_file: Path | None = None) -> int:
             destination = selected["output"]
             record = {"schemaVersion": "superflow.execution-receipt.v1", "caseId": case["id"],
                       "entryId": case["entryId"], "level": case["level"], "status": "PARTIAL",
-                      "evidenceKind": case.get("evidenceKind", "real"), "sources": build["sources"],
+                      "evidenceKind": case.get("evidenceKind", "real"), "sources": selected["sources"],
                       "build": build, "capture": capture,
                       "command": {"argv": facts["argv"], "exitCode": facts["exitCode"]},
                       "executionContext": selected["observedContext"]}

@@ -85,6 +85,7 @@ console.log(JSON.stringify(event));
   });
   recordExecution(directory, {
     kind: "case", changeDir: ".", review: path.relative(directory, captureReview), caseId,
+    sources: [`case-${caseId}.cjs`],
     build: `logs/${buildName}.json`, output: `logs/${caseId}.json`,
   });
   // Current delivery marker only; issuing real readiness remains the gate owner's job.

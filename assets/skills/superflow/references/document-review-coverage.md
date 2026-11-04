@@ -227,7 +227,7 @@ coding-ready 复检失败会写 BLOCKED 撤销旧 READY。
 
 PASS 的证据路径现在必须指向本地 `superflow.execution-receipt.v1` JSON；不得以空文件、任意文本、远端 URL 或测试总数代替。旧报告保留 PARTIAL，补齐受影响证据后再整体 PASS。
 
-凭证字段：`caseId/entryId/level/status=PASS/executed>=1/evidenceKind`；`command{argv,exitCode=0,output,sha256}`；`sources[{path,sha256}]`；`build{id,artifact,sha256,sourceFingerprint}`；`target{service,route,kind,buildId,buildSha256,sourceFingerprint}`；`assertions[{id,expected,actual,result=PASS}]`。路径相对凭证文件，可使用授权跨仓源码；输出需保留可读取的原始日志。源码指纹为 sources 按 `path:sha256` 排序后以换行连接的 SHA-256（末尾无换行）。构建与运行目标必须关联同一指纹和产物；Agent 仍核对构建命令与实际进程/镜像。
+凭证字段：`caseId/entryId/level/status=PASS/executed>=1/evidenceKind`；`command{argv,exitCode=0,output,sha256}`；`sources[{path,sha256}]`；`build{id,artifact,sha256,sourceFingerprint,sources}`；`target{service,route,kind,buildId,buildSha256,sourceFingerprint}`；`assertions[{id,expected,actual,result=PASS}]`。路径相对凭证文件，可使用授权跨仓源码；输出需保留可读取的原始日志。构建指纹仅为 `build.sources` 按 `path:sha256` 排序后以换行连接的 SHA-256（末尾无换行）。Case plan 显式 sources 声明执行输入，receipt.sources 为其与构建来源的并集，完整继承构建路径/hash；两次 capture 分别核各自输入的前后与当前身份。构建与运行目标仍关联同一构建指纹和产物；执行输入变化不重绑旧构建，共同生产来源变化不能复用旧证据。Agent 仍核对来源完整性、构建命令与实际进程/镜像。
 
 命令输出中每个用例包含一个 JSON 行执行事件，携带 `caseId/entryId/level/status/executed/assertions/persistence`，与凭证相同。普通日志可混排；未知 ID、零执行、SKIP、占位或缺少断言事件不可 PASS。一个日志可包含多个用例，各凭证分别定位自己的事件。
 

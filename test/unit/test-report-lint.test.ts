@@ -335,6 +335,7 @@ process.exit(Number(process.env.FAIL||0));`);
     save('build-plan.json', { kind: 'build', cwd: '.', argv: [process.execPath, 'build.cjs'],
       sources: ['source.txt', 'build.cjs', 'case.cjs'], artifact: 'artifact.txt', output: 'logs/build.json' });
     const plan = { kind: 'case', changeDir: '.', review: 'review.json', build: 'logs/build.json',
+      sources: ['case.cjs'],
       cases: ['C1', 'C2'].map(caseId => ({ caseId, output: `logs/${caseId}.json` })) };
     save('case-plan.json', plan);
     expect(run('--record-execution', 'build-plan.json').status).toBe(0);

@@ -113,6 +113,7 @@ function captureBuild() {
 function captureCase() {
   return record({
     kind: "case",
+    sources: ["case.cjs"],
     changeDir: ".",
     review: "review.json",
     caseId: "C1",
@@ -206,6 +207,7 @@ describe("execution receipt boundary", () => {
       expect(captureBuild().code).toBe(0);
       const result = record({
         kind: "case", changeDir: ".", review: "review.json", caseId: "C1",
+        sources: ["case.cjs"],
         build: "logs/build.json", output: "logs/C1.json",
         [reference]: "missing/reference.json",
       });
@@ -240,7 +242,7 @@ describe("execution receipt boundary", () => {
     for (const source of review.coverage.sources) source.path = "../../../" + source.path;
     fs.writeFileSync(reviewPath, JSON.stringify(review));
     const result = record({
-      kind: "case", changeDir,
+      kind: "case", changeDir, sources: ["case.cjs"],
       review: "openspec/changes/sample/.sdd/reviews/document-review.json",
       caseId: "C1", build: "logs/build.json", output: "logs/C1.json",
     });

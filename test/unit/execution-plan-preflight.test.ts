@@ -42,6 +42,7 @@ process.exit(actual?0:1);
   build = { kind: "build", cwd: ".", argv: [process.execPath, "build.cjs"],
     sources: ["app.txt", "build.cjs", "case.cjs"], artifact: "artifact.txt", output: "evidence/build.json" };
   casePlan = { kind: "case", changeDir: ".", review: "review.json", caseId: "C1",
+    sources: ["case.cjs"],
     build: "evidence/build.json", output: "evidence/C1.json" };
   review = { coverage: { entries: [{ id: "E1", kind: "library", service: "sample", route: "run" }],
     cases: [{ id: "C1", entryId: "E1", level: "library", executionEvidence: "runner-captured.v1",

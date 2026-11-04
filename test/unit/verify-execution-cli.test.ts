@@ -195,7 +195,7 @@ describe("execution feedback through the existing verify CLI", () => {
     "rejects a Case plan belonging to another change before any Python operation: %s",
     (...args) => {
       const f = fixture("zh", true);
-      f.savePlan({ kind: "case", changeDir: "openspec/changes/other-change" });
+      f.savePlan({ kind: "case", changeDir: "openspec/changes/other-change", sources: ["build.cjs"] });
       const result = f.run(
         "sample-change",
         "--execution-plan",
@@ -242,7 +242,7 @@ describe("execution feedback through the existing verify CLI", () => {
     const f = fixture("en", true);
     const alias = path.join(f.root, "selected-alias");
     fs.symlinkSync(f.change, alias, "dir");
-    f.savePlan({ kind: "case", changeDir: "selected-alias" });
+    f.savePlan({ kind: "case", changeDir: "selected-alias", sources: ["build.cjs"] });
     const result = f.run(
       f.change,
       "--execution-plan",

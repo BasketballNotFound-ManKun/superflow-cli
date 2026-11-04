@@ -129,27 +129,32 @@ missing current requirements block until completed. Full fields remain owned by 
 Place these two minimal plans at the project root:
 
 ```json
-{"kind":"build","argv":["node","build.js"],"cwd":".","sources":["app.js","build.js","case.js"],"artifact":"dist/app.js","output":"evidence/build.json"}
+{"kind":"build","argv":["node","build.js"],"cwd":".","sources":["app.js","build.js"],"artifact":"dist/app.js","output":"evidence/build.json"}
 ```
 
 ```json
-{"kind":"case","changeDir":".","review":"review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
+{"kind":"case","changeDir":".","review":"review.json","caseId":"C1","sources":["case.js"],"build":"evidence/build.json","output":"evidence/C1.json"}
 ```
 
-Use the current Host's installed script; replace installed-script-path with its installed location:
+The existing verify entry invokes the same capture implementation from the current installation:
 
 ```sh
-python3 <installed-script-path>/superflow-test-report-lint.py --check-execution-plan build-plan.json case-plan.json
-python3 <installed-script-path>/superflow-test-report-lint.py --record-execution build-plan.json
-python3 <installed-script-path>/superflow-test-report-lint.py --record-execution case-plan.json
+superflow verify <change-dir> --execution-plan build-plan.json
+superflow verify <change-dir> --execution-plan build-plan.json --run
+superflow verify <change-dir> --execution-plan case-plan.json --run --sync-report
 ```
 
 Case plans require changeDir relative to the plan directory; output/review/build are also plan-relative.
-Build cwd stays plan-relative; only case executionContext.cwd is changeDir-relative. Never infer
-the root from review directories. Build sources/artifact are
-relative to build cwd. build.sources covers relevant source, build and acceptance scripts, not
-unrelated small files. Build/case outputs must share one evidence directory. The case command
-comes only from frozen executionContext.
+Build cwd stays plan-relative; case executionContext.cwd is changeDir-relative. Never infer
+the root from review directories. Build sources/artifact are relative to build cwd and cover
+actual production build inputs and the frozen entry's code chain. Case plans also require an
+explicit nonempty sources list, relative to that frozen Case cwd, covering actual tests, adapters,
+data and configuration. A path may be shared with the build; do not create fictitious inputs.
+Missing Case inputs must be supplied, never inherited as a fallback. Case capture and
+receipt.sources verify the union; build.sources and its sourceFingerprint cover build inputs only.
+Recapture affected Cases when execution inputs change; changed common production inputs still
+invalidate the build and affected Cases. Equal jar bytes alone cannot authorize reuse.
+Build/case outputs share one evidence directory; commands come only from frozen executionContext.
 
 ### Prepare plans before capturing observations
 
@@ -169,10 +174,10 @@ entry's frozen code references; an old build cannot bypass drift.
 
 | Field/input | Required shape and repair owner |
 |---|---|
-| `kind` | Only `build` or `case`; build has argv/cwd/sources/artifact/output, case has changeDir/review/caseId/build/output |
+| `kind` | Only `build` or `case`; build has argv/cwd/sources/artifact/output, case has changeDir/review/caseId/sources/build/output |
 | `argv` / `executionContext` | Nonempty string argument array, no implicit Shell. Case commands come only from frozen coverage `{argv,cwd,environmentKeys}`; extra case-plan commands cannot override it |
-| `cwd` / paths | Build cwd is plan-relative; Case cwd is changeDir-relative; output/review/build/changeDir are plan-relative; artifact/sources are build-cwd-relative. Repair using declared/base/resolved diagnostics, never directory guesses |
-| `sources` | Explicit nonempty file array. Owner expands directories/globs before capture; files must exist and be nonempty; aliases resolving to one file are duplicates. Cover relevant code/build/acceptance files and frozen entry code chains, not directory strings |
+| `cwd` / paths | Build cwd is plan-relative; Case cwd is changeDir-relative; output/review/build/changeDir are plan-relative; artifact is build-cwd-relative and each plan's sources use its actual cwd. Repair using declared/base/resolved diagnostics, never directory guesses |
+| `sources` | Both plans require explicit nonempty file arrays; expand directories/globs first. Files exist and are nonempty; aliases cannot duplicate an input. Build covers production build inputs and the frozen entry chain; Case covers execution inputs and cannot fill a missing production source to bypass build validation |
 | `output` | File path, checked together with stdout/stderr/capture/events sidecars. Must not overwrite plans, review, sources, artifacts, dependency build/raw output or another batch output. A build receipt consumed by a Case is an allowed dependency; build/Case share one evidence directory |
 | Case / Entry | coverage.cases/entries are nonempty object arrays with unique nonempty IDs; caseId resolves one Case, entryId resolves one Entry, and Case.level matches Entry.kind |
 | `service` / `route` / `kind` | Declared Entry.service is a nonempty string; absent service uses Entry.id under the existing contract. route is a nonempty string; Entry.kind/Case.level is `browser/api/job/event/library/cli`. Repair coverage, never relabel a receipt for a different actual entry |
@@ -190,7 +195,7 @@ executionContext.cwd is ../../.. (project root), with argv still invoking root c
 The review location does not determine cwd:
 
 ```json
-{"kind":"case","changeDir":"openspec/changes/sample","review":"openspec/changes/sample/.sdd/reviews/document-review.json","caseId":"C1","build":"evidence/build.json","output":"evidence/C1.json"}
+{"kind":"case","changeDir":"openspec/changes/sample","review":"openspec/changes/sample/.sdd/reviews/document-review.json","caseId":"C1","sources":["case.js"],"build":"evidence/build.json","output":"evidence/C1.json"}
 ```
 
 The acceptance command emits exactly one JSON measurement event matching caseId on stdout;
@@ -229,7 +234,7 @@ evidence directory; do not merge different commands or conflicting runtime resou
 is not build-process count: do not require a full rebuild for each Case.
 
 ```json
-{"kind":"case","changeDir":"openspec/changes/sample","review":"openspec/changes/sample/.sdd/reviews/document-review.json","build":"evidence/build.json","cases":[{"caseId":"C1","output":"evidence/C1.json"},{"caseId":"C2","output":"evidence/C2.json"}]}
+{"kind":"case","changeDir":"openspec/changes/sample","review":"openspec/changes/sample/.sdd/reviews/document-review.json","sources":["case.js"],"build":"evidence/build.json","cases":[{"caseId":"C1","output":"evidence/C1.json"},{"caseId":"C2","output":"evidence/C2.json"}]}
 ```
 
 The cases array excludes top-level caseId/output. Use the same `--check-execution-plan` and
@@ -523,8 +528,16 @@ startup identity observation. Without that evidence retain PARTIAL; never copy l
 build.json into a claimed deployment identity. Do not add a test framework or parallel
 capture protocol.
 
+Frozen selectors must reach the native test command. Check a single-Case entry with a failing
+sibling in the same class and verify the actual selection. Splitting plans or filtering output
+events does not change what ran. Use a genuinely independent invocation or correct the batch
+when isolation is needed; never swallow the shared process exit code. Missing test methods,
+fixtures or runtime archives owned by this task are unfinished work, not automatically an
+unavailable external environment. Real permission and business boundaries still follow the contract.
+
 Choose reruns by current diff → affected sources/artifacts/runtime targets → invalidated
-Cases. Changed implementation/test sources require rebuilding and recapturing affected Cases;
+Cases. Changed build inputs require rebuilding and affected Case recapture. Changed execution
+inputs require affected Case recapture, not a new build with unchanged production inputs;
 changed deployment identity requires entry verification. Only plan-path/report-layout repair
 does not automatically require unrelated business reruns. Retained evidence must still match
 current frozen context and source/build identity; updating hashes alone is insufficient.

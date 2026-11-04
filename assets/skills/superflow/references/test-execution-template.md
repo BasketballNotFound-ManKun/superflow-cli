@@ -1,8 +1,9 @@
 # 测试执行与结果记录模板
 
 首次验证前实际完整读取 [test-guide.md](test-guide.md)。SDD 构建/用例从
-[Runner-Captured Execution](test-guide.md#runner-captured-execution)准备 plan，调用已安装
-`superflow-test-report-lint.py --record-execution`。由脚本生成构建/Case receipt、指纹和
+[Runner-Captured Execution](test-guide.md#runner-captured-execution)准备 plan，通过现有
+`superflow verify <change> --execution-plan <plan>` 预检，再显式 `--run`，Case 加
+`--sync-report`。由脚本生成构建/Case receipt、指纹和
 脱敏 stdout/stderr；报告链接这些产物，不手填捕获字段。旧证据保留原等级，缺来源为 PARTIAL。
 
 命令、工具链、运行时版本、启动/登录/就绪/停止入口、环境、端口和断言都从当前
@@ -25,6 +26,9 @@ Reviewer 报告保留原状态、finding ID、文件 hash 和结论。
 完整 SDD 按 `document-review.json` 的 R/E/C 索引逐项回填，沿既有
 [coverage/receipt](document-review-coverage.md)核验；Case 表是当前结果的唯一台账，
 详细输出用证据链接承接。数量区分合同 Case、参数分支、测试方法和重复执行。
+当前Case通过数从 `superflow verify <change> --execution-status` 的实测快照读取，恢复点和
+结尾引用同一Case表/快照，不手填多份累计通过数。原生方法全绿与Case回执缺失分别说明；
+报告lint成功只说明其实际检查层级，完整交付仍须独评及最终guard，不以PARTIAL格式通过收口。
 
 ## 报告形状
 
@@ -61,7 +65,7 @@ Reviewer 报告保留原状态、finding ID、文件 hash 和结论。
 
 - 目标与实际实现：<目标、实际入口/调用链及版本的对账>
 - 测试选择与补强：<理由、新增分支及影响的证据>
-- 实际数量：<按单元/接口或后端集成/后端业务链路/浏览器分列集合、通过/失败/跳过/阻塞>
+- 实际数量：<当前Case表/实测快照引用；原生测试方法/参数分支/重复数另列其原始输出，按实际验证范围说明>
 - 未决项：<失败/阻塞Case与finding、原因、影响、处置及所需协同；无则如实说明>
 - 外部协同及控制：<未完成联调；提交/发布等实际授权与执行事实>
 
