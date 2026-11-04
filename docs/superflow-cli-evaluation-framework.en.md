@@ -610,3 +610,29 @@ state registry or scan.
 False edit/failure reports, observer delays, queries executing tests, overwritten history/reviews,
 false approval or damaged unknown assets require repair of the original owner or rollback,
 retaining evidence without weakening assertions.
+
+## Actual feedback delivery and source isolation (2026-11-04)
+
+Baseline 8acf6ce passed the full 1817-test verification, but observed reminders only reached
+exit-0 stderr rather than model context; old tests checked printing alone. Project executors
+also ignored actual selectors, shared fingerprints expanded recapture, and method counts
+substituted for Cases. Owners are native Hook output, existing capture input boundaries and
+Agent review of project execution/measurement semantics.
+
+Reuse native additionalContext and Host event manifests; explicit Case sources, receipt unions
+and separate build fingerprints retain existing validation, independent-review and index consumers.
+Missing inputs require completion, with no old-rule fallback. Synthetic comparisons change one
+execution input without invalidating unrelated Cases; common production changes, nonzero/zero
+execution and drift remain rejected. A real local CLI and localhost-only fake provider compare
+whether old/new output enters actual subsequent requests, consuming no external model quota.
+This proves delivery, not model compliance. Cost comparisons count actual build/Case processes
+and preserved originals, not external business speed. Independent review found that wrong events
+or narrowed matchers could still authorize project-guard removal; the audit now shares complete
+canonical registration definitions, failing safely on unknown conditions or missing assets.
+Original and follow-up reviews remain separate external evidence.
+
+Full verification, isolated dual-host package installs and final input identities use this run's
+external results. Blocking feedback, unknown Host events, production sources moved into Case
+inputs to bypass build checks, rebound historical identities or unsafe project-protection removal
+require repair of the owner or rollback, retaining failures. Never weaken acceptance or add
+supervisors, fixed agent counts or default hard budgets.

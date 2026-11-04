@@ -108,6 +108,12 @@ DONE or a summary cannot replace verification. Keep rationale/recovery in existi
 reports, without new plan states, fixed headcounts/time/Token thresholds or supervisors.
 Implementation delegation does not replace independent read-only review under reviewer-checklist.
 
+Once production changes form a readable diff with a named risk, the Owner may obtain an existing
+independent code perspective while verification infrastructure continues. State the inspected
+scope and missing runtime evidence; actual final-version/evidence review remains required.
+Do not make every report document green a prerequisite for the first code review, or add fixed
+agent counts or review rounds.
+
 ## Continuous Execution Loop
 
 ```text

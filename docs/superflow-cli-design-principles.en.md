@@ -374,6 +374,19 @@ count. Read-only execution-status uses the same receipt validator; recover/next 
 and diagnostics without execution or phase promotion. Complete Case evidence is not independent
 review or full delivery approval. Owner still decides test sufficiency, ordering and delegation.
 
+Observation reminders must reach the Host's native context protocol; exit-0 stderr records do
+not establish model receipt. Keep them advisory and fail-open, without forcing retries or
+delegation via blocking exits. Register only Host-supported events through the existing manifest;
+do not infer business failures from arbitrary tool text. Retain observability limits when no
+structured exit facts exist.
+
+Build sources bind production build inputs; explicit Case plan sources bind execution inputs.
+Case receipts/capture validate their union while the embedded build and its fingerprint stay
+unchanged. Recapture affected Cases for execution-input changes; changed common production
+inputs still invalidate evidence. Case sources cannot supply a missing frozen production chain.
+Reuse capture, independent review and report consumers without another receipt protocol,
+persistent state or Runner. Agents still check actual selector propagation and assertion sufficiency.
+
 The existing loop observer finds the nearest fixed SDD marker from cwd up to the Git root,
 including nested document roots. It counts failures by actual operation identity; unrelated
 successful calls do not clear them. Bounded content snapshots observe Shell file changes and
