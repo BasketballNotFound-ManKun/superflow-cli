@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { HOOK_MAP, isSuperflowManagedHook } from "./hook.js";
+import { getManagedHookDefinitions, isSuperflowManagedHook } from "./hook.js";
 import { execFileSync } from "node:child_process";
 import { ASSETS_DIR } from "../platform/assets.js";
-import { getManifest } from "./config/manifest.js";
+import { getManifest, getManifestHooks } from "./config/manifest.js";
 import { auditLegacyScriptAliases, scriptMatchesPackage } from "./skill/scripts.js";
 
 export type HookHost = "codex" | "claude";
@@ -124,15 +124,21 @@ export function auditGlobalHooks(homeRoot: string, host: HookHost): HookAudit {
 }
 
 function hasGlobalReplacement(host: HookHost): boolean {
-  const { data } = readConfig(os.homedir(), host);
-  const commands = Object.values(data?.hooks ?? {}).flatMap((entries) =>
-    Array.isArray(entries) ? entries.flatMap((entry: any) =>
-      Array.isArray(entry?.hooks) ? entry.hooks.map((hook: any) => hook?.command) : []) : []);
-  const expected = Object.keys(HOOK_MAP).filter((name) =>
-    !name.startsWith(host === "codex" ? "claude-auto-" : "codex-auto-"));
-  return expected.every((name) => commands.some((command) =>
-    typeof command === "string" && command.endsWith(`/${name}`) &&
-    fs.existsSync(command) && scriptMatchesPackage(path.join(ASSETS_DIR, "scripts"), path.dirname(command), name, host)));
+  const { file, data } = readConfig(os.homedir(), host);
+  const scripts = path.join(path.dirname(file), host === "codex" ? "hooks" : "scripts");
+  return getManagedHookDefinitions(scripts, getManifestHooks(host)).every(({ event, entry, script }) => {
+    const groups = data?.hooks?.[event];
+    if (!Array.isArray(groups)) return false;
+    return groups.some((group: any) => {
+      if (!group || group.matcher !== entry.matcher || !Array.isArray(group.hooks)
+          || Object.keys(group).some((key) => !["hooks", "matcher"].includes(key))) return false;
+      const expected = entry.hooks[0];
+      return group.hooks.some((hook: any) => hook && typeof hook === "object"
+        && Object.keys(hook).length === Object.keys(expected).length
+        && Object.entries(expected).every(([key, value]) => hook[key] === value)
+        && scriptMatchesPackage(path.join(ASSETS_DIR, "scripts"), scripts, script, host));
+    });
+  });
 }
 
 export function migrateProjectHooks(

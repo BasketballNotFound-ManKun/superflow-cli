@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -9,6 +9,131 @@ import {
   migrateProjectHooks,
 } from "../../src/domains/hook-migration.js";
 import { hookMigrateCommand } from "../../src/app/commands/hook-migrate.js";
+
+import { syncManagedHooks } from "../../src/domains/hook.js";
+import { getManifestHooks } from "../../src/domains/config/manifest.js";
+import { deployScripts } from "../../src/domains/skill/scripts.js";
+import { ASSETS_DIR } from "../../src/platform/assets.js";
+
+it.each((["codex", "claude"] as const).flatMap(host =>
+  (["event", "matcher", "missingShell", "conditional", "async"] as const)
+    .map(fault => ({ host, fault }))))(
+  "$host 的 $fault 绑定不能授权移除项目护栏", async ({ host, fault }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-hook-binding-"));
+    const homedir = vi.spyOn(os, "homedir").mockReturnValue(root);
+    try {
+      const relative = host === "codex" ? ".codex/hooks.json" : ".claude/settings.json";
+      const file = path.join(root, relative);
+      const scripts = path.join(path.dirname(file), host === "codex" ? "hooks" : "scripts");
+      const names = getManifestHooks(host);
+      await deployScripts(names, path.join(ASSETS_DIR, "scripts"), scripts, { agent: host });
+      syncManagedHooks(file, scripts, names);
+      const valid = JSON.parse(fs.readFileSync(file, "utf8"));
+      const project = path.join(root, "project");
+      const projectFile = path.join(project, relative);
+      const original = JSON.stringify({ hooks: { PreToolUse: [{ hooks: [
+        { type: "command", command: path.join(project, ".claude/scripts/superflow-hook-guard.sh") },
+      ] }] } });
+      fs.mkdirSync(path.dirname(projectFile), { recursive: true });
+      const rejects = (configuration: typeof valid) => {
+        fs.writeFileSync(file, JSON.stringify(configuration));
+        fs.writeFileSync(projectFile, original);
+        expect(auditGlobalHooks(root, host).globalReplacement).toBe(false);
+        expect(migrateProjectHooks(project, host).changed).toBe(false);
+        expect(fs.readFileSync(projectFile, "utf8")).toBe(original);
+      };
+      const wrongEvent = { hooks: { SessionEnd: [{ hooks: Object.values(valid.hooks)
+        .flatMap((groups: any) => groups.flatMap((group: any) => group.hooks)) }] } };
+      const narrowed = structuredClone(valid);
+      const guard = narrowed.hooks.PreToolUse.find((group: any) => group.hooks
+        .some((hook: any) => hook.command.endsWith("/superflow-hook-guard.sh")));
+      guard.matcher = "Read";
+      const missingShell = structuredClone(valid);
+      missingShell.hooks.PreToolUse = missingShell.hooks.PreToolUse.filter((group: any) =>
+        !(group.matcher === "Bash|Shell|exec_command" && group.hooks.some((hook: any) =>
+          hook.command.endsWith("/superflow-sql-sync-hook.py"))));
+      const conditional = structuredClone(valid);
+      conditional.hooks.PreToolUse.find((group: any) => group.hooks
+        .some((hook: any) => hook.command.endsWith("/superflow-hook-guard.sh"))).if = "false";
+      const asyncObserver = structuredClone(valid);
+      asyncObserver.hooks.PostToolUse.find((group: any) => group.hooks
+        .some((hook: any) => hook.command.endsWith("/superflow-loop-observer.py")))
+        .hooks[0].async = true;
+      rejects({ event: wrongEvent, matcher: narrowed, missingShell,
+        conditional, async: asyncObserver }[fault]);
+      fs.writeFileSync(file, JSON.stringify(valid));
+      expect(auditGlobalHooks(root, host).globalReplacement).toBe(true);
+    } finally {
+      homedir.mockRestore();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  },
+);
+
+it.each(["codex", "claude"] as const)(
+  "%s 实际注册原生事件，并用同一清单确认全局替换与保留自定义资产", async (host) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "superflow-native-hooks-"));
+    const homedir = vi.spyOn(os, "homedir").mockReturnValue(root);
+    try {
+      const relative = host === "codex" ? ".codex/hooks.json" : ".claude/settings.json";
+      const file = path.join(root, relative);
+      const scripts = path.join(path.dirname(file), host === "codex" ? "hooks" : "scripts");
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      const custom = { command: "./company-hooks/observe.sh", type: "command" };
+      const customEvent = { hooks: [custom] };
+      fs.writeFileSync(file, JSON.stringify({ env: { KEEP: "yes" }, hooks: {
+        PostToolUse: [customEvent],
+        // A previous shared registration must disappear for Codex on sync.
+        PostToolUseFailure: [{ hooks: [{ command: path.join(scripts, "superflow-loop-failure-hook.sh") }] }],
+      } }));
+      const names = getManifestHooks(host);
+      await deployScripts(names, path.join(ASSETS_DIR, "scripts"), scripts, { agent: host });
+      syncManagedHooks(file, scripts, names);
+      const installed = JSON.parse(fs.readFileSync(file, "utf8"));
+      expect(installed.env).toEqual({ KEEP: "yes" });
+      expect(installed.hooks.PostToolUse).toContainEqual(customEvent);
+      const failureEntries = installed.hooks.PostToolUseFailure;
+      if (host === "codex") expect(failureEntries).toBeUndefined();
+      else expect(failureEntries[0].hooks[0].command)
+        .toBe(path.join(scripts, "superflow-loop-failure-hook.sh"));
+      expect(auditGlobalHooks(root, host).globalReplacement).toBe(true);
+      const project = path.join(root, "project");
+      const projectFile = path.join(project, relative);
+      fs.mkdirSync(path.dirname(projectFile), { recursive: true });
+      const projectConfig = { hooks: { PostToolUse: [{ hooks: [
+        { command: path.join(project, ".codex/hooks/superflow-hook-guard.sh") }, custom,
+      ] }] } };
+      fs.writeFileSync(projectFile, JSON.stringify(projectConfig));
+      expect(migrateProjectHooks(project, host).changed).toBe(true);
+      expect(JSON.parse(fs.readFileSync(projectFile, "utf8")).hooks.PostToolUse)
+        .toEqual([{ hooks: [custom] }]);
+      expect(migrateProjectHooks(project, host).changed).toBe(false);
+      const bytes = fs.readFileSync(file, "utf8");
+      expect(syncManagedHooks(file, scripts, names).changed).toBe(false);
+      expect(fs.readFileSync(file, "utf8")).toBe(bytes);
+      // Missing or modified required assets cannot authorize project removal.
+      const observer = path.join(scripts, "superflow-loop-observer.py");
+      const original = fs.readFileSync(observer, "utf8");
+      fs.writeFileSync(observer, `${original}\n# local customization\n`);
+      expect(auditGlobalHooks(root, host).globalReplacement).toBe(false);
+      expect(fs.readFileSync(observer, "utf8")).toContain("local customization");
+      fs.writeFileSync(observer, original);
+      expect(auditGlobalHooks(root, host).globalReplacement).toBe(true);
+      fs.rmSync(observer);
+      expect(auditGlobalHooks(root, host).globalReplacement).toBe(false);
+      fs.writeFileSync(projectFile, JSON.stringify(projectConfig));
+      const refused = migrateProjectHooks(project, host);
+      expect(refused.changed).toBe(false);
+      expect(refused.error).toContain("全局 Superflow Hook");
+      expect(fs.readFileSync(projectFile, "utf8")).toBe(JSON.stringify(projectConfig));
+      expect(JSON.parse(fs.readFileSync(file, "utf8")).hooks.PostToolUse)
+        .toContainEqual(customEvent);
+    } finally {
+      homedir.mockRestore();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  },
+);
 
 describe("项目级 Hook 安全迁移", () => {
   it("删除已知旧 ake Hook，保留自定义 Hook，并可重复执行", () => {

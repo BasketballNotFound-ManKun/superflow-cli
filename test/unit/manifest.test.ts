@@ -50,6 +50,12 @@ describe("core/manifest", () => {
     );
   });
 
+  it("只向支持原生失败事件的 Claude 注册失败观察器", () => {
+    expect(getManifestHooks("claude")).toContain("superflow-loop-failure-hook.sh");
+    expect(getManifestHooks("codex")).not.toContain("superflow-loop-failure-hook.sh");
+    expect(getManifestHooks("codex")).toContain("superflow-loop-observer.py");
+  });
+
   it("manifest declares Codex and Claude agents", () => {
     expect(getManifest().agents).toEqual(["claude", "codex"]);
   });

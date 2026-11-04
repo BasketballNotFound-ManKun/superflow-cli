@@ -248,6 +248,32 @@ export function registerHook(
   writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf-8");
 }
 
+/** The installer and replacement audit consume the same complete bindings. */
+export function getManagedHookDefinitions(
+  scriptsDir: string,
+  scriptNames: string[],
+) {
+  return scriptNames.flatMap((script) => {
+    const map = HOOK_MAP[script];
+    if (!map) throw new Error(`Unknown hook script: ${script}`);
+    const matchers = script === "superflow-sql-sync-hook.py"
+      ? [map.matcher, "Bash|Shell|exec_command"] : [map.matcher];
+    return matchers.map((matcher) => ({
+      script,
+      event: map.event,
+      entry: {
+        ...(matcher === undefined ? {} : { matcher }),
+        hooks: [{
+          type: "command",
+          command: path.join(scriptsDir, script),
+          timeout: map.event === "SessionEnd" ? 3
+            : script === "superflow-dependency-update-hook.sh" ? 300 : 120,
+        }],
+      },
+    }));
+  });
+}
+
 /** Reconcile all managed hooks in one write; identical definitions are a no-op. */
 export function syncManagedHooks(
   settingsFile: string,
@@ -279,33 +305,9 @@ export function syncManagedHooks(
     else delete hooks[event];
   }
   let registered = 0;
-  for (const script of scriptNames) {
-    const map = HOOK_MAP[script];
-    if (!map) throw new Error(`Unknown hook script: ${script}`);
-    const command = path.join(scriptsDir, script);
-    const matchers =
-      script === "superflow-sql-sync-hook.py"
-        ? [map.matcher, "Bash|Shell|exec_command"]
-        : [map.matcher];
-    for (const matcher of matchers) {
-      const entry: Record<string, unknown> = {
-        hooks: [
-          {
-            type: "command",
-            command,
-            timeout:
-              map.event === "SessionEnd"
-                ? 3
-                : script === "superflow-dependency-update-hook.sh"
-                  ? 300
-                  : 120,
-          },
-        ],
-      };
-      if (matcher !== undefined) entry.matcher = matcher;
-      (hooks[map.event] ??= []).push(entry);
-      registered += 1;
-    }
+  for (const { event, entry } of getManagedHookDefinitions(scriptsDir, scriptNames)) {
+    (hooks[event] ??= []).push(entry);
+    registered += 1;
   }
   settings.hooks = hooks;
   const next = JSON.stringify(settings, null, 2);

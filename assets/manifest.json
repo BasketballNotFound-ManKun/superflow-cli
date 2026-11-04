@@ -71,7 +71,6 @@
     "superflow-java-build-hook.py",
     "superflow-java-stop-hook.sh",
     "superflow-loop-observer.py",
-    "superflow-loop-failure-hook.sh",
     "superflow-loop-end-hook.sh",
     "superflow-doc-placement-hook.py",
     "superflow-delivery-check.sh",
@@ -81,7 +80,8 @@
   ],
   "agentHooks": {
     "claude": [
-      "claude-auto-backup-hook.sh"
+      "claude-auto-backup-hook.sh",
+      "superflow-loop-failure-hook.sh"
     ],
     "codex": [
       "codex-auto-backup-hook.sh"

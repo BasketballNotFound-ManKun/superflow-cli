@@ -91,7 +91,7 @@ def recent(values, now, window):
 def edited_paths(root, payload):
     tool_input = payload.get("tool_input") or {}
     paths = [tool_input.get("file_path")]
-    patch = tool_input.get("patch") or ""
+    patch = tool_input.get("patch") or tool_input.get("command") or ""
     paths += re.findall(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$", patch, re.M)
     result = set()
     for raw in paths:
@@ -187,7 +187,35 @@ def dirty_contents(root, repository, previous_paths):
     return contents, sorted(dirty)
 
 
+def reminder_language():
+    language = os.environ.get("SUPERFLOW_LANG", "")
+    if not language:
+        try:
+            state = json.loads((Path.home() / ".sdd-state.json").read_text(
+                encoding="utf-8"))
+            language = state.get("language", "")
+        except (OSError, ValueError, AttributeError):
+            pass
+    return "en" if re.match(r"^en(?:[-_]|$)", str(language)) else "zh"
+
+
+def reminder(kind, subject, count):
+    if reminder_language() == "en":
+        if kind == "edit":
+            return (f"[Superflow loop reminder] {subject} changed {count} times "
+                    "in 10 minutes; review the failure cause and approach.")
+        return (f"[Superflow failure reminder] {subject}: the same operation "
+                f"failed {count} times in 5 minutes; analyze the cause before "
+                "deciding whether to retry.")
+    if kind == "edit":
+        return (f"[Superflow 循环提醒] {subject} 在 10 分钟内修改 {count} 次；"
+                "请核对失败原因和实现方案。")
+    return (f"[Superflow 失败提醒] {subject} 同一操作在 5 分钟内失败 "
+            f"{count} 次；先分析原因，再决定是否重试。")
+
+
 def observe_success(root, repository, payload, state, now):
+    messages = []
     operation = operation_identity(payload)
     if operation:
         state["failures"].pop(operation, None)
@@ -232,9 +260,9 @@ def observe_success(root, repository, payload, state, now):
         stamps.append(now)
         state["edits"][path] = {"times": stamps, "warned": was_warned}
         if len(stamps) > EDIT_LIMIT and not was_warned:
-            print(f"[Superflow 循环提醒] {path} 在 10 分钟内修改 {len(stamps)} 次；"
-                  "请核对失败原因和实现方案。", file=sys.stderr)
+            messages.append(reminder("edit", path, len(stamps)))
             state["edits"][path]["warned"] = True
+    return messages
 
 
 def observe_failure(payload, state, now):
@@ -248,9 +276,8 @@ def observe_failure(payload, state, now):
     stamps.append(now)
     state["failures"][operation] = {"times": stamps, "warned": was_warned}
     if len(stamps) >= FAILURE_LIMIT and not was_warned:
-        print(f"[Superflow 失败提醒] {tool} 同一操作在 5 分钟内失败 "
-              f"{len(stamps)} 次；先分析原因，再决定是否重试。", file=sys.stderr)
         state["failures"][operation]["warned"] = True
+        return [reminder("failure", tool, len(stamps))]
 
 
 def prune_state(state, now):
@@ -267,8 +294,14 @@ def prune_state(state, now):
 def main():
     try:
         payload = json.loads(sys.stdin.read() or "{}")
+        event = payload.get("hook_event_name")
+        # Both hosts consume PostToolUse additionalContext. Claude also emits
+        # PostToolUseFailure; Codex currently reports tools through PostToolUse.
+        # Never infer an event from a tool name or a wrapper's command flags.
+        if event not in ("PostToolUse", "PostToolUseFailure", "SessionEnd"):
+            return 0
         root, repository = project_root(payload)
-        if "--end" in sys.argv:
+        if event == "SessionEnd":
             if not repository:
                 return 0
             for candidate in (working_directory(payload),
@@ -287,11 +320,18 @@ def main():
         state = load_state(file)
         now = time.time()
         prune_state(state, now)
-        if "--failure" in sys.argv:
-            observe_failure(payload, state, now)
+        if event == "PostToolUseFailure":
+            messages = observe_failure(payload, state, now)
         else:
-            observe_success(root, repository, payload, state, now)
+            messages = observe_success(root, repository, payload, state, now)
         save_state(file, state)
+        if messages:
+            # Exit-0 stderr and plain stdout are not model context for these
+            # events. Emit only advisory context: no decision or turn control.
+            print(json.dumps({"hookSpecificOutput": {
+                "hookEventName": event,
+                "additionalContext": "\n".join(messages),
+            }}, ensure_ascii=False))
     except Exception:
         pass
     return 0
