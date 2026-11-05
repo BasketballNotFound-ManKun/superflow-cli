@@ -139,6 +139,12 @@ async function smoke(snapshotPath: string | undefined): Promise<{
       );
     }
     const cli = path.join(installed, "dist", "app", "cli.js");
+    const runtime = JSON.parse(run(process.execPath,
+      [cli, "doctor", "--runtime-only", "--json"], consumer).stdout);
+    assert.equal(runtime.packageRoot, fs.realpathSync(installed));
+    assert.equal(runtime.nodePath, process.execPath);
+    assert.equal(runtime.version, pkg.version);
+    assert.match(runtime.cliSha256, /^[a-f0-9]{64}$/);
     assert.equal(
       run(process.execPath, [cli, "--version"], consumer).stdout.trim(),
       pkg.version,

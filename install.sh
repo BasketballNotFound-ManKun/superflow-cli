@@ -35,17 +35,20 @@ log_err()   { printf "${RED}✗ %s${NC}\n" "$*" >&2; }
 log_info "Step 1 / 6: 校验 Node 版本"
 
 NODE_MIN=20
-if ! command -v node >/dev/null 2>&1; then
-  log_err "Node.js 未安装。请先装 Node ${NODE_MIN}+ (推荐用 nvm: https://github.com/nvm-sh/nvm)"
-  exit 1
-fi
-
-NODE_VERSION=$(node -v | sed 's/^v//')
-NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
-if [ "$NODE_MAJOR" -lt "$NODE_MIN" ]; then
-  log_err "Node 版本 ${NODE_VERSION} 太低，要求 ${NODE_MIN}+"
-  exit 1
-fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BOOTSTRAP_FLAGS=()
+SDD_INIT_FLAGS=""
+for arg in "$@"; do
+  case "$arg" in
+    --yes) BOOTSTRAP_FLAGS+=(--yes) ;;
+    --dry-run) SDD_INIT_FLAGS="--dry-run" ;;
+    *) log_err "未知参数: $arg"; exit 1 ;;
+  esac
+done
+export SUPERFLOW_INSTALL_USER_PATH="${SUPERFLOW_INSTALL_USER_PATH-${PATH}}"
+NODE_BIN="$(bash "$SCRIPT_DIR/installer/bootstrap-node.sh" "${BOOTSTRAP_FLAGS[@]}")"
+export PATH="${NODE_BIN%/*}:$PATH"
+NODE_VERSION=$("$NODE_BIN" -v | sed 's/^v//')
 log_ok "Node ${NODE_VERSION} (≥ ${NODE_MIN})"
 
 # ----- Step 2: npm install（依赖）-----
@@ -55,7 +58,6 @@ log_info "Step 2 / 6: 安装 npm 依赖"
 NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmmirror.com}"
 log_info "使用 npm registry: ${NPM_REGISTRY}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 if [ ! -f "package.json" ]; then
@@ -63,12 +65,12 @@ if [ ! -f "package.json" ]; then
   exit 1
 fi
 
-npm install --registry="$NPM_REGISTRY" --no-audit --no-fund
+"$NODE_BIN" "$SCRIPT_DIR/scripts/npm-runtime.cjs" install --registry="$NPM_REGISTRY" --no-audit --no-fund
 log_ok "npm install 完成"
 
 # ----- Step 3: npm run build -----
 log_info "Step 3 / 6: build 编译 TypeScript"
-npm run build
+"$NODE_BIN" "$SCRIPT_DIR/scripts/npm-runtime.cjs" run build
 log_ok "build 完成"
 
 # ----- Step 4: link superflow 到全局 PATH -----
@@ -85,17 +87,8 @@ MCP_BIN_TARGET="$PREFERRED_BIN/superflow-mcp"
 DIST_BIN="$SCRIPT_DIR/dist/app/cli.js"
 DIST_MCP_BIN="$SCRIPT_DIR/dist/mcp/server.js"
 
-if [ -L "$BIN_TARGET" ] || [ -f "$BIN_TARGET" ]; then
-  log_warn "$BIN_TARGET 已存在，覆盖"
-  rm -f "$BIN_TARGET"
-fi
-ln -sf "$DIST_BIN" "$BIN_TARGET"
-if [ -L "$MCP_BIN_TARGET" ] || [ -f "$MCP_BIN_TARGET" ]; then
-  log_warn "$MCP_BIN_TARGET 已存在，覆盖"
-  rm -f "$MCP_BIN_TARGET"
-fi
-ln -sf "$DIST_MCP_BIN" "$MCP_BIN_TARGET"
-chmod +x "$DIST_BIN" "$DIST_MCP_BIN"
+"$NODE_BIN" -e 'require(process.argv[1]).installLaunchers(process.argv[2],process.argv[3],process.execPath)' \
+  "$SCRIPT_DIR/installer/launchers.cjs" "$PREFERRED_BIN" "$SCRIPT_DIR"
 log_ok "superflow 命令 → $BIN_TARGET"
 log_ok "superflow-mcp 命令 → $MCP_BIN_TARGET"
 
@@ -114,10 +107,8 @@ fi
 #   - 不污染任何真实项目仓库（避免之前"在源码目录跑 init 留临时上下文"的问题）
 log_info "Step 5 / 6: 全局部署 superflow（不污染任何项目）"
 
-SDD_INIT_FLAGS=""
-if [ "${1:-}" = "--dry-run" ]; then
+if [ "$SDD_INIT_FLAGS" = "--dry-run" ]; then
   log_info "用户指定 --dry-run：init 与 MCP 只打印计划；依赖、构建和本地链接仍执行"
-  SDD_INIT_FLAGS="--dry-run"
 fi
 
 # 只向本机真实存在的 Host 部署，支持任意单侧或组合。

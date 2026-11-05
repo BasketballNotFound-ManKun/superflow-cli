@@ -41,6 +41,7 @@ terminalSuite("installed CLI terminal onboarding", () => {
       path.join(compiled, "node_modules"),
       "dir",
     );
+    fs.symlinkSync(path.join(packageRoot, "scripts"), path.join(compiled, "scripts"), "dir");
     execFileSync(
       process.execPath,
       [
@@ -81,11 +82,15 @@ process.exit(92);
         { mode: 0o755 },
       );
     }
+    fs.copyFileSync(path.join(bin, "npm"), path.join(bin, "npm-cli.js"));
     env = {
       ...fixtureProcessEnv(root),
       PATH: bin + path.delimiter + process.env.PATH,
       SUPERFLOW_LANG: "",
       TEST_COMMAND_LOG: path.join(root, "commands.jsonl"),
+      npm_execpath: path.join(bin, "npm-cli.js"),
+      npm_node_execpath: process.execPath,
+      npm_config_prefix: path.join(root, "npm-global"),
     };
   });
   afterEach(() => fs.rmSync(root, { recursive: true, force: true }));

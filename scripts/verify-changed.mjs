@@ -6,13 +6,13 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
-  realpathSync,
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import npmRuntime from "./npm-runtime.cjs";
 
 // This maintenance script has a narrow test owner. Production code falls back
 // rather than guessing complete test coverage from source filenames.
@@ -228,41 +228,7 @@ export function collectChangedFiles(
   return [...new Set((tracked + untracked).split("\0").filter(Boolean))].sort();
 }
 
-export function resolveNpmInvocation({
-  npmExecPath = process.env.npm_execpath,
-  pathValue = process.env.PATH ?? "",
-  platform = process.platform,
-  language = "zh",
-} = {}) {
-  if (
-    npmExecPath &&
-    /\.(?:c?js|mjs)$/u.test(npmExecPath) &&
-    existsSync(npmExecPath)
-  ) {
-    return { executable: process.execPath, argumentPrefix: [npmExecPath] };
-  }
-  for (const directory of pathValue.split(
-    platform === "win32" ? ";" : path.delimiter,
-  )) {
-    const shim = path.join(directory, platform === "win32" ? "npm.cmd" : "npm");
-    const candidates = [
-      path.join(directory, "node_modules/npm/bin/npm-cli.js"),
-    ];
-    if (existsSync(shim) && platform !== "win32")
-      candidates.push(realpathSync(shim));
-    const entry = candidates.find(
-      (candidate) => candidate.endsWith(".js") && existsSync(candidate),
-    );
-    if (entry) return { executable: process.execPath, argumentPrefix: [entry] };
-  }
-  throw new Error(
-    text(
-      language,
-      "无法定位 npm JavaScript 入口；请通过 npm run verify:changed 运行。",
-      "Cannot locate npm JavaScript entrypoint; use npm run verify:changed.",
-    ),
-  );
-}
+export const resolveNpmInvocation = npmRuntime.resolveNpmInvocation;
 
 export function validateBaselineReport(
   report,

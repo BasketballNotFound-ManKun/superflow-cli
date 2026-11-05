@@ -80,8 +80,9 @@ describe('core/dependencies', () => {
   it('installOpenspec 调用 npm install -g @fission-ai/openspec@latest', async () => {
     await installOpenspec();
     expect(runCommand).toHaveBeenCalledWith(
-      'npm',
-      ['install', '-g', '@fission-ai/openspec@latest']
+      process.execPath,
+      [expect.stringMatching(/npm-cli\.js$/), 'install', '-g', '@fission-ai/openspec@latest'],
+      {},
     );
   });
 
@@ -217,7 +218,7 @@ describe('core/dependencies', () => {
     );
     expect(script).not.toContain('codex plugin add');
     expect(script).toContain(
-      'node "$cli" update --agent "$agents" --scope global --with-dependencies'
+      '"$SUPERFLOW_NODE" "$SUPERFLOW_CLI" update --agent "$agents" --scope auto --with-package'
     );
     expect(script).toContain(
       '自动升级已完整更新 CLI、依赖、Skills、Hooks、规则和托管 MCP'

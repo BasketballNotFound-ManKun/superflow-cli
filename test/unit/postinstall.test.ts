@@ -10,6 +10,7 @@ import {
 } from '../../scripts/postinstall.js';
 import { loadState } from '../../src/domains/state.js';
 import { migrateGlobalHooks } from '../../src/domains/hook-migration.js';
+import { verifyActiveInstallation } from '../../src/platform/npm-runtime.js';
 
 describe('scripts/postinstall', () => {
   it('detects global install from npm_config_global', () => {
@@ -99,7 +100,8 @@ describe('npm installation asset handoff', () => {
   function fixture() {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'superflow-npm-sync-'));
     const runCommand = vi.fn(async (_command: string, _args: string[], _options?: object) => ({ code: 0, stdout: '', stderr: '' }));
-    const runtime = { homeRoot: root, loadState, runCommand, migrateGlobalHooks };
+    const runtime = { homeRoot: root, loadState, runCommand, migrateGlobalHooks,
+      verifyActiveInstallation: vi.fn(async () => {}) };
     return { root, runCommand, runtime };
   }
 
@@ -168,6 +170,17 @@ describe('npm installation asset handoff', () => {
     f.runCommand.mockImplementation(async (command) => ({ code: command === process.execPath ? 1 : 0, stdout: '', stderr: 'deployment failed' }));
     try {
       await expect(runPostinstall({ npm_config_global: 'true' }, f.runtime)).rejects.toThrow(/deployment failed/);
+    } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
+  });
+  it('does not deploy host assets when PATH still selects another installation', async () => {
+    const f = fixture();
+    f.runCommand.mockImplementation(async (command) => ({
+      code: 0, stderr: '', stdout: command === 'superflow'
+        ? JSON.stringify({ schemaVersion: 'superflow.installation.v1', version: '0.6.2', packageRoot: '/another/installation' }) : '',
+    }));
+    try {
+      await expect(runPostinstall({ npm_config_global: 'true' }, { ...f.runtime, verifyActiveInstallation })).rejects.toThrow(/PATH/);
+      expect(f.runCommand.mock.calls.some(([, args]) => args.includes('init') || args.includes('update'))).toBe(false);
     } finally { fs.rmSync(f.root, { recursive: true, force: true }); }
   });
 });

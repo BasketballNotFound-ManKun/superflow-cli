@@ -13,6 +13,7 @@ import {
 import { hashFile } from "../../platform/fs.js";
 import { getManifest } from "../config/manifest.js";
 import path from "path";
+import { PACKAGE_ROOT } from "../../platform/assets.js";
 import type { Agent } from "../../types.js";
 
 export interface DeployScriptsOptions {
@@ -69,9 +70,19 @@ function shouldRewriteScript(file: string): boolean {
   return /\.(sh|py|js|json|md)$/i.test(file);
 }
 
-export function rewriteScriptContent(content: string, agent: Agent): string {
-  if (agent === "codex") return content;
-  return content
+export function rewriteScriptContent(
+  content: string,
+  agent: Agent,
+  runtime = { nodePath: process.execPath, cliPath: path.join(PACKAGE_ROOT, "dist/app/cli.js") },
+): string {
+  const quote = (value: string) => {
+    const portable = process.platform === 'win32' ? value.replaceAll("\\", "/") : value;
+    return `'${portable.replaceAll("'", "'\\''")}'`;
+  };
+  const bound = content.replaceAll("__SUPERFLOW_NODE__", quote(runtime.nodePath))
+    .replaceAll("__SUPERFLOW_CLI__", quote(runtime.cliPath));
+  if (agent === "codex") return bound;
+  return bound
     .replaceAll("$HOME/.codex/hooks", "$HOME/.claude/scripts")
     .replaceAll("~/.codex/hooks", "~/.claude/scripts")
     .replaceAll("~/.codex/skills", "~/.claude/skills")

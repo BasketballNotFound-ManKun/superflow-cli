@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname, join, resolve } from 'path';
+import npmRuntime from './npm-runtime.cjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -99,6 +100,10 @@ export async function runPostinstall(env = process.env, runtime = {}) {
     printInstallMessage(pkg.version, resolveInstallLanguage(env));
     return;
   }
+  const verify = runtime.verifyActiveInstallation
+    ?? (await import('../dist/platform/npm-runtime.js')).verifyActiveInstallation;
+  npmRuntime.repairGlobalLaunchers(join(__dirname, '..'), process.execPath, env);
+  await verify(join(__dirname, '..'), runCommand);
   const language = state?.language ?? resolveInstallLanguage(env);
   const args = installed
     ? ['update', caller, '--scope', 'auto', '--with-dependencies']

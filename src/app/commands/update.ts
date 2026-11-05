@@ -21,6 +21,7 @@ import { deployPrompts } from '../../domains/skill/prompts.js';
 import { syncManagedHooks } from '../../domains/hook.js';
 import type { Agent, InstallScope, Language, SddState } from '../../types.js';
 import { runCommand } from '../../platform/process.js';
+import { projectDependsOnSuperflow, repairGlobalLaunchers, runNpm, verifyActiveInstallation } from '../../platform/npm-runtime.js';
 import {
   CODEX_SUPERPOWERS_PLUGIN,
   installCodexSuperpowers,
@@ -177,8 +178,11 @@ async function executeUpdate(
 
   if (options.withPackage) {
     const failures: string[] = [];
-    await collectUpdateFailure(failures, () =>
-      updateNpmPackage(PACKAGE_NAME, packageScope, 'superflow package'));
+    let packageInstalled = false;
+    await collectUpdateFailure(failures, async () => {
+      await updateNpmPackage(PACKAGE_NAME, packageScope, 'superflow package', projectPath);
+      packageInstalled = true;
+    });
     await collectUpdateFailure(failures, () =>
       refreshWithInstalledCli({
         agents: planAgents,
@@ -188,6 +192,7 @@ async function executeUpdate(
         language,
         noHooks: options.noHooks,
         json: options.json,
+        packageInstalled,
       }));
     if (failures.length > 0) {
       throw new Error(
@@ -206,7 +211,7 @@ async function executeUpdate(
   const dependencyFailures: string[] = [];
   if (options.withDependencies) {
     await collectUpdateFailure(dependencyFailures, () =>
-      updateNpmPackage(OPENSPEC_PACKAGE_NAME, 'global', 'openspec package'));
+      updateNpmPackage(OPENSPEC_PACKAGE_NAME, 'global', 'openspec package', projectPath));
     await collectUpdateFailure(dependencyFailures, () => updateSuperpowers(planAgents));
   }
 
@@ -259,6 +264,8 @@ async function executeUpdate(
     { agent: planAgents.join(',') },
     language,
   );
+
+  repairGlobalLaunchers(PACKAGE_ROOT);
 
   persistUpdateLanguage(language, planAgents);
 
@@ -466,12 +473,7 @@ export function detectPackageScope(
   const packageJsonPath = path.join(projectPath, 'package.json');
   if (existsSync(packageJsonPath)) {
     try {
-      const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-      if (
-        pkg.dependencies?.[PACKAGE_NAME] ||
-        pkg.devDependencies?.[PACKAGE_NAME] ||
-        pkg.optionalDependencies?.[PACKAGE_NAME]
-      ) {
+      if (projectDependsOnSuperflow(projectPath)) {
         return 'project';
       }
     } catch {
@@ -547,9 +549,11 @@ export function persistUpdateLanguage(
 async function updateNpmPackage(
   packageName: string,
   scope: InstallScope,
-  label: string
+  label: string,
+  projectPath: string,
 ): Promise<void> {
-  const npmResult = await runCommand('npm', buildNpmUpdateArgs(packageName, scope), {
+  const npmResult = await runNpm(buildNpmUpdateArgs(packageName, scope), {
+    cwd: projectPath,
     env: { SUPERFLOW_INSTALL_OWNER: 'update' },
   });
   if (npmResult.code !== 0) {
@@ -576,10 +580,11 @@ async function refreshWithInstalledCli(input: {
   language: Language;
   noHooks?: boolean;
   json?: boolean;
+  packageInstalled?: boolean;
 }): Promise<void> {
   const packageBase = input.packageScope === 'project'
     ? path.join(input.projectPath, 'node_modules')
-    : await globalNpmRoot();
+    : await globalNpmRoot(input.projectPath);
   const cliPath = path.join(
     packageBase,
     '@chenmk',
@@ -594,6 +599,7 @@ async function refreshWithInstalledCli(input: {
   const result = await runCommand(
     process.execPath,
     buildPostPackageRefreshArgs({ ...input, cliPath }),
+    { env: { SUPERFLOW_INSTALL_OWNER: input.packageInstalled ? 'update' : 'refresh' } },
   );
   if (result.code !== 0) {
     throw new Error(
@@ -603,17 +609,12 @@ async function refreshWithInstalledCli(input: {
   const output = result.stdout.trim();
   if (output) console.log(output);
   const metadata = JSON.parse(readFileSync(path.join(packageBase, '@chenmk', 'superflow', 'package.json'), 'utf8')) as { version: string };
-  const active = await runCommand('superflow', ['--version'], { timeout: 8_000 });
-  if (active.code !== 0 || active.stdout.trim() !== metadata.version) {
-    throw new Error(managedText(input.language,
-      `新版CLI与配套资产已刷新，但PATH中的superflow未指向${metadata.version}。新版入口：${cliPath}。请检查命令路径并刷新终端缓存。`,
-      `The new CLI and assets were refreshed, but superflow on PATH is not ${metadata.version}. New entry: ${cliPath}. Check command paths and refresh the shell cache.`));
-  }
+  await verifyActiveInstallation(path.join(packageBase, '@chenmk', 'superflow'), runCommand, input.packageScope);
   if (!input.json) console.log(`CLI ${metadata.version}: ${cliPath}`);
 }
 
-async function globalNpmRoot(): Promise<string> {
-  const result = await runCommand('npm', ['root', '-g']);
+async function globalNpmRoot(projectPath: string): Promise<string> {
+  const result = await runNpm(['root', '-g'], { cwd: projectPath });
   const root = result.stdout.trim();
   if (result.code !== 0 || !root) {
     throw new Error(

@@ -1,5 +1,6 @@
 param(
-  [switch]$DryRun
+  [switch]$DryRun,
+  [switch]$Yes
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,18 +22,12 @@ function Write-Fail($Message) {
 }
 
 Write-Info "Step 1 / 6: 校验 Node 版本"
-$nodeCommand = Get-Command node -ErrorAction SilentlyContinue
-if (-not $nodeCommand) {
-  Write-Fail "Node.js 未安装。请先安装 Node 20+。"
-  exit 1
-}
-
-$nodeVersion = (& node -v).TrimStart("v")
-$nodeMajor = [int]($nodeVersion.Split(".")[0])
-if ($nodeMajor -lt 20) {
-  Write-Fail "Node 版本 $nodeVersion 太低，要求 20+。"
-  exit 1
-}
+if ($null -eq $env:SUPERFLOW_INSTALL_USER_PATH) { $env:SUPERFLOW_INSTALL_USER_PATH = $env:Path }
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$node = & (Join-Path $scriptDir 'installer\bootstrap-node.ps1') -Yes:$Yes
+if ($LASTEXITCODE -ne 0 -or -not $node) { throw 'Node bootstrap did not complete / Node 引导未完成' }
+$env:Path = (Split-Path -Parent $node) + ';' + $env:Path
+$nodeVersion = (& $node -v).TrimStart("v")
 Write-Ok "Node $nodeVersion"
 
 Write-Info "Step 2 / 6: 安装 npm 依赖"
@@ -44,12 +39,12 @@ if (-not $registry) {
   $registry = "https://registry.npmmirror.com"
 }
 Write-Info "使用 npm registry: $registry"
-npm install --registry="$registry" --no-audit --no-fund
+& $node (Join-Path $scriptDir 'scripts\npm-runtime.cjs') install --registry="$registry" --no-audit --no-fund
 if ($LASTEXITCODE -ne 0) { throw "npm install failed: $LASTEXITCODE" }
 Write-Ok "npm install 完成"
 
 Write-Info "Step 3 / 6: build 编译 TypeScript"
-npm run build
+& $node (Join-Path $scriptDir 'scripts\npm-runtime.cjs') run build
 if ($LASTEXITCODE -ne 0) { throw "build failed: $LASTEXITCODE" }
 Write-Ok "build 完成"
 
@@ -65,10 +60,8 @@ $distBin = Join-Path $scriptDir "dist\app\cli.js"
 $distMcpBin = Join-Path $scriptDir "dist\mcp\server.js"
 $cmdPath = Join-Path $binDir "superflow.cmd"
 $mcpCmdPath = Join-Path $binDir "superflow-mcp.cmd"
-$cmdContent = "@echo off`r`nnode `"$distBin`" %*`r`n"
-$mcpCmdContent = "@echo off`r`nnode `"$distMcpBin`" %*`r`n"
-Set-Content -Path $cmdPath -Value $cmdContent -Encoding ASCII
-Set-Content -Path $mcpCmdPath -Value $mcpCmdContent -Encoding ASCII
+& $node -e 'require(process.argv[1]).installLaunchers(process.argv[2],process.argv[3],process.execPath)' (Join-Path $scriptDir 'installer\launchers.cjs') $binDir $scriptDir
+if ($LASTEXITCODE -ne 0) { throw 'CLI launcher installation failed / 命令入口安装失败' }
 Write-Ok "superflow 命令 -> $cmdPath"
 Write-Ok "superflow-mcp 命令 -> $mcpCmdPath"
 
@@ -78,7 +71,7 @@ if ($pathItems -notcontains $binDir) {
 }
 
 Write-Info "Step 5 / 6: 跑 superflow init 全局部署"
-node $distBin --version
+& $node $distBin --version
 
 $hasCodex = $null -ne (Get-Command codex -ErrorAction SilentlyContinue)
 $hasClaude = $null -ne (Get-Command claude -ErrorAction SilentlyContinue)
@@ -106,7 +99,7 @@ $bootstrapDir = Join-Path ([System.IO.Path]::GetTempPath()) (
 New-Item -ItemType Directory -Force -Path $bootstrapDir | Out-Null
 Push-Location $bootstrapDir
 try {
-  node $distBin @initArgs
+  & $node $distBin @initArgs
   if ($LASTEXITCODE -ne 0) { throw "initialization failed: $LASTEXITCODE" }
 } finally {
   Pop-Location
@@ -118,7 +111,7 @@ $mcpArgs = @("mcp", "status", "--agent", $agentValue)
 if ($DryRun) {
   $mcpArgs += "--dry-run"
 }
-node $distBin @mcpArgs
+& $node $distBin @mcpArgs
 if ($LASTEXITCODE -ne 0) { throw "MCP status failed: $LASTEXITCODE" }
 Write-Ok "托管 MCP 已按本机 Agent 安装情况完成注册"
 

@@ -7,6 +7,8 @@ const USER_DIRECTORY_KEYS = new Set([
   "APPDATA",
   "LOCALAPPDATA",
   "XDG_CONFIG_HOME",
+  "XDG_DATA_HOME",
+  "XDG_STATE_HOME",
 ]);
 
 // Disposable Git repositories must not inherit host hooks or Git overrides.
@@ -25,6 +27,8 @@ export function fixtureProcessEnv(
     APPDATA: path.join(home, "AppData", "Roaming"),
     LOCALAPPDATA: path.join(home, "AppData", "Local"),
     XDG_CONFIG_HOME: path.join(home, ".config"),
+    XDG_DATA_HOME: path.join(home, ".local", "share"),
+    XDG_STATE_HOME: path.join(home, ".local", "state"),
     GIT_CONFIG_NOSYSTEM: "1",
     GIT_CONFIG_GLOBAL: os.devNull,
   };

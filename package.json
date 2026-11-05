@@ -42,6 +42,7 @@
     "prebuild": "npm run check:design-principles && npm run check:managed-design",
     "build": "node scripts/clean-dist.js && tsc && node scripts/ensure-bin-modes.js",
     "dev": "tsx watch src/cli/index.ts",
+    "preinstall": "node scripts/preinstall.js",
     "postinstall": "node scripts/postinstall.js",
     "prepack": "npm run build",
     "prepublishOnly": "npm run release:check && npm run verify:changed -- --full",

@@ -3,6 +3,7 @@ import { resolveChangesRoot } from "../../domains/config/planning-home.js";
 import { homedir } from 'os';
 import path from 'path';
 import { runCommand } from '../../platform/process.js';
+import { installationIdentity } from '../../platform/npm-runtime.js';
 import { getPlatformPaths } from '../../platform/paths.js';
 import {
   parseAgentSelection,
@@ -104,7 +105,17 @@ export async function doctorCommand(options: {
   scope?: string;
   targetPath?: string;
   language?: string;
+  runtimeOnly?: boolean;
 } = {}): Promise<void> {
+  if (options.runtimeOnly) {
+    const identity = installationIdentity();
+    console.log(options.json ? JSON.stringify(identity) : [
+      `CLI: ${identity.version} (${identity.cliPath})`,
+      `Node: ${identity.nodeVersion} (${identity.nodePath})`,
+      `Build: ${identity.buildCommit ?? 'unknown'}`,
+    ].join('\n'));
+    return;
+  }
   const language = resolveRuntimeLanguage(options.language);
   const result = await collectDoctor({ ...options, language });
   if (options.json) {

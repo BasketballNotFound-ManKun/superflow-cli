@@ -15,6 +15,8 @@ describe("fixture user directory isolation", () => {
       USERPROFILE: "host-profile",
       APPDATA: "host-roaming",
       LOCALAPPDATA: "host-local",
+      XDG_DATA_HOME: "host-data",
+      XDG_STATE_HOME: "host-state",
       GIT_DIR: "foreign.git",
       GIT_CONFIG_COUNT: "1",
       GIT_CONFIG_KEY_0: "core.hooksPath",
@@ -31,6 +33,8 @@ describe("fixture user directory isolation", () => {
     expect(env.USERPROFILE).toBe(home);
     expect(env.APPDATA).toBe(path.join(home, "AppData", "Roaming"));
     expect(env.LOCALAPPDATA).toBe(path.join(home, "AppData", "Local"));
+    expect(env.XDG_DATA_HOME).toBe(path.join(home, ".local", "share"));
+    expect(env.XDG_STATE_HOME).toBe(path.join(home, ".local", "state"));
     expect(env.GIT_DIR).toBeUndefined();
     expect(env.GIT_CONFIG_COUNT).toBeUndefined();
     expect(env.GIT_CONFIG_KEY_0).toBeUndefined();

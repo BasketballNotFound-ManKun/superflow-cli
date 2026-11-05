@@ -68,18 +68,32 @@ GLOBAL_STAMP="$STATE_DIR/dependency-update-last.stamp"
 LOG_FILE="$STATE_DIR/dependency-update.log"
 LOCK_DIR="$STATE_DIR/dependency-update.lock"
 
+# Bound by the existing installer; do not rediscover another installation on PATH.
+SUPERFLOW_NODE=__SUPERFLOW_NODE__
+SUPERFLOW_CLI=__SUPERFLOW_CLI__
+if [ ! -x "$SUPERFLOW_NODE" ] || [ ! -f "$SUPERFLOW_CLI" ]; then
+  printf '[Superflow] Installation runtime is unavailable; run superflow update to repair it. / 安装运行时不可用，请运行 superflow update 修复。\n' >&2
+  exit 0
+fi
+PACKAGE_ROOT="$(cd "$(dirname "$SUPERFLOW_CLI")/../.." && pwd)" || exit 0
+NPM_ENTRY="$PACKAGE_ROOT/scripts/npm-runtime.cjs"
+
+npm_for_installation() {
+  "$SUPERFLOW_NODE" "$NPM_ENTRY" "$@"
+}
+
 # One safe project migration per session. The CLI only removes known managed
 # legacy entries after a provenance check, backs up the project config, and
 # preserves custom hooks. A running Host may need a restart to reload hooks.
 PROJECT_STAMP="$STATE_DIR/project-hooks-$SESSION_HASH.stamp"
-if [ ! -f "$PROJECT_STAMP" ] && command -v superflow >/dev/null 2>&1; then
+if [ ! -f "$PROJECT_STAMP" ]; then
   HOST_AGENT=""
   case "$0" in
     */.codex/*) HOST_AGENT="codex" ;;
     */.claude/*) HOST_AGENT="claude" ;;
   esac
   if [ -n "$HOST_AGENT" ]; then
-    MIGRATION_JSON="$(superflow hook-migrate --path "$PWD" --agent "$HOST_AGENT" --apply --json 2>/dev/null || true)"
+    MIGRATION_JSON="$("$SUPERFLOW_NODE" "$SUPERFLOW_CLI" hook-migrate --path "$PWD" --agent "$HOST_AGENT" --apply --json 2>/dev/null || true)"
     if [ -n "$MIGRATION_JSON" ]; then
       MIGRATED="$(printf '%s' "$MIGRATION_JSON" | python3 -c '
 import json, sys
@@ -133,12 +147,12 @@ run_logged() {
 }
 
 latest_npm_version() {
-  npm view "$1" version --registry https://registry.npmjs.org 2>/dev/null | tail -n 1
+  npm_for_installation view "$1" version --registry https://registry.npmjs.org 2>/dev/null | tail -n 1
 }
 
 installed_npm_version() {
   local json
-  json="$(npm list -g "$1" --depth=0 --json 2>/dev/null || true)"
+  json="$(npm_for_installation list -g "$1" --depth=0 --json 2>/dev/null || true)"
   printf '%s' "$json" | python3 -c '
 import json, sys
 package_name = sys.argv[1]
@@ -153,29 +167,6 @@ if version:
 ' "$1"
 }
 
-update_npm_if_needed() {
-  local package_name="$1"
-  local current latest
-  command -v npm >/dev/null 2>&1 || return 1
-  latest="$(latest_npm_version "$package_name")"
-  if [ -z "$latest" ]; then
-    if [ "$LANGUAGE" = "en" ]; then
-      printf '\n[%s] Cannot confirm the latest version of %s\n' \
-        "$(date '+%Y-%m-%d %H:%M:%S')" "$package_name" \
-        >> "$LOG_FILE" 2>/dev/null || true
-    else
-      printf '\n[%s] 无法确认 %s 的最新版本\n' \
-        "$(date '+%Y-%m-%d %H:%M:%S')" "$package_name" \
-        >> "$LOG_FILE" 2>/dev/null || true
-    fi
-    return 1
-  fi
-  current="$(installed_npm_version "$package_name")"
-  if [ "$current" != "$latest" ]; then
-    SUPERFLOW_INSTALL_OWNER=hook run_logged npm install -g "$package_name@latest" --registry https://registry.npmjs.org
-  fi
-}
-
 detected_agents() {
   local agents=""
   command -v codex >/dev/null 2>&1 && agents="codex"
@@ -188,18 +179,13 @@ detected_agents() {
 refresh_superflow_installation() {
   local agents="$1"
   [ -n "$agents" ] || return 1
-  # Always run the package just installed, not an older PATH shadow.
-  local npm_root cli
-  npm_root="$(npm root -g 2>/dev/null)" || return 1
-  cli="$npm_root/@chenmk/superflow/dist/app/cli.js"
-  [ -f "$cli" ] || return 1
-  run_logged node "$cli" update --agent "$agents" --scope global --with-dependencies
+  # The CLI owns package installation, handoff and asset verification once.
+  run_logged "$SUPERFLOW_NODE" "$SUPERFLOW_CLI" update --agent "$agents" --scope auto --with-package
 }
 
 check_npm_package() {
   local package_name="$1"
   local current latest
-  command -v npm >/dev/null 2>&1 || return 0
   latest="$(latest_npm_version "$package_name")"
   [ -n "$latest" ] || return 0
   current="$(installed_npm_version "$package_name")"
@@ -212,9 +198,13 @@ check_npm_package() {
 
 if [ "$MODE" = "apply" ]; then
   APPLY_FAILED=0
-  update_npm_if_needed "@chenmk/superflow" || APPLY_FAILED=1
-  AGENT_VALUE="$(detected_agents)"
-  refresh_superflow_installation "$AGENT_VALUE" || APPLY_FAILED=1
+  if [ -z "$(latest_npm_version '@chenmk/superflow')" ]; then
+    printf '[Superflow] Cannot confirm the latest version / 无法确认 @chenmk/superflow 的最新版本\n' >> "$LOG_FILE"
+    APPLY_FAILED=1
+  else
+    AGENT_VALUE="$(detected_agents)"
+    refresh_superflow_installation "$AGENT_VALUE" || APPLY_FAILED=1
+  fi
 
   if [ "$APPLY_FAILED" -ne 0 ]; then
     rm -f "$STAMP" "$GLOBAL_STAMP" 2>/dev/null || true

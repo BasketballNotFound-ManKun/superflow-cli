@@ -258,6 +258,7 @@ describe("changed verification", () => {
     expect(() =>
       resolveNpmInvocation({
         platform: "win32",
+        nodePath: path.join(directory, "node.exe"),
         npmExecPath: "",
         pathValue: directory,
       }),

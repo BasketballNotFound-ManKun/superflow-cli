@@ -7,6 +7,7 @@ import {
 import { homedir } from 'os';
 import path from 'path';
 import { runCommand } from '../platform/process.js';
+import { runNpm } from '../platform/npm-runtime.js';
 import type { Agent, InstallScope } from '../types.js';
 
 export interface InstallResult {
@@ -122,7 +123,7 @@ function alreadyInstalled(output: string): boolean {
  * 失败阻塞 init（核心依赖）
  */
 export async function installOpenspec(): Promise<InstallResult> {
-  const result = await runCommand('npm', ['install', '-g', '@fission-ai/openspec@latest']);
+  const result = await runNpm(['install', '-g', '@fission-ai/openspec@latest']);
   if (result.code !== 0) {
     return { ok: false, error: `npm install failed: ${result.stderr}` };
   }

@@ -351,6 +351,7 @@ program
 program
   .command("doctor [targetPath]")
   .description(helpText.doctorDescription)
+  .option("--runtime-only", helpText.doctorRuntimeOnlyOption)
   .option("--agent <agent>", helpText.agentOption, "both")
   .option("--scope <scope>", helpText.commandScopeOption, "global")
   .option("--language <language>", helpText.languageOption)

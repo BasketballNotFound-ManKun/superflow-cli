@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { spawnSync } from "child_process";
 import { afterEach, describe, expect, it } from "vitest";
+import { rewriteScriptContent } from "../../src/domains/skill/scripts.js";
 
 const roots: string[] = [];
 
@@ -13,16 +14,49 @@ afterEach(() => {
 });
 
 describe("dependency update hook", () => {
+  it.each(["codex", "claude"] as const)("keeps quoted runtime paths literal after %s deployment", (agent) => {
+    const fixture = createFixture();
+    const node = path.join(fixture.root, "runtime 'quoted' $UNSET");
+    fs.copyFileSync(path.join(fixture.bin, "node"), node);
+    fs.chmodSync(node, 0o755);
+    const hook = path.join(fixture.root, `.${agent}`, agent === "claude" ? "scripts" : "hooks", "update.sh");
+    fs.mkdirSync(path.dirname(hook), { recursive: true });
+    fs.writeFileSync(hook, rewriteScriptContent(
+      fs.readFileSync(path.resolve("assets/scripts/superflow-dependency-update-hook.sh"), "utf8"),
+      agent, { nodePath: node, cliPath: path.join(fixture.root, "node_modules/@chenmk/superflow/dist/app/cli.js") },
+    ));
+    const result = runHook(fixture, { mode: "apply", script: hook });
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stderr).toContain("自动升级已完整更新");
+    expect(fs.readFileSync(fixture.commandLog, "utf8")).toContain("--with-package");
+  });
+  it("uses the installation-bound runtime instead of another Node/npm on PATH", () => {
+    const fixture = createFixture();
+    const owned = path.join(fixture.root, "owned-node");
+    writeExecutable(owned, `#!/bin/bash
+printf 'owned-node %s\\n' "$*" >> "$COMMAND_LOG"
+if [ "$2" = "view" ]; then echo 1.0.1; fi
+exit 0
+`);
+    const hook = path.join(fixture.root, "bound-hook.sh");
+    fs.writeFileSync(hook, fs.readFileSync(path.resolve("assets/scripts/superflow-dependency-update-hook.sh"), "utf8")
+      .replaceAll("__SUPERFLOW_NODE__", `'${owned}'`)
+      .replaceAll("__SUPERFLOW_CLI__", `'${path.join(fixture.root, "node_modules/@chenmk/superflow/dist/app/cli.js")}'`));
+    const result = runHook(fixture, { mode: "apply", script: hook });
+    expect(result.status, result.stderr).toBe(0);
+    const commands = fs.readFileSync(fixture.commandLog, "utf8");
+    expect(commands).toContain("owned-node");
+    expect(commands).toContain("--with-package");
+    expect(commands).not.toContain("npm install");
+  });
   it("refreshes packages, plugins, Agent assets, and managed MCP together", () => {
     const fixture = createFixture();
     const result = runHook(fixture);
 
     expect(result.status, result.stderr).toBe(0);
     const commands = fs.readFileSync(fixture.commandLog, "utf-8");
-    expect(commands).toContain(
-      "npm install -g @chenmk/superflow@latest",
-    );
-    expect(commands).toContain("dist/app/cli.js update --agent codex,claude --scope global --with-dependencies");
+    expect(commands).toContain("dist/app/cli.js update --agent codex,claude --scope auto --with-package");
+    expect(commands).not.toContain("npm install");
     expect(commands).not.toContain("codex plugin add");
     expect(commands).not.toContain("superflow update --agent");
     expect(result.stderr).toContain("自动升级已完整更新");
@@ -34,8 +68,8 @@ describe("dependency update hook", () => {
 
     expect(result.status, result.stderr).toBe(0);
     const commands = fs.readFileSync(fixture.commandLog, "utf-8");
-    expect(commands).toContain("npm install -g @chenmk/superflow@latest");
-    expect(commands).toContain("dist/app/cli.js update --agent codex,claude --scope global --with-dependencies");
+    expect(commands).toContain("dist/app/cli.js update --agent codex,claude --scope auto --with-package");
+    expect(commands).not.toContain("npm install");
     expect(result.stderr).toContain("自动升级已完整更新");
   });
 
@@ -72,7 +106,7 @@ describe("dependency update hook", () => {
     expect(second.stderr).not.toContain("自动升级已完整更新");
     expect(third.stderr).not.toContain("自动升级已完整更新");
     const commands = fs.readFileSync(fixture.commandLog, "utf-8");
-    expect(commands.match(/npm install -g/g)).toHaveLength(1);
+    expect(commands).not.toContain("npm install");
     expect(commands.match(/dist\/app\/cli.js update/g)).toHaveLength(1);
   });
 
@@ -148,8 +182,15 @@ function createFixture(
   fs.mkdirSync(path.dirname(cli), { recursive: true });
   fs.writeFileSync(cli, '// freshly installed CLI fixture');
   writeExecutable(path.join(bin, 'node'), `#!/bin/bash
-printf 'node %s\\n' "$*" >> "$COMMAND_LOG"
-exit ${options.failSuperflow ? 1 : 0}
+printf 'bound-node %s\\n' "$*" >> "$COMMAND_LOG"
+if [ "$1" = '${cli}' ]; then exit ${options.failSuperflow ? 1 : 0}; fi
+if [ "$2" = "view" ]; then
+  ${options.failVersionCheck ? "exit 1" : 'echo "1.0.1"; exit 0'}
+fi
+if [ "$2" = "list" ]; then
+  printf '{"dependencies":{"%s":{"version":"1.0.0"}}}\\n' "$4"
+fi
+exit 0
 `);
   writeExecutable(
     path.join(bin, "npm"),
@@ -182,19 +223,24 @@ printf 'superflow %s\n' "$*" >> "$COMMAND_LOG"
 exit ${options.failSuperflow ? 1 : 0}
 `,
   );
-  return { root, bin, stateRoot, commandLog, language: options.language };
+  const hook = path.join(root, "installed-hook.sh");
+  fs.writeFileSync(hook, rewriteScriptContent(
+    fs.readFileSync(path.resolve("assets/scripts/superflow-dependency-update-hook.sh"), "utf8"),
+    "codex", { nodePath: path.join(bin, "node"), cliPath: cli },
+  ));
+  return { root, bin, stateRoot, commandLog, language: options.language, hook };
 }
 
 function runHook(
   fixture: ReturnType<typeof createFixture>,
-  options: { mode?: string; sessionId?: string; interval?: string } = { mode: "apply" },
+  options: { mode?: string; sessionId?: string; interval?: string; script?: string } = { mode: "apply" },
 ) {
   const env = { ...process.env };
   delete env.SUPERFLOW_AUTO_UPDATE;
   if (options.mode !== undefined) env.SUPERFLOW_AUTO_UPDATE = options.mode;
   return spawnSync(
     "bash",
-    [path.resolve("assets/scripts/superflow-dependency-update-hook.sh")],
+    [options.script ?? fixture.hook],
     {
       encoding: "utf-8",
       input: JSON.stringify({ session_id: options.sessionId ?? "update-hook-test" }),

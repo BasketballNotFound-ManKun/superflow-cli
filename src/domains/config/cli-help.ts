@@ -38,6 +38,7 @@ export interface CliHelpText {
   cleanupRetentionOption: string;
   updateDescription: string;
   doctorDescription: string;
+  doctorRuntimeOnlyOption: string;
   hookMigrateDescription: string;
   hookAuditDescription: string;
   hookApplyOption: string;
@@ -157,6 +158,7 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     updateDescription: "Update Superflow (interactive wizard with no options)",
     doctorDescription:
       "Diagnose installation content and effective Git Hook sources",
+    doctorRuntimeOnlyOption: "Report only this CLI installation and Node identity",
     hookMigrateDescription:
       "Migrate owned legacy Hook entries safely; preserve custom hooks",
     hookAuditDescription:
@@ -288,6 +290,7 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     cleanupRetentionOption: "留存策略：full | compact | none",
     updateDescription: "更新 Superflow（无参数时进入交互向导）",
     doctorDescription: "诊断安装内容与实际 Git Hook 来源",
+    doctorRuntimeOnlyOption: "仅报告当前 CLI 安装与 Node 身份",
     hookMigrateDescription: "安全迁移已确认受管的旧 Hook 入口，保留自定义 Hook",
     hookAuditDescription: "只读核验宿主/Git Hook 引用及脚本来源",
     hookApplyOption: "备份受管旧入口并委托规范门禁",
