@@ -43,8 +43,13 @@ manual `mcp install` is a repair entry, not an extra normal setup step.
 npx --yes --package=@chenmk/superflow@latest superflow-install
 ```
 
-This bootstrap command installs the CLI. Continue with initialization and MCP
-registration below before using the skills and managed work in a conversation.
+The bootstrap reuses the visible global Superflow installation; a first install
+uses the current supported Node/npm. Global installation detects Claude/Codex and
+deploys skills, Hooks and MCP through the existing init/update owners. Installation
+and updates verify the actual entrypoint and build identity, including identical
+versions at different locations. Use `superflow doctor --runtime-only --json` to
+inspect the package, Node and build identity. Automatic update Hooks bind their
+installation's Node and CLI; run `superflow update` to repair a changed runtime.
 With Node.js 20+ already available, you can also install directly:
 
 ```bash
@@ -52,8 +57,21 @@ npm install -g @chenmk/superflow@latest
 ```
 
 > **Node.js requirement:** Node.js 20 or later is required. If `node -v` is older,
-> installation stops before command aliases are created. With nvm, run
-> `nvm install 20 && nvm use 20 && nvm alias default 20`, open a new terminal, and reinstall.
+> the bootstrap first checks existing supported Node/npm installations. If none
+> works, it shows the source, user directory and command-path changes, requests
+> consent, downloads current LTS and verifies SHA-256. It preserves Node/NVM
+> defaults and npm configuration. Only the Superflow command directory is appended
+> to PATH when needed; restart the terminal and Agent afterward.
+
+With no Node at all, npm/npx cannot start. Obtain this repository and run
+`bash install.sh`, or `powershell -File .\install.ps1` on Windows. Both invoke the
+same bootstrap before installing dependencies. Pass `--yes` / `-Yes` only when
+accepting the displayed plan; a noninteractive invocation otherwise stops.
+An explicitly selected HTTPS `SUPERFLOW_NODE_DOWNLOAD_BASE_URL` can provide an
+accessible distribution mirror. Its source is displayed and the release checksum
+is still verified; global mirror configuration is not changed.
+`superflow-install --help` never installs anything. CLI launchers bind absolute
+Node paths, so the dedicated runtime need not become the system-default Node.
 
 The repository `install.sh` and `install.ps1` scripts detect the Codex/Claude
 Hosts actually installed and register their managed MCP entries together with

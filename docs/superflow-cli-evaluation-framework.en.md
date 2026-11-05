@@ -636,3 +636,39 @@ external results. Blocking feedback, unknown Host events, production sources mov
 inputs to bypass build checks, rebound historical identities or unsafe project-protection removal
 require repair of the owner or rollback, retaining failures. Never weaken acceptance or add
 supervisors, fixed agent counts or default hard budgets.
+
+## Installation and update runtime consistency (2026-11-04)
+
+Baseline 98ce433 passed the complete 1847-test verification. Multiple Node
+installations exposed bare-npm selection of another prefix, version-only checks
+accepting another package/build, and bootstrap code installing Node and changing
+defaults/npm configuration. Ownership belongs to existing install, update and
+deployment code; a native Host executable does not select Superflow's Node.
+
+Reuse the verification entrypoint's npm resolver for bootstrap, updates and
+dependency installation. Prefer the visible owned global installation and bind
+its prefix. The existing deployer binds Hook Node/CLI paths, read-only queries
+share the resolver, and the sole update owner performs upgrades. Existing doctor
+reports read-only runtime identity; npm deployment and updates verify actual
+package/build identity, excluding transient npm shims from user entrypoint checks.
+No new registry, Hook or background service is introduced.
+
+RED cases cover foreign npm, unconsented environment changes, identical versions
+at different installations and Hook PATH drift. Follow-up cases cover existing
+install reuse, unavailable runtimes, global/local scope, Windows npm entrypoints,
+dual-host bindings and actual tarball consumption. Full verification and isolated
+installation evidence stay outside the repository; the active task's local
+installation is not replaced. Wrong-prefix writes, changed Node/npm defaults,
+ignored identity conflicts, false hot-load claims or real-user writes require
+owner repair or rollback with retained evidence, never multi-install workarounds
+or earlier-policy fallbacks.
+
+Fresh-machine review retained consented dependency provisioning: source entries
+with no Node and npm bootstrap with an old Node share platform provisioners.
+Only interactive acceptance or explicit yes permits a checksum-verified LTS in
+the user runtime directory. Preserve Node defaults/npm configuration and display
+any necessary CLI PATH append before consent. A sole launcher generator binds
+absolute Node/CLI paths, backs up owned entries and preserves custom modifications.
+Isolated cases cover no consent/decline, bad checksum, cache reuse, execution with
+no PATH Node, literal arguments, owned-alias repair and npm handoff. POSIX terminal
+cancellation ran natively; no Windows-machine execution is claimed.

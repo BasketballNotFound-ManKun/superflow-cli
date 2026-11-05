@@ -46,7 +46,8 @@ Superflow（SuperBridge Flow）把需求、源码实现、测试和独立评审�
 
 ## 快速开始
 
-准备好 **Node.js 20+、Git**，以及已经安装并登录的 Claude Code 或 Codex。
+准备好 **Git**，以及已经安装并登录的 Claude Code 或 Codex。已有 Node.js 20+ 时直接复用；
+没有可用 Node/npm 时，引导安装器会先展示方案，确认后补齐。
 Hook 脚本需要 Bash 和 Python3；Windows 用户需准备 Git Bash 或等价 shell。
 普通交付、需求梳理和文档工作只需一个工具；**托管执行需要选定的 Executor CLI 可用并完成登录**。
 Superflow 使用你已有的模型账号与权限，对应模型用量按各平台计费。
@@ -61,6 +62,13 @@ npm install -g @chenmk/superflow@latest
 `--registry`。全局 npm 安装会自动检测已安装的 Claude/Codex，并完成全局技能、依赖、Hooks 和 MCP 部署；已有安装沿用登记的宿主、语言和范围同步。
 
 `npx/npm exec`、源码依赖安装和更新流程内部的 npm 调用不重复初始化。未检测到宿主时只安装 CLI 并提示 `superflow init`；`--ignore-scripts` 会跳过自动部署。
+
+安装器复用已有 Node/npm 与可见的 Superflow 安装；确实缺少时，展示方案并确认后安装
+用户目录内的 LTS，核验校验和，绑定命令入口，不改现有 Node 默认版本和 npm 配置。
+没有 Node、无法使用 npm/npx 时，取得源码运行 `bash install.sh`（Windows 用 `install.ps1`）。
+必要的命令 PATH 追加会在确认前说明；自动化可显式传 `--yes` / `-Yes`。
+更新和自动 Hook 沿同一安装位置执行；入口路径或构建身份不一致时明确报错，
+不以相同版本号代替核验。可用 `superflow doctor --runtime-only --json` 查看实际身份。
 
 ### 按需运行初始化向导
 

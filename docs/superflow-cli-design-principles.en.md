@@ -207,6 +207,20 @@ dependencies. Runtime version and fingerprint must be diagnosable. When a Host
 restart is required, the current conversation states why and what to do instead
 of silently using a stale process.
 
+Prefer existing supported Node/npm and the visible owned installation. Only when
+none works, show source/directory/command-path changes and request consent before
+installing a checksum-verified user-scoped LTS. Noninteractive calls require
+explicit acceptance. Preserve existing Node/version-manager defaults and npm
+configuration. Bind command launchers to absolute Node paths; preserve unknown
+or user-modified entries. npm
+calls inherit verified lifecycle context and bind global operations to the
+selected installation's prefix. The existing deployer binds automatic Hooks to
+Node/CLI paths and delegates to the sole update owner. Verify actual entrypoints,
+package paths and build identities; equal versions alone do not establish
+consistency. Check local and global packages separately. Preserve unknown user
+entries; missing runtimes and identity conflicts report repair actions without
+silent fallback.
+
 ## 6. Evaluation-Driven Maintenance
 
 Every workflow or orchestration optimization follows

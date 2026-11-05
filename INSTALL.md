@@ -54,8 +54,15 @@ npm 默认使用公共官方库，但已有镜像、作用域源或私服配置�
 | Shell | macOS/Linux 原生 shell；Windows 使用 Git Bash 或兼容 shell | `bash --version` |
 | Python | hook 中的 Python 脚本需要 | `python3 --version` |
 
-> **Node 版本不足：** 安装会在创建命令前停止。若已安装 nvm，运行
-> `nvm install 20 && nvm use 20 && nvm alias default 20`，重新打开终端后再安装。
+> **Node 版本不足：** 先查找已有的合格 Node/npm。确实没有时，展示下载来源、用户目录
+> 和命令路径变更，确认后下载当前 LTS 并核验 SHA-256。不改现有 Node/NVM 默认版本或
+> npm 配置；仅在需要时将 Superflow 命令目录追加到 PATH，安装后重启终端与 Agent。
+
+完全没有 Node、无法运行 npm/npx 时，先取得本仓源码并运行 `bash install.sh`；Windows
+运行 `powershell -File .\install.ps1`。这些入口在安装依赖前调用同一引导流程。
+自动化明确认可所展示方案时，分别传 `--yes` 或 `-Yes`；没有交互终端且未显式认可时停止。
+需要指定可访问的 Node 发行镜像时，可设置 `SUPERFLOW_NODE_DOWNLOAD_BASE_URL` 为 HTTPS
+地址；安装前会显示实际来源，仍核验该版本校验和，不自动修改全局镜像配置。
 
 支持系统：
 
@@ -73,7 +80,13 @@ npx --yes --package=@chenmk/superflow@latest superflow-install
 superflow --version
 ```
 
-这个引导命令安装 CLI。继续执行下方的初始化与 MCP 注册，才能在对话中使用技能和托管功能。
+引导命令优先复用当前可见的全局 Superflow 安装；首次安装沿用当前合格 Node/npm。
+`superflow-install --yes` 明确认可缺失运行时的安装方案；`--help` 不执行安装。
+全局安装会检测 Claude/Codex 并沿既有 init/update 部署技能、Hook 和 MCP。
+安装、更新均回查入口路径与构建身份；同版本不同安装不能被当成更新成功。
+`superflow doctor --runtime-only --json` 可查看当前包路径、Node 与构建身份。
+自动更新 Hook 绑定安装时的运行时和 CLI，变更 Node 环境后可用 `superflow update` 修复绑定。
+CLI 启动器也绑定绝对 Node 路径；使用专用运行时不要求把它设为系统默认 Node。
 也可以在已准备好 Node.js 20+ 的终端直接运行：
 
 ```bash

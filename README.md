@@ -51,7 +51,9 @@ reports after exit; they do not promise autonomous background operation.
 
 ## Quickstart
 
-Have **Node.js 20+, Git**, and an installed, signed-in Claude Code or Codex ready.
+Have **Git** and an installed, signed-in Claude Code or Codex ready. Existing
+Node.js 20+ is reused; otherwise the bootstrap shows a plan and requests consent
+before providing Node/npm.
 Hooks require Bash and Python3; on Windows, use Git Bash or an equivalent shell.
 Ordinary delivery, requirements, and documents need one tool; **managed execution requires the selected Executor CLI to be installed and authenticated**.
 Superflow uses your existing model accounts and permissions. Model usage is billed by the respective platforms.
@@ -69,6 +71,15 @@ global skills, dependencies, Hooks and MCP. Existing installations retain their
 recorded hosts, language and scopes. `npx/npm exec`, source dependency installs
 and npm calls owned by an update do not initialize twice. If no host is detected,
 only the CLI is installed with an `init` hint. `--ignore-scripts` skips deployment.
+
+The bootstrap reuses existing Node/npm and the visible Superflow installation;
+when none works, it shows a plan and installs a checksum-verified user-scoped LTS
+only after consent, preserving existing Node defaults and npm configuration.
+Without Node/npm, obtain the repository and run `bash install.sh` or `install.ps1`;
+necessary CLI PATH additions are shown before consent. Automation accepts the
+plan explicitly with `--yes` / `-Yes`. Updates and automatic Hooks use
+that installation consistently. A different entrypoint or build fails verification
+even at the same version. Inspect it with `superflow doctor --runtime-only --json`.
 
 ### Customize setup when needed
 
