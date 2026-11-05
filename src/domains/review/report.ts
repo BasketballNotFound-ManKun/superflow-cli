@@ -56,7 +56,8 @@ export function auditReviewReport(
   if (fields.size !== identity.length) {
     issues.push("Review Identity fields must be unique");
   }
-  if (fields.get("Role") !== "independent-reviewer" || !["Dispatch", "Return"].every(key => /^(?:[a-z][a-z0-9+.-]*:|[^ \t]+[\/#])\S+$/i.test(fields.get(key) ?? ""))) {
+  if (fields.get("Role") !== "independent-reviewer"
+      || !["Dispatch", "Return"].every(key => validReference(fields.get(key)))) {
     issues.push("Review Identity requires independent-reviewer Role, Dispatch and Return references");
   }
   const returnReference = fields.get("Return");
@@ -77,26 +78,46 @@ export function auditReviewReport(
   let inFindings = false;
   let findingsSections = 0;
   const findingsBody: string[] = [];
+  let finding: ReviewReportAudit["findingEntries"][number] | undefined;
+  let continuationIndent = 0;
   for (const line of lines) {
     if (/^## Findings\s*$/.test(line)) {
       inFindings = true;
       findingsSections += 1;
+      finding = undefined;
       continue;
     }
     if (/^## /.test(line)) inFindings = false;
     if (!inFindings) continue;
     if (line.trim()) findingsBody.push(line.trim());
-    if (!/^\s*(?:[-+*]|\d{1,9}[.)])\s+/.test(line)) continue;
-    findings += 1;
+    if (!line.trim()) continue;
+    const item = /^([ \t]*)(?:[-+*]|\d{1,9}[.)])[ \t]+/.exec(line);
     const id = /^\s*(?:[-+*]|\d{1,9}[.)])\s+\[([A-Z][A-Z0-9]*-\d+)\]/.exec(line)?.[1];
+    const indent = /^[ \t]*/.exec(line)![0].replaceAll("\t", "    ").length;
+    if (finding && indent >= continuationIndent) {
+      if (id) issues.push(`finding requires a unique stable ID in a top-level item: ${line.trim()}`);
+      finding.text += `\n${line}`;
+      continue;
+    }
+    finding = undefined;
+    if (!item) {
+      if (!/^(?:None|无)[。.]?$/i.test(line.trim())) {
+        issues.push(`invalid Findings item: ${line.trim()}; expected - [F-001] file:line; indent explanations under their finding`);
+      }
+      continue;
+    }
+    findings += 1;
     if (!id || findingIds.includes(id)) issues.push("finding requires a unique stable ID");
     else {
       findingIds.push(id);
-      findingEntries.push({ id, text: line.trim() });
+      finding = { id, text: line.trim() };
+      findingEntries.push(finding);
+      continuationIndent = item[0].replaceAll("\t", "    ").length;
     }
     const anchor = /(?:^|\s)([^\s:]+):([1-9]\d*)\b/.exec(line);
-    if (!anchor || !(historical ? safeRelative(anchor[1]) : validAnchor(projectRoot, anchor[1], Number(anchor[2])))) {
-      issues.push(`invalid finding anchor: ${line.trim()}`);
+    if (!anchor || !safeRelative(anchor[1])
+        || !historical && !validAnchor(projectRoot, anchor[1], Number(anchor[2]))) {
+      issues.push(`invalid finding anchor: ${line.trim()}; expected project-root-relative file:line; ${pathDiagnostic(projectRoot, anchor?.[1])}`);
     }
   }
   const reviewedSources = auditReviewedSources(lines, projectRoot, issues, historical);
@@ -136,20 +157,14 @@ function auditReviewedSources(
     issues.push("reviewer report requires current Reviewed Sources");
     return null;
   }
-  if (headings.length !== 1) issues.push("duplicate reviewed source sections");
+  const rows = reportTable(lines, "Reviewed Sources", ["Path", "SHA-256"], issues);
   const sources: NonNullable<ReviewReportAudit["reviewedSources"]> = [];
   const seen = new Set<string>();
-  for (const line of lines.slice(headings[0] + 1)) {
-    if (/^## /.test(line)) break;
-    if (!line.trim()) continue;
-    if (/^\|\s*Path\s*\|\s*SHA-256\s*\|$/.test(line)
-        || /^\|[\s:|-]+\|$/.test(line)) continue;
-    const columns = /^\|\s*([^|]+?)\s*\|\s*([a-f0-9]{64})\s*\|$/.exec(line);
-    if (!columns) {
-      issues.push(`invalid reviewed source row: ${line.trim()}`);
+  for (const [candidate, sha256] of rows) {
+    if (!/^[a-f0-9]{64}$/.test(sha256)) {
+      issues.push(`invalid reviewed source SHA-256: ${candidate}; expected 64 lowercase hexadecimal characters`);
       continue;
     }
-    const [, candidate, sha256] = columns;
     if (historical && safeRelative(candidate)) {
       if (seen.has(path.resolve(root, candidate))) issues.push(`duplicate reviewed source: ${candidate}`);
       seen.add(path.resolve(root, candidate));
@@ -157,18 +172,20 @@ function auditReviewedSources(
       continue;
     }
     const file = containedFile(root, candidate);
-    if (!file || path.isAbsolute(candidate)) {
-      issues.push(`invalid reviewed source path: ${candidate}`);
+    if (!file || !safeRelative(candidate)) {
+      issues.push(`invalid reviewed source path: ${candidate}; ${pathDiagnostic(root, candidate)}`);
       continue;
     }
     if (seen.has(file)) issues.push(`duplicate reviewed source: ${candidate}`);
     seen.add(file);
     try {
       const actual = createHash("sha256").update(fs.readFileSync(file)).digest("hex");
-      if (actual !== sha256) issues.push(`reviewed source hash drift: ${candidate}`);
+      if (actual !== sha256) {
+        issues.push(`reviewed source hash drift: ${candidate}; declared=${sha256}, actual=${actual}; ${pathDiagnostic(root, candidate)}`);
+      }
       sources.push({ path: candidate, sha256 });
     } catch {
-      issues.push(`unreadable reviewed source: ${candidate}`);
+      issues.push(`unreadable reviewed source: ${candidate}; ${pathDiagnostic(root, candidate)}`);
     }
   }
   if (!sources.length) issues.push("reviewed sources must contain current files");
@@ -176,34 +193,81 @@ function auditReviewedSources(
 }
 
 // References prove recorded identities, never real Agent independence or sufficiency.
+function validReference(reference: string | undefined): boolean {
+  return !!reference && !/[<>`]/.test(reference)
+    && /^(?:[a-z][a-z0-9+.-]*:|[^ \t]+[\/#])\S+$/i.test(reference);
+}
+
 function safeRelative(candidate: string): boolean {
   return !path.isAbsolute(candidate) && !/^[A-Za-z]:[\\/]/.test(candidate)
     && !candidate.split(/[\\/]/).includes("..");
 }
 
 function sectionLines(lines: string[], title: string, issues: string[]): string[] | null {
+  return sectionBodyLines(lines, title, issues)?.map(line => line.trim()).filter(Boolean) ?? null;
+}
+
+function sectionBodyLines(lines: string[], title: string, issues: string[]): string[] | null {
   const starts = lines.flatMap((line, index) => line.trimEnd() === `## ${title}` ? [index] : []);
   if (!starts.length) return null;
   if (starts.length !== 1) issues.push(`duplicate ${title} sections`);
   const rest = lines.slice(starts[0] + 1);
   const end = rest.findIndex(line => /^## /.test(line));
-  return (end < 0 ? rest : rest.slice(0, end)).map(line => line.trim()).filter(Boolean);
+  return end < 0 ? rest : rest.slice(0, end);
 }
 
 function reportTable(lines: string[], title: string, header: string[], issues: string[]): string[][] {
-  const body = sectionLines(lines, title, issues);
+  const body = sectionBodyLines(lines, title, issues);
   if (!body) return [];
   const rows: string[][] = [];
-  for (const line of body) {
-    if (/^\|[\s:|-]+\|$/.test(line)) continue;
-    const row = line.startsWith("|") && line.endsWith("|")
-      ? line.slice(1, -1).split("|").map(value => value.trim()) : [];
-    if (row.join("|") === header.join("|")) continue;
-    if (row.length !== header.length || row.some(value => !value)) {
-      issues.push(`invalid ${title} row: ${line}`);
+  const expected = `| ${header.join(" | ")} |`;
+  let tables = 0;
+  let inTable = false;
+  for (let index = 0; index < body.length; index += 1) {
+    const line = body[index].trim();
+    const row = tableCells(line);
+    if (row?.join("|") === header.join("|")) {
+      tables += 1;
+      const separator = tableCells(body[index + 1]?.trim() ?? "");
+      inTable = separator?.length === header.length
+        && separator.every(cell => /^:?-{3,}:?$/.test(cell));
+      if (inTable) index += 1;
+      else issues.push(`invalid ${title} table separator; expected ${expected} followed immediately by |${header.map(() => "---").join("|")}|`);
+      continue;
+    }
+    if (!line.startsWith("|") && !line.endsWith("|")
+        && !(inTable && line.includes("|"))) {
+      inTable = false;
+      continue;
+    }
+    if (!inTable || !row || row.length !== header.length
+        || row.some(value => !value)) {
+      issues.push(`invalid ${title} row: ${line}; expected ${expected} in one contiguous table`);
     } else rows.push(row);
   }
+  if (tables === 0) issues.push(`missing ${title} table; expected ${expected} and a Markdown separator`);
+  if (tables > 1) issues.push(`duplicate ${title} tables; expected exactly one ${expected}`);
   return rows;
+}
+
+function tableCells(line: string): string[] | null {
+  if (!line.startsWith("|") || !line.endsWith("|")) return null;
+  const cells: string[] = [];
+  let start = 1;
+  let backslashes = 0;
+  for (let index = 1; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === "|" && backslashes % 2 === 0) {
+      cells.push(line.slice(start, index).trim());
+      start = index + 1;
+    }
+    backslashes = character === "\\" ? backslashes + 1 : 0;
+  }
+  return start === line.length ? cells : null;
+}
+
+function pathDiagnostic(root: string, candidate?: string): string {
+  return `projectRoot=${path.resolve(root)}; declared=${candidate ?? "<missing>"}; resolved=${candidate ? path.resolve(root, candidate) : "<missing>"}`;
 }
 
 function auditReviewChain(lines: string[], root: string, issues: string[],
@@ -217,7 +281,7 @@ function auditReviewChain(lines: string[], root: string, issues: string[],
     const file = safeRelative(candidate) ? containedFile(root, candidate) : null;
     if (!file || !/^[a-f0-9]{64}$/.test(hash)
         || createHash("sha256").update(fs.readFileSync(file)).digest("hex") !== hash) {
-      issues.push(`Review Chain invalid file/hash: ${candidate}`);
+      issues.push(`Review Chain invalid file/hash: ${candidate}; ${pathDiagnostic(root, candidate)}`);
       continue;
     }
     if (!["original", "owner-response"].includes(role) || files.has(role)) {

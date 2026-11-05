@@ -70,6 +70,28 @@ const nonempty = (value) =>
   typeof value === "string" && value.trim().length > 0;
 const list = (value) => (Array.isArray(value) ? value : []);
 
+function validateObservedCaseContract(test, issues) {
+  const aggregate = list(test.databaseAssertions).some(
+    (assertion) => assertion?.kind === "allParameterBranches",
+  );
+  if (Object.hasOwn(test, "requiredBranches") || aggregate) {
+    const branches = test.requiredBranches;
+    if (
+      !Array.isArray(branches) || !branches.length ||
+      branches.some((id) => !nonempty(id)) ||
+      new Set(branches).size !== branches.length
+    ) issues.push(`用例 ${test.id} requiredBranches 需要非空且唯一的必测分支 ID`);
+  }
+  if (Object.hasOwn(test, "runtimeArtifact")) {
+    const runtime = test.runtimeArtifact;
+    if (
+      !runtime || typeof runtime !== "object" || Array.isArray(runtime) ||
+      Object.keys(runtime).join(",") !== "instances" ||
+      !Number.isSafeInteger(runtime.instances) || runtime.instances < 1
+    ) issues.push(`用例 ${test.id} runtimeArtifact 需要 {instances: 正整数}，不能用任务名代替实际运行身份`);
+  }
+}
+
 // This validates trace structure and evidence identity, NOT business semantics.
 export function validateCoverage(root, review, issues, checkCode = true) {
   const coverage = review?.coverage;
@@ -217,6 +239,7 @@ export function validateCoverage(root, review, issues, checkCode = true) {
     }
   }
   for (const test of cases.values()) {
+    validateObservedCaseContract(test, issues);
     const entry = entries.get(test.entryId);
     if (test.executionEvidence !== "runner-captured.v1") {
       issues.push(

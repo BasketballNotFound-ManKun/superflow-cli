@@ -221,6 +221,31 @@ Limits: this verifies naming, deployment, gates, and migration, not real third-p
 
 ## Evaluation material isolation
 
+### Branch observations, runtime binding, and report formatting repairs
+
+Observed failures: method-level success was copied into complete branch success and an
+old runtime copy received a new build label. Ordinary prose near review tables was parsed
+as malformed rows and unclear path bases caused repeated full-report rewrites. Owners are
+the project adapter, existing fact validator, and report parser/template, respectively;
+unobserved supplier congestion is not a supported explanation.
+
+The baseline is the current CLI before repair. The hypothesis is that checking required
+branches, actual runtime bytes and process declarations in existing coverage/receipts,
+accepting normal canonical Markdown prose, and exposing the single root base reduces false
+PASS and format rework. Real child processes and temporary artifacts first demonstrate RED
+for missing, duplicate, failed, or unexecuted branches, wrong copies/hashes, and duplicate
+PIDs; complete observations pass. Report cases cover ordinary prose, escaped pipes, nested
+analysis, unanchored findings, malformed tables, and a bilingual nested-cwd prepare/return
+chain. Receipt replay and commit-index checks must still verify the actual copy, not just
+validate on first write. Project adapters reuse this capture's canonical validator.
+
+Keep runtime evidence outside this repository. These results establish deterministic tool
+behavior, not real-model speed, business-test sufficiency, or arbitrary PID-to-loaded-byte
+attestation. Project observations and independent review establish actual launch and immutable
+copy identity. Roll back for old copies or missing branches passing, valid prose rejection,
+overwritten originals, rebound historical hashes, or unrelated business reruns after formatting.
+Repair the existing owner without weakening required checks or adding business strategy to prompts.
+
 Keep external-project raw cases and detailed run evidence in a task-owned external
 directory. Retain only de-identified mechanism evaluations and minimal synthetic
 regressions here, following “External-project verification isolation” in the global

@@ -3,7 +3,11 @@ import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { auditReviewReport } from "../../src/domains/review/report.js";
+import {
+  auditOwnerResponse,
+  auditReviewReport,
+} from "../../src/domains/review/report.js";
+import { renderReviewTemplate } from "../../src/domains/review/templates.js";
 
 
 // Normal parser fixtures carry the same current source identity as real reports.
@@ -34,6 +38,223 @@ function auditCurrentReport(content: string, root: string) {
   const manifest = `\n## Reviewed Sources\n| Path | SHA-256 |\n|---|---|\n| ${path.relative(root, file)} | ${digest} |\n`;
   return auditReviewReport(content.slice(0, split) + manifest + content.slice(split), root);
 }
+
+function canonicalReportFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-markdown-"));
+  fixtureSources.push(root);
+  fs.mkdirSync(path.join(root, "src"));
+  const source = "export const first = 1;\nexport const second = 2;\n";
+  fs.writeFileSync(path.join(root, "src/example.ts"), source);
+  const sha256 = createHash("sha256").update(source).digest("hex");
+  const sources = [{ path: "src/example.ts", sha256 }];
+  const identity = [
+    "## Review Identity",
+    "| Field | Value |",
+    "|---|---|",
+    "| Role | independent-reviewer |",
+    "| Dispatch | session:fixture/dispatch |",
+    "| Return | session:fixture/return |",
+  ].join("\n");
+  const reviewedSources = [
+    "## Reviewed Sources",
+    "| Path | SHA-256 |",
+    "|---|---|",
+    `| src/example.ts | ${sha256} |`,
+  ].join("\n");
+  const report = [
+    "DONE", identity, "## Findings", "None", "## Concerns", "None",
+    reviewedSources, "",
+  ].join("\n");
+  return { root, report, identity, reviewedSources, sources };
+}
+
+describe("canonical review Markdown boundaries", () => {
+  it("audits a complete current report without fixture repairs", () => {
+    const f = canonicalReportFixture();
+    const result = auditReviewReport(f.report, f.root);
+    expect(result.issues).toEqual([]);
+    expect(result.eligibleForTriage).toBe(true);
+    expect(result.findingsClear).toBe(true);
+  });
+
+  it.each(["Review Identity", "Reviewed Sources"])(
+    "accepts ordinary prose and explanation lists around the %s table",
+    (title) => {
+      const f = canonicalReportFixture();
+      const section = title === "Review Identity"
+        ? f.identity : f.reviewedSources;
+      const explained = section.replace(
+        `## ${title}\n`,
+        `## ${title}\nThe following table binds the actual input.\n\n`,
+      ) + "\nInput identity does not prove actual reading.\n- Scope details are recorded in Impact.\n";
+      const result = auditReviewReport(f.report.replace(section, explained), f.root);
+      expect(result.issues).toEqual([]);
+      expect(result.eligibleForTriage).toBe(true);
+      expect(result.reviewedSources).toEqual(f.sources);
+    },
+  );
+
+  it("retains indented finding evidence without counting it as another finding", () => {
+    const f = canonicalReportFixture();
+    const finding = [
+      "- [F-001] src/example.ts:1 [correctness][HIGH] missing guard",
+      "  - Evidence: the actual caller supplies an empty value.",
+      "    - Counterexample: the value must not be persisted.",
+      "  Repair: reject the invalid input before writing.",
+    ].join("\n");
+    const report = f.report
+      .replace("## Findings\nNone", `## Findings\n${finding}`)
+      .replace(/^DONE\n/, "DONE_WITH_CONCERNS\n")
+      .replace("## Concerns\nNone", "## Concerns\nF-001 remains open.");
+    const result = auditReviewReport(report, f.root);
+    expect(result.issues).toEqual([]);
+    expect(result.findings).toBe(1);
+    expect(result.findingIds).toEqual(["F-001"]);
+    expect(result.findingEntries).toEqual([{ id: "F-001", text: finding }]);
+    expect(result.findingsClear).toBe(false);
+    expect(result.eligibleForTriage).toBe(false);
+  });
+
+  it.each([
+    "- another unresolved issue without a stable ID",
+    "another unresolved issue without a list marker",
+  ])("rejects an unknown top-level finding: %s", (unknown) => {
+    const f = canonicalReportFixture();
+    const report = f.report.replace(
+      "## Findings\nNone",
+      `## Findings\n- [F-001] src/example.ts:1 missing guard\n${unknown}`,
+    );
+    expect(auditReviewReport(report, f.root).issues.length).toBeGreaterThan(0);
+  });
+
+  it.each(["F-001", "F-002"])(
+    "rejects nested finding ID %s rather than discarding it as explanation",
+    id => {
+      const f = canonicalReportFixture();
+      const report = f.report.replace(
+        "## Findings\nNone",
+        `## Findings\n- [F-001] src/example.ts:1 missing guard\n  - [${id}] src/example.ts:2 another finding`,
+      );
+      expect(auditReviewReport(report, f.root).eligibleForTriage).toBe(false);
+    },
+  );
+
+  it.each(["Review Identity", "Reviewed Sources"])(
+    "requires the canonical header and separator for %s",
+    (title) => {
+      const f = canonicalReportFixture();
+      const header = title === "Review Identity"
+        ? "| Field | Value |\n" : "| Path | SHA-256 |\n";
+      for (const damaged of [
+        f.report.replace(header, ""),
+        f.report.replace(`${header}|---|---|`, `${header}|--|not-a-separator|`),
+        f.report.replace(header, "| Unknown | Schema |\n"),
+      ]) {
+        expect(auditReviewReport(damaged, f.root).eligibleForTriage).toBe(false);
+      }
+    },
+  );
+
+  it.each(["Review Identity", "Reviewed Sources"])(
+    "rejects duplicate canonical %s tables inside one section",
+    (title) => {
+      const f = canonicalReportFixture();
+      const section = title === "Review Identity"
+        ? f.identity : f.reviewedSources;
+      const table = section.slice(section.indexOf("\n") + 1);
+      const report = f.report.replace(section, `${section}\n\n${table}`);
+      const issues = auditReviewReport(report, f.root).issues.join("\n");
+      expect(issues).toMatch(/duplicate.*table/i);
+    },
+  );
+
+  it.each([
+    "| extra | value | unexpected |",
+    "| missing-value | |",
+    "| missing-end | value",
+    "missing-bounds | value",
+  ])("rejects a malformed row while allowing prose outside the table: %s", row => {
+    const f = canonicalReportFixture();
+    const report = f.report.replace(f.identity, `${f.identity}\n${row}\nOrdinary explanation.`);
+    expect(auditReviewReport(report, f.root).eligibleForTriage).toBe(false);
+  });
+
+  it.each(["Dispatch", "Return"])("rejects placeholder references inside %s identity", field => {
+    const f = canonicalReportFixture();
+    const report = f.report.replace(
+      new RegExp(`\\| ${field} \\| [^|]+ \\|`),
+      `| ${field} | session:<actual-reference> |`,
+    );
+    expect(auditReviewReport(report, f.root).eligibleForTriage).toBe(false);
+  });
+
+  it("does not use a nested evidence anchor to rescue an unanchored finding", () => {
+    const f = canonicalReportFixture();
+    const report = f.report.replace(
+      "## Findings\nNone",
+      "## Findings\n- [F-001] missing root anchor\n  - Evidence: src/example.ts:1",
+    );
+    expect(auditReviewReport(report, f.root).eligibleForTriage).toBe(false);
+  });
+
+  it("diagnoses the actual root and resolved source path for an invalid anchor", () => {
+    const f = canonicalReportFixture();
+    const report = f.report.replace(
+      "## Findings\nNone",
+      "## Findings\n- [F-001] docs/src/example.ts:1 missing guard",
+    );
+    const issues = auditReviewReport(report, f.root).issues.join("\n");
+    expect(issues).toContain(`projectRoot=${f.root}`);
+    expect(issues).toContain(path.join(f.root, "docs/src/example.ts"));
+    expect(issues).toContain("file:line");
+  });
+
+  it("diagnoses the actual root and resolved reviewed source path", () => {
+    const f = canonicalReportFixture();
+    const report = f.report.replace("| src/example.ts |", "| docs/src/example.ts |");
+    const issues = auditReviewReport(report, f.root).issues.join("\n");
+    expect(issues).toContain(`projectRoot=${f.root}`);
+    expect(issues).toContain(path.join(f.root, "docs/src/example.ts"));
+  });
+
+  it("accepts ordinary explanation around an Owner disposition table", () => {
+    const owner = [
+      "## Finding Dispositions",
+      "The following dispositions respond to the original IDs.",
+      "",
+      "| ID | Disposition | Evidence |",
+      "|---|---|---|",
+      "| F-001 | fixed | source:guard; test:actual-run |",
+      "",
+      "- Remaining scope is explained in the report.",
+    ].join("\n");
+    expect(auditOwnerResponse(owner, ["F-001"]).issues).toEqual([]);
+  });
+
+  it("keeps an escaped Markdown pipe inside the same evidence cell", () => {
+    const evidence = "source:guard \\| test:actual-run";
+    const owner = [
+      "## Finding Dispositions",
+      "| ID | Disposition | Evidence |",
+      "|---|---|---|",
+      `| F-001 | fixed | ${evidence} |`,
+    ].join("\n");
+    const result = auditOwnerResponse(owner, ["F-001"]);
+    expect(result.issues).toEqual([]);
+    expect(result.dispositions).toEqual([["F-001", "fixed", evidence]]);
+  });
+
+  it.each([false, true])("renders a complete safe Markdown example (english=%s)", english => {
+    const f = canonicalReportFixture();
+    const template = renderReviewTemplate(f.sources, english);
+    const example = /```markdown\n([\s\S]*?)\n```/.exec(template)?.[1] ?? "";
+    const result = auditReviewReport(example, f.root);
+    expect(result.issues).toEqual([]);
+    expect(result.state).toBe("NEEDS_CONTEXT");
+    expect(result.eligibleForTriage).toBe(false);
+    expect(auditReviewReport(template, f.root).eligibleForTriage).toBe(false);
+  });
+});
 
 describe("reviewer four-state report", () => {
 

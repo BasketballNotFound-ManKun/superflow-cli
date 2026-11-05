@@ -199,6 +199,21 @@ no business-specific Skill, Hook, blacklist or runtime dependency. Apply this to
 Codex/Claude, both languages and project/global scopes without authorizing shared
 resource changes or unrelated business repository edits.
 
+### Observed branches and runtime artifacts
+
+Project contracts freeze required parameter/failure branch IDs; the same capture retains
+each branch's real comparisons and execution count. A green method cannot supply branch
+or forbidden-effect actuals. Artifact execution retains the actual copy path, byte digest,
+and process identity and checks them against the bound build. Internal archive consistency
+does not establish current build identity. Extend existing coverage, measurements, receipts,
+and validation without adding a test framework or business verdict engine.
+
+Review formatting accepts ordinary commentary around canonical tables while still rejecting
+malformed tables, missing IDs, invalid anchors, and source drift. Tables and finding paths
+use the Git project root; diagnostics expose that base and templates show complete fillable
+shapes. Reviewers author actual returns. Structural validity does not promote semantic
+verdicts; final delivery still uses the existing verify gate.
+
 ## 5. Installation and Upgrade Closure
 
 Source install, npm install, and hook auto-upgrade install the same complete

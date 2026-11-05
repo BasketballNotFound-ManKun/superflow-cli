@@ -261,6 +261,15 @@ claim that every goal was achieved.
 
 ## Phase handoff and final package
 
+Report audit zero issues establishes structural validity only. Case PASS,
+DONE_WITH_CONCERNS, and final delivery readiness are separate facts. The current
+Independent Review table references only final reports supporting this completion;
+retain historical findings and BLOCKED returns through Review Chain. Keep Report cells
+as locatable paths, with commentary and digests outside the table. Do not create a hash
+cycle by writing review digests into already reviewed files. After final report bytes
+change, assess the real impact and current review identity, then run the same verify
+guard; never edit readiness receipts or omit phase completion.
+
 After implementation signals are complete, run the existing implement guard with `--apply`, then actually read the `READ` skill path returned by `next`. A build summary or reviewer reply does not execute verify. Follow its `CHECK` command after reconciling evidence; a missing/failed final guard is pending verification, never complete delivery. Preserve manual stage boundaries and existing Git/archive authorization.
 
 Use captured originals and immutable attempts directly. If delivery needs retained copies, declare only those copies in the existing report's [Delivery Evidence table](test-execution-template.md#delivery-evidence); the report lint checks source/copy identity. Do not hand-copy an entire evidence directory after every test. Refresh affected copies on repair and keep historical attempts separate.

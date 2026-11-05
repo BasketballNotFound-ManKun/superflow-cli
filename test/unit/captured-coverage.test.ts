@@ -44,6 +44,22 @@ function validate(update: (test: any) => void) {
 }
 
 describe("captured execution coverage contract", () => {
+  it.each([
+    ["duplicate branch IDs", { requiredBranches: ["changed", "changed"] }, "requiredBranches"],
+    ["empty branch IDs", { requiredBranches: [] }, "requiredBranches"],
+    ["aggregate branches without a frozen set", { databaseAssertions: [{ id: "all", kind: "allParameterBranches", expected: true }] }, "requiredBranches"],
+    ["runtime task name instead of identity", { runtimeArtifact: "archive-task" }, "runtimeArtifact"],
+    ["invalid runtime count", { runtimeArtifact: { instances: 0 } }, "runtimeArtifact"],
+  ])("rejects %s before issuing Coding Ready", (_name, update, diagnostic) => {
+    expect(validate(test => Object.assign(test, update)).join("\n")).toContain(diagnostic);
+  });
+
+  it("accepts explicit branch IDs and observed runtime instance obligations", () => {
+    expect(validate(test => Object.assign(test, {
+      requiredBranches: ["changed", "unchanged"], runtimeArtifact: { instances: 2 },
+    }))).toEqual([]);
+  });
+
   it("rejects cases without the current captured execution policy", () => {
     expect(
       validate((test) => {

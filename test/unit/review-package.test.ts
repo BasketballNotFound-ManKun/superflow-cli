@@ -61,6 +61,67 @@ function fixture(language = "en") {
 
 describe("review package preparation through the existing CLI", () => {
   it.each(["en", "zh"])(
+    "keeps prose, nested finding evidence and the worktree path base through preparation in %s",
+    language => {
+      const f = fixture(language);
+      const nested = path.join(f.root, "docs");
+      fs.mkdirSync(nested);
+      const preparedResult = f.runFrom(
+        nested, "--prepare", path.join(f.directory, "review"),
+        "--path", "application.ts", "--json",
+      );
+      expect(preparedResult.status, preparedResult.stderr).toBe(0);
+      const prepared = JSON.parse(preparedResult.stdout).package;
+      const template = fs.readFileSync(prepared.reportTemplate, "utf8");
+      const evidence = "  - Evidence: the unchanged caller supplies invalid input.";
+      const actual = template
+        .replace(/^NEEDS_CONTEXT/, "DONE_WITH_CONCERNS")
+        .replace("<actual-dispatch-reference>", "session:fixture/dispatch")
+        .replace("<actual-return-reference>", "session:fixture/return")
+        .replace(
+          "| Return | session:fixture/return |",
+          "| Return | session:fixture/return |\nIdentity binds this actual return.",
+        )
+        .replace(
+          /## Findings\n[\s\S]*?(?=\n## Concerns)/,
+          `## Findings\n- [F-001] application.ts:1 [correctness][HIGH] missing guard\n${evidence}\n`,
+        )
+        .replace(
+          /## Concerns\n[\s\S]*?(?=\n## )/,
+          "## Concerns\nF-001 remains unresolved.\n",
+        )
+        .replace(
+          /\| application.ts \| [a-f0-9]{64} \|/,
+          "$&\nThese paths resolve from the Git worktree root.",
+        );
+      fs.writeFileSync(path.join(nested, "review.md"), actual);
+      const audited = f.runFrom(
+        nested, "--report", path.join(nested, "review.md"),
+        "--path", "application.ts", "--json",
+      );
+      expect(audited.status).toBe(1);
+      const report = JSON.parse(audited.stdout).report;
+      expect(report.issues).toEqual([]);
+      expect(report.state).toBe("DONE_WITH_CONCERNS");
+      expect(report.findings).toBe(1);
+      expect(report.findingIds).toEqual(["F-001"]);
+      expect(report.eligibleForTriage).toBe(false);
+      const responseResult = f.runFrom(
+        nested, "--prepare", path.join(f.directory, "response"),
+        "--original-review", "docs/review.md",
+        "--path", "application.ts", "--json",
+      );
+      expect(responseResult.status, responseResult.stderr).toBe(0);
+      const response = JSON.parse(responseResult.stdout).package;
+      expect(fs.readFileSync(response.reviewInputs, "utf8")).toContain(evidence);
+      expect(fs.readFileSync(response.ownerResponseTemplate, "utf8"))
+        .toContain("| F-001 | <disposition> |");
+      expect(fs.readFileSync(path.join(nested, "review.md"), "utf8")).toBe(actual);
+    },
+    15_000,
+  );
+
+  it.each(["en", "zh"])(
     "dispatches the exact canonical template in %s and exposes unselected dirty files",
     (language) => {
       const f = fixture(language);

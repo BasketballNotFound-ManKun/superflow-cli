@@ -197,6 +197,13 @@ PARTIAL就披露缺口和下一步，不说全部目标已达成。
 
 ## Phase handoff and final package
 
+`review-coverage --report` 的零 issues 只表示报告结构有效；Case PASS、
+DONE_WITH_CONCERNS 与最终可交付是不同事实。当前 `Independent Review` 表只引用支持
+本次完成判定的最终报告，历史发现和 BLOCKED 返回经 Review Chain 保留。Report 列仅放
+可解析路径，说明与摘要置于表外；不要把报告自身/复评摘要互写进已审文件形成哈希循环。
+最终报告字节改变后核实际影响和当前评审身份，再执行同一 verify guard，不手改凭证或
+省略阶段完成步骤。
+
 实施信号完成后运行既有 implement guard `--apply`，再实际读取 next 返回的 `READ` 技能路径。build 摘要或 Reviewer 返回不代表 verify 阶段已执行。完成证据对账后按其 `CHECK` 命令核验；未执行或失败的最终 guard 是待验证，不能称完整交付。保留手动阶段边界及已有 Git/归档授权。
 
 直接引用 capture 原件与不可变 attempt；确需交付副本时，仅在既有报告的[Delivery Evidence 表](test-execution-template.md#delivery-evidence)登记这些副本，由报告 lint 核原件/副本身份。不要每轮测试手工复制整个证据目录。整改只刷新受影响副本，历史 attempt 单独保留。

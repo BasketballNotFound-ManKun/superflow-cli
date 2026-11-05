@@ -182,6 +182,29 @@ Runner 通过规范脱敏器保留 stdout/stderr、退出码、执行前后源�
 敏感原始证据可留仓外；交付给授权接手方可访问的位置与 hash，不强制 Git 提交大包，
 也不能只给另一人无法读取的个人路径。
 
+### 必测分支与实际运行副本
+
+参数/异常分支在同一 Case 的 `requiredBranches` 冻结唯一非空 ID 数组；声明
+`databaseAssertions.kind=allParameterBranches` 时该清单必填。measurement 和 receipt
+的 `branches` 须恰好覆盖这些 ID，每项为 `{id,executed,assertions}`：executed 为正整数，
+assertions 逐项保留 response/state/forbiddenEffects 的 `{id,expected,actual,result}`。
+分支未执行、缺失、重复、实际值不符或 FAIL 均不得 PASS；不把方法绿转换为分支 actual。
+分支的业务含义、具体预期及适用性由项目 tests/API 冻结，通用工具不猜测。
+
+实际执行构建产物的 Case 冻结 `runtimeArtifact: {"instances": 1}`（多实例填实际必需数）。
+该字段不接受任务名称字符串。原观测须在 `target.runtimeArtifacts` 保留每个进程的
+`{path,sha256,pid}`；path 相对 Case 实际 cwd，或为授权范围内可回查的本地绝对路径。
+PID 为互不重复的正整数，实例数量必须与合同一致。捕获器读取副本实际字节、核其 SHA
+并与绑定 build 产物比较；旧归档自洽或抄写 buildId/buildSha256 不证明实际运行的是新构建。
+在最终绑定前重建所需归档与执行输入，原副本按已声明证据生命周期保留。
+源码直接装配的测试沿实际执行来源核验，不伪报为产物进程；具体运行方案由项目决定。
+路径摘要和正整数 PID 不是进程加载字节的认证：项目须留存启动时命令、PID、不可覆盖副本
+与摘要及窗口，结束观测引用该启动身份；不能事后从可变 build 路径补写运行身份。
+
+项目 adapter 通过 `SUPERFLOW_REPORT_LINT` 导入本次规范校验器，复用其观测诊断与断言核验。
+case capture 只向该子进程绑定当前脚本路径；单独运行 adapter 时显式选择同一已安装入口。
+缺少当前校验能力须明确失败，不扫描另一宿主配置、不自写一套宽松判定器。
+
 ## Observed batch and measurement diagnostics
 
 同一真实suite可证明多个Case时，先维护tests/coverage的Case、selector、断言与分支映射，

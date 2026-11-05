@@ -698,6 +698,8 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
         if target.get(key) != expected:
             raise ValueError(f"真实运行目标 {key} 与冻结入口不一致")
     validate_measurement_assertions(receipt, case)
+    validate_runtime_artifacts(receipt, case, build,
+                               (change / case["executionContext"]["cwd"]).resolve())
 
     # Every PASS needs observed execution, including cases without a declaration.
     case_capture = validate_capture(file.parent, receipt, "case")
@@ -706,16 +708,88 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
         raise ValueError("case capture 早于绑定构建完成，不能重绑新构建身份")
 
 
-def validate_measurement_assertions(receipt: dict, case: dict) -> None:
-    assertions = receipt["assertions"]
-    required = set(case.get("assertions", {})) - {"persistence"}
-    required |= {"response", "state", "forbiddenEffects"}
-    if not isinstance(assertions, list) or {a["id"] for a in assertions} != required or len(assertions) != len(required):
-        raise ValueError("缺少冻结响应/状态/禁止副作用断言")
+def validate_observed_assertions(assertions, required: set) -> None:
+    if (not isinstance(assertions, list)
+            or any(not isinstance(a, dict) or not isinstance(a.get("id"), str)
+                   for a in assertions)
+            or {a["id"] for a in assertions} != required
+            or len(assertions) != len(required)):
+        raise ValueError("缺少唯一冻结响应/状态/禁止副作用断言")
     for assertion in assertions:
         if (assertion.get("result") != "PASS" or "expected" not in assertion
                 or "actual" not in assertion or not json_equal(assertion["expected"], assertion["actual"])):
             raise ValueError("断言失败或缺少预期值/实际值")
+
+
+def required_branch_ids(case: dict):
+    branches = case.get("requiredBranches")
+    aggregate = any(isinstance(item, dict) and item.get("kind") == "allParameterBranches"
+                    for item in case.get("databaseAssertions", []) or [])
+    if "requiredBranches" not in case and not aggregate:
+        return None
+    if (not isinstance(branches, list) or not branches
+            or any(not isinstance(branch, str) or not branch.strip() for branch in branches)
+            or len(set(branches)) != len(branches)):
+        raise ValueError("requiredBranches 必须冻结非空且唯一的 branch ID；聚合 PASS 不能代替分支清单")
+    return branches
+
+
+def validate_parameter_branches(receipt: dict, case: dict) -> None:
+    required = required_branch_ids(case)
+    observed = receipt.get("branches")
+    if required is None and observed is None:
+        return
+    if (required is None or not isinstance(observed, list)
+            or any(not isinstance(branch, dict) or not isinstance(branch.get("id"), str)
+                   for branch in observed)
+            or len(observed) != len(required)
+            or {branch["id"] for branch in observed} != set(required)):
+        raise ValueError("branches 缺失、重复或与 requiredBranches 冻结 ID 集合不一致")
+    for branch in observed:
+        if type(branch.get("executed")) is not int or branch["executed"] < 1:
+            raise ValueError(f"branch {branch['id']} 未真实执行，不能 PASS")
+        try:
+            validate_observed_assertions(branch.get("assertions"),
+                                         {"response", "state", "forbiddenEffects"})
+        except ValueError as error:
+            raise ValueError(f"branch {branch['id']}: {error}") from error
+
+
+def runtime_instance_count(case: dict):
+    contract = case.get("runtimeArtifact")
+    if "runtimeArtifact" not in case:
+        return None
+    if (not isinstance(contract, dict) or set(contract) != {"instances"}
+            or type(contract["instances"]) is not int
+            or not 1 <= contract["instances"] <= 9_007_199_254_740_991):
+        raise ValueError("runtimeArtifact 需要当前合同 {instances: 正整数}；任务名称不证明运行身份")
+    return contract["instances"]
+
+
+def validate_runtime_artifacts(receipt: dict, case: dict, build: dict, cwd: Path) -> None:
+    count = runtime_instance_count(case)
+    actual = (receipt.get("target") or {}).get("runtimeArtifacts")
+    if count is None and actual is None:
+        return
+    if (count is None or not isinstance(actual, list) or len(actual) != count
+            or any(not isinstance(artifact, dict) for artifact in actual)):
+        raise ValueError("target.runtimeArtifacts 数量与冻结 runtimeArtifact.instances 不一致")
+    pids = [artifact.get("pid") for artifact in actual]
+    if any(type(pid) is not int or pid < 1 for pid in pids) or len(set(pids)) != count:
+        raise ValueError("runtimeArtifacts.pid 必须为实际且不同的正整数进程 ID")
+    for artifact in actual:
+        if not build or artifact.get("sha256") != build.get("sha256"):
+            raise ValueError("runtimeArtifacts 不是当前 build 的实际运行产物，不能沿旧归档 PASS")
+        try:
+            hashed_file(cwd, artifact.get("path"), artifact.get("sha256"))
+        except (OSError, ValueError, TypeError) as error:
+            raise ValueError(f"runtimeArtifacts 实际文件核验失败: {error}") from error
+
+
+def validate_measurement_assertions(receipt: dict, case: dict) -> None:
+    required = (set(case.get("assertions", {})) - {"persistence"}) | {"response", "state", "forbiddenEffects"}
+    validate_observed_assertions(receipt.get("assertions"), required)
+    validate_parameter_branches(receipt, case)
     expected_writes = case.get("assertions", {}).get("persistence", [])
     writes = receipt.get("persistence", [])
     if not isinstance(writes, list) or len(writes) != len(expected_writes):
@@ -839,7 +913,12 @@ def observe_command(argv: list, cwd: Path, output: Path, kind: str,
     started = time.time_ns()
     print(f"capture {kind} 开始；startedNs={started}", flush=True)
     try:
-        child = subprocess.Popen(argv, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        environment = dict(os.environ)
+        if kind == "case":
+            # Project adapters reuse this exact capture policy, not another install.
+            environment["SUPERFLOW_REPORT_LINT"] = str(Path(__file__).resolve())
+        child = subprocess.Popen(argv, cwd=cwd, env=environment,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print(f"capture {kind} 运行中；pid={child.pid}", flush=True)
         stdout, stderr = child.communicate()
         exit_code = child.returncode
@@ -915,7 +994,7 @@ def validate_capture(base: Path, record: dict, kind: str) -> dict:
         if sorted(observed_ids, key=str) != sorted(case_ids):
             raise ValueError("capture measurement Case 清单遗漏、重复或包含未声明事件")
         measured = measurement_event(streams["stdout"], record["caseId"])
-        for key in ("executed", "assertions", "persistence", "target", "database", "mockBoundary", "testLayer"):
+        for key in ("executed", "assertions", "branches", "persistence", "target", "database", "mockBoundary", "testLayer"):
             if not json_equal(measured.get(key), record.get(key)):
                 raise ValueError(f"capture 实测 {key} 与凭证不一致")
         if not json_equal(sources, record.get("sources")):
@@ -987,6 +1066,10 @@ def measurement_diagnostics(stdout: str, prepared: list) -> list:
             validate_measurement_assertions(event, case)
         except (ValueError, KeyError, TypeError, AttributeError) as error:
             problems.append(prefix + f"assertions/persistence: {error}")
+        try:
+            validate_runtime_artifacts(event, case, item.get("build"), item["cwd"])
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+            problems.append(prefix + f"runtime: {error}")
         if not isinstance(event.get("persistence", []), list):
             problems.append(prefix + "persistence 必须为数组")
         elif len(event.get("persistence", [])) != len(case.get("assertions", {}).get("persistence", [])):
@@ -1175,6 +1258,11 @@ def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False, o
 def validate_plan_case_shape(case: dict, entry: dict) -> None:
     """Check declared shapes, not the semantic sufficiency owned by review."""
     problems = []
+    for validate in (required_branch_ids, runtime_instance_count):
+        try:
+            validate(case)
+        except (ValueError, TypeError) as error:
+            problems.append(str(error))
     if entry.get("kind") not in ("browser", "api", "job", "event", "library", "cli"):
         problems.append("entry.kind 无效")
     if case.get("level") != entry.get("kind"):
@@ -1457,7 +1545,7 @@ def record_execution(plan_file: Path, report_file: Path | None = None) -> int:
                       "executionContext": selected["observedContext"]}
             try:
                 measured = measurement_event(stdout, case["id"])
-                for key in ("executed", "assertions", "persistence", "target", "database", "mockBoundary", "testLayer"):
+                for key in ("executed", "assertions", "branches", "persistence", "target", "database", "mockBoundary", "testLayer"):
                     if key in measured:
                         record[key] = measured[key]
                 case_errors = [error for error in diagnostics if error.startswith(f"measurement {case['id']}:")
@@ -1520,6 +1608,12 @@ def check_receipt_index(file: Path, report: Path, review: Path, root: Path) -> N
     dependencies.extend((file.parent / source["path"]).resolve() for source in receipt["sources"])
     coverage = json.loads(review.read_text())["coverage"]
     dependencies.extend((report.parent / source["path"]).resolve() for source in coverage.get("sources", []))
+    case = next((item for item in coverage.get("cases", [])
+                 if item.get("id") == receipt.get("caseId")), None)
+    if case and case.get("runtimeArtifact"):
+        cwd = (report.parent / case["executionContext"]["cwd"]).resolve()
+        dependencies.extend((cwd / artifact["path"]).resolve()
+                            for artifact in receipt["target"]["runtimeArtifacts"])
     tests = infer_tests_path(report)
     if tests is not None:
         dependencies.append(tests)

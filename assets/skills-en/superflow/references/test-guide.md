@@ -226,6 +226,36 @@ COUNT cannot prove unobserved fields or old rounds unchanged. Sensitive raw evid
 outside the repository: provide authorized successors accessible locations and hashes, without
 requiring large Git bundles or giving only inaccessible personal paths.
 
+### Required branches and actual runtime copies
+
+Freeze parameter and failure branch IDs in the Case's nonempty, unique `requiredBranches`
+array. This is mandatory when `databaseAssertions.kind=allParameterBranches` is declared.
+The measurement and receipt `branches` must cover exactly those IDs. Each item contains
+`{id,executed,assertions}`: a positive execution count and observed comparisons for
+response/state/forbiddenEffects, each shaped as `{id,expected,actual,result}`.
+Missing, duplicate, unexecuted, failed, or unequal branches cannot PASS. A green method
+does not supply branch actuals. Project tests/API own branch meaning and applicability.
+
+Cases that execute built artifacts freeze `runtimeArtifact: {"instances": 1}` (use the
+required count for multiple instances), not a task-name string. Actual observations
+retain `target.runtimeArtifacts`, one `{path,sha256,pid}` per process. Paths are relative
+to the Case's actual cwd or authorized, retained local absolute paths. PIDs must be
+distinct positive integers and the count must match the contract. Capture reads the
+runtime copy, verifies its bytes and SHA, and compares it with the bound build artifact.
+An internally consistent old archive or copied buildId/buildSha256 does not establish
+current runtime identity. Rebuild required archives and execution inputs before binding;
+retain copies under the declared evidence lifecycle. Source-loaded tests bind their real
+execution inputs without pretending to be artifact processes; projects own runtime design.
+Path digests and positive PIDs do not attest loaded process bytes. Projects retain actual
+launch commands, PIDs, immutable copies/digests, and time windows; completion observations
+reference launch identity instead of filling it later from a mutable build path.
+
+Project adapters import the current canonical validator via `SUPERFLOW_REPORT_LINT`,
+reusing its observation diagnostics and assertion checks. Case capture binds this script
+path only in its child environment; standalone adapters explicitly select the same installed
+entry. Missing current validation fails clearly, without searching another host's config
+or maintaining a permissive parallel verdict implementation.
+
 ## Observed batch and measurement diagnostics
 
 When one real suite proves several Cases, first align tests/coverage Case IDs, selectors, assertions
