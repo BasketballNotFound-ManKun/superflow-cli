@@ -5,7 +5,7 @@
 产物是 `prompt/implementation.md`：一份执行导航，不是第二份业务设计。
 所有执行模式使用以下同一形状；保留已声明 build_mode/isolation/tdd_mode/review_mode。
 完整 HOW、算法、SQL 和命令分别只在 design/technical_design、release-sql、tests 持有。
-读取 [Flow Owner](flow-owner.md) 与 [测试指南](test-guide.md)；独评由
+读取 [Flow Owner](flow-owner.md)，按当前验证/采集分支读取 [测试指南](test-guide.md)；准备独评时读取
 [Reviewer 清单](reviewer-checklist.md) 持有，不在每批重复这些过程。
 
 ## 输出顺序
@@ -68,3 +68,7 @@ VERIFY_EXISTING可无新增实现任务；EXCLUDED不伪造验收用例。
 当前会话退出后不承诺后台唤醒；恢复点保留原任务、证据、资源和下一条动作。
 
 运行test-report属于证据，在所有context_compression模式中只引用，不投影正文。
+
+## 可验证任务切片
+
+任务形状由[canonical Tasks format](document-templates.md#tasks-format)持有。主Prompt只导航原tasks/tests的能力、依赖和验证引用，不再复制一份任务模板或命令；现有任务缺引用时调查原合同，不猜依赖或编造验收。

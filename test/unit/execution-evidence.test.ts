@@ -861,23 +861,13 @@ describe("execution receipt boundary", () => {
       environmentKeys: ["NODE_ENV"],
     };
     fs.writeFileSync(reviewFile, JSON.stringify(review));
-    const receipt = JSON.parse(
-      fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"),
-    );
-    receipt.executionContext = {
-      cwd: fs.realpathSync(dir),
-      environmentSha256: {
-        NODE_ENV: digest(JSON.stringify(process.env.NODE_ENV ?? null)),
-      },
-    };
-    const outputFile = currentEvidence("C1", "command");
-    const event = JSON.parse(fs.readFileSync(outputFile, "utf8"));
-    event.executionContext = receipt.executionContext;
-    const output = JSON.stringify(event) + "\n";
-    fs.writeFileSync(outputFile, output);
-    receipt.command.sha256 = digest(output);
-    save(receipt);
-    return receipt;
+    // A changed frozen context needs a real new capture, not rewritten raw evidence.
+    const captured = record({
+      kind: "case", changeDir: ".", review: "review.json", caseId: "C1",
+      sources: ["case-C1.cjs"], build: "logs/build.json", output: "logs/C1.json",
+    });
+    expect(captured.code, captured.output).toBe(0);
+    return JSON.parse(fs.readFileSync(path.join(dir, "logs/C1.json"), "utf8"));
   }
   it("requires a frozen context even when the receipt retains actual capture context", () => {
     const file = path.join(dir, "review.json");

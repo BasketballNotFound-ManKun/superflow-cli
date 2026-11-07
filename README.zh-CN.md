@@ -399,6 +399,8 @@ MCP 是主 Agent 与本地托管状态机的通信通道，不会把 Superflow �
 | `superflow docs [change]`                                    | 执行 docs 门禁并校验阶段技能                                |
 | `superflow design [change]`                                  | 校验 SuperBridge Flow design 阶段技能部署                   |
 | `superflow implement [change]`                               | 生成当前 Coding Ready 凭证后进入实现阶段                    |
+| `superflow implement <change> --instructions --json` | 只读返回原任务frontier、交付能力与验证引用，不授予准入 |
+| `superflow verify <change> --execution-plan <PLAN...> --run --reuse-valid --sync-report` | 整体预检顺序构建/Case计划，只复用经校验的当前证据并同步原报告 |
 | `superflow pipeline`                                         | 校验 SuperBridge Flow pipeline 阶段技能部署                 |
 | `superflow quick "<任务>" --path <文件> --seam <既有文件>`    | 对小型代码任务做窄门判断；批准 Quick Spec 后复用 quick 托管档位 |
 | `superflow pipeline "<任务>" --managed --project <目录>`     | 执行 Agent 短会话开发，当前 Host Agent 直接评审             |

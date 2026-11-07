@@ -511,6 +511,8 @@ best-effort and does not block initialization.
 | `superflow docs [change]`                                    | Run the docs gate and check the phase skill                              |
 | `superflow design`                                           | Check design-phase skill deployment                                      |
 | `superflow implement [change]`                               | Create a current Coding Ready receipt before implementation              |
+| `superflow implement <change> --instructions --json` | Read-only original task frontier, capability and verification references; not admission |
+| `superflow verify <change> --execution-plan <PLAN...> --run --reuse-valid --sync-report` | Preflight an ordered build/Case sequence, execute with validated evidence reuse, then sync the existing report |
 | `superflow verify`                                           | Check verify-phase skill deployment                                      |
 | `superflow archive`                                          | Check archive-phase skill deployment                                     |
 | `superflow check <change> --level files\|docs\|coding-ready` | Audit file, document-delivery, or coding readiness                       |

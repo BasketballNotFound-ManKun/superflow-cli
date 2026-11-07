@@ -418,10 +418,22 @@ def current_report_text(text: str) -> str:
     return "\n".join(current)
 
 
+def task_items_from_body(lines: list[str]) -> list[dict]:
+    """Share task identity and source location with read-only navigation."""
+    items = []
+    for number, line in enumerate(lines, 1):
+        checkbox = re.match(r"^ *- \[([ xX])\]\s+(.*)$", line)
+        if checkbox:
+            identity = re.match(r"([^\s]+)\s", checkbox[2])
+            items.append({"id": identity[1] if identity else "",
+                          "line": number, "title": checkbox[2].strip(),
+                          "done": checkbox[1].lower() == "x"})
+    return items
+
+
 def task_ids_from_body(lines: list[str]) -> list[str]:
     """Extract IDs only after the canonical parser classified task blocks."""
-    return [match[1] for line in lines
-            if (match := re.match(r"^ *- \[[ xX]\]\s+([^\s]+)\s", line))]
+    return [item["id"] for item in task_items_from_body(lines) if item["id"]]
 
 
 def final_report_result(text: str) -> str:
@@ -485,6 +497,56 @@ def json_equal(left, right) -> bool:
     if isinstance(left, list):
         return len(left) == len(right) and all(json_equal(a, b) for a, b in zip(left, right))
     return left == right
+
+
+def execution_contract(case: dict, entry: dict, coverage: dict) -> dict:
+    """Bind this Case's frozen meaning, including the definitions of its refs."""
+    # Follow only current contract structure. Business expected/value payloads
+    # may contain these field names without referring to coverage.sources.
+    children = {
+        "contract": {"database": ("database", False), "statements": ("anchor", True),
+                     "investigation": ("investigation", False),
+                     "valueConstraints": ("constraint", True)},
+        "database": {"statements": ("anchor", True)},
+        "investigation": {"canonical": ("anchor", False), "evidence": ("anchor", True)},
+        "constraint": {"schema": ("anchor", False), "values": ("anchor", True)},
+        "anchor": {},
+    }
+    refs = []
+
+    def collect(node, kind, label):
+        if not isinstance(node, dict):
+            raise ValueError(f"executionContract {label} 必须为 JSON object")
+        if kind == "anchor" or "sourceRef" in node:
+            ref = node.get("sourceRef")
+            if not isinstance(ref, str) or not ref.strip():
+                raise ValueError(f"executionContract {label}.sourceRef 需要非空来源 ID")
+            refs.append(ref)
+        for key in ("sourceRefs", "schemaSourceRefs"):
+            if key not in node:
+                continue
+            values = node[key]
+            if (not isinstance(values, list)
+                    or any(not isinstance(ref, str) or not ref.strip() for ref in values)):
+                raise ValueError(f"executionContract {label}.{key} 需要来源 ID 数组")
+            refs.extend(values)
+        for key, (child_kind, multiple) in children[kind].items():
+            if key not in node:
+                continue
+            values = node[key]
+            if multiple and not isinstance(values, list):
+                raise ValueError(f"executionContract {label}.{key} 必须为 JSON object 数组")
+            for index, value in enumerate(values if multiple else [values]):
+                collect(value, child_kind, f"{label}.{key}[{index}]" if multiple else f"{label}.{key}")
+
+    collect(case, "contract", "case")
+    collect(entry, "contract", "entry")
+    index = execution_id_index(coverage.get("sources"), "来源 sources") if refs else {}
+    missing = sorted(set(refs) - set(index))
+    if missing:
+        raise ValueError("executionContract sources 缺少冻结来源 ID：" + ", ".join(missing))
+    return {"schemaVersion": coverage.get("schemaVersion"), "case": case, "entry": entry,
+            "sources": [index[ref] for ref in sorted(set(refs))]}
 
 
 def validate_database_receipt(receipt: dict, event: dict, case: dict,
@@ -634,7 +696,7 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
         raise ValueError("原始输出缺少唯一用例执行事件；未知 ID/零执行不可 PASS")
     event = events[0]
     for key in ["caseId", "entryId", "level", "status", "executed", "assertions", "persistence",
-                "evidenceKind", "sources", "build", "target"]:
+                "evidenceKind", "sources", "build", "target", "executionContract"]:
         if not json_equal(event.get(key), receipt.get(key)):
             raise ValueError(f"原始执行输出与凭证 {key} 不一致")
     if not json_equal(event.get("command"), {"argv": command["argv"], "exitCode": command["exitCode"]}):
@@ -661,6 +723,8 @@ def validate_execution_receipt(file: Path, case: dict, coverage: dict, change: P
     entry = next((e for e in coverage.get("entries", []) if e["id"] == case["entryId"]), None)
     if entry is None:
         raise ValueError("执行凭证缺少冻结入口定义")
+    if not json_equal(receipt.get("executionContract"), execution_contract(case, entry, coverage)):
+        raise ValueError("执行凭证缺少当前 Case/Entry/来源定义的 executionContract 身份；保持 PARTIAL，应重新真实采集")
     source_index = {s["id"]: s for s in coverage.get("sources", [])}
     for ref in entry.get("sourceRefs", []):
         source = source_index[ref]
@@ -1119,7 +1183,8 @@ def execution_id_index(items, label: str) -> dict:
     return result
 
 
-def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False, override=None) -> dict:
+def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False, override=None,
+                           pending_builds=()) -> dict:
     """One read-only preparation path for preview and actual capture."""
     base = plan_file.parent
     plan = override if override is not None else json.loads(verified_file(base, plan_file.name).read_text(encoding="utf-8"))
@@ -1185,7 +1250,10 @@ def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False, o
         review = check("review", review_input)
         if review:
             prepared["inputs"].add(review)
-            coverage = check("review.coverage", lambda: json.loads(review.read_text())["coverage"])
+            prepared["reviewFile"] = review
+            prepared["reviewIdentity"] = execution_file_identity(review)
+            prepared["reviewBytes"] = review.read_bytes()
+            coverage = check("review.coverage", lambda: json.loads(prepared["reviewBytes"])["coverage"])
             prepared["coverage"] = coverage
             if not isinstance(coverage, dict):
                 errors.append("review.coverage 必须是 JSON object，修复原 coverage 合同")
@@ -1205,6 +1273,8 @@ def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False, o
                         errors.append(f"entryId 缺少唯一冻结 Entry：{case.get('entryId')!r}")
                     else:
                         check("冻结入口/用例", lambda: validate_plan_case_shape(case, entry))
+                        prepared["executionContract"] = check("executionContract",
+                            lambda: execution_contract(case, entry, coverage))
                     context = case.get("executionContext")
                     if isinstance(context, dict) and change:
                         cwd = check("executionContext.cwd", lambda: execution_plan_path(
@@ -1229,7 +1299,9 @@ def prepare_execution_plan(plan_file: Path, allow_pending_build: bool = False, o
                 errors.append("capture 构建和用例凭证须保存在同一证据目录："
                               f"声明值={plan.get('build')!r}；解析基准={base}；"
                               f"实际路径={build_file}；用例凭证目录={output.parent}")
-            if not build_file.exists() and allow_pending_build:
+            if (any(execution_file_identity(build_file) == execution_file_identity(file)
+                    for file in pending_builds)
+                    or (not build_file.exists() and allow_pending_build)):
                 prepared["dependency"] = "BUILD_NOT_RUN"
             else:
                 def load_build():
@@ -1364,8 +1436,10 @@ def execution_output_issues(prepared: list, plan_files: list) -> list:
     return errors
 
 
-def check_execution_plans(plan_files: list, allow_pending_build: bool = True) -> tuple:
+def check_execution_plans(plan_files: list, allow_pending_build: bool = True,
+                          ordered: bool = False) -> tuple:
     prepared, errors = [], []
+    pending_builds = set()
     for file in plan_files:
         try:
             plan = json.loads(file.read_text(encoding="utf-8"))
@@ -1382,10 +1456,13 @@ def check_execution_plans(plan_files: list, allow_pending_build: bool = True) ->
             group = []
             for selection in selected if selected is not None else [None]:
                 expanded = {**plan, **selection} if selection is not None else plan
-                item = prepare_execution_plan(file, allow_pending_build, expanded)
+                item = prepare_execution_plan(file, allow_pending_build, expanded,
+                                              pending_builds if ordered else ())
                 prepared.append(item)
                 group.append(item)
                 errors.extend(f"{file}: {error}" for error in item["errors"])
+            if ordered and plan.get("kind") == "build" and group[0].get("output"):
+                pending_builds.add(group[0]["output"])
             if selected is not None:
                 contexts = [value.get("case", {}).get("executionContext") for value in group if value.get("case")]
                 if (len(contexts) != len(group) or any(not json_equal(contexts[0], value) for value in contexts)
@@ -1393,12 +1470,19 @@ def check_execution_plans(plan_files: list, allow_pending_build: bool = True) ->
                     raise ValueError("cases 同次执行必须共享冻结 executionContext 和证据目录")
         except (OSError, ValueError, KeyError, TypeError) as error:
             errors.append(f"{file}: {error}")
-    for item in prepared:
+    for position, item in enumerate(prepared):
         if item["plan"].get("kind") != "case" or not item.get("case") or not item.get("entry"):
             continue
-        producer = next((other for other in prepared if other["plan"].get("kind") == "build"
-                         and other["output"] is not None and item.get("buildFile") is not None
-                         and execution_file_identity(other["output"]) == execution_file_identity(item["buildFile"])), None)
+        producers = [other for other in prepared
+                     if other["plan"].get("kind") == "build"
+                     and other["output"] is not None and item.get("buildFile") is not None
+                     and execution_file_identity(other["output"]) == execution_file_identity(item["buildFile"])]
+        producer = next((other for other in producers
+                         if not ordered or other in prepared[:position]), None)
+        if ordered and producer is None and (item["dependency"] or producers):
+            message = "build 依赖必须由前序匹配构建计划生成"
+            item["errors"].append(message)
+            errors.append(f"{item['planFile']}: {message}")
         source_paths = set()
         if item.get("build"):
             source_paths = {(item["buildFile"].parent / source["path"]).resolve()
@@ -1428,7 +1512,8 @@ def check_execution_plans(plan_files: list, allow_pending_build: bool = True) ->
     return prepared, errors
 
 
-def snapshot_owned_receipt(output: Path, kind: str, redactor: Path, write_guard) -> None:
+def snapshot_owned_receipt(output: Path, kind: str, redactor: Path, write_guard,
+                           snapshot: bool = True) -> None:
     """Only the verified current pointer is replaced; immutable attempts stay in place."""
     if not output.exists():
         return
@@ -1468,13 +1553,16 @@ def snapshot_owned_receipt(output: Path, kind: str, redactor: Path, write_guard)
             raise ValueError("当前原件含未脱敏内容，拒绝复制")
     except (UnicodeError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise CaptureOutputConflict(f"output 所有权无法核实；未知资产原位保留：{error}") from error
+    if not snapshot:
+        return
     saved = output.with_name(output.stem + ".previous-" + uuid.uuid4().hex + output.suffix)
     write_guard(saved)
     with saved.open("xb") as stream:
         stream.write(original)
 
 
-def record_execution(plan_file: Path, report_file: Path | None = None) -> int:
+def record_execution(plan_file: Path, report_file: Path | None = None,
+                     batch_prepared=None, batch_files=None) -> int:
     prepared, errors = check_execution_plans([plan_file], allow_pending_build=False)
     if errors:
         raise ValueError("\n".join(errors))
@@ -1490,7 +1578,9 @@ def record_execution(plan_file: Path, report_file: Path | None = None) -> int:
                 item["runtimeOutputs"].append(file)
         # Never reuse pre-command inode observations: the child may have created
         # or replaced an output path. Preserve conflicting inputs, not PARTIAL.
-        issues = execution_output_issues(prepared, [plan_file])
+        others = [selected for selected in (batch_prepared or [])
+                  if selected["planFile"] != plan_file]
+        issues = execution_output_issues(others + prepared, batch_files or [plan_file])
         if issues:
             raise CaptureOutputConflict("\n".join(issues))
 
@@ -1542,7 +1632,8 @@ def record_execution(plan_file: Path, report_file: Path | None = None) -> int:
                       "evidenceKind": case.get("evidenceKind", "real"), "sources": selected["sources"],
                       "build": build, "capture": capture,
                       "command": {"argv": facts["argv"], "exitCode": facts["exitCode"]},
-                      "executionContext": selected["observedContext"]}
+                      "executionContext": selected["observedContext"],
+                      "executionContract": selected["executionContract"]}
             try:
                 measured = measurement_event(stdout, case["id"])
                 for key in ("executed", "assertions", "branches", "persistence", "target", "database", "mockBoundary", "testLayer"):
@@ -1568,6 +1659,103 @@ def record_execution(plan_file: Path, report_file: Path | None = None) -> int:
     else:
         raise ValueError("capture plan.kind 必须为 build 或 case")
     print("capture 已记录；业务充分性仍须独立评审")
+    return 0
+
+
+def reusable_execution(prepared: list) -> bool:
+    """Reuse original process facts only after checking the current full inputs."""
+    try:
+        for item in prepared:
+            output, plan = item["output"], item["plan"]
+            record = json.loads(output.read_text(encoding="utf-8"))
+            if record.get("status") != "PASS":
+                return False
+            capture = validate_capture(output.parent, record, plan["kind"])
+            observed = sorted(record["sources"], key=lambda source: source["path"])
+            current = sorted(item["sources"], key=lambda source: source["path"])
+            if not json_equal(observed, current) or capture.get("cwd") != str(item["cwd"]):
+                return False
+            if plan["kind"] == "build":
+                if (not json_equal(record["command"]["argv"], plan["argv"])
+                        or (output.parent / record["artifact"]).resolve() != item["artifact"]):
+                    return False
+                hashed_file(output.parent, record["artifact"], record["sha256"])
+                events = hashed_file(output.parent, record["command"]["output"],
+                                     record["command"]["sha256"])
+                expected = {"event": "build", "buildId": record["id"],
+                            "sourceFingerprint": record["sourceFingerprint"],
+                            "artifactSha256": record["sha256"],
+                            "argv": record["command"]["argv"], "exitCode": 0}
+                if not json_equal([json.loads(line) for line in events.read_text().splitlines()], [expected]):
+                    return False
+            else:
+                if not json_equal(record["build"], item["build"]):
+                    return False
+                validate_execution_receipt(output, item["case"], item["coverage"], item["change"])
+        # A multi-Case plan is one real process: never split its exit semantics.
+        if prepared[0]["plan"]["kind"] == "case":
+            captures = [json.loads(item["output"].read_text())["capture"] for item in prepared]
+            if any(not json_equal(captures[0], value) for value in captures):
+                return False
+            facts = validate_capture(prepared[0]["output"].parent,
+                                     json.loads(prepared[0]["output"].read_text()), "case")
+            if set(facts["caseIds"]) != {item["case"]["id"] for item in prepared}:
+                return False
+        return True
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, StopIteration):
+        return False
+
+
+def record_execution_sequence(plan_files: list, reuse_valid: bool = False,
+                              report_file: Path | None = None) -> int:
+    """Preflight the whole ordered invocation before any side-effecting command."""
+    prepared, errors = check_execution_plans(plan_files, allow_pending_build=False, ordered=True)
+    if errors:
+        raise ValueError("\n".join(errors))
+    cases = [item for item in prepared if item["plan"]["kind"] == "case"]
+    if report_file:
+        if not cases:
+            raise ValueError("--sync-report 需要至少一个 Case plan")
+        prepare_report_sync(report_file, cases, cases[0]["planFile"])
+        issues = execution_output_issues(prepared, plan_files)
+        if issues:
+            raise ValueError("\n".join(issues))
+    plan_snapshots = {file: json.loads(file.read_text(encoding="utf-8")) for file in plan_files}
+    review_snapshots = {item["reviewFile"]: (item["reviewIdentity"], item["reviewBytes"])
+                        for item in cases}
+
+    def check_inputs():
+        for file, original in plan_snapshots.items():
+            if not json_equal(json.loads(file.read_text(encoding="utf-8")), original):
+                raise ValueError(f"执行期间计划已改变；停止后续命令并重新预检：{file}")
+        for file, (identity, original) in review_snapshots.items():
+            if execution_file_identity(file) != identity or file.read_bytes() != original:
+                raise ValueError(f"执行期间评审合同身份或正文已改变；停止后续命令并重新预检：{file}")
+
+    check_inputs()
+    redactor = capture_redactor()
+    contracts = [item["executionContract"] for item in cases]
+    if not json_equal(redact_capture(contracts, redactor), contracts):
+        raise ValueError("executionContract 含敏感内容；清理原合同后重新预检，不能直接写入执行原件")
+    for item in prepared:
+        snapshot_owned_receipt(item["output"], item["plan"]["kind"], redactor,
+                               lambda file=None: None, snapshot=False)
+    for plan_file in plan_files:
+        check_inputs()
+        # The previous producer may have rebuilt: reread its real receipt and
+        # current bytes rather than projecting the preflight dependency.
+        current, errors = check_execution_plans([plan_file], allow_pending_build=False)
+        if errors:
+            raise ValueError("\n".join(errors))
+        if reuse_valid and reusable_execution(current):
+            if report_file and current[0]["plan"]["kind"] == "case":
+                sync_execution_report(prepare_report_sync(report_file, current, plan_file), current)
+            print(f"capture 原始证据仍有效，未执行命令：{plan_file}")
+            continue
+        record_execution(plan_file,
+                         report_file if current[0]["plan"]["kind"] == "case" else None,
+                         prepared, plan_files)
+        check_inputs()
     return 0
 
 
@@ -1690,13 +1878,18 @@ def execution_status(report: Path, review_file: Path, text: str | None = None) -
 
 def prepare_report_sync(report: Path, prepared: list, plan_file: Path) -> dict:
     item = prepared[0]
-    if item["plan"].get("kind") != "case":
-        raise ValueError("--sync-report 只用于实际 Case capture")
+    if (item["plan"].get("kind") != "case"
+            or any(selected["plan"].get("kind") != "case"
+                   or selected["change"] != item["change"] for selected in prepared)):
+        raise ValueError("--sync-report 只用于同一 change 的 Case capture")
     if report.is_symlink() or report.parent.resolve() != item["change"].resolve() or report.name != "test-report.md":
         raise ValueError("--sync-report 必须是本 change 的普通 test-report.md")
     text = report.read_bytes().decode("utf-8")
     review = verified_file(plan_file.parent, item["plan"]["review"])
     execution_status(report, review, text)
+    if any(verified_file(selected["planFile"].parent, selected["plan"]["review"]).read_bytes()
+           != review.read_bytes() for selected in prepared):
+        raise ValueError("--sync-report 同批 Case 必须引用同一当前 coverage 合同")
     identities = {execution_file_identity(file) for selected in prepared
                   for file in selected["inputs"] | selected["buildEvidence"] | {plan_file}}
     identities.update(execution_file_identity(file) for selected in prepared
@@ -2089,8 +2282,10 @@ def lint_report(path: Path, repo: Path | None, tests_path: Path | None = None,
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lint SuperBridge Flow test-report evidence")
     parser.add_argument("reports", nargs="*")
-    parser.add_argument("--record-execution", metavar="PLAN", default="",
+    parser.add_argument("--record-execution", metavar="PLAN", nargs="+", default=[],
                         help="实际执行冻结 build/case plan 并保留脱敏 stdout/stderr")
+    parser.add_argument("--reuse-valid", action="store_true",
+                        help="仅复用通过当前原始 capture、计划输入和构建身份核验的证据")
     parser.add_argument("--check-execution-plan", metavar="PLAN", nargs="+", default=[],
                         help="只读批量检查 build/case plan；不执行命令、不创建证据、不代表测试通过")
     parser.add_argument("--check-measurement", metavar="PLAN", default="",
@@ -2113,6 +2308,8 @@ def main() -> int:
                         help="输出明确排除历史节的当前报告，保留命令代码块与行号")
     args = parser.parse_args()
 
+    if args.reuse_valid and not args.record_execution:
+        parser.error("--reuse-valid 仅配合 --record-execution 使用")
     if args.execution_status:
         if (not args.review or args.reports or args.record_execution or args.sync_report
                 or args.check_execution_plan or args.check_measurement or args.measurement):
@@ -2147,7 +2344,8 @@ def main() -> int:
         if args.record_execution or args.reports:
             parser.error("--check-execution-plan 不能与报告或 --record-execution 混用")
         try:
-            prepared, errors = check_execution_plans([Path(file).resolve() for file in args.check_execution_plan])
+            prepared, errors = check_execution_plans(
+                [Path(file).resolve() for file in args.check_execution_plan], ordered=True)
         except OSError as error:
             print(f"FAIL plan: 无法只读核验文件身份：{error}")
             return 2
@@ -2164,8 +2362,9 @@ def main() -> int:
         try:
             if args.reports or args.review or args.tests or args.require_complete:
                 parser.error("--record-execution 不与报告检查参数混用")
-            return record_execution(Path(args.record_execution).resolve(),
-                                    Path(args.sync_report).absolute() if args.sync_report else None)
+            return record_execution_sequence([Path(file).resolve() for file in args.record_execution],
+                                             args.reuse_valid,
+                                             Path(args.sync_report).absolute() if args.sync_report else None)
         except (OSError, ValueError, KeyError, TypeError, StopIteration) as error:
             print(f"FAIL capture: {error}")
             return 2
@@ -2189,7 +2388,8 @@ def main() -> int:
             parser.error("--markdown-body requires exactly one Markdown file")
         lines, ambiguous = markdown_body_lines(
             Path(args.reports[0]).read_text(encoding="utf-8"), task_index=True)
-        print(json.dumps({"lines": lines, "ambiguous": ambiguous}))
+        print(json.dumps({"lines": lines, "tasks": task_items_from_body(lines),
+                          "ambiguous": ambiguous}))
         return 0
 
     if args.task_index:

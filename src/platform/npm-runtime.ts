@@ -27,12 +27,20 @@ export function runNpm(
   args: string[],
   options: Parameters<typeof runCommand>[2] = {},
 ): Promise<SpawnResult> {
+  const invocation = resolveNpmCommand(args);
+  return runCommand(invocation.executable, invocation.args, options);
+}
+
+// Queries and their cache identities must use the same bound npm owner.
+export function resolveNpmCommand(args: string[]) {
   const invocation = runtime.resolveNpmInvocation();
-  return runCommand(
-    invocation.executable,
-    [...invocation.argumentPrefix, ...runtime.npmArguments(args, PACKAGE_ROOT)],
-    options,
-  );
+  return {
+    executable: invocation.executable,
+    args: [
+      ...invocation.argumentPrefix,
+      ...runtime.npmArguments(args, PACKAGE_ROOT),
+    ],
+  };
 }
 
 export function installationIdentity(packageRoot = PACKAGE_ROOT) {

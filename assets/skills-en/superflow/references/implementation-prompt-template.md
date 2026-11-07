@@ -6,9 +6,7 @@ The artifact is `prompt/implementation.md`: one execution navigator, not a secon
 business design. Use this shape for every execution mode and retain declared
 build_mode/isolation/tdd_mode/review_mode. HOW, algorithms, SQL and commands remain
 owned by design/technical_design, release-sql and tests respectively. Read
-[Flow Owner](flow-owner.md), [test guide](test-guide.md) and the
-[Reviewer checklist](reviewer-checklist.md), rather than copying their procedures
-into every batch.
+[Flow Owner](flow-owner.md), load [test guide](test-guide.md) for the current signal/capture branch, and read the [Reviewer checklist](reviewer-checklist.md) when preparing independent review. Keep procedures in their canonical owners instead of copying them into every batch.
 
 ## Output order
 
@@ -77,3 +75,7 @@ checks or unresolved items remain PARTIAL/Blocked. Session exit provides no back
 wake-up; retain task, evidence, resources and next action for recovery.
 
 Runtime test-report is evidence: reference it without projecting its body in every context_compression mode.
+
+## Verifiable task slices
+
+The [canonical Tasks format](document-templates.md#tasks-format) owns task shape. The main Prompt only navigates original tasks/tests for capabilities, dependencies and verification references; do not copy a second task template or command. Investigate missing references in existing contracts instead of inventing dependencies or acceptance.

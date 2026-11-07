@@ -12,7 +12,8 @@ import { resolveChangeDir, runChangeGuard } from "./change-guard.js";
 const SKILL_NAME = "superflow-verify";
 
 export interface VerifyOptions extends SkillCheckOptions {
-  executionPlan?: string;
+  executionPlan?: string | string[];
+  reuseValid?: boolean;
   run?: boolean;
   syncReport?: boolean;
   executionStatus?: boolean;
@@ -24,6 +25,7 @@ export async function verifyCommand(
 ): Promise<void> {
   if (
     options.executionPlan ||
+    options.reuseValid ||
     options.run ||
     options.syncReport ||
     options.executionStatus
@@ -55,12 +57,23 @@ function runExecutionOperation(
         path.join(changeDir, ".sdd/reviews/document-review.json"),
       ];
     } else {
-      const plan = path.resolve(options.executionPlan!);
-      checkPlanChangeBinding(plan, changeDir, options, english);
+      const values = Array.isArray(options.executionPlan)
+        ? options.executionPlan
+        : [options.executionPlan!];
+      const plans = values.map((value) => path.resolve(value));
+      for (const plan of plans) {
+        checkPlanChangeBinding(
+          plan,
+          changeDir,
+          { ...options, syncReport: options.syncReport && plans.length === 1 },
+          english,
+        );
+      }
       args = [
         options.run ? "--record-execution" : "--check-execution-plan",
-        plan,
+        ...plans,
       ];
+      if (options.reuseValid) args.push("--reuse-valid");
       if (options.syncReport) args.push("--sync-report", report);
     }
     const script = path.join(
@@ -91,12 +104,22 @@ function validateExecutionOptions(
 ): void {
   if (
     options.executionStatus &&
-    (options.executionPlan || options.run || options.syncReport)
+    (options.executionPlan ||
+      options.run ||
+      options.syncReport ||
+      options.reuseValid)
   ) {
     throw new Error(
       english
         ? "--execution-status cannot be combined with --execution-plan, --run or --sync-report"
         : "--execution-status 不能与 --execution-plan、--run 或 --sync-report 混用",
+    );
+  }
+  if (options.reuseValid && (!options.run || !options.executionPlan)) {
+    throw new Error(
+      english
+        ? "--reuse-valid requires --execution-plan and --run"
+        : "--reuse-valid 需要 --execution-plan 和 --run",
     );
   }
   if ((options.run || options.syncReport) && !options.executionPlan) {

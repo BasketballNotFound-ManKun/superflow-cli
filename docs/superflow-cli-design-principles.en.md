@@ -426,3 +426,31 @@ business failures, automatically delegating/stopping, or adding a Hook, supervis
 Project ownership follows the host's session cwd. A tool workdir distinguishes operation identity
 but does not silently switch the session into another subproject. Start in that project's directory
 to observe it; SessionEnd cleans up along the same ownership boundary.
+
+## Verifiable capabilities and low-maintenance execution (2026-11-06)
+
+Choose the next observable capability through the existing task graph; necessary preparation
+is ready with the first task that uses it. Close the smallest runnable path and applicable
+signals before expanding. Pure functions/documents retain their actual scope without forced
+HTTP or extra services. Task/test references stay canonical; read-only CLI navigation grants
+no admission and does not infer test sufficiency from a title.
+
+Business assertions stay in native project tests. Existing capture can explicitly execute
+ordered original plans after whole-sequence ownership/dependency preflight, stopping at the
+first failure. Explicit reuse requires revalidated raw receipts matching current real inputs;
+never mutate history or invent new execution. Production changes still rebuild and rerun
+affected Cases; plan formatting/path alone does not require rerunning business commands.
+Load the active phase branch and consume the full independent-review contract at dispatch.
+
+Explicit reuse also binds the current Case, associated Entry and actual source definitions
+from canonical coverage to the immutable execution event. Historical receipts without this
+identity are not upgraded with current contracts to skip execution. Unreferenced Cases and
+pure editorial changes do not widen invalidation. Identity does not prove semantic assertion
+sufficiency or that native tests actually consume the declared selector.
+
+Navigation reuses the handoff manifest to discover actual specs, requirement sources and declared
+technical design. Inventory failure reports a gap rather than partial ready instructions. Task
+identity and coverage share the canonical index, preserving the first token without searching
+titles or rewriting IDs. Update hints reuse the npm runtime and user state directory, with bounded
+cross-process caching scoped by installation/configuration identity, distinct success TTL and
+failure backoff; disabled hints perform no query or cache writes.

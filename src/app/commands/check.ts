@@ -59,7 +59,10 @@ export async function checkCommand(
   } = {},
 ): Promise<void> {
   const projectPath = path.resolve(options.projectPath ?? process.cwd());
-  const changeDir = resolveChangeDirByName(projectPath, changeName);
+  // Read-only instructions and guards may already have resolved a nested workspace.
+  const changeDir = path.isAbsolute(changeName)
+    ? path.resolve(changeName)
+    : resolveChangeDirByName(projectPath, changeName);
 
   if (!existsSync(changeDir)) {
     console.error(`错误：change 目录不存在: ${changeDir}`);

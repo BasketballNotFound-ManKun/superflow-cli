@@ -139,8 +139,13 @@ async function smoke(snapshotPath: string | undefined): Promise<{
       );
     }
     const cli = path.join(installed, "dist", "app", "cli.js");
-    const runtime = JSON.parse(run(process.execPath,
-      [cli, "doctor", "--runtime-only", "--json"], consumer).stdout);
+    const runtime = JSON.parse(
+      run(
+        process.execPath,
+        [cli, "doctor", "--runtime-only", "--json"],
+        consumer,
+      ).stdout,
+    );
     assert.equal(runtime.packageRoot, fs.realpathSync(installed));
     assert.equal(runtime.nodePath, process.execPath);
     assert.equal(runtime.version, pkg.version);
@@ -226,6 +231,42 @@ async function smoke(snapshotPath: string | undefined): Promise<{
         fs.existsSync(path.join(change, "prompt", "implementation.md")),
         true,
       );
+      // The installed navigation must use packaged inventory/parser assets.
+      fs.mkdirSync(path.join(change, ".sdd"), { recursive: true });
+      fs.writeFileSync(
+        path.join(change, ".sdd/state.yaml"),
+        "phase: implement\nbuild_mode: owner\n",
+      );
+      fs.writeFileSync(
+        path.join(change, "tasks.md"),
+        "- [ ] T-01 Save content\n  - Blocked by: none\n",
+      );
+      const spec = path.join(change, "specs/capability/spec.md");
+      fs.mkdirSync(path.dirname(spec), { recursive: true });
+      fs.writeFileSync(spec, "# Current capability\n");
+      const instructions = JSON.parse(
+        run(
+          process.execPath,
+          [
+            cli,
+            "--language",
+            language,
+            "implement",
+            change,
+            "--instructions",
+            "--json",
+          ],
+          consumer,
+        ).stdout,
+      );
+      assert.equal(instructions.state, "ready");
+      assert.equal(instructions.frontier[0].id, "T-01");
+      assert.equal(instructions.executionPermission, "not-evaluated");
+      assert.equal(
+        instructions.contextFiles.includes(fs.realpathSync(spec)),
+        true,
+      );
+      assert.equal(fs.existsSync(path.join(change, ".sdd/handoff")), false);
     }
     // Exercise the installed package's existing deployment owners, never source assets.
     const { deploySkill } = await import(

@@ -56,10 +56,13 @@ deterministic facts. Use existing controlled refreezing without weakening contra
 
 1. Read project rules, current workspace, baseline, and untracked files; separate
    task changes from other people's work.
-2. For SDD, run `superflow-state.sh recover <change-dir>` and `next`; reload the
-   frozen handoff, implementation prompt, tasks.md, tests.md, and test-report.md.
-   First implementation requires Coding Ready; admitted continuation uses build's
-   receipt check. Contract drift returns to its document owner.
+2. For SDD use `superflow implement <change> --instructions --json` for original tasks,
+   frontier, selected modes and verification references; follow its paths to frozen handoff,
+   main Prompt, tasks/tests and current report. Navigation grants no admission or acceptance
+   and creates no second progress state. First implementation requires Coding Ready; admitted
+   continuation uses the returned receipt check. Use `recover` / `next` for actual phase
+   transitions or unresolved runtime recovery, not three equivalent status queries per task.
+   Contract drift returns to its document owner.
 3. Preserve selected build_mode, isolation, and user boundaries. After design is
    settled, record a new ordinary SDD task with the existing
    `superflow-state.sh set <change-dir> build_mode owner`, plus actual isolation,
@@ -72,10 +75,7 @@ deterministic facts. Use existing controlled refreezing without weakening contra
    bare task through existing admission; being an Owner does not bypass Quick
    gates or required SDD documents.
 
-Read the entire current phase SKILL.md and its required references before acting.
-Flow Owner defines continuity and cannot replace build/verify or another full phase
-contract. Before implementation/review read the full [Reviewer checklist](reviewer-checklist.md)
-and use its readable bundle for actual dispatch and rereview.
+Read the current phase SKILL.md. Load references for the active verification, capture or review branch without skipping mandatory contracts. Flow Owner cannot replace build/verify phase prose. When preparing independent review, read the full [Reviewer checklist](reviewer-checklist.md) and use its readable bundle for actual dispatch and rereview.
 
 At recovery/integration, read the observed `EXECUTION` snapshot from `recover`/`next`.
 For missing evidence, follow `EVIDENCE_CHECK` and [test-guide](test-guide.md#first-verification-action)
@@ -83,6 +83,8 @@ through the same verification entry. The snapshot covers current Case evidence o
 review or delivery approval. Choose the next action from individual diagnostics and continue authorized
 work independent of failures. Do not reconstruct passed counts from handwritten summaries or treat an
 unrelated successful tool call as recovery of a failing test.
+
+The read-only `superflow implement <change> --instructions --json` snapshot exposes the original task lines, frontier and verification references. It is navigation, not admission or acceptance; no separate progress state is needed. Choose the next observable capability from canonical Delivers and Verify/Case references. Close its smallest runnable vertical path before expanding; pure functions and documents use their applicable signals, without mandatory HTTP or extra services. Narrow signals do not cancel required branches or final integration.
 
 ## Owner-led delegation
 

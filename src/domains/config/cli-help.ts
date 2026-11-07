@@ -16,6 +16,8 @@ export interface CliHelpText {
   docsDescription: string;
   designDescription: string;
   implementDescription: string;
+  implementInstructionsOption: string;
+  verifyReuseValidOption: string;
   pipelineDescription: string;
   verifyDescription: string;
   verifyExecutionPlanOption: string;
@@ -111,8 +113,10 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "Enumerate changed files, resolve path rules, and emit risk hints for Host impact assessment",
     reviewPrepareOption:
       "Prepare a new diff/source snapshot/report template package without committing",
-    reviewOriginalOption: "With --prepare, read an original project-root-relative review and prepare Owner response input",
-    reviewOwnerResponseOption: "With --prepare and --original-review, bind actual Owner response for a new rereview template",
+    reviewOriginalOption:
+      "With --prepare, read an original project-root-relative review and prepare Owner response input",
+    reviewOwnerResponseOption:
+      "With --prepare and --original-review, bind actual Owner response for a new rereview template",
     reviewBaseOption: "Review changes since a Git reference",
     reviewPathOption: "Review explicit files",
     reviewReportOption:
@@ -130,13 +134,22 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     designDescription: "Check SuperBridge Flow design skill deployment",
     implementDescription:
       "Require a Coding Ready receipt before implementation",
+    implementInstructionsOption:
+      "Read-only task frontier, capability and verification references; does not grant admission",
+    verifyReuseValidOption:
+      "With --run, reuse only validated receipts matching current execution inputs",
     pipelineDescription:
       "Route SDD phases or manage an implementation prompt to terminal delivery",
-    verifyDescription: "Run the verify gate, check skill deployment, or inspect execution evidence",
-    verifyExecutionPlanOption: "Read-only preflight of an existing build/Case plan; does not execute tests or report business PASS",
-    verifyRunOption: "With --execution-plan, explicitly execute the frozen command and capture evidence",
-    verifySyncReportOption: "With a matching Case --execution-plan and --run, sync observed Case results into the selected test-report.md",
-    verifyExecutionStatusOption: "Read the selected change's current Case evidence snapshot; PARTIAL is possible and this is not full delivery approval",
+    verifyDescription:
+      "Run the verify gate, check skill deployment, or inspect execution evidence",
+    verifyExecutionPlanOption:
+      "Read-only preflight of an existing build/Case plan; does not execute tests or report business PASS",
+    verifyRunOption:
+      "With --execution-plan, explicitly execute the frozen command and capture evidence",
+    verifySyncReportOption:
+      "With a matching Case --execution-plan and --run, sync observed Case results into the selected test-report.md",
+    verifyExecutionStatusOption:
+      "Read the selected change's current Case evidence snapshot; PARTIAL is possible and this is not full delivery approval",
     archiveDescription: "Check SuperBridge Flow archive skill deployment",
     statusDescription:
       "Show active managed tasks, SDD changes, and next commands",
@@ -158,7 +171,8 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     updateDescription: "Update Superflow (interactive wizard with no options)",
     doctorDescription:
       "Diagnose installation content and effective Git Hook sources",
-    doctorRuntimeOnlyOption: "Report only this CLI installation and Node identity",
+    doctorRuntimeOnlyOption:
+      "Report only this CLI installation and Node identity",
     hookMigrateDescription:
       "Migrate owned legacy Hook entries safely; preserve custom hooks",
     hookAuditDescription:
@@ -251,8 +265,10 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
       "枚举改动文件、解析路径规则并提供风险提示；实际影响由 Host 判断",
     reviewPrepareOption:
       "生成新的差异、源码快照与报告模板包，不提交或覆盖已有报告",
-    reviewOriginalOption: "配合 --prepare 读取项目根相对原评审，准备 Owner 响应输入",
-    reviewOwnerResponseOption: "配合 --prepare 和 --original-review 绑定实际 Owner 响应，生成新复评模板",
+    reviewOriginalOption:
+      "配合 --prepare 读取项目根相对原评审，准备 Owner 响应输入",
+    reviewOwnerResponseOption:
+      "配合 --prepare 和 --original-review 绑定实际 Owner 响应，生成新复评模板",
     reviewBaseOption: "评审相对 Git 引用的改动",
     reviewPathOption: "评审指定文件",
     reviewReportOption: "核验报告状态与锚点；五维充分性由 Host 判断",
@@ -267,13 +283,20 @@ const CLI_TEXT: Record<Language, CliHelpText> = {
     docsDescription: "执行 docs 门禁并校验交付合同技能 superflow-contracts",
     designDescription: "校验 SuperBridge Flow design 阶段技能部署状态",
     implementDescription: "通过 Coding Ready 门禁后进入执行交接阶段",
+    implementInstructionsOption:
+      "只读返回可做任务、能力与验证引用；不授予实施准入",
+    verifyReuseValidOption:
+      "配合 --run，仅复用校验通过且匹配当前执行输入的回执",
     pipelineDescription:
       "路由 SDD 阶段，或托管实现 Prompt 直到双 Agent 交付终态",
     verifyDescription: "执行 verify 门禁、校验技能部署或查看执行证据",
-    verifyExecutionPlanOption: "只读预检现有构建/Case 计划；不执行测试，不产生业务 PASS",
+    verifyExecutionPlanOption:
+      "只读预检按顺序提供的构建/Case 计划；不执行测试，不产生业务 PASS",
     verifyRunOption: "配合 --execution-plan 显式执行冻结命令并采集证据",
-    verifySyncReportOption: "配合匹配的 Case --execution-plan 和 --run，将实测 Case 结果同步至所选 test-report.md",
-    verifyExecutionStatusOption: "只读查看所选 change 的当前 Case 证据快照；可能为 PARTIAL，不代表完整交付通过",
+    verifySyncReportOption:
+      "配合匹配的 Case --execution-plan 和 --run，将实测 Case 结果同步至所选 test-report.md",
+    verifyExecutionStatusOption:
+      "只读查看所选 change 的当前 Case 证据快照；可能为 PARTIAL，不代表完整交付通过",
     archiveDescription: "校验 SuperBridge Flow archive 阶段技能部署状态",
     statusDescription: "查看当前项目的托管任务、SDD changes 和下一步命令",
     mcpDescription: "安装、移除或检查 Superflow 托管 MCP 集成",

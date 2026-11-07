@@ -83,6 +83,25 @@ not create domain obligations or reduce applicable mandatory verification gates.
 - Implementation agents only copy the block verbatim and verify the hash;
   omissions return to docs
 
+## Tasks format
+
+Slice independently verifiable capabilities, not files or technical layers. Necessary setup
+is ready with the first capability that needs it. Delivers owns the result; Verify/Cases
+reference canonical tests without copying commands or expectations. Investigate missing dependencies.
+
+```markdown
+- [ ] 1.1 Deliver the smallest runnable path and applicable signals
+  - Blocked by: none
+  - Delivers: Invoking the existing entry produces the frozen observable result
+  - Verify: [Required signals](tests.md)
+  - Cases: C1
+- [ ] 1.2 Extend the next consumer after the first capability holds
+  - Blocked by: 1.1
+  - Delivers: The additional consumer meets its frozen scenario
+  - Verify: [Required signals](tests.md)
+  - Cases: C2
+```
+
 ## tests.md
 
 - Case ID

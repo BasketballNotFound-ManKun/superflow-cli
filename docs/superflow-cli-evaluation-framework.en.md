@@ -697,3 +697,36 @@ absolute Node/CLI paths, backs up owned entries and preserves custom modificatio
 Isolated cases cover no consent/decline, bad checksum, cache reuse, execution with
 no PATH Node, literal arguments, owned-alias repair and npm handoff. POSIX terminal
 cancellation ran natively; no Windows-machine execution is claimed.
+
+## Verifiable capability delivery loop (2026-11-06)
+
+The pre-change source is the baseline. External comparisons observed horizontal task progress,
+failed guesses at native workspace instructions, evidence bookkeeping/recapture, and delegation
+that did not shorten the critical path. Strictness alone is not delivery benefit. Owners are
+the existing CLI task navigation, capture and phase skills; no Hook, managed-state or business
+acceptance changes.
+
+Plan: reuse status task graph and canonical Markdown classification for read-only implement
+instructions; reuse capture preflight and original receipt validation for ordered original
+plans and explicit valid reuse; consolidate bilingual build guidance around task outcomes,
+verification references and phase-scoped reading, preserving full independent review. Observe
+RED synthetic cases, then actual command counts: initial build/two Cases, unchanged zero business
+processes, one changed Case reruns alone, changed production rebuilds and reruns affected Cases.
+Bad later plans, unknown outputs and reversed dependencies fail before execution; first failure
+stops subsequent work.
+
+Final results belong to the external full verification summary and actual independent review.
+Synthetic counts and shorter prompts do not prove model speed, token savings or semantic gains.
+Rollback on stale/unexecuted reuse, unknown-output overwrite, cross-change execution, phase
+violations, method counts masquerading as acceptance or omitted independent review. Fix the
+existing owner without weakening gates.
+
+Further source checks reproduced hard-coded contextFiles omitting actual specs/design, arbitrary
+title ID matching disagreeing with coverage first-token identity, and process-local notification
+caches causing three CLI processes to issue three queries through unbound npm. Navigation now
+reuses the manifest and canonical task index; notifications reuse npm runtime/state ownership.
+Cases cover multiple specs, declared project design outside change, source additions/removals and
+failures, exact ID case/punctuation/dependencies, isolated offline process query counts, identity
+changes, failure backoff, concurrency and disabled zero side effects. Unknown inventories never
+silently degrade. Roll back caching if incorrect cross-install reuse or extra query/configuration
+work outweighs benefit; do not add another updater.

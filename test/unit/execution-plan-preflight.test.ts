@@ -206,21 +206,28 @@ describe("execution plan preflight", () => {
     expect(fs.readFileSync(buildFile)).toEqual(original);
     expect(fs.existsSync(path.join(dir, "invoked"))).toBe(false);
   });
-  it("preserves pending dependency and real recapture in either batch order", () => {
+  it("requires forward producer order while preserving pending dependency and real recapture", () => {
     const forward = ["build-plan.json", "case-plan.json"];
     const reverse = [...forward].reverse();
-    for (const plans of [forward, reverse]) {
-      const result = run("--check-execution-plan", plans);
-      expect(result.status, result.stdout + result.stderr).toBe(0);
-      expect(result.stdout).toContain("BUILD_NOT_RUN");
-      assertUntouched();
-    }
+    const result = run("--check-execution-plan", forward);
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout).toContain("BUILD_NOT_RUN");
+    assertUntouched();
+    const reversed = run("--check-execution-plan", reverse);
+    expect(reversed.status, reversed.stdout + reversed.stderr).toBe(2);
+    expect(reversed.stdout).toContain("前序");
+    assertUntouched();
     expect(run("--record-execution", ["build-plan.json"]).status).toBe(0);
-    for (const plans of [forward, reverse])
-      expect(run("--check-execution-plan", plans).status).toBe(0);
+    fs.rmSync(path.join(dir, "invoked"));
+    expect(run("--check-execution-plan", forward).status).toBe(0);
+    expect(run("--check-execution-plan", reverse).status).toBe(2);
+    expect(fs.existsSync(path.join(dir, "invoked"))).toBe(false);
     expect(run("--record-execution", ["build-plan.json"]).status).toBe(0);
     expect(run("--record-execution", ["case-plan.json"]).status).toBe(0);
-    expect(JSON.parse(fs.readFileSync(path.join(dir, "evidence/C1.json"), "utf8")).status).toBe("PASS");
+    expect(
+      JSON.parse(fs.readFileSync(path.join(dir, "evidence/C1.json"), "utf8"))
+        .status,
+    ).toBe("PASS");
   });
   it.each(["source", "plan", "artifact"].flatMap(role =>
     ["json", "stdout.log", "stderr.log", "capture.json", "events.jsonl"].flatMap(suffix =>

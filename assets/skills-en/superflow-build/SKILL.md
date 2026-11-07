@@ -9,223 +9,46 @@ metadata:
   generatedBy: "1.3.1"
 ---
 
-At startup check batch Task/Entry/Case via [main navigation](../superflow/references/implementation-prompt-template.md#execution-navigation). Decouple delivery identity using the [test guide](../superflow/references/test-guide.md#capture-boundaries-without-test-coupling). Repair under the [original/re-review chain](../superflow/references/reviewer-checklist.md#finding-closure), never by rewriting conclusions for formatting.
+# Build one verifiable capability at a time
 
-Implement tasks from an OpenSpec change.
+The current Flow Owner implements authorized work and runs its signals. [Flow Owner](../superflow/references/flow-owner.md) owns continuity and recovery; [test-guide](../superflow/references/test-guide.md#owner-led-test-planning) owns signal selection and evidence; [Reviewer checklist](../superflow/references/reviewer-checklist.md) owns independent review. Read each branch when it is needed, rather than preparing final review paperwork before the first working slice.
 
-## Current independent review and delivery record
+## 1. Read the current work
 
-Read the full [Reviewer checklist](../superflow/references/reviewer-checklist.md).
-Dispatch its readable diff.patch/source-manifest bundle; distinguish FIXED,
-MITIGATED, DEFERRED and NOT_A_DEFECT. Repairs return to the original Reviewer
-or a new isolated Reviewer for actual rereview. Logs do not fix remaining defects.
-For all complete SDD delivery under observed-delivery.v1, test-report.md `## Independent Review`
-contains a `| Report |` table referencing current independent DONE reports. Reports
-bind reviewed source versions through `## Reviewed Sources` and `| Path | SHA-256 |`.
-Changed source requires actual rereview, not rebound historical report hashes.
-Missing reports/current rereview or open blockers remain PARTIAL/Blocked. Retain old
-files only as history or PARTIAL; missing current requirements block until completed.
+Select the explicit change, or resolve ambiguity before acting. For a Superflow change run:
 
-
-## Superflow implementation verification entry
-
-Within the Superflow workflow, before the first task actually read the full
-[test-guide.md](../superflow/references/test-guide.md), then use its
-[Owner-led planning](../superflow/references/test-guide.md#owner-led-test-planning)
-with baseline tests.md and project tests. For the first SDD verification, follow the [first delivery chain](../superflow/references/test-guide.md#first-verification-action):
-check task dependencies and complete actual assertion observations → adapter → capture → current
-report lint before expanding batches. If tests must run early but capture is documented after all
-features, the original document owner repairs ordering and affected review. Do not bypass frozen
-contracts or wait until final independent review to connect capture. Plain OpenSpec follows project rules.
-Owner adds same-goal boundaries/regressions
-from actual diffs/callers/discoveries, executes applicable RED/GREEN and required real
-checks, and completes tasks only with proof. New Case IDs/frozen contexts are maintained
-by the same Owner through contracts/handoff/readiness before continuing, without routine
-approval requests. Never lower expectations/required checks. Missing required environments
-stay blocked. Plain OpenSpec retains project rules.
-
-## Continuous delivery ownership
-
-For authorized ordinary implementation, read [Flow Owner](../superflow/references/flow-owner.md).
-Follow the selected mode through all tasks, verification and repair. At startup,
-each batch selection and returned-work integration use [Owner-led delegation](../superflow/references/flow-owner.md#owner-led-delegation),
-then inspect actual changes/evidence before advancing. Progress updates are
-intermediate; the Owner may implement/test, obtaining required independent views
-through the existing checklist without claiming self-review is independent.
-
-For medium/high risk, record actual dispatch, reviewer identity, reviewed diff,
-report, and finding closure under the Reviewer checklist. Rerun affected signals
-and obtain isolated rereview after implementation changes. Without that capability,
-finish other authorized work, retain PARTIAL, and use the Flow Owner delivery matrix.
-
-**Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
-
-**Steps**
-
-1. **Select the change**
-
-   If a name is provided, use it. Otherwise:
-   - Infer from conversation context if the user mentioned a change
-   - Auto-select if only one active change exists
-   - If ambiguous, run `openspec list --json` to get available changes and use the **AskUserQuestion tool** to let the user select
-
-   Always announce: "Using change: <name>" and how to override (e.g., `$superflow <other>`) .
-
-**Superflow pre-coding gate (before reading apply readiness as permission)**
-
-   For existing documents, apply [contract intake](../superflow/references/document-readiness.md#existing-contract-intake)
-   before admission. Reconcile actual prompts/affected prose; format repair is not document rereview.
-
-
-   Before the first source edit or initial implementation dispatch for a Superflow
-   change, including one with missing `.sdd/state.yaml`, run
-   `superflow check <change> --level coding-ready`. A failure means `Blocked for docs`;
-   return to the existing document owner using
-   [Document Delivery Exit](../superflow/SKILL.md#document-delivery-exit).
-   Do not fall back to native OpenSpec apply readiness or treat missing Superflow
-   documents as coding tasks. A passing OpenSpec status alone is insufficient.
-   When resuming implementation already admitted by a valid receipt, use the
-   existing `superflow-review-coverage.mjs <change-dir>` receipt check without
-   `--check-sources`, as source-edit hooks do. It checks frozen contracts while
-   allowing intended implementation code changes; do not rerun strict document
-   readiness solely because source code changed. Contract drift returns to its
-   document owner for review and a new receipt before the affected work continues.
-
-2. **Check status to understand the schema**
-   ```bash
-   openspec status --change "<name>" --json
-   ```
-   Parse the JSON to understand:
-   - `schemaName`: The workflow being used (e.g., "spec-driven")
-   - Which artifact contains the tasks (typically "tasks" for spec-driven, check status for others)
-
-3. **Get apply instructions**
-
-   ```bash
-   openspec instructions apply --change "<name>" --json
-   ```
-
-   This returns:
-   - `contextFiles`: artifact ID -> array of concrete file paths (varies by schema - could be proposal/specs/design/tasks or spec/tests/implementation/docs)
-   - Progress (total, complete, remaining)
-   - Task list with status
-   - Dynamic instruction based on current state
-
-   **Handle states:**
-   - If `state: "blocked"` (missing artifacts): show message, suggest using openspec-continue-change
-   - If `state: "all_done"`: in Superflow continue to verification and delivery reconciliation; plain OpenSpec follows project closeout.
-   - Otherwise: proceed to implementation
-
-4. **Read context files**
-
-   Read every file path listed under `contextFiles` from the apply instructions output.
-   The files depend on the schema being used:
-   - **spec-driven**: proposal, specs, design, tasks
-   - Other schemas: follow the contextFiles from CLI output
-
-5. **Show current progress**
-
-   Display:
-   - Schema being used
-   - Progress: "N/M tasks complete"
-   - Remaining tasks overview
-   - Dynamic instruction from CLI
-
-6. **Implement tasks (loop until done or blocked)**
-
-   Each iteration recomputes prerequisites from current tasks and actual completion
-   evidence, selecting only unfinished dependency-ready work. Allocate under Owner-led
-   delegation; static batch numbers do not establish independence.
-
-   For each pending task:
-   - Show which task is being worked on
-   - Make the code changes required
-   - Keep changes minimal and focused
-   - Run the task's mandatory baseline plus source-driven strengthened signals; only after they pass, mark the task `- [ ]` → `- [x]`. Select only tasks whose actual predecessors are complete.
-   - Continue to next task
-
-   **Pause if:**
-   - Test detail is unclear → inspect source and existing tests, supplement within the confirmed goal; unresolved business meaning → request the required decision
-   - Implementation reveals a design issue → suggest updating artifacts
-   - Repairable error within authorization → diagnose, repair, and rerun affected signals; actual decision/permission/environment blocker → persist evidence and stop dependent work.
-   - User interrupts
-
-7. **On completion or pause, show status**
-
-   Display:
-   - Tasks completed this session
-   - Overall progress: "N/M tasks complete"
-   - If all implementation tasks are done: run required signals and continue `$superflow-verify`; do not end authorized delivery at checkbox completion.
-   - If paused: explain why and wait for guidance
-
-**Output During Implementation**
-
-```
-## Implementing: <change-name> (schema: <schema-name>)
-
-Working on task 3/7: <task description>
-[...implementation happening...]
-✓ Task complete
-
-Working on task 4/7: <task description>
-[...implementation happening...]
-✓ Task complete
+```sh
+superflow implement <change> --instructions --json
 ```
 
-**Output On Completion**
+This read-only snapshot returns the task frontier, original task lines, declared Delivers/Verify/Case references, canonical paths and admission/resume commands. It neither grants permission nor marks business work complete. Read the returned contextFiles (the existing manifest dynamically lists specs, requirement sources and declared technical design), then the selected task, the main Prompt's canonical links, current tests and recovery evidence. Follow original paths; do not guess native OpenSpec workspace paths or substitute another change.
 
-```
-## Implementation Complete
+Before the first edit or dispatch run `superflow check <change> --level coding-ready`. Resume an admitted implementation with the returned `superflow-review-coverage.mjs <change-dir>` command, without `--check-sources`. Missing or stale contracts remain `Blocked for docs` and return to the existing document owner via [Document Delivery Exit](../superflow/SKILL.md#document-delivery-exit); source edits alone do not require strict document re-admission. A snapshot or OpenSpec readiness never overrides this gate. Existing document intake follows [document-readiness](../superflow/references/document-readiness.md#existing-contract-intake).
 
-**Change:** <change-name>
-**Schema:** <schema-name>
-**Progress:** 7/7 tasks complete ✓
+## 2. Close a runnable slice
 
-### Completed This Session
-- [x] Task 1
-- [x] Task 2
-...
+Choose a dependency-ready task by its observable capability and frozen verification, not its technical layer. Resolve missing dependency or signal references from the canonical contract. Do not invent an execution order or drop required branches. If the approved batch is too broad, complete its smallest runnable path and required signals before widening implementation; keep incomplete tasks unchecked.
 
-Implementation signals complete. Continuing verification, review, repair, and delivery reconciliation.
-```
+Run native verification according to the selected tdd_mode and applicable signals. When RED/GREEN applies, inspect the actual failure before implementation and rerun affected signals. Document-only work and tdd_mode: off do not require RED merely because of this guidance; original mandatory signals still apply. Keep business assertions in native tests; provenance wrappers attach identities to real observations, not a second implementation of business expectations. The [first verification chain](../superflow/references/test-guide.md#first-verification-action) is prepared with the first applicable slice. Repair ordinary failures within authorization, then continue; do not postpone all runtime checks until horizontal layers are finished.
 
-**Output On Pause (Issue Encountered)**
+For capture, reuse the existing ordered plan interface:
 
-```
-## Implementation Paused
-
-**Change:** <change-name>
-**Schema:** <schema-name>
-**Progress:** 4/7 tasks complete
-
-### Issue Encountered
-<description of the issue>
-
-**Options:**
-1. <option 1>
-2. <option 2>
-3. Other approach
-
-What would you like to do?
+```sh
+superflow verify <change> --execution-plan build-plan.json case-plan.json --run --reuse-valid --sync-report
 ```
 
-**Guardrails**
-- Keep going through tasks until done or blocked
-- Always read context files before starting (from the apply instructions output)
-- If task is ambiguous, pause and ask before implementing
-- If implementation reveals a confirmed design/contract gap, return to its document owner; repair ordinary defects within authorization.
-- Keep code changes minimal and scoped to each task
-- Update task checkbox immediately after completing each task
-- Diagnose ordinary errors within authorization; pause only for actual decisions, unavailable prerequisites, user pause, or the existing convergence limit.
-- Use contextFiles from CLI output, don't assume specific file names
+Use plans and commands frozen in the project contract. Preflight checks the whole sequence; explicit run executes it, stopping on failure. Reuse requires current validated raw evidence, sources, artifact, command and environment. Changed input reruns its affected scope; unknown output ownership remains an error. Original attempts stay immutable. Missing, skipped or failed required branches remain PARTIAL; method counts are not Case counts. Read [capture details](../superflow/references/test-guide.md#capture-boundaries-without-test-coupling) when integrating or diagnosing capture, not as a separate test framework to reinvent.
 
-**Fluid Workflow Integration**
+Mark a task complete only when its required signals hold. Re-read the work snapshot after integration. A process update is followed by the next authorized task, not a request to continue.
 
-This skill supports the "actions on a change" model:
+## 3. Review and deliver
 
-- **Can be invoked anytime**: Before all artifacts are done (if tasks exist), after partial implementation, interleaved with other actions
-- **Allows artifact updates**: If implementation reveals design issues, suggest updating artifacts - not phase-locked, work fluidly
+When a readable diff and named risk exist, use the [Reviewer checklist](../superflow/references/reviewer-checklist.md), including its report shape, dispatch identity, source manifest and finding closure. Independent review may begin while other verification is being prepared. Implementation delegation is not independent review; inspect real returns and unresolved concerns. Preserve original findings, repair within scope, rerun affected signals and obtain actual re-review; do not rewrite reports or rebind old hashes.
 
-### Phase handoff
+Complete required integration/regression and reconcile tasks, Case branches, current evidence and resource cleanup. Keep `workflowPolicy: observed-delivery.v1`, actual `runner-captured.v1` receipts and current Independent Review / Reviewed Sources bindings. All implementation checkboxes complete still means verification and delivery remain: run the existing implement guard, read the actual next verify skill and run its CHECK commands. Follow [phase handoff and final package](../superflow/references/flow-owner.md#phase-handoff-and-final-package). No summary, copied evidence or green structural check replaces semantic acceptance.
 
-At implementation completion, follow [phase handoff and final package](../superflow/references/flow-owner.md#phase-handoff-and-final-package): run the implement guard, actually read the returned verify skill, and continue its final check before claiming delivery.
+## Continuity and stopping
+
+Read [Owner-led delegation](../superflow/references/flow-owner.md#owner-led-delegation) at actual dispatch decisions. Shared files, test outputs and fixtures require isolation or sequential execution; waiting on a child does not justify repeated polling or preparing another copy of its context. Carry a compact recovery point in the existing report; valid evidence is reused.
+
+Continue repairable errors and all dependency-ready authorized work. Pause dependent work only for user interruption, a real business decision, unavailable permission/environment/quota, explicit manual boundary or existing non-convergence limit. Preserve selected build_mode/isolation/tdd_mode/review_mode; never fall back from a failed Superflow gate to native OpenSpec. Git, archive and publishing follow their separate existing authorization.

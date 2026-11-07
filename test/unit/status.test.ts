@@ -20,13 +20,13 @@ describe("commands/status", () => {
     fs.writeFileSync(
       tasks,
       [
-        "- [ ] [local_required] P00 Create station credential storage",
+        "- [ ] P00 [local_required] Create station credential storage",
         "  - Blocked by: none",
-        "- [ ] [local_required] P01 Route partner calls by station",
+        "- [ ] P01 [local_required] Route partner calls by station",
         "  - Blocked by: P00",
-        "- [ ] [local_required] P02 Update management page",
+        "- [ ] P02 [local_required] Update management page",
         "  - Blocked by: P00",
-        "- [ ] [environment_required] P03 Verify two-station callbacks",
+        "- [ ] P03 [environment_required] Verify two-station callbacks",
         "  - Blocked by: P01, P02",
         "",
       ].join("\n"),
@@ -39,7 +39,7 @@ describe("commands/status", () => {
         tasks,
         fs
           .readFileSync(tasks, "utf8")
-          .replace("- [ ] [local_required] P00", "- [x] [local_required] P00"),
+          .replace("- [ ] P00 [local_required]", "- [x] P00 [local_required]"),
       );
       const afterStorage = (await collectStatus(root)).changes[0];
       expect(afterStorage.taskFrontier).toEqual(["P01", "P02"]);
@@ -64,7 +64,7 @@ describe("commands/status", () => {
         fs
           .readFileSync(tasks, "utf8")
           .replace("Blocked by: P99", "Blocked by: P03")
-          .replace("- [x] [local_required] P00", "- [ ] [local_required] P00"),
+          .replace("- [x] P00 [local_required]", "- [ ] P00 [local_required]"),
       );
       const cyclic = (await collectStatus(root, "en")).changes[0];
       expect(cyclic.taskFrontier).toEqual([]);

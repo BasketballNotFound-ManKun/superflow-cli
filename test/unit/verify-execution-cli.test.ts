@@ -195,7 +195,11 @@ describe("execution feedback through the existing verify CLI", () => {
     "rejects a Case plan belonging to another change before any Python operation: %s",
     (...args) => {
       const f = fixture("zh", true);
-      f.savePlan({ kind: "case", changeDir: "openspec/changes/other-change", sources: ["build.cjs"] });
+      f.savePlan({
+        kind: "case",
+        changeDir: "openspec/changes/other-change",
+        sources: ["build.cjs"],
+      });
       const result = f.run(
         "sample-change",
         "--execution-plan",
@@ -242,7 +246,11 @@ describe("execution feedback through the existing verify CLI", () => {
     const f = fixture("en", true);
     const alias = path.join(f.root, "selected-alias");
     fs.symlinkSync(f.change, alias, "dir");
-    f.savePlan({ kind: "case", changeDir: "selected-alias", sources: ["build.cjs"] });
+    f.savePlan({
+      kind: "case",
+      changeDir: "selected-alias",
+      sources: ["build.cjs"],
+    });
     const result = f.run(
       f.change,
       "--execution-plan",
@@ -382,6 +390,81 @@ describe("execution feedback through the existing verify CLI", () => {
     expect(calls).not.toMatch(
       /--record-execution|--check-execution-plan|--execution-status|--sync-report/,
     );
+    expect(fs.existsSync(path.join(f.root, "executed.txt"))).toBe(false);
+  });
+
+  it("forwards ordered plans and explicit reuse together through the actual CLI", () => {
+    const f = fixture("en", true);
+    const casePlan = path.join(f.root, "case-plan.json");
+    fs.writeFileSync(
+      casePlan,
+      JSON.stringify({
+        kind: "case",
+        changeDir: "openspec/changes/sample-change",
+      }),
+    );
+    const result = f.run(
+      "sample-change",
+      "--execution-plan",
+      f.plan,
+      casePlan,
+      "--run",
+      "--reuse-valid",
+      "--sync-report",
+    );
+    expect(result.status, result.stderr).toBe(0);
+    const calls = fs
+      .readFileSync(f.calls, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(calls.at(-1)).toEqual(
+      expect.arrayContaining([
+        "--record-execution",
+        f.plan,
+        casePlan,
+        "--reuse-valid",
+        "--sync-report",
+        path.join(f.change, "test-report.md"),
+      ]),
+    );
+    expect(calls.at(-1).indexOf(f.plan)).toBeLessThan(
+      calls.at(-1).indexOf(casePlan),
+    );
+  });
+
+  it("rejects a later cross-change plan before invoking any executor", () => {
+    const f = fixture("en", true);
+    const casePlan = path.join(f.root, "other-plan.json");
+    fs.writeFileSync(
+      casePlan,
+      JSON.stringify({
+        kind: "case",
+        changeDir: "openspec/changes/other-change",
+      }),
+    );
+    const result = f.run(
+      "sample-change",
+      "--execution-plan",
+      f.plan,
+      casePlan,
+      "--run",
+    );
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("plan.changeDir must match");
+    expect(fs.existsSync(path.join(f.root, "executed.txt"))).toBe(false);
+  });
+
+  it("does not treat a reuse request as permission to execute", () => {
+    const f = fixture("en", true);
+    const result = f.run(
+      "sample-change",
+      "--execution-plan",
+      f.plan,
+      "--reuse-valid",
+    );
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("--run");
     expect(fs.existsSync(path.join(f.root, "executed.txt"))).toBe(false);
   });
 });

@@ -9,214 +9,46 @@ metadata:
   generatedBy: "1.3.1"
 ---
 
-开工按[主导航](../superflow/references/implementation-prompt-template.md#execution-navigation)核本批Task/Entry/Case，测试按[test-guide](../superflow/references/test-guide.md#capture-boundaries-without-test-coupling)解耦交付身份。已有独评问题沿[原报告和复评链](../superflow/references/reviewer-checklist.md#finding-closure)整改，不改原结论过格式。
+# 每次交付一块可验证的业务能力
 
-Implement tasks from an OpenSpec change.
+当前Flow Owner负责已授权实施和信号执行。[Flow Owner](../superflow/references/flow-owner.md)持有持续责任与恢复，[test-guide](../superflow/references/test-guide.md#owner-led-test-planning)持有验证选择与证据，[Reviewer清单](../superflow/references/reviewer-checklist.md)持有独立评审。按阶段读取需要的分支，首条能力尚未跑通时不预先准备全部终验文书。
 
-## 当前独立评审与交付记录
+## 1. 读取当前工作
 
-完整读取 [Reviewer 清单](../superflow/references/reviewer-checklist.md)，按其中可读
-diff.patch/source-manifest 派发，区分 FIXED/MITIGATED/DEFERRED/NOT_A_DEFECT；
-整改后由原 Reviewer 或新隔离 Reviewer 实际复评。补日志不关闭仍存在的错误行为。
-所有完整 SDD 交付（统一 observed-delivery.v1）在 test-report.md `## Independent Review` 下
-用 `| Report |` 表引用当前独立 DONE 报告，报告在 `## Reviewed Sources` 的
-`| Path | SHA-256 |` 表绑定已审源码。源码变更后真实复评，不重绑历史报告的 hash；
-缺报告/当前复评或未决阻断项保持 PARTIAL/Blocked。旧文件仅保留为历史或 PARTIAL，
-缺当前要求时阻断补齐。
+使用明确的change；歧义先解决。Superflow变更运行：
 
-
-## Superflow 实施验证入口
-
-在 Superflow 工作流中，实施首个任务前实际完整读取
-[test-guide.md](../superflow/references/test-guide.md)，按其中的
-[测试决策方法](../superflow/references/test-guide.md#owner-led-test-planning)加载tests.md基线与项目测试。
-首次 SDD 验证按[首批交付链](../superflow/references/test-guide.md#first-verification-action)
-核任务依赖并完成“真实断言观测→adapter→capture→当前报告 lint”，再扩大批次。
-若测试要早跑但采集能力被文档放到所有功能之后，回原文档 owner 修顺序与受影响评审，
-不绕开冻结合同，也不等最终独评才首次接线。普通 OpenSpec 继续沿项目规则。
-Owner根据实际diff、调用者和新发现自主补同目标边界/回归，执行适用RED/GREEN与必要真实验证，
-证据成立才勾选。新增Case/冻结上下文变化由同一Owner维护contracts/handoff及相关准入证据后
-继续，不例行问是否补测；不降低原预期或必测。必需环境缺失保留阻塞。普通OpenSpec沿项目规则。
-
-## 持续交付责任
-
-普通已授权实施必须先读取 [Flow Owner](../superflow/references/flow-owner.md)。
-按所选执行模式持续覆盖全部任务、验证和整改；开工、每批选择与返回整合按
-[Owner 自主委派](../superflow/references/flow-owner.md#owner-led-delegation)权衡，
-核实际改动与证据后再推进。阶段进度用过程消息汇报后继续；当前 Owner 可编码和测试，
-独立评审按现有清单执行，不能用自评冒充。
-
-中高风险按 Reviewer 清单记录实际派发、身份、评审 diff、报告及 finding 闭环。
-评审后的实现变更按影响重测并交隔离 Reviewer 复评；无此能力时完成其余授权工作，
-保留 PARTIAL，交付沿 Flow Owner 事实矩阵对账。
-
-**Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
-
-**Steps**
-
-1. **Select the change**
-
-   If a name is provided, use it. Otherwise:
-   - Infer from conversation context if the user mentioned a change
-   - Auto-select if only one active change exists
-   - If ambiguous, run `openspec list --json` to get available changes and use the **AskUserQuestion tool** to let the user select
-
-   Always announce: "Using change: <name>" and how to override (e.g., `$superflow <other>`) .
-
-**Superflow pre-coding gate (before reading apply readiness as permission)**
-
-   已有文档实施先执行[现有合同接入](../superflow/references/document-readiness.md#existing-contract-intake)，
-   收敛实际主/批次导航和受影响正文后再核准入；不把格式修补当实际文档复评。
-
-
-   Before the first source edit or initial implementation dispatch for a Superflow
-   change, including one with missing `.sdd/state.yaml`, run
-   `superflow check <change> --level coding-ready`. A failure means `Blocked for docs`;
-   return to the existing document owner using
-   [Document Delivery Exit](../superflow/SKILL.md#document-delivery-exit).
-   Do not fall back to native OpenSpec apply readiness or treat missing Superflow
-   documents as coding tasks. A passing OpenSpec status alone is insufficient.
-   When resuming implementation already admitted by a valid receipt, use the
-   existing `superflow-review-coverage.mjs <change-dir>` receipt check without
-   `--check-sources`, as source-edit hooks do. It checks frozen contracts while
-   allowing intended implementation code changes; do not rerun strict document
-   readiness solely because source code changed. Contract drift returns to its
-   document owner for review and a new receipt before the affected work continues.
-
-2. **Check status to understand the schema**
-   ```bash
-   openspec status --change "<name>" --json
-   ```
-   Parse the JSON to understand:
-   - `schemaName`: The workflow being used (e.g., "spec-driven")
-   - Which artifact contains the tasks (typically "tasks" for spec-driven, check status for others)
-
-3. **Get apply instructions**
-
-   ```bash
-   openspec instructions apply --change "<name>" --json
-   ```
-
-   This returns:
-   - `contextFiles`: artifact ID -> array of concrete file paths (varies by schema - could be proposal/specs/design/tasks or spec/tests/implementation/docs)
-   - Progress (total, complete, remaining)
-   - Task list with status
-   - Dynamic instruction based on current state
-
-   **Handle states:**
-   - If `state: "blocked"` (missing artifacts): show message, suggest using openspec-continue-change
-   - If `state: "all_done"`: in Superflow continue to verification and delivery reconciliation; plain OpenSpec follows project closeout.
-   - Otherwise: proceed to implementation
-
-4. **Read context files**
-
-   Read every file path listed under `contextFiles` from the apply instructions output.
-   The files depend on the schema being used:
-   - **spec-driven**: proposal, specs, design, tasks
-   - Other schemas: follow the contextFiles from CLI output
-
-5. **Show current progress**
-
-   Display:
-   - Schema being used
-   - Progress: "N/M tasks complete"
-   - Remaining tasks overview
-   - Dynamic instruction from CLI
-
-6. **Implement tasks (loop until done or blocked)**
-
-   每轮从当前 tasks 与实际完成证据重算前置依赖，只选择已满足前置的未完成任务；
-   沿 Owner 委派方法分工，不把静态批次编号当可并行证明。
-
-   For each pending task:
-   - Show which task is being worked on
-   - Make the code changes required
-   - Keep changes minimal and focused
-   - Run the task's mandatory baseline plus source-driven strengthened signals; only after they pass, mark the task `- [ ]` → `- [x]`. Select only tasks whose actual predecessors are complete.
-   - Continue to next task
-
-   **Pause if:**
-   - Test detail is unclear → inspect source and existing tests, supplement within the confirmed goal; unresolved business meaning → request the required decision
-   - Implementation reveals a design issue → suggest updating artifacts
-   - Repairable error within authorization → diagnose, repair, and rerun affected signals; actual decision/permission/environment blocker → persist evidence and stop dependent work.
-   - User interrupts
-
-7. **On completion or pause, show status**
-
-   Display:
-   - Tasks completed this session
-   - Overall progress: "N/M tasks complete"
-   - If all implementation tasks are done: run required signals and continue `$superflow-verify`; do not end authorized delivery at checkbox completion.
-   - If paused: explain why and wait for guidance
-
-**Output During Implementation**
-
-```
-## Implementing: <change-name> (schema: <schema-name>)
-
-Working on task 3/7: <task description>
-[...implementation happening...]
-✓ Task complete
-
-Working on task 4/7: <task description>
-[...implementation happening...]
-✓ Task complete
+```sh
+superflow implement <change> --instructions --json
 ```
 
-**Output On Completion**
+只读快照返回任务frontier、原文行号、已声明的Delivers/Verify/Case引用、canonical路径与准入/续跑命令；它不授予实施权限，也不证明业务已完成。先读取返回的contextFiles（沿现有manifest动态列出规格、需求来源与已声明详设），再核当前任务、主Prompt的canonical links、tests与恢复证据。沿原路径消费，不猜原生OpenSpec工作区，也不替换成其他change。
 
-```
-## Implementation Complete
+首次编辑或实施派发前执行 `superflow check <change> --level coding-ready`。已有准入的实施续跑使用返回的 `superflow-review-coverage.mjs <change-dir>`，不加 `--check-sources`；源码正常变化不重复严格文档准入。合同缺失或漂移保持 `Blocked for docs`，沿[Document Delivery Exit](../superflow/SKILL.md#document-delivery-exit)回原文档owner；快照和OpenSpec就绪不覆盖门禁。已有合同接入沿[document-readiness](../superflow/references/document-readiness.md#existing-contract-intake)。
 
-**Change:** <change-name>
-**Schema:** <schema-name>
-**Progress:** 7/7 tasks complete ✓
+## 2. 跑通一条能力
 
-### Completed This Session
-- [x] Task 1
-- [x] Task 2
-...
+按可观察交付结果与冻结验证选择依赖就绪任务，不按技术层逐层铺开。缺依赖或信号引用时核canonical合同，不猜顺序、不删必测。已批准批次较宽时，先闭合其中最小可运行路径及必测信号，再扩大实现；未闭环任务保持未勾选。
 
-Implementation signals complete. Continuing verification, review, repair, and delivery reconciliation.
-```
+按已选tdd_mode与适用信号执行项目原生验证；需要RED/GREEN时先核真实失败，再实现并重跑受影响信号。纯文档和tdd_mode: off不因此强制RED，原必测仍须成立。业务断言留在原生测试；来源wrapper给真实观测附身份，不另实现一套业务预期。[首批验证链](../superflow/references/test-guide.md#first-verification-action)随首条适用能力准备。普通失败在授权内修复后继续，不把真实运行验证全部推迟到横向代码铺完。
 
-**Output On Pause (Issue Encountered)**
+采集复用现有顺序计划入口：
 
-```
-## Implementation Paused
-
-**Change:** <change-name>
-**Schema:** <schema-name>
-**Progress:** 4/7 tasks complete
-
-### Issue Encountered
-<description of the issue>
-
-**Options:**
-1. <option 1>
-2. <option 2>
-3. Other approach
-
-What would you like to do?
+```sh
+superflow verify <change> --execution-plan build-plan.json case-plan.json --run --reuse-valid --sync-report
 ```
 
-**Guardrails**
-- Keep going through tasks until done or blocked
-- Always read context files before starting (from the apply instructions output)
-- If task is ambiguous, pause and ask before implementing
-- If implementation reveals a confirmed design/contract gap, return to its document owner; repair ordinary defects within authorization.
-- Keep code changes minimal and scoped to each task
-- Update task checkbox immediately after completing each task
-- Diagnose ordinary errors within authorization; pause only for actual decisions, unavailable prerequisites, user pause, or the existing convergence limit.
-- Use contextFiles from CLI output, don't assume specific file names
+计划和命令来自项目冻结合同。先整体预检，显式run后顺序执行，首个失败即停。复用须核当前原始证据、sources、产物、命令与环境；输入变化重跑受影响范围，未知输出所有权仍报错，原attempt不可变。缺失/skip/失败分支保持PARTIAL，方法数不冒Case数。接线或诊断采集时才读[capture细则](../superflow/references/test-guide.md#capture-boundaries-without-test-coupling)，不把它当作每个任务都要重新实现的测试框架。
 
-**Fluid Workflow Integration**
+必测信号成立才勾选任务；整合后重读工作快照。阶段进度用过程消息，随后继续下一条已授权任务，不以汇报结束索要继续。
 
-This skill supports the "actions on a change" model:
+## 3. 评审与交付
 
-- **Can be invoked anytime**: Before all artifacts are done (if tasks exist), after partial implementation, interleaved with other actions
-- **Allows artifact updates**: If implementation reveals design issues, suggest updating artifacts - not phase-locked, work fluidly
+可读diff和命名风险具备时，实际读取[Reviewer清单](../superflow/references/reviewer-checklist.md)，按原报告形状、派发身份、source manifest与finding closure执行；其他验证准备期间即可取得独立视角。实施委派不替代独评，核真实返回与Concerns。原finding保留，合同内修复、受影响重测并实际复评，不改报告结论或重绑旧hash。
 
-### Phase handoff
+完成必需整合/回归，对账任务、Case分支、当前证据和清理。保持 `workflowPolicy: observed-delivery.v1`、实际 `runner-captured.v1` 回执及当前Independent Review / Reviewed Sources绑定。任务全勾不等于交付：运行既有implement guard，实际读取next返回的verify技能并执行CHECK，按[阶段承接与最终交付包](../superflow/references/flow-owner.md#phase-handoff-and-final-package)收尾。摘要、交付副本或结构检查不能代替语义验收。
 
-实施完成按[阶段承接与最终交付包](../superflow/references/flow-owner.md#phase-handoff-and-final-package)运行 implement guard，实际读取返回的 verify 技能并继续最终检查，再给交付结论。
+## 连续执行与停止
+
+真正分工时按[Owner自主委派](../superflow/references/flow-owner.md#owner-led-delegation)权衡；共享文件、测试输出与fixture须隔离或串行。等待子代理不重复轮询、不另备一份相同上下文。恢复点留在原报告，复用尚有效证据。
+
+持续修复普通错误并完成依赖就绪的授权工作；只有用户中断、真实业务取舍、权限/环境/额度不可得、显式手动边界或既有不收敛限制才停止依赖工作。保留已选build_mode/isolation/tdd_mode/review_mode，Superflow门禁失败不回退原生OpenSpec。Git、归档与发布沿各自已有授权。

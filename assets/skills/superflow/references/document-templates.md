@@ -102,7 +102,10 @@
 风险评估（并发、性能、兼容性）
 ```
 
-## Tasks 格式
+## Tasks format
+
+按可独立验证的能力切片，不按文件或技术层分票。必要准备随首次需要它的能力就绪；
+Delivers持有结果，Verify/Cases只引用tests的唯一信号，不复制预期或命令。缺依赖先调查。
 
 ```markdown
 # Tasks: <功能名称>
@@ -117,15 +120,19 @@
   新建、追加、重排或改写 SQL。发现遗漏退回 `$superflow-contracts`
 - 不需要 SQL 的任务也需写明"本任务不新增 SQL，但开始前仍需核查依赖表结构是否已满足设计"
 
-## 1. Requirement A 实现
-- [ ] 1.1 修改 `FilePath.java`，在 `methodName()` 中增加 X 逻辑
+## 1. Requirement A 最小可用路径
+- [ ] 1.1 打通最小可运行路径及其适用验证
   - 源码锚点：`FilePath.java:line-start-line-end`
-  - 验收标准：调用 Y 接口后，Z 状态变为 W
+  - Delivers: 调用 Y 入口后，Z 状态变为 W
+  - Verify: [已冻结必测信号](tests.md)
+  - Cases: C1
   - 冻结 SQL：`release-sql.md` → `{target_sql_path}`，仅原样复制并核对 `sql_sha256`（或"本任务不新增 SQL，但开始前仍需核查依赖表结构"）
   - blocked by: 无
-- [ ] 1.2 修改 `FilePath2.java`，调整 `methodName2()` 返回值
+- [ ] 1.2 在首条能力成立后扩展下一条使用路径
   - 源码锚点：`FilePath2.java:line-start-line-end`
-  - 验收标准：单元测试通过
+  - Delivers: 新调用方的可观察结果符合已冻结场景
+  - Verify: [已冻结必测信号](tests.md)
+  - Cases: C2
   - 冻结 SQL：`release-sql.md` → `{target_sql_path}`，仅原样复制并核对 `sql_sha256`
   - blocked by: 1.1
 ```

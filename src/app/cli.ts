@@ -157,6 +157,8 @@ program
 program
   .command("implement [change]")
   .description(helpText.implementDescription)
+  .option("--instructions", helpText.implementInstructionsOption)
+  .option("--json", helpText.jsonOption)
   .option("--agent <agent>", helpText.agentOption, "both")
   .action(async (change, options) => {
     const { implementCommand } = await import("./commands/implement.js");
@@ -246,7 +248,8 @@ program
   .command("verify [change]")
   .description(helpText.verifyDescription)
   .option("--agent <agent>", helpText.agentOption, "both")
-  .option("--execution-plan <PLAN>", helpText.verifyExecutionPlanOption)
+  .option("--execution-plan <PLAN...>", helpText.verifyExecutionPlanOption)
+  .option("--reuse-valid", helpText.verifyReuseValidOption)
   .option("--run", helpText.verifyRunOption)
   .option("--sync-report", helpText.verifySyncReportOption)
   .option("--execution-status", helpText.verifyExecutionStatusOption)

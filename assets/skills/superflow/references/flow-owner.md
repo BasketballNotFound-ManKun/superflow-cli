@@ -43,9 +43,11 @@ state 脚本推进 SDD，test-guide 定义验证分层，reviewer-checklist 定�
 ## 开工与恢复
 
 1. 读取项目规则、当前工作区、基线及未跟踪文件；区分本任务与他人改动。
-2. 已有 SDD 时运行 `superflow-state.sh recover <change-dir>` 与 `next`，读取冻结
-   handoff、实现 Prompt、tasks.md、tests.md 和 test-report.md。首次实施必须通过
-   Coding Ready；已获准续跑按 build 的 receipt 检查，合同漂移回对应文档 owner。
+2. 已有SDD时用 `superflow implement <change> --instructions --json` 取得当前任务原文、
+   frontier、模式与验证引用，沿其路径读取冻结handoff、主Prompt、tasks/tests与当前报告。
+   快照不代表准入或验收，不另造进度文件。首次实施通过Coding Ready；已准入续跑用
+   返回的receipt检查。实际阶段切换或未决运行恢复时再用 `recover` / `next`，不为每个
+   任务重复三份等价状态查询。合同漂移回对应文档owner。
 3. 保留已选 build_mode、隔离方式和用户边界。新普通 SDD 在设计确定后用现有
    `superflow-state.sh set <change-dir> build_mode owner` 记录当前 Agent 负责执行；
    同时记录实际 isolation、tdd_mode、review_mode，不伪称已派发子代理。
@@ -54,8 +56,8 @@ state 脚本推进 SDD，test-guide 定义验证分层，reviewer-checklist 定�
    恢复点写入同目录 test-report.md，不能修改已批准步骤或追加内容使摘要失效。裸任务先由
    既有路由判定范围，不能因称为 Owner 就跳过 quick 准入或必要 SDD 文档。
 
-完整读取当前阶段 SKILL.md 与其必读 references，再执行；Flow Owner 是持续职责合同，
-不能代替 build/verify 或其他阶段全文。实施/评审前完整读取
+实际读取当前阶段 SKILL.md；references按当前验证、采集或评审分支加载，原必需合同不跳过。
+Flow Owner不能代替build/verify阶段正文。准备独立评审时完整读取
 [Reviewer 清单](reviewer-checklist.md)，实际派发与复评按其可读包执行。
 
 恢复/整合时读取 `recover`/`next` 返回的 `EXECUTION` 实测快照；缺证据按
@@ -88,13 +90,15 @@ state 脚本推进 SDD，test-guide 定义验证分层，reviewer-checklist 定�
 ## 连续执行循环
 
 ```text
-读取当前合同/进度 → 选择依赖已完成的任务 → 实施与适用验证
+读取当前合同/进度 → 选择下一块可验证能力 → 原生信号/最小实现/验证
        ↑                                  ↓
        └──── 有效 finding：整改、重测 ← 独立核验与代码评审
                                           ↓
                                 门禁与剩余项对账 → 交付
 ```
 
+- 任务以原文Delivers与Verify/Case引用定义可观察结果；先跑通最小业务纵向链再扩展，
+  纯函数或文档按其适用信号验证，不强制应用/HTTP。窄信号不取消必测分支或最终整合。
 - 循环覆盖用户已授权的全部任务。只有当前任务所需信号成立才勾选；验证失败的任务
   保留未完成。重算真实前置依赖，不跳过依赖或把未做的本地代码改成外部待办。
 - 测试失败、配置错误、已定位的代码缺陷和报告格式问题，先在授权范围内诊断修复、

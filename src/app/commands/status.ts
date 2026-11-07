@@ -7,6 +7,8 @@ import {
 } from "fs";
 import { resolveChangesRoot } from "../../domains/config/planning-home.js";
 import path from "path";
+import { execFileSync } from "node:child_process";
+import { ASSETS_DIR } from "../../platform/assets.js";
 import { t } from "../../domains/config/i18n.js";
 import { resolveRuntimeLanguage } from "../../domains/config/cli-help.js";
 import { managedText } from "../../domains/managed-work/i18n.js";
@@ -164,7 +166,7 @@ function fileExists(changeDir: string, file: string): boolean {
   return existsSync(path.join(changeDir, file));
 }
 
-function parseSimpleYaml(content: string): Record<string, string> {
+export function parseSimpleYaml(content: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const line of content.split(/\r?\n/)) {
     if (!line.trim() || line.trimStart().startsWith("#")) continue;
@@ -175,78 +177,162 @@ function parseSimpleYaml(content: string): Record<string, string> {
   return result;
 }
 
-interface TaskProgress {
+export interface TaskCard {
+  id: string;
+  title: string;
+  line: number;
+  done: boolean;
+  blockedBy: string[];
+  declared: boolean;
+  delivers: string | null;
+  verification: string | null;
+  cases: string[];
+}
+
+export interface TaskProgress {
   done: number;
   total: number;
   frontier: string[];
   issues: string[];
+  tasks: TaskCard[];
 }
 
-const TASK_ID = /\b(?:T-\d+|P\d+|\d+(?:\.\d+)*)\b/i;
-const TASK_IDS = /\b(?:T-\d+|P\d+|\d+(?:\.\d+)*)\b/gi;
+const TASK_ID = /^(?:T-\d+|P\d+|\d+(?:\.\d+)*)$/i;
 
-function readTasks(tasksPath: string, language: Language): TaskProgress {
+export function readTasks(tasksPath: string, language: Language): TaskProgress {
   if (!existsSync(tasksPath)) {
-    return { done: 0, total: 0, frontier: [], issues: [] };
+    return { done: 0, total: 0, frontier: [], issues: [], tasks: [] };
   }
-  const lines = readFileSync(tasksPath, "utf-8").split(/\r?\n/);
-  const entries: Array<{
-    id: string;
-    done: boolean;
-    blockedBy: string[];
-    declared: boolean;
-  }> = [];
+  let lines: string[];
+  let indexed: Map<number, Pick<TaskCard, "id" | "title" | "line" | "done">>;
+  try {
+    const body = JSON.parse(
+      execFileSync(
+        "python3",
+        [
+          path.join(ASSETS_DIR, "scripts/superflow-test-report-lint.py"),
+          "--markdown-body",
+          tasksPath,
+        ],
+        { encoding: "utf8" },
+      ),
+    );
+    if (body.ambiguous) throw new Error("Ambiguous tasks Markdown");
+    lines = body.lines;
+    indexed = new Map(body.tasks.map((task: TaskCard) => [task.line, task]));
+  } catch (error) {
+    return {
+      done: 0,
+      total: 0,
+      frontier: [],
+      tasks: [],
+      issues: [String((error as Error).message)],
+    };
+  }
+  const entries: TaskCard[] = [];
+  const issues: string[] = [];
   let current: (typeof entries)[number] | undefined;
+  let currentIndent = -1;
   let done = 0;
   let total = 0;
   let hasDependencyMetadata = false;
-  for (const line of lines) {
-    const checkbox = /^\s*-\s*\[([ xX])\]\s*(.*)$/.exec(line);
-    if (checkbox) {
+  for (const [index, line] of lines.entries()) {
+    const task = indexed.get(index + 1);
+    if (task) {
       total += 1;
-      const completed = checkbox[1].toLowerCase() === "x";
+      const completed = task.done;
       if (completed) done += 1;
-      const id = TASK_ID.exec(checkbox[2])?.[0].toUpperCase() ?? "";
-      current = { id, done: completed, blockedBy: [], declared: false };
+      const id = task.id;
+      current = {
+        id,
+        title: task.title,
+        line: index + 1,
+        done: completed,
+        blockedBy: [],
+        declared: false,
+        delivers: null,
+        verification: null,
+        cases: [],
+      };
+      currentIndent = line.length - line.trimStart().length;
       entries.push(current);
       continue;
     }
-    const dependency = /^\s*-\s*(?:\*\*)?Blocked by(?:\*\*)?\s*:\s*(.*)$/i.exec(line);
+    if (line.trim() && line.length - line.trimStart().length <= currentIndent) {
+      current = undefined;
+      currentIndent = -1;
+    }
+    const metadata = /^\s*-\s*(Delivers|Verify|Cases):\s*(.+)$/i.exec(line);
+    if (current && metadata) {
+      const field = metadata[1].toLowerCase();
+      if (field === "delivers") current.delivers = metadata[2].trim();
+      if (field === "verify") current.verification = metadata[2].trim();
+      if (field === "cases")
+        current.cases = metadata[2]
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+    }
+    const dependency = /^\s*-\s*(?:\*\*)?Blocked by(?:\*\*)?\s*:\s*(.*)$/i.exec(
+      line,
+    );
     if (current && dependency) {
       hasDependencyMetadata = true;
       current.declared = true;
-      current.blockedBy = [...dependency[1].matchAll(TASK_IDS)]
-        .map((match) => match[0].toUpperCase());
+      const value = dependency[1].trim();
+      if (
+        !/^(none|无)$/i.test(value) &&
+        value
+          .split(",")
+          .some((id) => !/^(?:T-\d+|P\d+|\d+(?:\.\d+)*)$/i.test(id.trim()))
+      ) {
+        issues.push(
+          language === "en"
+            ? `${current.id || "Task"} has invalid dependency metadata: ${value}`
+            : `${current.id || "任务"} 的依赖声明无效：${value}`,
+        );
+      }
+      current.blockedBy = /^(none|无)$/i.test(value)
+        ? []
+        : value.split(",").map((id) => id.trim());
     }
   }
-  if (!hasDependencyMetadata) return { done, total, frontier: [], issues: [] };
+  if (!hasDependencyMetadata)
+    return { done, total, frontier: [], issues: [], tasks: entries };
 
-  const issues: string[] = [];
   const byId = new Map<string, (typeof entries)[number]>();
   for (const entry of entries) {
-    if (!entry.id) {
-      issues.push(language === "en"
-        ? "Task graph contains a checkbox without an ID"
-        : "任务图中有未标注编号的 checkbox");
+    if (!TASK_ID.test(entry.id)) {
+      issues.push(
+        language === "en"
+          ? "Task graph requires an ID as the first token (T-01, P01 or 1.1)"
+          : "任务图需以编号为首个字段（T-01、P01 或 1.1）",
+      );
     } else if (byId.has(entry.id)) {
-      issues.push(language === "en"
-        ? `Duplicate task ID: ${entry.id}`
-        : `任务 ID 重复: ${entry.id}`);
+      issues.push(
+        language === "en"
+          ? `Duplicate task ID: ${entry.id}`
+          : `任务 ID 重复: ${entry.id}`,
+      );
     } else {
       byId.set(entry.id, entry);
     }
     if (!entry.declared) {
-      issues.push(language === "en"
-        ? `${entry.id || "Task"} lacks Blocked by metadata`
-        : `${entry.id || "任务"} 缺少 Blocked by 元数据`);
+      issues.push(
+        language === "en"
+          ? `${entry.id || "Task"} lacks Blocked by metadata`
+          : `${entry.id || "任务"} 缺少 Blocked by 元数据`,
+      );
     }
   }
   for (const entry of entries) {
     for (const predecessor of entry.blockedBy) {
       if (!byId.has(predecessor)) {
-        issues.push(language === "en"
-          ? `${entry.id} references missing predecessor ${predecessor}`
-          : `${entry.id} 引用了不存在的前置任务 ${predecessor}`);
+        issues.push(
+          language === "en"
+            ? `${entry.id} references missing predecessor ${predecessor}`
+            : `${entry.id} 引用了不存在的前置任务 ${predecessor}`,
+        );
       }
     }
   }
@@ -254,9 +340,11 @@ function readTasks(tasksPath: string, language: Language): TaskProgress {
   const visited = new Set<string>();
   const visit = (id: string): void => {
     if (visiting.has(id)) {
-      issues.push(language === "en"
-        ? `Task dependency cycle: ${id}`
-        : `任务依赖成环: ${id}`);
+      issues.push(
+        language === "en"
+          ? `Task dependency cycle: ${id}`
+          : `任务依赖成环: ${id}`,
+      );
       return;
     }
     if (visited.has(id)) return;
@@ -270,15 +358,23 @@ function readTasks(tasksPath: string, language: Language): TaskProgress {
   for (const id of byId.keys()) visit(id);
   for (const entry of entries) {
     if (entry.done && entry.blockedBy.some((id) => !byId.get(id)?.done)) {
-      issues.push(language === "en"
-        ? `${entry.id} is complete before its predecessor`
-        : `${entry.id} 已完成，但前置任务尚未完成`);
+      issues.push(
+        language === "en"
+          ? `${entry.id} is complete before its predecessor`
+          : `${entry.id} 已完成，但前置任务尚未完成`,
+      );
     }
   }
-  const frontier = issues.length > 0 ? [] : entries
-    .filter((entry) => !entry.done && entry.blockedBy.every((id) => byId.get(id)?.done))
-    .map((entry) => entry.id);
-  return { done, total, frontier, issues };
+  const frontier =
+    issues.length > 0
+      ? []
+      : entries
+          .filter(
+            (entry) =>
+              !entry.done && entry.blockedBy.every((id) => byId.get(id)?.done),
+          )
+          .map((entry) => entry.id);
+  return { done, total, frontier, issues, tasks: entries };
 }
 
 function nextCommand(change: string, phase: string | undefined): string | null {
@@ -661,7 +757,8 @@ function collectManagedTasks(
           executorConfig: task.executorConfig
             ? `${task.executorConfig.model ?? "unknown"}/${task.executorConfig.reasoningEffort ?? "unknown"} (${task.executorConfig.confirmed ? "confirmed" : "pending confirmation"})`
             : "not applicable",
-          runtimeTools: state.runtimeTelemetry?.tools.join(",") ||
+          runtimeTools:
+            state.runtimeTelemetry?.tools.join(",") ||
             (state.runtimeTelemetry?.capabilitiesReported ? "[]" : "unknown"),
           runtimeSkills: state.runtimeTelemetry?.skills ?? null,
           runtimeSlashCommands: state.runtimeTelemetry?.slashCommands ?? null,
